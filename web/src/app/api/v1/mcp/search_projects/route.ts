@@ -19,7 +19,17 @@ export async function GET(request: Request) {
     const query = url.searchParams.get("query")?.trim() || undefined;
     const tag = url.searchParams.get("tag")?.trim() || undefined;
     const tech = url.searchParams.get("tech")?.trim() || undefined;
-    const status = parseStatus(url.searchParams.get("status"));
+    const rawStatus = url.searchParams.get("status");
+    const status = parseStatus(rawStatus);
+    if (rawStatus && !status) {
+      return apiError(
+        {
+          code: "INVALID_STATUS",
+          message: `status must be one of: ${PROJECT_STATUSES.join(", ")}`,
+        },
+        400
+      );
+    }
 
     const result = await listProjects({ query, tag, tech, status, page, limit });
 

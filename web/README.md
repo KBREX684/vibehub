@@ -1,10 +1,13 @@
-# VibeHub Web (P1 + P2-1)
+# VibeHub Web (P1 + P2)
 
 Next.js full-stack implementation for VibeHub.
 
 Current scope:
 - P1: discussions, project gallery, creator pages, MCP v1 read tools
 - P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
+- P2-2: collaboration intent submit/review workflow
+- P2-3: topic collections, leaderboards, collaboration funnel metrics
+- P2-4: discover page (investor/ops radar), extended project filters + facets API
 
 ## 1. Quick Start
 
@@ -92,7 +95,24 @@ Runs `lint + test + build`.
 - `GET /api/v1/admin/reports`
 - `GET /api/v1/admin/audit-logs`
 
-## 6. PostgreSQL / Prisma
+## 6. P2 Public Endpoints (non-admin)
+
+- Collaboration:
+  - `GET /api/v1/projects/:slug/collaboration-intents?status=approved|pending|rejected|all`
+  - `POST /api/v1/projects/:slug/collaboration-intents`
+- Topics:
+  - `GET /api/v1/collection-topics`
+  - `GET /api/v1/collection-topics/:slug`
+- Leaderboards:
+  - `GET /api/v1/leaderboards/discussions?limit=10`
+  - `GET /api/v1/leaderboards/projects?limit=10`
+- Metrics:
+  - `GET /api/v1/metrics/collaboration-intent-funnel`
+- Discovery filters:
+  - `GET /api/v1/projects?query=&tag=&tech=&status=&page=&limit=`
+  - `GET /api/v1/projects/facets`
+
+## 7. PostgreSQL / Prisma
 
 If you want real database mode:
 
@@ -105,7 +125,7 @@ npm run prisma:seed
 npm run dev
 ```
 
-## 7. Self-Hosted Deployment
+## 8. Self-Hosted Deployment
 
 See:
 - `infra/docker-compose.yml` (PostgreSQL)

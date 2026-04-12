@@ -32,3 +32,10 @@
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
 |---|---|---|---|---|---|---|---|
 | BUG-P2-2-001 | P2 | Collaboration workflow | Missing collaboration entry/review loop between project page and admin queue | No CollaborationIntent model or API chain | Added model + repository + `/api/v1/projects/[slug]/collaboration-intents` + `/api/v1/admin/collaboration-intents` + admin review endpoint/page | Verified | `npm run check` passed; tests include `collaboration-intent-repository.test.ts` |
+
+## P2 Closure Audit (2026-04-12)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| BUG-P2-4-001 | P2 | API contracts (`projects`, `mcp/search_projects`) | Invalid `status` query was silently ignored, yielding broad result set without caller feedback | Parameter parsing returned `undefined` for unknown values and proceeded | Added strict validation: invalid `status` now returns `400 INVALID_STATUS` with allowed enum values | Verified | `npm run check` passed after API update |
+| AUDIT-P2-DOC-001 | P2 | `web/README.md` | Scope documentation still labeled as `P1 + P2-1`, missing P2-2/3/4 endpoints and discovery routes | Docs were not updated alongside feature increments | Updated scope and endpoint sections to include P2-2/3/4 public APIs and discover/facets filters | Verified | Manual doc review + endpoint list cross-check with `src/app/api/v1/**/route.ts` |
