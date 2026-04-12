@@ -109,6 +109,37 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
     }
   }
 
+  async function reorderTask(taskId: string, direction: "up" | "down") {
+    setMsg(null);
+    try {
+      const res = await fetch(
+        `/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(taskId)}/reorder`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ direction }),
+        }
+      );
+      const json = (await res.json()) as {
+        data?: { tasks?: TeamTask[] };
+        error?: { message?: string; code?: string };
+      };
+      if (!res.ok) {
+        setMsg(json.error?.message ?? "Reorder failed");
+        return;
+      }
+      if (json.data?.tasks) {
+        setTasks(json.data.tasks);
+      } else {
+        await load();
+      }
+      router.refresh();
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   async function removeTask(taskId: string) {
     setMsg(null);
     try {
@@ -144,8 +175,11 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
 
   return (
     <div className="card">
-      <h2>任务板（P3-4）</h2>
-      <p className="muted small">成员可创建、更新状态、指派与删除。接口：GET/POST /api/v1/teams/:slug/tasks</p>
+      <h2>任务板（P3-4 + P3-6）</h2>
+      <p className="muted small">
+        成员可创建、更新状态、指派与删除；列表按 <code>sortOrder</code> 排序，可用上移/下移调整顺序。接口：GET/POST
+        /api/v1/teams/:slug/tasks；POST …/tasks/:id/reorder
+      </p>
 
       <form onSubmit={(ev) => void createTask(ev)} className="discover-filter-grid" style={{ marginTop: "1rem" }}>
         <label className="discover-field" style={{ gridColumn: "1 / -1" }}>
@@ -178,7 +212,7 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
       {loading ? <p className="muted small">加载中…</p> : null}
 
       <ul className="admin-list" style={{ marginTop: "1rem", listStyle: "none", padding: 0 }}>
-        {tasks.map((t) => (
+        {tasks.map((t, index) => (
           <li key={t.id} className="card" style={{ marginBottom: "0.75rem" }}>
             <div className="meta-row">
               <strong>{t.title}</strong>
@@ -190,6 +224,24 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
               {t.assigneeName ? ` · 指派：${t.assigneeName}` : ""}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button
+                type="button"
+                className="button ghost"
+                disabled={index === 0}
+                onClick={() => void reorderTask(t.id, "up")}
+                aria-label="上移任务"
+              >
+                上移
+              </button>
+              <button
+                type="button"
+                className="button ghost"
+                disabled={index === tasks.length - 1}
+                onClick={() => void reorderTask(t.id, "down")}
+                aria-label="下移任务"
+              >
+                下移
+              </button>
               <select
                 value={t.status}
                 onChange={(e) =>

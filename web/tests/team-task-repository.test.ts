@@ -3,6 +3,7 @@ import {
   createTeamTask,
   deleteTeamTask,
   listTeamTasks,
+  reorderTeamTask,
   updateTeamTask,
 } from "../src/lib/repository";
 
@@ -10,6 +11,29 @@ describe("team tasks (P3-4, mock)", () => {
   it("lists tasks for team member", async () => {
     const tasks = await listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u1" });
     expect(tasks.length).toBeGreaterThan(0);
+    expect(tasks.every((x) => typeof x.sortOrder === "number")).toBe(true);
+  });
+
+  it("reorders tasks with up/down (swap sortOrder)", async () => {
+    const before = await listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u1" });
+    expect(before.length).toBeGreaterThanOrEqual(2);
+    const firstId = before[0]!.id;
+    const secondId = before[1]!.id;
+    await reorderTeamTask({
+      teamSlug: "vibehub-core",
+      taskId: secondId,
+      actorUserId: "u1",
+      direction: "up",
+    });
+    const after = await listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u1" });
+    expect(after[0]!.id).toBe(secondId);
+    expect(after[1]!.id).toBe(firstId);
+    await reorderTeamTask({
+      teamSlug: "vibehub-core",
+      taskId: secondId,
+      actorUserId: "u1",
+      direction: "down",
+    });
   });
 
   it("rejects list for non-member", async () => {

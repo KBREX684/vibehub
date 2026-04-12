@@ -306,6 +306,7 @@ model TeamTask {
   title             String
   description       String?
   status            TeamTaskStatus @default(todo)
+  sortOrder         Int            @default(0)
   createdByUserId   String
   assigneeUserId    String?
   createdAt         DateTime       @default(now())
@@ -316,6 +317,7 @@ model TeamTask {
 
   @@index([teamId])
   @@index([teamId, status])
+  @@index([teamId, sortOrder])
 }
 
 model TeamMilestone {

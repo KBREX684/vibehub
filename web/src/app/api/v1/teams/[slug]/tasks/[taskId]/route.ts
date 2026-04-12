@@ -9,6 +9,7 @@ const patchSchema = z.object({
   description: z.union([z.string().max(2000), z.null()]).optional(),
   status: z.enum(["todo", "doing", "done"]).optional(),
   assigneeUserId: z.union([z.string().min(1), z.null()]).optional(),
+  sortOrder: z.number().int().optional(),
 });
 
 interface Params {
@@ -33,6 +34,7 @@ export async function PATCH(request: Request, { params }: Params) {
       description: parsed.description,
       status: parsed.status as TeamTaskStatus | undefined,
       assigneeUserId: parsed.assigneeUserId,
+      sortOrder: parsed.sortOrder,
     });
     return apiSuccess(task);
   } catch (error) {

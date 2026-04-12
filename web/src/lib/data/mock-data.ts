@@ -49,6 +49,7 @@ export interface MockTeamTask {
   title: string;
   description?: string;
   status: TeamTaskStatus;
+  sortOrder: number;
   createdByUserId: string;
   assigneeUserId?: string;
   createdAt: string;
@@ -260,6 +261,7 @@ export const mockTeamTasks: MockTeamTask[] = [
     title: "Ship weekly leaderboard materialize cron",
     description: "Optional scheduled job or doc for ops.",
     status: "doing",
+    sortOrder: 0,
     createdByUserId: "u1",
     assigneeUserId: "u2",
     createdAt: new Date().toISOString(),
@@ -270,6 +272,7 @@ export const mockTeamTasks: MockTeamTask[] = [
     teamId: "team1",
     title: "Review join requests daily",
     status: "todo",
+    sortOrder: 1,
     createdByUserId: "u1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

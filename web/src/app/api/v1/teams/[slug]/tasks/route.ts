@@ -9,6 +9,7 @@ const createSchema = z.object({
   description: z.string().max(2000).optional(),
   status: z.enum(["todo", "doing", "done"]).optional(),
   assigneeUserId: z.string().min(1).optional(),
+  sortOrder: z.number().int().optional(),
 });
 
 interface Params {
@@ -61,6 +62,7 @@ export async function POST(request: Request, { params }: Params) {
       description: parsed.description,
       status: parsed.status as TeamTaskStatus | undefined,
       assigneeUserId: parsed.assigneeUserId,
+      sortOrder: parsed.sortOrder,
     });
     return apiSuccess(task, 201);
   } catch (error) {

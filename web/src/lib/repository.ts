@@ -583,6 +583,7 @@ function mockTeamTaskToDto(row: {
   title: string;
   description?: string;
   status: TeamTaskStatus;
+  sortOrder: number;
   createdByUserId: string;
   assigneeUserId?: string;
   createdAt: string;
@@ -595,6 +596,7 @@ function mockTeamTaskToDto(row: {
     title: row.title,
     description: row.description,
     status: row.status,
+    sortOrder: row.sortOrder,
     createdByUserId: row.createdByUserId,
     createdByName: userNameById(row.createdByUserId),
     assigneeUserId: row.assigneeUserId,
@@ -603,6 +605,14 @@ function mockTeamTaskToDto(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function nextTeamTaskSortOrderMock(teamId: string): number {
+  const rows = mockTeamTasks.filter((t) => t.teamId === teamId);
+  if (rows.length === 0) {
+    return 0;
+  }
+  return Math.max(...rows.map((r) => r.sortOrder)) + 1;
 }
 
 async function assertTeamMemberBySlug(teamSlug: string, userId: string): Promise<{ teamId: string }> {
@@ -643,7 +653,7 @@ export async function listTeamTasks(params: { teamSlug: string; viewerUserId: st
     return mockTeamTasks
       .filter((t) => t.teamId === team.id)
       .map(mockTeamTaskToDto)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      .sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
   }
 
   const prisma = await getPrisma();
@@ -653,7 +663,7 @@ export async function listTeamTasks(params: { teamSlug: string; viewerUserId: st
   }
   const rows = await prisma.teamTask.findMany({
     where: { teamId: team.id },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
     include: {
       createdBy: { select: { id: true, name: true } },
       assignee: { select: { id: true, name: true, email: true } },
@@ -665,6 +675,7 @@ export async function listTeamTasks(params: { teamSlug: string; viewerUserId: st
     title: r.title,
     description: r.description ?? undefined,
     status: r.status as TeamTaskStatus,
+    sortOrder: r.sortOrder,
     createdByUserId: r.createdByUserId,
     createdByName: r.createdBy.name,
     assigneeUserId: r.assignee?.id,
@@ -682,6 +693,7 @@ export async function createTeamTask(params: {
   description?: string;
   status?: TeamTaskStatus;
   assigneeUserId?: string;
+  sortOrder?: number;
 }): Promise<TeamTask> {
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
   const title = params.title.trim();
@@ -702,12 +714,17 @@ export async function createTeamTask(params: {
       }
     }
     const now = new Date().toISOString();
+    const sortOrder =
+      params.sortOrder !== undefined && Number.isFinite(params.sortOrder)
+        ? Math.floor(params.sortOrder)
+        : nextTeamTaskSortOrderMock(teamId);
     const row = {
       id: `tt_${teamId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       teamId,
       title,
       description: desc,
       status,
+      sortOrder,
       createdByUserId: params.actorUserId,
       assigneeUserId: params.assigneeUserId,
       createdAt: now,
@@ -736,6 +753,17 @@ export async function createTeamTask(params: {
     }
   }
 
+  let sortOrder: number;
+  if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
+    sortOrder = Math.floor(params.sortOrder);
+  } else {
+    const agg = await prisma.teamTask.aggregate({
+      where: { teamId },
+      _max: { sortOrder: true },
+    });
+    sortOrder = agg._max.sortOrder != null ? agg._max.sortOrder + 1 : 0;
+  }
+
   const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const t = await tx.teamTask.create({
       data: {
@@ -743,6 +771,7 @@ export async function createTeamTask(params: {
         title,
         description: desc ?? null,
         status,
+        sortOrder,
         createdByUserId: params.actorUserId,
         assigneeUserId: params.assigneeUserId ?? null,
       },
@@ -769,6 +798,7 @@ export async function createTeamTask(params: {
     title: created.title,
     description: created.description ?? undefined,
     status: created.status as TeamTaskStatus,
+    sortOrder: created.sortOrder,
     createdByUserId: created.createdByUserId,
     createdByName: created.createdBy.name,
     assigneeUserId: created.assignee?.id,
@@ -779,6 +809,68 @@ export async function createTeamTask(params: {
   };
 }
 
+export async function reorderTeamTask(params: {
+  teamSlug: string;
+  taskId: string;
+  actorUserId: string;
+  direction: "up" | "down";
+}): Promise<TeamTask[]> {
+  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+
+  if (useMockData) {
+    const ordered = mockTeamTasks
+      .filter((t) => t.teamId === teamId)
+      .sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
+    const idx = ordered.findIndex((t) => t.id === params.taskId);
+    if (idx < 0) {
+      throw new Error("TEAM_TASK_NOT_FOUND");
+    }
+    const j = params.direction === "up" ? idx - 1 : idx + 1;
+    if (j < 0 || j >= ordered.length) {
+      throw new Error("TEAM_TASK_REORDER_EDGE");
+    }
+    const a = ordered[idx];
+    const b = ordered[j];
+    const tmp = a.sortOrder;
+    a.sortOrder = b.sortOrder;
+    b.sortOrder = tmp;
+    const now = new Date().toISOString();
+    a.updatedAt = now;
+    b.updatedAt = now;
+    return listTeamTasks({ teamSlug: params.teamSlug, viewerUserId: params.actorUserId });
+  }
+
+  const prisma = await getPrisma();
+  const tasks = await prisma.teamTask.findMany({
+    where: { teamId },
+    orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+  });
+  const idx = tasks.findIndex((t) => t.id === params.taskId);
+  if (idx < 0) {
+    throw new Error("TEAM_TASK_NOT_FOUND");
+  }
+  const j = params.direction === "up" ? idx - 1 : idx + 1;
+  if (j < 0 || j >= tasks.length) {
+    throw new Error("TEAM_TASK_REORDER_EDGE");
+  }
+  const a = tasks[idx];
+  const b = tasks[j];
+  const orderA = a.sortOrder;
+  const orderB = b.sortOrder;
+  await prisma.$transaction([
+    prisma.teamTask.update({
+      where: { id: a.id },
+      data: { sortOrder: orderB, updatedAt: new Date() },
+    }),
+    prisma.teamTask.update({
+      where: { id: b.id },
+      data: { sortOrder: orderA, updatedAt: new Date() },
+    }),
+  ]);
+
+  return listTeamTasks({ teamSlug: params.teamSlug, viewerUserId: params.actorUserId });
+}
+
 export async function updateTeamTask(params: {
   teamSlug: string;
   taskId: string;
@@ -787,6 +879,7 @@ export async function updateTeamTask(params: {
   description?: string | null;
   status?: TeamTaskStatus;
   assigneeUserId?: string | null;
+  sortOrder?: number;
 }): Promise<TeamTask> {
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
 
@@ -825,6 +918,9 @@ export async function updateTeamTask(params: {
         cur.assigneeUserId = params.assigneeUserId;
       }
     }
+    if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
+      cur.sortOrder = Math.floor(params.sortOrder);
+    }
     cur.updatedAt = new Date().toISOString();
     return mockTeamTaskToDto(cur);
   }
@@ -851,6 +947,7 @@ export async function updateTeamTask(params: {
     description?: string | null;
     status?: "todo" | "doing" | "done";
     assigneeUserId?: string | null;
+    sortOrder?: number;
   } = {};
   if (params.title !== undefined) {
     const t = params.title.trim();
@@ -871,6 +968,9 @@ export async function updateTeamTask(params: {
   if (params.assigneeUserId !== undefined) {
     data.assigneeUserId = params.assigneeUserId;
   }
+  if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
+    data.sortOrder = Math.floor(params.sortOrder);
+  }
 
   const updated = await prisma.teamTask.update({
     where: { id: params.taskId },
@@ -886,6 +986,7 @@ export async function updateTeamTask(params: {
     title: updated.title,
     description: updated.description ?? undefined,
     status: updated.status as TeamTaskStatus,
+    sortOrder: updated.sortOrder,
     createdByUserId: updated.createdByUserId,
     createdByName: updated.createdBy.name,
     assigneeUserId: updated.assignee?.id,

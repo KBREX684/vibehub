@@ -227,6 +227,7 @@ export interface TeamTask {
   title: string;
   description?: string;
   status: TeamTaskStatus;
+  sortOrder: number;
   createdByUserId: string;
   createdByName: string;
   assigneeUserId?: string;
