@@ -239,6 +239,42 @@ a {
   color: #15803d;
 }
 
+.team-task-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .team-task-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+.team-task-column {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 10px 6px;
+  background: color-mix(in srgb, var(--card) 94%, var(--bg));
+}
+
+.team-task-column h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.team-task-column .muted.small {
+  margin: 0 0 8px;
+}
+
+.team-task-card {
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
 .detail {
   display: grid;
   grid-template-columns: 2fr 1fr;

@@ -54,6 +54,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P3-7-001 | P3 | `TeamTask` ↔ `TeamMilestone` | 任务与里程碑无结构化关联 | 未建模 | `milestoneId` optional FK + API + UI + seed + tests | Verified | `npm run check` |
 
+## P3 Mainline Sweep (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P3-SWEEP-001 | P3 | `TeamTasksPanel` / `reorderTeamTask` | 单列列表与「分列看板」心智不一致；reorder 可跨状态交换顺序 | 初版按全局 sortOrder 排序 | 三列 UI + reorder 仅在同一 `status` 内相邻交换 | Verified | `npm run check` |
+
 ## P3-5 Debug Closure (2026-04-12)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

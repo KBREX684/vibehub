@@ -859,8 +859,12 @@ export async function reorderTeamTask(params: {
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
 
   if (useMockData) {
+    const row = mockTeamTasks.find((t) => t.id === params.taskId && t.teamId === teamId);
+    if (!row) {
+      throw new Error("TEAM_TASK_NOT_FOUND");
+    }
     const ordered = mockTeamTasks
-      .filter((t) => t.teamId === teamId)
+      .filter((t) => t.teamId === teamId && t.status === row.status)
       .sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
     const idx = ordered.findIndex((t) => t.id === params.taskId);
     if (idx < 0) {
@@ -882,8 +886,15 @@ export async function reorderTeamTask(params: {
   }
 
   const prisma = await getPrisma();
+  const self = await prisma.teamTask.findFirst({
+    where: { id: params.taskId, teamId },
+    select: { status: true },
+  });
+  if (!self) {
+    throw new Error("TEAM_TASK_NOT_FOUND");
+  }
   const tasks = await prisma.teamTask.findMany({
-    where: { teamId },
+    where: { teamId, status: self.status },
     orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
   });
   const idx = tasks.findIndex((t) => t.id === params.taskId);

@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TeamMember, TeamMilestone, TeamTask, TeamTaskStatus } from "@/lib/types";
 
@@ -17,6 +17,16 @@ const STATUSES: { value: TeamTaskStatus; label: string }[] = [
   { value: "done", label: "完成" },
 ];
 
+const BOARD_COLUMNS: { status: TeamTaskStatus; title: string }[] = [
+  { status: "todo", title: "待办" },
+  { status: "doing", title: "进行中" },
+  { status: "done", title: "完成" },
+];
+
+function sortTasksForColumn(rows: TeamTask[]): TeamTask[] {
+  return [...rows].sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
+}
+
 export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TeamTask[]>([]);
@@ -27,6 +37,17 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
   const [newDesc, setNewDesc] = useState("");
   const [newAssignee, setNewAssignee] = useState("");
   const [newMilestoneId, setNewMilestoneId] = useState("");
+
+  const tasksByStatus = useMemo(() => {
+    const map: Record<TeamTaskStatus, TeamTask[]> = { todo: [], doing: [], done: [] };
+    for (const t of tasks) {
+      map[t.status].push(t);
+    }
+    (Object.keys(map) as TeamTaskStatus[]).forEach((k) => {
+      map[k] = sortTasksForColumn(map[k]);
+    });
+    return map;
+  }, [tasks]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -165,6 +186,91 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
     }
   }
 
+  function renderTaskCard(t: TeamTask, column: TeamTaskStatus) {
+    const col = tasksByStatus[column];
+    const index = col.findIndex((x) => x.id === t.id);
+    return (
+      <li key={t.id} className="card team-task-card">
+        <div className="meta-row">
+          <strong>{t.title}</strong>
+          <span className={`status status-${t.status}`}>{t.status}</span>
+        </div>
+        {t.description ? <p className="muted small">{t.description}</p> : null}
+        <p className="muted small">
+          创建：{t.createdByName}
+          {t.assigneeName ? ` · 指派：${t.assigneeName}` : ""}
+          {t.milestoneTitle ? ` · 里程碑：${t.milestoneTitle}` : ""}
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
+          <button
+            type="button"
+            className="button ghost"
+            disabled={index <= 0}
+            onClick={() => void reorderTask(t.id, "up")}
+            aria-label="列内上移"
+          >
+            上移
+          </button>
+          <button
+            type="button"
+            className="button ghost"
+            disabled={index < 0 || index >= col.length - 1}
+            onClick={() => void reorderTask(t.id, "down")}
+            aria-label="列内下移"
+          >
+            下移
+          </button>
+          <select
+            value={t.status}
+            onChange={(e) => void patchTask(t.id, { status: e.target.value as TeamTaskStatus })}
+            aria-label="任务状态"
+          >
+            {STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={t.assigneeUserId ?? ""}
+            onChange={(e) =>
+              void patchTask(t.id, {
+                assigneeUserId: e.target.value === "" ? null : e.target.value,
+              })
+            }
+            aria-label="指派成员"
+          >
+            <option value="">未指派</option>
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={t.milestoneId ?? ""}
+            onChange={(e) =>
+              void patchTask(t.id, {
+                milestoneId: e.target.value === "" ? null : e.target.value,
+              })
+            }
+            aria-label="关联里程碑"
+          >
+            <option value="">不关联里程碑</option>
+            {milestones.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="button ghost" onClick={() => void removeTask(t.id)}>
+            删除
+          </button>
+        </div>
+      </li>
+    );
+  }
+
   if (!currentUserId) {
     return (
       <p className="muted small">
@@ -181,10 +287,10 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
 
   return (
     <div className="card">
-      <h2>任务板（P3-4 + P3-6 + P3-7）</h2>
+      <h2>任务板（P3 主线扫尾：分列看板）</h2>
       <p className="muted small">
-        成员可创建、更新状态、指派、可选关联里程碑与删除；列表按 <code>sortOrder</code> 排序。接口：GET/POST
-        /api/v1/teams/:slug/tasks（body 含 <code>milestoneId</code> 可选）；PATCH 可改关联；POST …/tasks/:id/reorder
+        按状态分为三列；列内顺序由 <code>sortOrder</code> 决定，「上移 / 下移」仅在<strong>同一列</strong>内调整。跨列请改状态下拉。接口不变：GET/POST
+        /api/v1/teams/:slug/tasks；PATCH；POST …/tasks/:id/reorder。
       </p>
 
       <form onSubmit={(ev) => void createTask(ev)} className="discover-filter-grid" style={{ marginTop: "1rem" }}>
@@ -228,90 +334,28 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
       {msg ? <p className="error-text">{msg}</p> : null}
       {loading ? <p className="muted small">加载中…</p> : null}
 
-      <ul className="admin-list" style={{ marginTop: "1rem", listStyle: "none", padding: 0 }}>
-        {tasks.map((t, index) => (
-          <li key={t.id} className="card" style={{ marginBottom: "0.75rem" }}>
-            <div className="meta-row">
-              <strong>{t.title}</strong>
-              <span className={`status status-${t.status}`}>{t.status}</span>
-            </div>
-            {t.description ? <p className="muted small">{t.description}</p> : null}
-            <p className="muted small">
-              创建：{t.createdByName}
-              {t.assigneeName ? ` · 指派：${t.assigneeName}` : ""}
-              {t.milestoneTitle ? ` · 里程碑：${t.milestoneTitle}` : ""}
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
-              <button
-                type="button"
-                className="button ghost"
-                disabled={index === 0}
-                onClick={() => void reorderTask(t.id, "up")}
-                aria-label="上移任务"
-              >
-                上移
-              </button>
-              <button
-                type="button"
-                className="button ghost"
-                disabled={index === tasks.length - 1}
-                onClick={() => void reorderTask(t.id, "down")}
-                aria-label="下移任务"
-              >
-                下移
-              </button>
-              <select
-                value={t.status}
-                onChange={(e) =>
-                  void patchTask(t.id, { status: e.target.value as TeamTaskStatus })
-                }
-                aria-label="任务状态"
-              >
-                {STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={t.assigneeUserId ?? ""}
-                onChange={(e) =>
-                  void patchTask(t.id, {
-                    assigneeUserId: e.target.value === "" ? null : e.target.value,
-                  })
-                }
-                aria-label="指派成员"
-              >
-                <option value="">未指派</option>
-                {members.map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={t.milestoneId ?? ""}
-                onChange={(e) =>
-                  void patchTask(t.id, {
-                    milestoneId: e.target.value === "" ? null : e.target.value,
-                  })
-                }
-                aria-label="关联里程碑"
-              >
-                <option value="">不关联里程碑</option>
-                {milestones.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.title}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="button ghost" onClick={() => void removeTask(t.id)}>
-                删除
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="team-task-board">
+        {BOARD_COLUMNS.map(({ status, title }) => {
+          const col = tasksByStatus[status];
+          return (
+            <section key={status} className="team-task-column" aria-label={title}>
+              <h3>
+                {title}{" "}
+                <span className="muted" style={{ fontWeight: 500 }}>
+                  ({col.length})
+                </span>
+              </h3>
+              {col.length === 0 ? (
+                <p className="muted small">暂无任务</p>
+              ) : (
+                <ul className="admin-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {col.map((t) => renderTaskCard(t, status))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

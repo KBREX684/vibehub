@@ -11,6 +11,7 @@ Current scope:
 - P3-5: **TeamMilestone** timeline (target date, completed, sortOrder), members-only API + UI on team page
 - P3-6: **TeamTask.sortOrder** + list ordering; optional `sortOrder` on create/PATCH; `POST .../tasks/:taskId/reorder` for up/down
 - P3-7: optional **task → milestone** link (`TeamTask.milestoneId`), validated per team; cleared on milestone delete (FK SetNull + mock parity)
+- P3 sweep: **status-column kanban** on team task board; `reorder` applies **within the same status** only
 - P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
 - P2-2: collaboration intent submit/review workflow
 - P2-3: topic collections, leaderboards, collaboration funnel metrics
@@ -148,7 +149,7 @@ Runs `lint + test + build`.
   - `GET /api/v1/teams/:slug/tasks` (ordered by `sortOrder` asc, then `updatedAt` desc)
   - `POST /api/v1/teams/:slug/tasks` body `{ "title", "description"?, "status"?, "assigneeUserId"?, "sortOrder"?, "milestoneId"?|null }`
   - `PATCH /api/v1/teams/:slug/tasks/:taskId` body partial `{ "title", "description"|null, "status", "assigneeUserId"|null, "sortOrder"?, "milestoneId"|null }`
-  - `POST /api/v1/teams/:slug/tasks/:taskId/reorder` body `{ "direction": "up" | "down" }` — swaps with adjacent task in list order
+  - `POST /api/v1/teams/:slug/tasks/:taskId/reorder` body `{ "direction": "up" | "down" }` — swaps `sortOrder` with the adjacent task **in the same status column** (todo / doing / done)
   - `DELETE /api/v1/teams/:slug/tasks/:taskId`
 - Teams (P3-1 + P3-2):
   - `GET /api/v1/teams?page=&limit=`
