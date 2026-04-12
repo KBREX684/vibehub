@@ -36,6 +36,11 @@ enum WeeklyLeaderboardKind {
   projects_by_weekly_collaboration_intent_count
 }
 
+enum TeamRole {
+  owner
+  member
+}
+
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
@@ -53,6 +58,8 @@ model User {
   auditLogs                 AuditLog[]
   collaborationIntents      CollaborationIntent[] @relation("CollaborationApplicant")
   reviewedCollabIntents     CollaborationIntent[] @relation("CollaborationReviewer")
+  ownedTeams                Team[]                @relation("TeamOwner")
+  teamMemberships           TeamMembership[]
 }
 
 model CreatorProfile {
@@ -223,4 +230,32 @@ model WeeklyLeaderboardRow {
   snapshot   WeeklyLeaderboardSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   @@index([snapshotId])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  mission     String?
+  ownerUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  memberships TeamMembership[]
+
+  @@index([ownerUserId])
+}
+
+model TeamMembership {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamRole @default(member)
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
 }

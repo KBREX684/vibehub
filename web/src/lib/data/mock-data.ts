@@ -7,8 +7,26 @@ import type {
   Post,
   Project,
   ReportTicket,
+  TeamRole,
   User,
 } from "@/lib/types";
+
+export interface MockTeam {
+  id: string;
+  slug: string;
+  name: string;
+  mission?: string;
+  ownerUserId: string;
+  createdAt: string;
+}
+
+export interface MockTeamMembership {
+  id: string;
+  teamId: string;
+  userId: string;
+  role: TeamRole;
+  joinedAt: string;
+}
 
 export const mockUsers: User[] = [
   { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin" },
@@ -153,6 +171,34 @@ export const mockReportTickets: ReportTicket[] = [
 ];
 
 export const mockAuditLogs: AuditLog[] = [];
+
+export const mockTeams: MockTeam[] = [
+  {
+    id: "team1",
+    slug: "vibehub-core",
+    name: "VibeHub Core",
+    mission: "Ship the community platform MVP and iterate with early adopters.",
+    ownerUserId: "u1",
+    createdAt: new Date().toISOString(),
+  },
+];
+
+export const mockTeamMemberships: MockTeamMembership[] = [
+  {
+    id: "tm1",
+    teamId: "team1",
+    userId: "u1",
+    role: "owner",
+    joinedAt: new Date().toISOString(),
+  },
+  {
+    id: "tm2",
+    teamId: "team1",
+    userId: "u2",
+    role: "member",
+    joinedAt: new Date().toISOString(),
+  },
+];
 
 export const mockCollaborationIntents: CollaborationIntent[] = [
   {

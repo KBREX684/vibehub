@@ -105,7 +105,7 @@ export interface AuditLog {
   id: string;
   actorId: string;
   action: string;
-  entityType: "post" | "moderation_case" | "report_ticket" | "collaboration_intent" | "system";
+  entityType: "post" | "moderation_case" | "report_ticket" | "collaboration_intent" | "system" | "team";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -159,6 +159,30 @@ export interface WeeklyLeaderboardPublicPayload {
   source: WeeklyLeaderboardSource;
   generatedAt?: string;
   rows: WeeklyLeaderboardMaterializedRow[];
+}
+
+export type TeamRole = "owner" | "member";
+
+export interface TeamSummary {
+  id: string;
+  slug: string;
+  name: string;
+  mission?: string;
+  ownerUserId: string;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface TeamMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: TeamRole;
+  joinedAt: string;
+}
+
+export interface TeamDetail extends TeamSummary {
+  members: TeamMember[];
 }
 
 export interface CollaborationIntentConversionMetrics {

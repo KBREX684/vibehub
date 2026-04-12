@@ -4,6 +4,7 @@ Next.js full-stack implementation for VibeHub.
 
 Current scope:
 - P1: discussions, project gallery, creator pages, MCP v1 read tools
+- P3-1: teams (list/create/detail, join, owner invite by email, member leave / owner remove)
 - P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
 - P2-2: collaboration intent submit/review workflow
 - P2-3: topic collections, leaderboards, collaboration funnel metrics
@@ -129,6 +130,13 @@ Runs `lint + test + build`.
 - Discovery filters:
   - `GET /api/v1/projects?query=&tag=&tech=&status=&page=&limit=`
   - `GET /api/v1/projects/facets`
+- Teams (P3-1):
+  - `GET /api/v1/teams?page=&limit=`
+  - `POST /api/v1/teams` (login required) body `{ "name", "slug"?, "mission"? }`
+  - `GET /api/v1/teams/:slug`
+  - `POST /api/v1/teams/:slug/join` (login required)
+  - `POST /api/v1/teams/:slug/members` (owner only) body `{ "email" }` — user must exist
+  - `DELETE /api/v1/teams/:slug/members/:userId` (self or owner; cannot remove owner)
 
 ## 7. PostgreSQL / Prisma
 
