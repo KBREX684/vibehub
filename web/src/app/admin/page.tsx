@@ -67,6 +67,39 @@ export default async function AdminPage() {
               View audit API
             </a>
           </article>
+          <article className="card detail-full">
+            <h3>协作意向漏斗（P2-3）</h3>
+            <p className="muted small">
+              公开指标接口{" "}
+              <code className="code-inline">GET /api/v1/metrics/collaboration-intent-funnel</code>
+            </p>
+            <div className="funnel-grid">
+              <div className="funnel-stat">
+                <strong>{overview.collaborationIntentFunnel.totalSubmissions}</strong>
+                <span>总提交</span>
+              </div>
+              <div className="funnel-stat">
+                <strong>{overview.collaborationIntentFunnel.pending}</strong>
+                <span>待审核</span>
+              </div>
+              <div className="funnel-stat">
+                <strong>{overview.collaborationIntentFunnel.approved}</strong>
+                <span>已通过</span>
+              </div>
+              <div className="funnel-stat">
+                <strong>{overview.collaborationIntentFunnel.rejected}</strong>
+                <span>已拒绝</span>
+              </div>
+              <div className="funnel-stat">
+                <strong>{(overview.collaborationIntentFunnel.approvalRate * 100).toFixed(1)}%</strong>
+                <span>通过率（已通过/总提交）</span>
+              </div>
+              <div className="funnel-stat">
+                <strong>{(overview.collaborationIntentFunnel.reviewedApprovalRate * 100).toFixed(1)}%</strong>
+                <span>审核通过率（已通过/已审结）</span>
+              </div>
+            </div>
+          </article>
         </section>
       </main>
     </>

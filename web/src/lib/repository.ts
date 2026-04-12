@@ -1,5 +1,6 @@
 import { paginateArray } from "@/lib/pagination";
-import type { Prisma } from "@prisma/client";
+import { COLLECTION_TOPICS } from "@/lib/topics-config";
+import { Prisma } from "@prisma/client";
 import {
   mockAuditLogs,
   mockComments,
@@ -13,10 +14,14 @@ import {
 } from "@/lib/data/mock-data";
 import type {
   AuditLog,
-  Comment,
   CollaborationIntent,
+  CollaborationIntentConversionMetrics,
   CollaborationIntentType,
+  CollectionTopic,
+  Comment,
   CreatorProfile,
+  LeaderboardDiscussionRow,
+  LeaderboardProjectRow,
   ModerationCase,
   Post,
   Project,
@@ -1172,7 +1177,149 @@ export async function listAuditLogs(params: {
   };
 }
 
+export function listCollectionTopics(): CollectionTopic[] {
+  return COLLECTION_TOPICS.map((topic) => ({
+    slug: topic.slug,
+    title: topic.title,
+    description: topic.description,
+    tag: topic.tag,
+  }));
+}
+
+export async function getTopicDiscovery(slug: string): Promise<{
+  topic: CollectionTopic;
+  posts: Paginated<Post>;
+  projects: Paginated<Project>;
+} | null> {
+  const config = COLLECTION_TOPICS.find((item) => item.slug === slug);
+  if (!config) {
+    return null;
+  }
+
+  const topic: CollectionTopic = {
+    slug: config.slug,
+    title: config.title,
+    description: config.description,
+    tag: config.tag,
+  };
+
+  const [posts, projects] = await Promise.all([
+    listPosts({ tag: config.tag, page: 1, limit: 12 }),
+    listProjects({ tag: config.tag, page: 1, limit: 12 }),
+  ]);
+
+  return { topic, posts, projects };
+}
+
+export async function getDiscussionLeaderboard(limit: number): Promise<LeaderboardDiscussionRow[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 50);
+
+  if (useMockData) {
+    const approved = mockPosts.filter((p) => p.reviewStatus === "approved");
+    const rows: LeaderboardDiscussionRow[] = approved.map((post) => ({
+      postId: post.id,
+      slug: post.slug,
+      title: post.title,
+      commentCount: mockComments.filter((c) => c.postId === post.id).length,
+    }));
+    rows.sort((a, b) => b.commentCount - a.commentCount || b.title.localeCompare(a.title));
+    return rows.slice(0, safeLimit);
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.$queryRaw<
+    { id: string; slug: string; title: string; comment_count: bigint }[]
+  >`
+    SELECT p.id, p.slug, p.title, COUNT(c.id)::bigint AS comment_count
+    FROM "Post" p
+    LEFT JOIN "Comment" c ON c."postId" = p.id
+    WHERE p."reviewStatus" = 'approved'
+    GROUP BY p.id, p.slug, p.title
+    ORDER BY COUNT(c.id) DESC, p.title ASC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => ({
+    postId: row.id,
+    slug: row.slug,
+    title: row.title,
+    commentCount: Number(row.comment_count),
+  }));
+}
+
+export async function getProjectCollaborationLeaderboard(limit: number): Promise<LeaderboardProjectRow[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 50);
+
+  if (useMockData) {
+    const rows: LeaderboardProjectRow[] = mockProjects.map((project) => ({
+      projectId: project.id,
+      slug: project.slug,
+      title: project.title,
+      intentCount: mockCollaborationIntents.filter((i) => i.projectId === project.id).length,
+    }));
+    rows.sort((a, b) => b.intentCount - a.intentCount || a.title.localeCompare(b.title));
+    return rows.slice(0, safeLimit);
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.$queryRaw<
+    { id: string; slug: string; title: string; intent_count: bigint }[]
+  >`
+    SELECT pr.id, pr.slug, pr.title, COUNT(ci.id)::bigint AS intent_count
+    FROM "Project" pr
+    LEFT JOIN "CollaborationIntent" ci ON ci."projectId" = pr.id
+    GROUP BY pr.id, pr.slug, pr.title
+    ORDER BY COUNT(ci.id) DESC, pr.title ASC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => ({
+    projectId: row.id,
+    slug: row.slug,
+    title: row.title,
+    intentCount: Number(row.intent_count),
+  }));
+}
+
+export async function getCollaborationIntentConversionMetrics(): Promise<CollaborationIntentConversionMetrics> {
+  if (useMockData) {
+    const totalSubmissions = mockCollaborationIntents.length;
+    const pending = mockCollaborationIntents.filter((i) => i.status === "pending").length;
+    const approved = mockCollaborationIntents.filter((i) => i.status === "approved").length;
+    const rejected = mockCollaborationIntents.filter((i) => i.status === "rejected").length;
+    const reviewed = approved + rejected;
+    return {
+      totalSubmissions,
+      pending,
+      approved,
+      rejected,
+      approvalRate: totalSubmissions === 0 ? 0 : approved / totalSubmissions,
+      reviewedApprovalRate: reviewed === 0 ? 0 : approved / reviewed,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const [totalSubmissions, pending, approved, rejected] = await Promise.all([
+    prisma.collaborationIntent.count(),
+    prisma.collaborationIntent.count({ where: { status: "pending" } }),
+    prisma.collaborationIntent.count({ where: { status: "approved" } }),
+    prisma.collaborationIntent.count({ where: { status: "rejected" } }),
+  ]);
+
+  const reviewed = approved + rejected;
+  return {
+    totalSubmissions,
+    pending,
+    approved,
+    rejected,
+    approvalRate: totalSubmissions === 0 ? 0 : approved / totalSubmissions,
+    reviewedApprovalRate: reviewed === 0 ? 0 : approved / reviewed,
+  };
+}
+
 export async function getAdminOverview() {
+  const collaborationIntentFunnel = await getCollaborationIntentConversionMetrics();
+
   if (useMockData) {
     const pendingPosts = mockPosts.filter((item) => item.reviewStatus === "pending").length;
     const openReports = mockReportTickets.filter((item) => item.status === "open").length;
@@ -1189,6 +1336,7 @@ export async function getAdminOverview() {
       moderationCases,
       pendingCollaborationIntents,
       auditLogs: mockAuditLogs.length,
+      collaborationIntentFunnel,
     };
   }
 
@@ -1212,6 +1360,7 @@ export async function getAdminOverview() {
     moderationCases,
     pendingCollaborationIntents,
     auditLogs,
+    collaborationIntentFunnel,
   };
 }
 

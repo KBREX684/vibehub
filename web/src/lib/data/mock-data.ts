@@ -113,6 +113,20 @@ export const mockComments: Comment[] = [
     body: "Great breakdown. Could you share your schema for tags?",
     createdAt: new Date().toISOString(),
   },
+  {
+    id: "cm2",
+    postId: "post2",
+    authorId: "u1",
+    body: "Solid picks — would add a lightweight analytics hook for solo launches.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "cm3",
+    postId: "post2",
+    authorId: "u3",
+    body: "Thanks, adding observability early saved me weeks last quarter.",
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 export const mockModerationCases: ModerationCase[] = [
@@ -149,6 +163,18 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
     message: "I want to contribute to API contracts and integration tests for VibeHub.",
     contact: "chen@vibehub.dev",
     status: "pending",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "ci2",
+    projectId: "p2",
+    applicantId: "u1",
+    intentType: "recruit",
+    message: "Looking for a collaborator to ship prompt evaluation exports.",
+    contact: "alice@vibehub.dev",
+    status: "approved",
+    reviewedAt: new Date().toISOString(),
+    reviewedBy: "u1",
     createdAt: new Date().toISOString(),
   },
 ];
