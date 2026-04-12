@@ -1,0 +1,9 @@
+# root temporary files
+plan_extracted.txt
+
+# web
+web/node_modules
+web/.next
+web/.env
+web/.env.local
+web/coverage
