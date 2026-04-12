@@ -271,9 +271,15 @@ function toAuditLogDto(item: {
 export async function listProjects(params: {
   query?: string;
   tag?: string;
+  /** Matches if any `techStack` entry equals this string (case-sensitive in DB; mock compares case-insensitively). */
+  tech?: string;
+  status?: Project["status"];
   page: number;
   limit: number;
 }): Promise<Paginated<Project>> {
+  const techFilter = params.tech?.trim();
+  const statusFilter = params.status;
+
   if (useMockData) {
     const filtered = mockProjects.filter((project) => {
       const q = params.query?.toLowerCase().trim();
@@ -287,7 +293,13 @@ export async function listProjects(params: {
 
       const tagMatch = !t || project.tags.some((tag) => tag.toLowerCase() === t);
 
-      return queryMatch && tagMatch;
+      const techMatch =
+        !techFilter ||
+        project.techStack.some((item) => item.toLowerCase() === techFilter.toLowerCase());
+
+      const statusMatch = !statusFilter || project.status === statusFilter;
+
+      return queryMatch && tagMatch && techMatch && statusMatch;
     });
 
     return paginateArray(filtered, params.page, params.limit);
@@ -310,6 +322,14 @@ export async function listProjects(params: {
             },
           }
         : {},
+      techFilter
+        ? {
+            techStack: {
+              has: techFilter,
+            },
+          }
+        : {},
+      statusFilter ? { status: statusFilter } : {},
     ],
   };
 
@@ -332,6 +352,36 @@ export async function listProjects(params: {
       total,
       totalPages: Math.max(1, Math.ceil(total / params.limit)),
     },
+  };
+}
+
+export async function getProjectFilterFacets(): Promise<{ tags: string[]; techStack: string[] }> {
+  if (useMockData) {
+    const tagSet = new Set<string>();
+    const techSet = new Set<string>();
+    for (const project of mockProjects) {
+      project.tags.forEach((t) => tagSet.add(t));
+      project.techStack.forEach((t) => techSet.add(t));
+    }
+    return {
+      tags: [...tagSet].sort((a, b) => a.localeCompare(b)),
+      techStack: [...techSet].sort((a, b) => a.localeCompare(b)),
+    };
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.project.findMany({
+    select: { tags: true, techStack: true },
+  });
+  const tagSet = new Set<string>();
+  const techSet = new Set<string>();
+  for (const row of rows) {
+    row.tags.forEach((t) => tagSet.add(t));
+    row.techStack.forEach((t) => techSet.add(t));
+  }
+  return {
+    tags: [...tagSet].sort((a, b) => a.localeCompare(b)),
+    techStack: [...techSet].sort((a, b) => a.localeCompare(b)),
   };
 }
 

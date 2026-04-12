@@ -365,3 +365,47 @@ pre.code {
   color: var(--muted);
   font-size: 0.88rem;
 }
+
+.discover-filters {
+  margin-bottom: 16px;
+}
+
+.discover-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.discover-field {
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+
+.discover-field span {
+  color: var(--muted);
+}
+
+.discover-field input,
+.discover-field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+  background: #fff;
+}
+
+.discover-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.discover-pagination {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
