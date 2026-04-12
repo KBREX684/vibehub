@@ -53,13 +53,71 @@ async function main() {
 
   await prisma.post.upsert({
     where: { slug: "vibehub-p1-kickoff" },
-    update: {},
+    update: {
+      reviewStatus: "approved",
+      reviewedBy: alice.id,
+      reviewedAt: new Date(),
+      moderationNote: "Seed approved content",
+    },
     create: {
       slug: "vibehub-p1-kickoff",
       authorId: bob.id,
       title: "VibeHub P1 kickoff",
       body: "P1 now includes discussion square, project gallery and MCP v1 APIs.",
       tags: ["kickoff", "p1", "build-log"],
+      reviewStatus: "approved",
+      reviewedBy: alice.id,
+      reviewedAt: new Date(),
+      moderationNote: "Seed approved content",
+    },
+  });
+
+  const pendingPost = await prisma.post.upsert({
+    where: { slug: "needs-moderation-sample" },
+    update: {
+      reviewStatus: "pending",
+      moderationNote: null,
+      reviewedBy: null,
+      reviewedAt: null,
+    },
+    create: {
+      slug: "needs-moderation-sample",
+      authorId: bob.id,
+      title: "Needs moderation sample",
+      body: "This post is seeded as pending to test admin moderation workflow.",
+      tags: ["moderation", "p2"],
+      reviewStatus: "pending",
+    },
+  });
+
+  await prisma.moderationCase.create({
+    data: {
+      targetType: "post",
+      targetId: pendingPost.id,
+      postId: pendingPost.id,
+      status: "pending",
+      reason: "seed_pending_content",
+    },
+  });
+
+  await prisma.reportTicket.create({
+    data: {
+      targetType: "post",
+      targetId: pendingPost.id,
+      postId: pendingPost.id,
+      reporterId: bob.id,
+      reason: "Seed report ticket for moderation flow",
+      status: "open",
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: alice.id,
+      action: "seed_initialized",
+      entityType: "post",
+      entityId: pendingPost.id,
+      metadata: { stage: "p2-1" },
     },
   });
 }

@@ -8,11 +8,12 @@ export function SiteHeader() {
           VibeHub
         </Link>
         <nav className="links">
-          <Link href="/discussions">讨论广场</Link>
-          <Link href="/projects/vibehub">项目画廊</Link>
-          <Link href="/creators/alice-ai-builder">创作者</Link>
+          <Link href="/discussions">Discussions</Link>
+          <Link href="/projects/vibehub">Projects</Link>
+          <Link href="/creators/alice-ai-builder">Creators</Link>
+          <Link href="/admin">Admin</Link>
           <a href="/api/v1/auth/demo-login?role=user&redirect=/" className="button ghost">
-            Demo 登录
+            Demo User
           </a>
         </nav>
       </div>

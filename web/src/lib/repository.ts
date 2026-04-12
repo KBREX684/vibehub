@@ -1,12 +1,27 @@
 import { paginateArray } from "@/lib/pagination";
+import type { Prisma } from "@prisma/client";
 import {
+  mockAuditLogs,
   mockComments,
   mockCreators,
+  mockModerationCases,
   mockPosts,
   mockProjects,
+  mockReportTickets,
   mockUsers,
 } from "@/lib/data/mock-data";
-import type { Comment, CreatorProfile, Post, Project, Role } from "@/lib/types";
+import type {
+  AuditLog,
+  Comment,
+  CreatorProfile,
+  ModerationCase,
+  Post,
+  Project,
+  ReportTicket,
+  ReviewStatus,
+  Role,
+  User,
+} from "@/lib/types";
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
 type DemoRole = Extract<Role, "admin" | "user">;
@@ -23,9 +38,21 @@ interface Paginated<T> {
   pagination: PaginationMeta;
 }
 
+interface ReviewPostInput {
+  postId: string;
+  action: "approve" | "reject";
+  note?: string;
+  adminUserId: string;
+}
+
 async function getPrisma() {
   const db = await import("@/lib/db");
   return db.prisma;
+}
+
+function normalizeModerationNote(note?: string): string | undefined {
+  const value = note?.trim();
+  return value ? value.slice(0, 500) : undefined;
 }
 
 function toProjectDto(project: {
@@ -73,6 +100,20 @@ function toCreatorDto(creator: {
   };
 }
 
+function toUserDto(user: {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+}): User {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  };
+}
+
 function toPostDto(post: {
   id: string;
   slug: string;
@@ -80,10 +121,23 @@ function toPostDto(post: {
   title: string;
   body: string;
   tags: string[];
+  reviewStatus: ReviewStatus;
+  moderationNote: string | null;
+  reviewedAt: Date | null;
+  reviewedBy: string | null;
   createdAt: Date;
 }): Post {
   return {
-    ...post,
+    id: post.id,
+    slug: post.slug,
+    authorId: post.authorId,
+    title: post.title,
+    body: post.body,
+    tags: post.tags,
+    reviewStatus: post.reviewStatus,
+    moderationNote: post.moderationNote ?? undefined,
+    reviewedAt: post.reviewedAt?.toISOString(),
+    reviewedBy: post.reviewedBy ?? undefined,
     createdAt: post.createdAt.toISOString(),
   };
 }
@@ -98,6 +152,74 @@ function toCommentDto(comment: {
   return {
     ...comment,
     createdAt: comment.createdAt.toISOString(),
+  };
+}
+
+function toModerationCaseDto(item: {
+  id: string;
+  targetType: string;
+  targetId: string;
+  status: ReviewStatus;
+  reason: string | null;
+  note: string | null;
+  createdAt: Date;
+  resolvedAt: Date | null;
+  resolvedBy: string | null;
+}): ModerationCase {
+  return {
+    id: item.id,
+    targetType: "post",
+    targetId: item.targetId,
+    status: item.status,
+    reason: item.reason ?? undefined,
+    note: item.note ?? undefined,
+    createdAt: item.createdAt.toISOString(),
+    resolvedAt: item.resolvedAt?.toISOString(),
+    resolvedBy: item.resolvedBy ?? undefined,
+  };
+}
+
+function toReportTicketDto(item: {
+  id: string;
+  targetType: string;
+  targetId: string;
+  reporterId: string;
+  reason: string;
+  status: string;
+  createdAt: Date;
+  resolvedAt: Date | null;
+  resolvedBy: string | null;
+}): ReportTicket {
+  return {
+    id: item.id,
+    targetType: "post",
+    targetId: item.targetId,
+    reporterId: item.reporterId,
+    reason: item.reason,
+    status: item.status === "resolved" ? "resolved" : "open",
+    createdAt: item.createdAt.toISOString(),
+    resolvedAt: item.resolvedAt?.toISOString(),
+    resolvedBy: item.resolvedBy ?? undefined,
+  };
+}
+
+function toAuditLogDto(item: {
+  id: string;
+  actorId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata: unknown;
+  createdAt: Date;
+}): AuditLog {
+  return {
+    id: item.id,
+    actorId: item.actorId,
+    action: item.action,
+    entityType: item.entityType as AuditLog["entityType"],
+    entityId: item.entityId,
+    metadata: (item.metadata ?? undefined) as Record<string, unknown> | undefined,
+    createdAt: item.createdAt.toISOString(),
   };
 }
 
@@ -146,14 +268,15 @@ export async function listProjects(params: {
     ],
   };
 
+  const prisma = await getPrisma();
   const [items, total] = await Promise.all([
-    (await getPrisma()).project.findMany({
+    prisma.project.findMany({
       where,
       orderBy: { updatedAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
     }),
-    (await getPrisma()).project.count({ where }),
+    prisma.project.count({ where }),
   ]);
 
   return {
@@ -179,7 +302,11 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
   return project ? toProjectDto(project) : null;
 }
 
-export async function listCreators(params: { query?: string; page: number; limit: number }) {
+export async function listCreators(params: {
+  query?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<CreatorProfile>> {
   if (useMockData) {
     const filtered = mockCreators.filter((creator) => {
       if (!params.query) {
@@ -205,14 +332,15 @@ export async function listCreators(params: { query?: string; page: number; limit
       }
     : {};
 
+  const prisma = await getPrisma();
   const [items, total] = await Promise.all([
-    (await getPrisma()).creatorProfile.findMany({
+    prisma.creatorProfile.findMany({
       where,
       orderBy: { updatedAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
     }),
-    (await getPrisma()).creatorProfile.count({ where }),
+    prisma.creatorProfile.count({ where }),
   ]);
 
   return {
@@ -238,6 +366,53 @@ export async function getCreatorBySlug(slug: string): Promise<CreatorProfile | n
   return creator ? toCreatorDto(creator) : null;
 }
 
+export async function listUsers(params: {
+  query?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<User>> {
+  if (useMockData) {
+    const filtered = mockUsers.filter((user) => {
+      const q = params.query?.toLowerCase().trim();
+      if (!q) {
+        return true;
+      }
+      return user.name.toLowerCase().includes(q) || user.email.toLowerCase().includes(q);
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = params.query
+    ? {
+        OR: [
+          { name: { contains: params.query, mode: "insensitive" as const } },
+          { email: { contains: params.query, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toUserDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
 export async function listPosts(params: {
   query?: string;
   tag?: string;
@@ -254,7 +429,8 @@ export async function listPosts(params: {
         post.body.toLowerCase().includes(q) ||
         post.tags.some((tag) => tag.toLowerCase().includes(q));
       const tagMatch = !t || post.tags.some((tag) => tag.toLowerCase() === t);
-      return queryMatch && tagMatch;
+      const approvedOnly = post.reviewStatus === "approved";
+      return queryMatch && tagMatch && approvedOnly;
     });
 
     return paginateArray(filtered, params.page, params.limit);
@@ -262,6 +438,7 @@ export async function listPosts(params: {
 
   const where = {
     AND: [
+      { reviewStatus: "approved" as const },
       params.query
         ? {
             OR: [
@@ -280,14 +457,71 @@ export async function listPosts(params: {
     ],
   };
 
+  const prisma = await getPrisma();
   const [items, total] = await Promise.all([
-    (await getPrisma()).post.findMany({
+    prisma.post.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
     }),
-    (await getPrisma()).post.count({ where }),
+    prisma.post.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toPostDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function listPostsForModeration(params: {
+  status?: ReviewStatus | "all";
+  query?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<Post>> {
+  if (useMockData) {
+    const filtered = mockPosts.filter((post) => {
+      const query = params.query?.toLowerCase().trim();
+      const statusMatch = !params.status || params.status === "all" || post.reviewStatus === params.status;
+      const queryMatch =
+        !query ||
+        post.title.toLowerCase().includes(query) ||
+        post.body.toLowerCase().includes(query) ||
+        post.tags.some((tag) => tag.toLowerCase().includes(query));
+      return statusMatch && queryMatch;
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = {
+    AND: [
+      params.status && params.status !== "all" ? { reviewStatus: params.status } : {},
+      params.query
+        ? {
+            OR: [
+              { title: { contains: params.query, mode: "insensitive" as const } },
+              { body: { contains: params.query, mode: "insensitive" as const } },
+            ],
+          }
+        : {},
+    ],
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.post.findMany({
+      where,
+      orderBy: [{ reviewStatus: "asc" }, { createdAt: "desc" }],
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.post.count({ where }),
   ]);
 
   return {
@@ -321,23 +555,48 @@ export async function createPost(input: {
       title: input.title,
       body: input.body,
       tags: input.tags,
+      reviewStatus: "pending",
       createdAt: new Date().toISOString(),
     };
     mockPosts.unshift(post);
+    mockModerationCases.unshift({
+      id: `mc_${Date.now()}`,
+      targetType: "post",
+      targetId: post.id,
+      status: "pending",
+      reason: "new_post_submission",
+      createdAt: new Date().toISOString(),
+    });
     return post;
   }
 
   const prisma = await getPrisma();
-  const post = await prisma.post.create({
-    data: {
-      slug: `${slug}-${Date.now()}`,
-      title: input.title,
-      body: input.body,
-      tags: input.tags,
-      authorId: input.authorId,
-    },
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const post = await tx.post.create({
+      data: {
+        slug: `${slug}-${Date.now()}`,
+        title: input.title,
+        body: input.body,
+        tags: input.tags,
+        authorId: input.authorId,
+        reviewStatus: "pending",
+      },
+    });
+
+    await tx.moderationCase.create({
+      data: {
+        targetType: "post",
+        targetId: post.id,
+        postId: post.id,
+        status: "pending",
+        reason: "new_post_submission",
+      },
+    });
+
+    return post;
   });
-  return toPostDto(post);
+
+  return toPostDto(result);
 }
 
 export async function createComment(input: { postId: string; body: string; authorId: string }) {
@@ -361,9 +620,9 @@ export async function createComment(input: { postId: string; body: string; autho
   const prisma = await getPrisma();
   const post = await prisma.post.findUnique({
     where: { id: input.postId },
-    select: { id: true },
+    select: { id: true, reviewStatus: true },
   });
-  if (!post) {
+  if (!post || post.reviewStatus !== "approved") {
     throw new Error("POST_NOT_FOUND");
   }
 
@@ -375,6 +634,288 @@ export async function createComment(input: { postId: string; body: string; autho
     },
   });
   return toCommentDto(comment);
+}
+
+export async function reviewPost(input: ReviewPostInput): Promise<Post> {
+  const nextStatus: ReviewStatus = input.action === "approve" ? "approved" : "rejected";
+  const note = normalizeModerationNote(input.note);
+
+  if (useMockData) {
+    const post = mockPosts.find((item) => item.id === input.postId);
+    if (!post) {
+      throw new Error("POST_NOT_FOUND");
+    }
+
+    post.reviewStatus = nextStatus;
+    post.reviewedAt = new Date().toISOString();
+    post.reviewedBy = input.adminUserId;
+    post.moderationNote = note;
+
+    const existingCase = mockModerationCases.find(
+      (item) => item.targetId === input.postId && item.status === "pending"
+    );
+    if (existingCase) {
+      existingCase.status = nextStatus;
+      existingCase.note = note;
+      existingCase.resolvedAt = new Date().toISOString();
+      existingCase.resolvedBy = input.adminUserId;
+    } else {
+      mockModerationCases.unshift({
+        id: `mc_${Date.now()}`,
+        targetType: "post",
+        targetId: input.postId,
+        status: nextStatus,
+        reason: "manual_review",
+        note,
+        createdAt: new Date().toISOString(),
+        resolvedAt: new Date().toISOString(),
+        resolvedBy: input.adminUserId,
+      });
+    }
+
+    mockReportTickets
+      .filter((ticket) => ticket.targetId === input.postId && ticket.status === "open")
+      .forEach((ticket) => {
+        ticket.status = "resolved";
+        ticket.resolvedAt = new Date().toISOString();
+        ticket.resolvedBy = input.adminUserId;
+      });
+
+    mockAuditLogs.unshift({
+      id: `log_${Date.now()}`,
+      actorId: input.adminUserId,
+      action: `post_${nextStatus}`,
+      entityType: "post",
+      entityId: input.postId,
+      metadata: { note },
+      createdAt: new Date().toISOString(),
+    });
+
+    return post;
+  }
+
+  const prisma = await getPrisma();
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const post = await tx.post.findUnique({
+      where: { id: input.postId },
+    });
+    if (!post) {
+      throw new Error("POST_NOT_FOUND");
+    }
+
+    const updatedPost = await tx.post.update({
+      where: { id: input.postId },
+      data: {
+        reviewStatus: nextStatus,
+        moderationNote: note ?? null,
+        reviewedAt: new Date(),
+        reviewedBy: input.adminUserId,
+      },
+    });
+
+    const pendingCases = await tx.moderationCase.findMany({
+      where: {
+        targetType: "post",
+        targetId: input.postId,
+        status: "pending",
+      },
+      select: { id: true },
+    });
+
+    if (pendingCases.length > 0) {
+      const pendingCaseIds = pendingCases.map((item: { id: string }) => item.id);
+      await tx.moderationCase.updateMany({
+        where: { id: { in: pendingCaseIds } },
+        data: {
+          status: nextStatus,
+          note: note ?? null,
+          resolvedAt: new Date(),
+          resolvedBy: input.adminUserId,
+        },
+      });
+    } else {
+      await tx.moderationCase.create({
+        data: {
+          targetType: "post",
+          targetId: input.postId,
+          postId: input.postId,
+          status: nextStatus,
+          reason: "manual_review",
+          note: note ?? null,
+          resolvedAt: new Date(),
+          resolvedBy: input.adminUserId,
+        },
+      });
+    }
+
+    await tx.reportTicket.updateMany({
+      where: {
+        targetType: "post",
+        targetId: input.postId,
+        status: "open",
+      },
+      data: {
+        status: "resolved",
+        resolvedAt: new Date(),
+        resolvedBy: input.adminUserId,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: input.adminUserId,
+        action: `post_${nextStatus}`,
+        entityType: "post",
+        entityId: input.postId,
+        metadata: { note },
+      },
+    });
+
+    return updatedPost;
+  });
+
+  return toPostDto(updated);
+}
+
+export async function listModerationCases(params: {
+  status?: ReviewStatus | "all";
+  page: number;
+  limit: number;
+}): Promise<Paginated<ModerationCase>> {
+  if (useMockData) {
+    const filtered = mockModerationCases.filter((item) => {
+      return !params.status || params.status === "all" || item.status === params.status;
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = params.status && params.status !== "all" ? { status: params.status } : {};
+  const [items, total] = await Promise.all([
+    prisma.moderationCase.findMany({
+      where,
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.moderationCase.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toModerationCaseDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function listReportTickets(params: {
+  status?: "open" | "resolved" | "all";
+  page: number;
+  limit: number;
+}): Promise<Paginated<ReportTicket>> {
+  if (useMockData) {
+    const filtered = mockReportTickets.filter((item) => {
+      return !params.status || params.status === "all" || item.status === params.status;
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = params.status && params.status !== "all" ? { status: params.status } : {};
+  const [items, total] = await Promise.all([
+    prisma.reportTicket.findMany({
+      where,
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.reportTicket.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toReportTicketDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function listAuditLogs(params: {
+  actorId?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<AuditLog>> {
+  if (useMockData) {
+    const filtered = mockAuditLogs.filter((item) => {
+      return !params.actorId || item.actorId === params.actorId;
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = params.actorId ? { actorId: params.actorId } : {};
+  const [items, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toAuditLogDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function getAdminOverview() {
+  if (useMockData) {
+    const pendingPosts = mockPosts.filter((item) => item.reviewStatus === "pending").length;
+    const openReports = mockReportTickets.filter((item) => item.status === "open").length;
+    const moderationCases = mockModerationCases.filter((item) => item.status === "pending").length;
+
+    return {
+      users: mockUsers.length,
+      posts: mockPosts.length,
+      pendingPosts,
+      openReports,
+      moderationCases,
+      auditLogs: mockAuditLogs.length,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const [users, posts, pendingPosts, openReports, moderationCases, auditLogs] = await Promise.all([
+    prisma.user.count(),
+    prisma.post.count(),
+    prisma.post.count({ where: { reviewStatus: "pending" } }),
+    prisma.reportTicket.count({ where: { status: "open" } }),
+    prisma.moderationCase.count({ where: { status: "pending" } }),
+    prisma.auditLog.count(),
+  ]);
+
+  return {
+    users,
+    posts,
+    pendingPosts,
+    openReports,
+    moderationCases,
+    auditLogs,
+  };
 }
 
 export function getDemoUser(role: DemoRole = "user") {

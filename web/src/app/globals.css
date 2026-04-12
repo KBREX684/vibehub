@@ -162,6 +162,71 @@ a {
   font-weight: 600;
 }
 
+.admin-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-actions {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.admin-actions textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  font: inherit;
+  background: #fff;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+}
+
+.button.success {
+  border-color: #16a34a;
+  color: #166534;
+}
+
+.button.danger {
+  border-color: #dc2626;
+  color: #991b1b;
+}
+
+.error-text {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.status-pending {
+  color: #b45309;
+}
+
+.status-approved {
+  color: #15803d;
+}
+
+.status-rejected {
+  color: #b91c1c;
+}
+
 .detail {
   display: grid;
   grid-template-columns: 2fr 1fr;

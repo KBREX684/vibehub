@@ -1,10 +1,10 @@
-# VibeHub Web (P1 MVP)
+# VibeHub Web (P1 + P2-1)
 
-Next.js full-stack implementation for VibeHub P1:
-- 讨论广场（Posts API + 页面）
-- 项目画廊（Projects API + 页面）
-- 创作者页（Creators API + 页面）
-- MCP v1 只读工具接口
+Next.js full-stack implementation for VibeHub.
+
+Current scope:
+- P1: discussions, project gallery, creator pages, MCP v1 read tools
+- P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
 
 ## 1. Quick Start
 
@@ -16,10 +16,18 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## 2. API Conventions
+## 2. Quality Gate
+
+```bash
+npm run check
+```
+
+Runs `lint + test + build`.
+
+## 3. API Conventions
 
 - Base path: `/api/v1`
-- Success response:
+- Success shape:
 
 ```json
 {
@@ -31,7 +39,7 @@ Open `http://localhost:3000`.
 }
 ```
 
-- Error response:
+- Error shape:
 
 ```json
 {
@@ -46,19 +54,18 @@ Open `http://localhost:3000`.
 }
 ```
 
-## 3. P1 Endpoints
+## 4. P1 Public Endpoints
 
-### REST
 - `GET /api/v1/health`
 - `GET /api/v1/projects`
 - `GET /api/v1/projects/:slug`
 - `GET /api/v1/creators`
 - `GET /api/v1/creators/:slug`
-- `GET /api/v1/posts`
-- `POST /api/v1/posts` (requires demo login cookie)
-- `POST /api/v1/comments` (requires demo login cookie)
+- `GET /api/v1/posts` (approved posts only)
+- `POST /api/v1/posts` (requires login; new post enters moderation queue)
+- `POST /api/v1/comments` (requires login; approved post only)
 
-### Auth (Demo)
+### Demo Auth
 - `GET /api/v1/auth/demo-login?role=user|admin&redirect=/`
 - `GET /api/v1/auth/session`
 - `POST /api/v1/auth/logout`
@@ -68,7 +75,24 @@ Open `http://localhost:3000`.
 - `GET /api/v1/mcp/get_project_detail?slug=...`
 - `GET /api/v1/mcp/search_creators`
 
-## 4. PostgreSQL / Prisma
+## 5. P2-1 Admin Endpoints (admin role required)
+
+- `GET /api/v1/admin/overview`
+- `GET /api/v1/admin/users`
+- `GET /api/v1/admin/moderation/posts?status=pending|approved|rejected|all`
+- `POST /api/v1/admin/moderation/posts/:postId/review` with body:
+
+```json
+{
+  "action": "approve",
+  "note": "optional moderation note"
+}
+```
+
+- `GET /api/v1/admin/reports`
+- `GET /api/v1/admin/audit-logs`
+
+## 6. PostgreSQL / Prisma
 
 If you want real database mode:
 
@@ -76,12 +100,12 @@ If you want real database mode:
 # 1) set USE_MOCK_DATA=false and DATABASE_URL in .env.local
 # 2) set SESSION_SECRET in .env.local
 npm run prisma:generate
-npm run prisma:migrate -- --name init
+npm run prisma:migrate -- --name p2_1_admin_moderation
 npm run prisma:seed
 npm run dev
 ```
 
-## 5. Self-Hosted Deployment
+## 7. Self-Hosted Deployment
 
 See:
 - `infra/docker-compose.yml` (PostgreSQL)

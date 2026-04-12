@@ -1,4 +1,13 @@
-import type { Comment, CreatorProfile, Post, Project, User } from "@/lib/types";
+import type {
+  AuditLog,
+  Comment,
+  CreatorProfile,
+  ModerationCase,
+  Post,
+  Project,
+  ReportTicket,
+  User,
+} from "@/lib/types";
 
 export const mockUsers: User[] = [
   { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin" },
@@ -66,6 +75,9 @@ export const mockPosts: Post[] = [
     title: "How I built an Agent-ready project page",
     body: "Sharing a practical structure for project metadata that both humans and agents can consume.",
     tags: ["agent", "metadata", "project-page"],
+    reviewStatus: "approved",
+    reviewedBy: "u1",
+    reviewedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
   },
   {
@@ -75,6 +87,19 @@ export const mockPosts: Post[] = [
     title: "Weekly VibeCoding stack review",
     body: "My best stack picks this week for solo founders shipping fast.",
     tags: ["tech-stack", "weekly", "solo-founder"],
+    reviewStatus: "approved",
+    reviewedBy: "u1",
+    reviewedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post3",
+    slug: "need-review-agent-template",
+    authorId: "u3",
+    title: "Need review: Agent prompt template",
+    body: "Drafting an experimental template. Looking for moderator review before publishing.",
+    tags: ["prompt", "review-needed"],
+    reviewStatus: "pending",
     createdAt: new Date().toISOString(),
   },
 ];
@@ -88,3 +113,28 @@ export const mockComments: Comment[] = [
     createdAt: new Date().toISOString(),
   },
 ];
+
+export const mockModerationCases: ModerationCase[] = [
+  {
+    id: "mc1",
+    targetType: "post",
+    targetId: "post3",
+    status: "pending",
+    reason: "new_post_submission",
+    createdAt: new Date().toISOString(),
+  },
+];
+
+export const mockReportTickets: ReportTicket[] = [
+  {
+    id: "rt1",
+    targetType: "post",
+    targetId: "post3",
+    reporterId: "u2",
+    reason: "Needs moderation due to outbound links",
+    status: "open",
+    createdAt: new Date().toISOString(),
+  },
+];
+
+export const mockAuditLogs: AuditLog[] = [];

@@ -20,16 +20,27 @@ enum ProjectStatus {
   paused
 }
 
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
 model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  name           String
-  role           Role            @default(user)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  creatorProfile CreatorProfile?
-  posts          Post[]
-  comments       Comment[]
+  id                        String           @id @default(cuid())
+  email                     String           @unique
+  name                      String
+  role                      Role             @default(user)
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+  creatorProfile            CreatorProfile?
+  posts                     Post[]           @relation("PostAuthor")
+  reviewedPosts             Post[]           @relation("PostReviewer")
+  comments                  Comment[]
+  resolvedModerationCases   ModerationCase[] @relation("ModerationResolvedBy")
+  reportTickets             ReportTicket[]   @relation("ReportReporter")
+  resolvedReportTickets     ReportTicket[]   @relation("ReportResolvedBy")
+  auditLogs                 AuditLog[]
 }
 
 model CreatorProfile {
@@ -65,18 +76,27 @@ model Project {
 }
 
 model Post {
-  id        String    @id @default(cuid())
-  slug      String    @unique
-  authorId  String
-  title     String
-  body      String
-  tags      String[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  comments  Comment[]
+  id               String          @id @default(cuid())
+  slug             String          @unique
+  authorId         String
+  title            String
+  body             String
+  tags             String[]
+  reviewStatus     ReviewStatus    @default(pending)
+  moderationNote   String?
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  author           User            @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewer         User?           @relation("PostReviewer", fields: [reviewedBy], references: [id])
+  comments         Comment[]
+  moderationCases  ModerationCase[]
+  reportTickets    ReportTicket[]
 
   @@index([authorId])
+  @@index([reviewStatus])
+  @@index([reviewedBy])
 }
 
 model Comment {
@@ -91,4 +111,55 @@ model Comment {
 
   @@index([postId])
   @@index([authorId])
+}
+
+model ModerationCase {
+  id         String       @id @default(cuid())
+  targetType String
+  targetId   String
+  postId     String?
+  status     ReviewStatus @default(pending)
+  reason     String?
+  note       String?
+  createdAt  DateTime     @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?
+  post       Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  resolver   User?        @relation("ModerationResolvedBy", fields: [resolvedBy], references: [id])
+
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+model ReportTicket {
+  id         String   @id @default(cuid())
+  targetType String
+  targetId   String
+  postId     String?
+  reporterId String
+  reason     String
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter   User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolver   User?    @relation("ReportResolvedBy", fields: [resolvedBy], references: [id])
+
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
 }
