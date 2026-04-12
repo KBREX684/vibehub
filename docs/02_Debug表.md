@@ -39,3 +39,13 @@
 |---|---|---|---|---|---|---|---|
 | BUG-P2-4-001 | P2 | API contracts (`projects`, `mcp/search_projects`) | Invalid `status` query was silently ignored, yielding broad result set without caller feedback | Parameter parsing returned `undefined` for unknown values and proceeded | Added strict validation: invalid `status` now returns `400 INVALID_STATUS` with allowed enum values | Verified | `npm run check` passed after API update |
 | AUDIT-P2-DOC-001 | P2 | `web/README.md` | Scope documentation still labeled as `P1 + P2-1`, missing P2-2/3/4 endpoints and discovery routes | Docs were not updated alongside feature increments | Updated scope and endpoint sections to include P2-2/3/4 public APIs and discover/facets filters | Verified | Manual doc review + endpoint list cross-check with `src/app/api/v1/**/route.ts` |
+| AUDIT-P2-DOC-002 | P2 | Docs (`docs/01`, `docs/03`, `README.md`) | P2-5 与 P2-4 记录在实现图中顺序倒置；根 README 未反映周榜物化；缺少「P2 全量对照计划书」收口段 | 增量开发中文档追加顺序未整理 | 重排实现计划图 P2 小节并增加计划书对照表；项目日志增加 P2 收口结论；根 README 补充 P2-5 关键词 | Verified | 与代码及已开 PR 描述交叉核对 |
+| AUDIT-P2-COMPLETE-001 | P2 | P2-1…P2-5 主线 | 需可复核的「阶段完成」结论与延期项清单 | 无单一收口记录 | 在 `docs/03_项目日志.md` 增加 P2 全量收口审计结论；在 `docs/01_实现计划图.md` 标注计划书 §4.2 延期项 | Verified | `npm run check` on closure branch；Debug 表本条闭环 |
+
+## P2 延期 / 未纳入（对照计划书 §4.2，2026-04-12）
+
+| Item | Tracking |
+|---|---|
+| 挑战赛活动页 | 未开工；建议 P3 或独立运营需求单 |
+| 创作者成长面板（浏览、互动、收藏、关注趋势） | 未开工；建议 P3 |
+| 独立「精华」机制（与审核通过帖区分） | 未开工；可结合专题或加权排序后续设计 |

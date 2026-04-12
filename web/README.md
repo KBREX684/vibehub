@@ -75,7 +75,7 @@ Runs `lint + test + build`.
 - `POST /api/v1/auth/logout`
 
 ### MCP v1
-- `GET /api/v1/mcp/search_projects`
+- `GET /api/v1/mcp/search_projects` (optional `query`, `tag`, `tech`, `status`, `page`, `limit`; invalid `status` returns `400`)
 - `GET /api/v1/mcp/get_project_detail?slug=...`
 - `GET /api/v1/mcp/search_creators`
 
@@ -95,6 +95,9 @@ Runs `lint + test + build`.
 
 - `GET /api/v1/admin/reports`
 - `GET /api/v1/admin/audit-logs`
+- Collaboration moderation (P2-2):
+  - `GET /api/v1/admin/collaboration-intents`
+  - `POST /api/v1/admin/collaboration-intents/:intentId/review` with body `{ "action": "approve" | "reject", "note": "optional" }`
 - Weekly leaderboard materialization (P2-5):
   - `POST /api/v1/admin/leaderboards/weekly/materialize` with JSON body:
 
@@ -135,10 +138,12 @@ If you want real database mode:
 # 1) set USE_MOCK_DATA=false and DATABASE_URL in .env.local
 # 2) set SESSION_SECRET in .env.local
 npm run prisma:generate
-npm run prisma:migrate -- --name p2_1_admin_moderation
+npm run prisma:migrate
 npm run prisma:seed
 npm run dev
 ```
+
+Apply all pending migrations in `prisma/migrations/` (P2 adds collaboration intents, weekly snapshot tables, and prior admin schema).
 
 ## 8. Self-Hosted Deployment
 
