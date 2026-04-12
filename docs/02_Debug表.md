@@ -42,6 +42,12 @@
 | AUDIT-P2-DOC-002 | P2 | Docs (`docs/01`, `docs/03`, `README.md`) | P2-5 与 P2-4 记录在实现图中顺序倒置；根 README 未反映周榜物化；缺少「P2 全量对照计划书」收口段 | 增量开发中文档追加顺序未整理 | 重排实现计划图 P2 小节并增加计划书对照表；项目日志增加 P2 收口结论；根 README 补充 P2-5 关键词 | Verified | 与代码及已开 PR 描述交叉核对 |
 | AUDIT-P2-COMPLETE-001 | P2 | P2-1…P2-5 主线 | 需可复核的「阶段完成」结论与延期项清单 | 无单一收口记录 | 在 `docs/03_项目日志.md` 增加 P2 全量收口审计结论；在 `docs/01_实现计划图.md` 标注计划书 §4.2 延期项 | Verified | `npm run check` on closure branch；Debug 表本条闭环 |
 
+## P3-1…P3-6 Full Audit Closure (2026-04-12)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| AUDIT-P3-COMPLETE-001 | P3 | P3-1…P3-6 主线 | 需可复核的审计结论与合入 `main` 记录 | 增量交付分散在多分支 | 合并 P3-6 分支至 `main`；交叉核对 API/迁移/测试；更新 `docs/01`、`docs/03`、根 README | Verified | `npm run check` on `main` after closure commit |
+
 ## P3-5 Debug Closure (2026-04-12)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
@@ -71,6 +77,7 @@
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
 |---|---|---|---|---|---|---|---|
 | BUG-P3-1-001 | P3 | `removeTeamMember` mock path | Member leave test flaky / failed: u2 still listed after self-remove | Mock membership rows used `Date.now()` for `id`; duplicate ids could make `findIndex` remove wrong row | Remove membership by `(teamId, userId)` instead of non-unique `id` | Verified | `npm run check`; `tests/team-repository.test.ts` |
+| BUG-P3-1-002 | P3 | `createTeam` slug collision path | Under repeated name collisions, auto-generated slug may exceed 48 chars and violate API contract / DB schema | Collision suffix appended without reserving length budget (`${baseSlug}-${n}`) | Add bounded slug candidate builder that truncates base before suffix and keeps final slug ≤48 in both mock and DB paths | Verified | `npm run check`; `tests/team-repository.test.ts` |
 
 ## P2 延期 / 未纳入（对照计划书 §4.2，2026-04-12）
 

@@ -51,6 +51,7 @@ import type {
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
 type DemoRole = Extract<Role, "admin" | "user">;
+const TEAM_SLUG_MAX_LENGTH = 48;
 
 const mockWeeklySnapshots = new Map<string, WeeklyLeaderboardMaterializedSnapshot>();
 
@@ -2714,8 +2715,23 @@ function slugifyTeamSlug(raw: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
+    .slice(0, TEAM_SLUG_MAX_LENGTH);
   return s || "team";
+}
+
+function buildTeamSlugCandidate(baseSlug: string, duplicateIndex: number): string {
+  if (duplicateIndex <= 0) {
+    return baseSlug.slice(0, TEAM_SLUG_MAX_LENGTH) || "team";
+  }
+
+  const suffix = `-${duplicateIndex}`;
+  const baseLimit = TEAM_SLUG_MAX_LENGTH - suffix.length;
+  if (baseLimit <= 0) {
+    return `${duplicateIndex}`.slice(-TEAM_SLUG_MAX_LENGTH);
+  }
+
+  const normalizedBase = baseSlug.slice(0, baseLimit).replace(/-+$/g, "") || "team";
+  return `${normalizedBase}${suffix}`;
 }
 
 function mockTeamMemberRows(teamId: string): TeamMember[] {
@@ -2964,11 +2980,11 @@ export async function createTeam(input: {
     if (!ownerExists) {
       throw new Error("USER_NOT_FOUND");
     }
-    let slug = baseSlug;
     let n = 0;
+    let slug = buildTeamSlugCandidate(baseSlug, n);
     while (mockTeams.some((t) => t.slug === slug)) {
       n += 1;
-      slug = `${baseSlug}-${n}`;
+      slug = buildTeamSlugCandidate(baseSlug, n);
     }
     const id = `team_${Date.now()}`;
     const createdAt = new Date().toISOString();
@@ -3010,13 +3026,15 @@ export async function createTeam(input: {
     throw new Error("USER_NOT_FOUND");
   }
 
-  let slug = baseSlug;
+  let n = 0;
+  let slug = buildTeamSlugCandidate(baseSlug, n);
   for (let i = 0; i < 20; i += 1) {
     const exists = await prisma.team.findUnique({ where: { slug }, select: { id: true } });
     if (!exists) {
       break;
     }
-    slug = `${baseSlug}-${i + 1}`;
+    n += 1;
+    slug = buildTeamSlugCandidate(baseSlug, n);
   }
 
   const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
