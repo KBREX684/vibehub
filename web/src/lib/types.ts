@@ -105,7 +105,14 @@ export interface AuditLog {
   id: string;
   actorId: string;
   action: string;
-  entityType: "post" | "moderation_case" | "report_ticket" | "collaboration_intent" | "system" | "team";
+  entityType:
+    | "post"
+    | "moderation_case"
+    | "report_ticket"
+    | "collaboration_intent"
+    | "system"
+    | "team"
+    | "team_join_request";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -181,8 +188,26 @@ export interface TeamMember {
   joinedAt: string;
 }
 
+export type TeamJoinRequestStatus = "pending" | "approved" | "rejected";
+
+export interface TeamJoinRequestRow {
+  id: string;
+  teamId: string;
+  applicantId: string;
+  applicantName: string;
+  applicantEmail: string;
+  message: string;
+  status: TeamJoinRequestStatus;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
 export interface TeamDetail extends TeamSummary {
   members: TeamMember[];
+  /** Set when the viewer has a pending join request for this team. */
+  viewerPendingJoinRequest?: boolean;
+  /** Owner-only: pending requests awaiting review. */
+  pendingJoinRequests?: TeamJoinRequestRow[];
 }
 
 export interface CollaborationIntentConversionMetrics {

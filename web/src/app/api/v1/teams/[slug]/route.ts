@@ -1,3 +1,4 @@
+import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getTeamBySlug } from "@/lib/repository";
 
@@ -8,7 +9,8 @@ interface Params {
 export async function GET(_request: Request, { params }: Params) {
   try {
     const { slug } = await params;
-    const team = await getTeamBySlug(slug);
+    const session = await getSessionUserFromCookie();
+    const team = await getTeamBySlug(slug, session?.userId ?? null);
     if (!team) {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }

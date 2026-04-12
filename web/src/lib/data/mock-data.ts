@@ -7,6 +7,7 @@ import type {
   Post,
   Project,
   ReportTicket,
+  TeamJoinRequestStatus,
   TeamRole,
   User,
 } from "@/lib/types";
@@ -26,6 +27,16 @@ export interface MockTeamMembership {
   userId: string;
   role: TeamRole;
   joinedAt: string;
+}
+
+export interface MockTeamJoinRequest {
+  id: string;
+  teamId: string;
+  applicantId: string;
+  message: string;
+  status: TeamJoinRequestStatus;
+  reviewedAt?: string;
+  createdAt: string;
 }
 
 export const mockUsers: User[] = [
@@ -182,6 +193,8 @@ export const mockTeams: MockTeam[] = [
     createdAt: new Date().toISOString(),
   },
 ];
+
+export const mockTeamJoinRequests: MockTeamJoinRequest[] = [];
 
 export const mockTeamMemberships: MockTeamMembership[] = [
   {

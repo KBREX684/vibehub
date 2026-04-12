@@ -12,10 +12,9 @@ export default async function TeamsPage() {
       <main className="container section">
         <h1>团队（P3-1）</h1>
         <p className="muted">
-          最小 Team 空间：创建团队、公开列表、成员加入；队长可按邮箱邀请已注册用户。API：{" "}
-          <code className="code-inline">GET/POST /api/v1/teams</code>、{" "}
-          <code className="code-inline">GET /api/v1/teams/:slug</code>、{" "}
-          <code className="code-inline">POST /api/v1/teams/:slug/join</code>。
+          Team 空间：创建团队、公开列表；入队需<strong>申请并由队长审批</strong>（P3-2），队长也可按邮箱直接邀请。API：{" "}
+          <code className="code-inline">POST /api/v1/teams/:slug/join</code>（提交申请）、{" "}
+          <code className="code-inline">POST .../join-requests/:id/review</code>（队长审批）。
         </p>
 
         <div style={{ display: "grid", gap: "1.5rem", marginTop: "1.5rem" }}>

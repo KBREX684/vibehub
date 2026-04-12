@@ -41,6 +41,12 @@ enum TeamRole {
   member
 }
 
+enum TeamJoinRequestStatus {
+  pending
+  approved
+  rejected
+}
+
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
@@ -60,6 +66,7 @@ model User {
   reviewedCollabIntents     CollaborationIntent[] @relation("CollaborationReviewer")
   ownedTeams                Team[]                @relation("TeamOwner")
   teamMemberships           TeamMembership[]
+  teamJoinRequests          TeamJoinRequest[]     @relation("TeamJoinApplicant")
 }
 
 model CreatorProfile {
@@ -242,6 +249,7 @@ model Team {
   updatedAt   DateTime @updatedAt
   owner       User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   memberships TeamMembership[]
+  joinRequests TeamJoinRequest[]
 
   @@index([ownerUserId])
 }
@@ -258,4 +266,21 @@ model TeamMembership {
   @@unique([teamId, userId])
   @@index([teamId])
   @@index([userId])
+}
+
+model TeamJoinRequest {
+  id          String                 @id @default(cuid())
+  teamId      String
+  applicantId String
+  message     String                 @default("")
+  status      TeamJoinRequestStatus  @default(pending)
+  reviewedAt  DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  team        Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  applicant   User                   @relation("TeamJoinApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, applicantId])
+  @@index([teamId, status])
+  @@index([applicantId])
 }

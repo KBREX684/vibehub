@@ -11,12 +11,11 @@ interface Props {
 
 export default async function TeamDetailPage({ params }: Props) {
   const { slug } = await params;
-  const team = await getTeamBySlug(slug);
+  const session = await getSessionUserFromCookie();
+  const team = await getTeamBySlug(slug, session?.userId ?? null);
   if (!team) {
     notFound();
   }
-
-  const session = await getSessionUserFromCookie();
 
   return (
     <>

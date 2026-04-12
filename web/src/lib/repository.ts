@@ -10,6 +10,7 @@ import {
   mockPosts,
   mockProjects,
   mockReportTickets,
+  mockTeamJoinRequests,
   mockTeamMemberships,
   mockTeams,
   mockUsers,
@@ -31,6 +32,8 @@ import type {
   ReviewStatus,
   Role,
   TeamDetail,
+  TeamJoinRequestRow,
+  TeamJoinRequestStatus,
   TeamMember,
   TeamSummary,
   User,
@@ -1860,14 +1863,37 @@ export async function listTeams(params: { page: number; limit: number }): Promis
   };
 }
 
-export async function getTeamBySlug(slug: string): Promise<TeamDetail | null> {
+function toTeamJoinRequestRowMock(r: {
+  id: string;
+  teamId: string;
+  applicantId: string;
+  message: string;
+  status: TeamJoinRequestStatus;
+  reviewedAt?: string;
+  createdAt: string;
+}): TeamJoinRequestRow {
+  const u = mockUsers.find((x) => x.id === r.applicantId);
+  return {
+    id: r.id,
+    teamId: r.teamId,
+    applicantId: r.applicantId,
+    applicantName: u?.name ?? "Unknown",
+    applicantEmail: u?.email ?? "",
+    message: r.message,
+    status: r.status,
+    reviewedAt: r.reviewedAt,
+    createdAt: r.createdAt,
+  };
+}
+
+export async function getTeamBySlug(slug: string, viewerUserId?: string | null): Promise<TeamDetail | null> {
   if (useMockData) {
     const team = mockTeams.find((t) => t.slug === slug);
     if (!team) {
       return null;
     }
     const members = mockTeamMemberRows(team.id);
-    return {
+    const detail: TeamDetail = {
       id: team.id,
       slug: team.slug,
       name: team.name,
@@ -1877,6 +1903,23 @@ export async function getTeamBySlug(slug: string): Promise<TeamDetail | null> {
       createdAt: team.createdAt,
       members,
     };
+    if (viewerUserId) {
+      const isMember = members.some((m) => m.userId === viewerUserId);
+      if (!isMember) {
+        const pend = mockTeamJoinRequests.find(
+          (r) => r.teamId === team.id && r.applicantId === viewerUserId && r.status === "pending"
+        );
+        if (pend) {
+          detail.viewerPendingJoinRequest = true;
+        }
+      }
+      if (team.ownerUserId === viewerUserId) {
+        detail.pendingJoinRequests = mockTeamJoinRequests
+          .filter((r) => r.teamId === team.id && r.status === "pending")
+          .map(toTeamJoinRequestRowMock);
+      }
+    }
+    return detail;
   }
 
   const prisma = await getPrisma();
@@ -1913,10 +1956,42 @@ export async function getTeamBySlug(slug: string): Promise<TeamDetail | null> {
       return a.joinedAt.localeCompare(b.joinedAt);
     });
 
-  return {
+  const detail: TeamDetail = {
     ...toTeamSummary(team, team._count.memberships),
     members,
   };
+
+  if (viewerUserId) {
+    const isMember = members.some((m) => m.userId === viewerUserId);
+    if (!isMember) {
+      const pend = await prisma.teamJoinRequest.findFirst({
+        where: { teamId: team.id, applicantId: viewerUserId, status: "pending" },
+      });
+      if (pend) {
+        detail.viewerPendingJoinRequest = true;
+      }
+    }
+    if (team.ownerUserId === viewerUserId) {
+      const rows = await prisma.teamJoinRequest.findMany({
+        where: { teamId: team.id, status: "pending" },
+        include: { applicant: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      });
+      detail.pendingJoinRequests = rows.map((r) => ({
+        id: r.id,
+        teamId: r.teamId,
+        applicantId: r.applicant.id,
+        applicantName: r.applicant.name,
+        applicantEmail: r.applicant.email,
+        message: r.message,
+        status: r.status as TeamJoinRequestStatus,
+        reviewedAt: r.reviewedAt?.toISOString(),
+        createdAt: r.createdAt.toISOString(),
+      }));
+    }
+  }
+
+  return detail;
 }
 
 export async function createTeam(input: {
@@ -2022,36 +2097,90 @@ export async function createTeam(input: {
   return detail;
 }
 
-export async function joinTeamAsMember(params: { teamSlug: string; userId: string }): Promise<TeamMember> {
+export async function requestTeamJoin(params: {
+  teamSlug: string;
+  userId: string;
+  message?: string;
+}): Promise<TeamJoinRequestRow> {
+  const message = params.message?.trim().slice(0, 500) ?? "";
+
   if (useMockData) {
     const team = mockTeams.find((t) => t.slug === params.teamSlug);
     if (!team) {
       throw new Error("TEAM_NOT_FOUND");
     }
+    if (team.ownerUserId === params.userId) {
+      throw new Error("TEAM_OWNER_NO_REQUEST");
+    }
     const userExists = mockUsers.some((u) => u.id === params.userId);
     if (!userExists) {
       throw new Error("USER_NOT_FOUND");
     }
-    const existing = mockTeamMemberships.find((m) => m.teamId === team.id && m.userId === params.userId);
-    if (existing) {
+    const existingMember = mockTeamMemberships.find((m) => m.teamId === team.id && m.userId === params.userId);
+    if (existingMember) {
       throw new Error("TEAM_ALREADY_MEMBER");
     }
-    const joinedAt = new Date().toISOString();
-    mockTeamMemberships.push({
-      id: `tm_${Date.now()}`,
+    const existingPending = mockTeamJoinRequests.find(
+      (r) => r.teamId === team.id && r.applicantId === params.userId && r.status === "pending"
+    );
+    if (existingPending) {
+      throw new Error("TEAM_JOIN_REQUEST_PENDING");
+    }
+    const rejectedIdx = mockTeamJoinRequests.findIndex(
+      (r) => r.teamId === team.id && r.applicantId === params.userId && r.status === "rejected"
+    );
+    const createdAt = new Date().toISOString();
+    if (rejectedIdx >= 0) {
+      const prev = mockTeamJoinRequests[rejectedIdx];
+      mockTeamJoinRequests[rejectedIdx] = {
+        ...prev,
+        message,
+        status: "pending",
+        reviewedAt: undefined,
+        createdAt,
+      };
+      mockAuditLogs.unshift({
+        id: `log_tjr_${Date.now()}`,
+        actorId: params.userId,
+        action: "team_join_requested",
+        entityType: "team_join_request",
+        entityId: prev.id,
+        metadata: { teamId: team.id, teamSlug: team.slug, reopened: true },
+        createdAt,
+      });
+      return toTeamJoinRequestRowMock(mockTeamJoinRequests[rejectedIdx]);
+    }
+    const row = {
+      id: `tjr_${team.id}_${params.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       teamId: team.id,
-      userId: params.userId,
-      role: "member",
-      joinedAt,
+      applicantId: params.userId,
+      message,
+      status: "pending" as const,
+      createdAt,
+    };
+    mockTeamJoinRequests.push(row);
+    mockAuditLogs.unshift({
+      id: `log_tjr_${Date.now()}`,
+      actorId: params.userId,
+      action: "team_join_requested",
+      entityType: "team_join_request",
+      entityId: row.id,
+      metadata: { teamId: team.id, teamSlug: team.slug },
+      createdAt,
     });
-    const user = mockUsers.find((u) => u.id === params.userId)!;
-    return { userId: params.userId, name: user.name, email: user.email, role: "member", joinedAt };
+    return toTeamJoinRequestRowMock(row);
   }
 
   const prisma = await getPrisma();
-  const team = await prisma.team.findUnique({ where: { slug: params.teamSlug }, select: { id: true } });
+  const team = await prisma.team.findUnique({
+    where: { slug: params.teamSlug },
+    select: { id: true, ownerUserId: true },
+  });
   if (!team) {
     throw new Error("TEAM_NOT_FOUND");
+  }
+  if (team.ownerUserId === params.userId) {
+    throw new Error("TEAM_OWNER_NO_REQUEST");
   }
   const user = await prisma.user.findUnique({
     where: { id: params.userId },
@@ -2061,24 +2190,214 @@ export async function joinTeamAsMember(params: { teamSlug: string; userId: strin
     throw new Error("USER_NOT_FOUND");
   }
 
+  const existingMember = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId: team.id, userId: params.userId } },
+  });
+  if (existingMember) {
+    throw new Error("TEAM_ALREADY_MEMBER");
+  }
+
+  const existingPending = await prisma.teamJoinRequest.findFirst({
+    where: { teamId: team.id, applicantId: params.userId, status: "pending" },
+  });
+  if (existingPending) {
+    throw new Error("TEAM_JOIN_REQUEST_PENDING");
+  }
+
+  const existingRejected = await prisma.teamJoinRequest.findFirst({
+    where: { teamId: team.id, applicantId: params.userId, status: "rejected" },
+  });
+
   try {
-    const row = await prisma.teamMembership.create({
-      data: { teamId: team.id, userId: params.userId, role: "member" },
-      include: { user: { select: { id: true, name: true, email: true } } },
+    const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const r = existingRejected
+        ? await tx.teamJoinRequest.update({
+            where: { id: existingRejected.id },
+            data: {
+              message,
+              status: "pending",
+              reviewedAt: null,
+            },
+            include: { applicant: { select: { id: true, name: true, email: true } } },
+          })
+        : await tx.teamJoinRequest.create({
+            data: {
+              teamId: team.id,
+              applicantId: params.userId,
+              message,
+              status: "pending",
+            },
+            include: { applicant: { select: { id: true, name: true, email: true } } },
+          });
+      await tx.auditLog.create({
+        data: {
+          actorId: params.userId,
+          action: "team_join_requested",
+          entityType: "team_join_request",
+          entityId: r.id,
+          metadata: { teamId: team.id, reopened: Boolean(existingRejected) },
+        },
+      });
+      return r;
     });
     return {
-      userId: row.user.id,
-      name: row.user.name,
-      email: row.user.email,
-      role: "member",
-      joinedAt: row.joinedAt.toISOString(),
+      id: created.id,
+      teamId: created.teamId,
+      applicantId: created.applicant.id,
+      applicantName: created.applicant.name,
+      applicantEmail: created.applicant.email,
+      message: created.message,
+      status: created.status as TeamJoinRequestStatus,
+      reviewedAt: created.reviewedAt?.toISOString(),
+      createdAt: created.createdAt.toISOString(),
     };
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      throw new Error("TEAM_ALREADY_MEMBER");
+      throw new Error("TEAM_JOIN_REQUEST_PENDING");
     }
     throw e;
   }
+}
+
+export async function reviewTeamJoinRequest(params: {
+  teamSlug: string;
+  requestId: string;
+  ownerUserId: string;
+  action: "approve" | "reject";
+}): Promise<TeamJoinRequestRow> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    if (team.ownerUserId !== params.ownerUserId) {
+      throw new Error("FORBIDDEN_NOT_OWNER");
+    }
+    const idx = mockTeamJoinRequests.findIndex((r) => r.id === params.requestId && r.teamId === team.id);
+    if (idx < 0) {
+      throw new Error("JOIN_REQUEST_NOT_FOUND");
+    }
+    const req = mockTeamJoinRequests[idx];
+    if (req.status !== "pending") {
+      throw new Error("JOIN_REQUEST_NOT_PENDING");
+    }
+    const reviewedAt = new Date().toISOString();
+    if (params.action === "reject") {
+      mockTeamJoinRequests[idx] = { ...req, status: "rejected", reviewedAt };
+      return toTeamJoinRequestRowMock(mockTeamJoinRequests[idx]);
+    }
+    const existingMember = mockTeamMemberships.find((m) => m.teamId === team.id && m.userId === req.applicantId);
+    if (existingMember) {
+      throw new Error("TEAM_ALREADY_MEMBER");
+    }
+    mockTeamJoinRequests[idx] = { ...req, status: "approved", reviewedAt };
+    mockTeamMemberships.push({
+      id: `tm_${Date.now()}`,
+      teamId: team.id,
+      userId: req.applicantId,
+      role: "member",
+      joinedAt: reviewedAt,
+    });
+    mockAuditLogs.unshift({
+      id: `log_tjr_review_${Date.now()}`,
+      actorId: params.ownerUserId,
+      action: "team_join_approved",
+      entityType: "team_join_request",
+      entityId: req.id,
+      metadata: { teamId: team.id, applicantId: req.applicantId },
+      createdAt: reviewedAt,
+    });
+    return toTeamJoinRequestRowMock(mockTeamJoinRequests[idx]);
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug: params.teamSlug },
+    select: { id: true, ownerUserId: true },
+  });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  if (team.ownerUserId !== params.ownerUserId) {
+    throw new Error("FORBIDDEN_NOT_OWNER");
+  }
+
+  const req = await prisma.teamJoinRequest.findFirst({
+    where: { id: params.requestId, teamId: team.id },
+    include: { applicant: { select: { id: true, name: true, email: true } } },
+  });
+  if (!req) {
+    throw new Error("JOIN_REQUEST_NOT_FOUND");
+  }
+  if (req.status !== "pending") {
+    throw new Error("JOIN_REQUEST_NOT_PENDING");
+  }
+
+  if (params.action === "reject") {
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const r = await tx.teamJoinRequest.update({
+        where: { id: req.id },
+        data: { status: "rejected", reviewedAt: new Date() },
+        include: { applicant: { select: { id: true, name: true, email: true } } },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: params.ownerUserId,
+          action: "team_join_rejected",
+          entityType: "team_join_request",
+          entityId: r.id,
+          metadata: { teamId: team.id, applicantId: r.applicantId },
+        },
+      });
+      return r;
+    });
+    return {
+      id: updated.id,
+      teamId: updated.teamId,
+      applicantId: updated.applicant.id,
+      applicantName: updated.applicant.name,
+      applicantEmail: updated.applicant.email,
+      message: updated.message,
+      status: updated.status as TeamJoinRequestStatus,
+      reviewedAt: updated.reviewedAt?.toISOString(),
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const r = await tx.teamJoinRequest.update({
+      where: { id: req.id },
+      data: { status: "approved", reviewedAt: new Date() },
+      include: { applicant: { select: { id: true, name: true, email: true } } },
+    });
+    await tx.teamMembership.upsert({
+      where: { teamId_userId: { teamId: team.id, userId: r.applicantId } },
+      update: {},
+      create: { teamId: team.id, userId: r.applicantId, role: "member" },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.ownerUserId,
+        action: "team_join_approved",
+        entityType: "team_join_request",
+        entityId: r.id,
+        metadata: { teamId: team.id, applicantId: r.applicantId },
+      },
+    });
+    return r;
+  });
+
+  return {
+    id: updated.id,
+    teamId: updated.teamId,
+    applicantId: updated.applicant.id,
+    applicantName: updated.applicant.name,
+    applicantEmail: updated.applicant.email,
+    message: updated.message,
+    status: updated.status as TeamJoinRequestStatus,
+    reviewedAt: updated.reviewedAt?.toISOString(),
+    createdAt: updated.createdAt.toISOString(),
+  };
 }
 
 export async function addTeamMemberByEmail(params: {
@@ -2115,6 +2434,13 @@ export async function addTeamMemberByEmail(params: {
       role: "member",
       joinedAt,
     });
+    const now = joinedAt;
+    for (let i = 0; i < mockTeamJoinRequests.length; i += 1) {
+      const jr = mockTeamJoinRequests[i];
+      if (jr.teamId === team.id && jr.applicantId === target.id && jr.status === "pending") {
+        mockTeamJoinRequests[i] = { ...jr, status: "approved", reviewedAt: now };
+      }
+    }
     return { userId: target.id, name: target.name, email: target.email, role: "member", joinedAt };
   }
 
@@ -2135,9 +2461,16 @@ export async function addTeamMemberByEmail(params: {
   }
 
   try {
-    const row = await prisma.teamMembership.create({
-      data: { teamId: team.id, userId: target.id, role: "member" },
-      include: { user: { select: { id: true, name: true, email: true } } },
+    const row = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const m = await tx.teamMembership.create({
+        data: { teamId: team.id, userId: target.id, role: "member" },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
+      await tx.teamJoinRequest.updateMany({
+        where: { teamId: team.id, applicantId: target.id, status: "pending" },
+        data: { status: "approved", reviewedAt: new Date() },
+      });
+      return m;
     });
     return {
       userId: row.user.id,
