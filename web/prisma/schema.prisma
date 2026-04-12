@@ -26,6 +26,11 @@ enum ReviewStatus {
   rejected
 }
 
+enum CollaborationIntentType {
+  join
+  recruit
+}
+
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
@@ -41,6 +46,8 @@ model User {
   reportTickets             ReportTicket[]   @relation("ReportReporter")
   resolvedReportTickets     ReportTicket[]   @relation("ReportResolvedBy")
   auditLogs                 AuditLog[]
+  collaborationIntents      CollaborationIntent[] @relation("CollaborationApplicant")
+  reviewedCollabIntents     CollaborationIntent[] @relation("CollaborationReviewer")
 }
 
 model CreatorProfile {
@@ -71,6 +78,7 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   creator     CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  collaborationIntents CollaborationIntent[]
 
   @@index([creatorId])
 }
@@ -162,4 +170,27 @@ model AuditLog {
 
   @@index([actorId])
   @@index([entityType, entityId])
+}
+
+model CollaborationIntent {
+  id          String                  @id @default(cuid())
+  projectId   String
+  applicantId String
+  intentType  CollaborationIntentType
+  message     String
+  contact     String?
+  status      ReviewStatus            @default(pending)
+  reviewNote  String?
+  reviewedAt  DateTime?
+  reviewedBy  String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  project     Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  applicant   User                    @relation("CollaborationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  reviewer    User?                   @relation("CollaborationReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([projectId])
+  @@index([applicantId])
+  @@index([status])
+  @@index([reviewedBy])
 }

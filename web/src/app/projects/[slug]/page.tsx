@@ -1,7 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { getProjectBySlug } from "@/lib/repository";
+import { CollaborationIntentForm } from "@/components/collaboration-intent-form";
+import { getProjectBySlug, listProjectCollaborationIntents } from "@/lib/repository";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -19,6 +20,13 @@ export default async function ProjectDetailPage({ params }: Props) {
     tool: "get_project_detail",
     input: { slug: project.slug },
   };
+
+  const approvedIntents = await listProjectCollaborationIntents({
+    projectId: project.id,
+    status: "approved",
+    page: 1,
+    limit: 8,
+  });
 
   return (
     <>
@@ -45,15 +53,45 @@ export default async function ProjectDetailPage({ params }: Props) {
         </article>
 
         <aside className="card">
-          <h3>Agent 调用示例</h3>
+          <h3>Agent Invocation Example</h3>
           <pre className="code">{JSON.stringify(mcpToolExample, null, 2)}</pre>
           <p className="muted">
-            对应接口：<code>/api/v1/mcp/get_project_detail?slug={project.slug}</code>
+            Endpoint: <code>/api/v1/mcp/get_project_detail?slug={project.slug}</code>
           </p>
           <Link href="/" className="inline-link">
-            返回首页
+            Back to homepage
           </Link>
         </aside>
+
+        <section className="card detail-full">
+          <h3>Collaboration Square</h3>
+          <p className="muted">
+            Submit your intent to collaborate on this project. Choose join/recruit and provide context.
+          </p>
+          <CollaborationIntentForm projectSlug={project.slug} />
+        </section>
+
+        <section className="card detail-full">
+          <h3>Approved Collaboration Intents</h3>
+          <p className="muted">Showing {approvedIntents.items.length} approved submissions.</p>
+          {approvedIntents.items.length === 0 ? (
+            <p className="muted">No approved intents yet.</p>
+          ) : (
+            <div className="admin-list">
+              {approvedIntents.items.map((intent) => (
+                <article key={intent.id} className="card">
+                  <div className="meta-row">
+                    <strong>{intent.intentType === "join" ? "Join Request" : "Recruitment Notice"}</strong>
+                    <span className={`status status-${intent.status}`}>{intent.status}</span>
+                  </div>
+                  <p>{intent.message}</p>
+                  <p className="muted">Applicant: {intent.applicantId}</p>
+                  {intent.contact ? <p className="muted">Contact: {intent.contact}</p> : null}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </>
   );

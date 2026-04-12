@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import {
   mockAuditLogs,
   mockComments,
+  mockCollaborationIntents,
   mockCreators,
   mockModerationCases,
   mockPosts,
@@ -13,6 +14,8 @@ import {
 import type {
   AuditLog,
   Comment,
+  CollaborationIntent,
+  CollaborationIntentType,
   CreatorProfile,
   ModerationCase,
   Post,
@@ -40,6 +43,13 @@ interface Paginated<T> {
 
 interface ReviewPostInput {
   postId: string;
+  action: "approve" | "reject";
+  note?: string;
+  adminUserId: string;
+}
+
+interface ReviewCollaborationIntentInput {
+  intentId: string;
   action: "approve" | "reject";
   note?: string;
   adminUserId: string;
@@ -152,6 +162,36 @@ function toCommentDto(comment: {
   return {
     ...comment,
     createdAt: comment.createdAt.toISOString(),
+  };
+}
+
+function toCollaborationIntentDto(item: {
+  id: string;
+  projectId: string;
+  applicantId: string;
+  intentType: string;
+  message: string;
+  contact: string | null;
+  status: ReviewStatus;
+  reviewNote: string | null;
+  reviewedAt: Date | null;
+  reviewedBy: string | null;
+  createdAt: Date;
+}): CollaborationIntent {
+  const intentType: CollaborationIntentType = item.intentType === "recruit" ? "recruit" : "join";
+
+  return {
+    id: item.id,
+    projectId: item.projectId,
+    applicantId: item.applicantId,
+    intentType,
+    message: item.message,
+    contact: item.contact ?? undefined,
+    status: item.status,
+    reviewNote: item.reviewNote ?? undefined,
+    reviewedAt: item.reviewedAt?.toISOString(),
+    reviewedBy: item.reviewedBy ?? undefined,
+    createdAt: item.createdAt.toISOString(),
   };
 }
 
@@ -636,6 +676,256 @@ export async function createComment(input: { postId: string; body: string; autho
   return toCommentDto(comment);
 }
 
+export async function listProjectCollaborationIntents(params: {
+  projectId: string;
+  status?: ReviewStatus | "all";
+  page: number;
+  limit: number;
+}): Promise<Paginated<CollaborationIntent>> {
+  if (useMockData) {
+    const filtered = mockCollaborationIntents.filter((item) => {
+      const projectMatch = item.projectId === params.projectId;
+      const statusMatch = !params.status || params.status === "all" || item.status === params.status;
+      return projectMatch && statusMatch;
+    });
+
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = {
+    AND: [
+      { projectId: params.projectId },
+      params.status && params.status !== "all" ? { status: params.status } : {},
+    ],
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.collaborationIntent.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.collaborationIntent.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toCollaborationIntentDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function createCollaborationIntent(input: {
+  projectId: string;
+  applicantId: string;
+  intentType: CollaborationIntentType;
+  message: string;
+  contact?: string;
+}): Promise<CollaborationIntent> {
+  const message = input.message.trim();
+  const contact = input.contact?.trim();
+
+  if (useMockData) {
+    const projectExists = mockProjects.some((project) => project.id === input.projectId);
+    if (!projectExists) {
+      throw new Error("PROJECT_NOT_FOUND");
+    }
+    const applicantExists = mockUsers.some((user) => user.id === input.applicantId);
+    if (!applicantExists) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    const intent: CollaborationIntent = {
+      id: `ci_${Date.now()}`,
+      projectId: input.projectId,
+      applicantId: input.applicantId,
+      intentType: input.intentType,
+      message,
+      contact: contact || undefined,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+    mockCollaborationIntents.unshift(intent);
+    mockAuditLogs.unshift({
+      id: `log_${Date.now()}`,
+      actorId: input.applicantId,
+      action: "collaboration_intent_created",
+      entityType: "collaboration_intent",
+      entityId: intent.id,
+      metadata: {
+        projectId: input.projectId,
+        intentType: input.intentType,
+      },
+      createdAt: new Date().toISOString(),
+    });
+    return intent;
+  }
+
+  const prisma = await getPrisma();
+  const createdIntent = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const [project, user] = await Promise.all([
+      tx.project.findUnique({
+        where: { id: input.projectId },
+        select: { id: true },
+      }),
+      tx.user.findUnique({
+        where: { id: input.applicantId },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!project) {
+      throw new Error("PROJECT_NOT_FOUND");
+    }
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    const intent = await tx.collaborationIntent.create({
+      data: {
+        projectId: input.projectId,
+        applicantId: input.applicantId,
+        intentType: input.intentType,
+        message,
+        contact: contact || null,
+        status: "pending",
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: input.applicantId,
+        action: "collaboration_intent_created",
+        entityType: "collaboration_intent",
+        entityId: intent.id,
+        metadata: {
+          projectId: input.projectId,
+          intentType: input.intentType,
+        },
+      },
+    });
+
+    return intent;
+  });
+
+  return toCollaborationIntentDto(createdIntent);
+}
+
+export async function listCollaborationIntentsForModeration(params: {
+  status?: ReviewStatus | "all";
+  projectId?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<CollaborationIntent>> {
+  if (useMockData) {
+    const filtered = mockCollaborationIntents.filter((item) => {
+      const statusMatch = !params.status || params.status === "all" || item.status === params.status;
+      const projectMatch = !params.projectId || item.projectId === params.projectId;
+      return statusMatch && projectMatch;
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = {
+    AND: [
+      params.status && params.status !== "all" ? { status: params.status } : {},
+      params.projectId ? { projectId: params.projectId } : {},
+    ],
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.collaborationIntent.findMany({
+      where,
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.collaborationIntent.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toCollaborationIntentDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function reviewCollaborationIntent(
+  input: ReviewCollaborationIntentInput
+): Promise<CollaborationIntent> {
+  const nextStatus: ReviewStatus = input.action === "approve" ? "approved" : "rejected";
+  const note = normalizeModerationNote(input.note);
+
+  if (useMockData) {
+    const intent = mockCollaborationIntents.find((item) => item.id === input.intentId);
+    if (!intent) {
+      throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+    }
+
+    intent.status = nextStatus;
+    intent.reviewNote = note;
+    intent.reviewedAt = new Date().toISOString();
+    intent.reviewedBy = input.adminUserId;
+
+    mockAuditLogs.unshift({
+      id: `log_${Date.now()}`,
+      actorId: input.adminUserId,
+      action: `collaboration_intent_${nextStatus}`,
+      entityType: "collaboration_intent",
+      entityId: input.intentId,
+      metadata: { note },
+      createdAt: new Date().toISOString(),
+    });
+
+    return intent;
+  }
+
+  const prisma = await getPrisma();
+  const updatedIntent = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const intent = await tx.collaborationIntent.findUnique({
+      where: { id: input.intentId },
+    });
+    if (!intent) {
+      throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+    }
+
+    const updated = await tx.collaborationIntent.update({
+      where: { id: input.intentId },
+      data: {
+        status: nextStatus,
+        reviewNote: note ?? null,
+        reviewedAt: new Date(),
+        reviewedBy: input.adminUserId,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: input.adminUserId,
+        action: `collaboration_intent_${nextStatus}`,
+        entityType: "collaboration_intent",
+        entityId: input.intentId,
+        metadata: { note },
+      },
+    });
+
+    return updated;
+  });
+
+  return toCollaborationIntentDto(updatedIntent);
+}
+
 export async function reviewPost(input: ReviewPostInput): Promise<Post> {
   const nextStatus: ReviewStatus = input.action === "approve" ? "approved" : "rejected";
   const note = normalizeModerationNote(input.note);
@@ -887,6 +1177,9 @@ export async function getAdminOverview() {
     const pendingPosts = mockPosts.filter((item) => item.reviewStatus === "pending").length;
     const openReports = mockReportTickets.filter((item) => item.status === "open").length;
     const moderationCases = mockModerationCases.filter((item) => item.status === "pending").length;
+    const pendingCollaborationIntents = mockCollaborationIntents.filter(
+      (item) => item.status === "pending"
+    ).length;
 
     return {
       users: mockUsers.length,
@@ -894,19 +1187,22 @@ export async function getAdminOverview() {
       pendingPosts,
       openReports,
       moderationCases,
+      pendingCollaborationIntents,
       auditLogs: mockAuditLogs.length,
     };
   }
 
   const prisma = await getPrisma();
-  const [users, posts, pendingPosts, openReports, moderationCases, auditLogs] = await Promise.all([
+  const [users, posts, pendingPosts, openReports, moderationCases, pendingCollaborationIntents, auditLogs] =
+    await Promise.all([
     prisma.user.count(),
     prisma.post.count(),
     prisma.post.count({ where: { reviewStatus: "pending" } }),
     prisma.reportTicket.count({ where: { status: "open" } }),
     prisma.moderationCase.count({ where: { status: "pending" } }),
+    prisma.collaborationIntent.count({ where: { status: "pending" } }),
     prisma.auditLog.count(),
-  ]);
+    ]);
 
   return {
     users,
@@ -914,6 +1210,7 @@ export async function getAdminOverview() {
     pendingPosts,
     openReports,
     moderationCases,
+    pendingCollaborationIntents,
     auditLogs,
   };
 }

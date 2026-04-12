@@ -1,6 +1,7 @@
 import type {
   AuditLog,
   Comment,
+  CollaborationIntent,
   CreatorProfile,
   ModerationCase,
   Post,
@@ -138,3 +139,16 @@ export const mockReportTickets: ReportTicket[] = [
 ];
 
 export const mockAuditLogs: AuditLog[] = [];
+
+export const mockCollaborationIntents: CollaborationIntent[] = [
+  {
+    id: "ci1",
+    projectId: "p1",
+    applicantId: "u3",
+    intentType: "join",
+    message: "I want to contribute to API contracts and integration tests for VibeHub.",
+    contact: "chen@vibehub.dev",
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  },
+];

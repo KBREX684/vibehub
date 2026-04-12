@@ -120,6 +120,24 @@ async function main() {
       metadata: { stage: "p2-1" },
     },
   });
+
+  const vibehubProject = await prisma.project.findUnique({
+    where: { slug: "vibehub" },
+    select: { id: true },
+  });
+
+  if (vibehubProject) {
+    await prisma.collaborationIntent.create({
+      data: {
+        projectId: vibehubProject.id,
+        applicantId: bob.id,
+        intentType: "join",
+        message: "Can support backend API module and testing workflow for P2.",
+        contact: "bob@vibehub.dev",
+        status: "pending",
+      },
+    });
+  }
 }
 
 main()

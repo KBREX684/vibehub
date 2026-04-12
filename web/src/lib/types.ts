@@ -2,6 +2,7 @@ export type Role = "guest" | "user" | "admin";
 
 export type ProjectStatus = "idea" | "building" | "launched" | "paused";
 export type ReviewStatus = "pending" | "approved" | "rejected";
+export type CollaborationIntentType = "join" | "recruit";
 
 export interface User {
   id: string;
@@ -56,6 +57,20 @@ export interface Comment {
   createdAt: string;
 }
 
+export interface CollaborationIntent {
+  id: string;
+  projectId: string;
+  applicantId: string;
+  intentType: CollaborationIntentType;
+  message: string;
+  contact?: string;
+  status: ReviewStatus;
+  reviewNote?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  createdAt: string;
+}
+
 export interface SessionUser {
   userId: string;
   role: Role;
@@ -90,7 +105,7 @@ export interface AuditLog {
   id: string;
   actorId: string;
   action: string;
-  entityType: "post" | "moderation_case" | "report_ticket";
+  entityType: "post" | "moderation_case" | "report_ticket" | "collaboration_intent";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;

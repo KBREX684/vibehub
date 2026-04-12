@@ -26,3 +26,9 @@
 1. 无编号问题不修复。
 2. 每次状态变更必须更新“验证记录”。
 3. 进入 `Verified` 必须有复测结论。
+
+## P2-2 Debug Closure (2026-04-12)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| BUG-P2-2-001 | P2 | Collaboration workflow | Missing collaboration entry/review loop between project page and admin queue | No CollaborationIntent model or API chain | Added model + repository + `/api/v1/projects/[slug]/collaboration-intents` + `/api/v1/admin/collaboration-intents` + admin review endpoint/page | Verified | `npm run check` passed; tests include `collaboration-intent-repository.test.ts` |

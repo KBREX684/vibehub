@@ -54,6 +54,13 @@ export default async function AdminPage() {
             </a>
           </article>
           <article className="card">
+            <h3>Pending Collaboration Intents</h3>
+            <p>{overview.pendingCollaborationIntents}</p>
+            <Link className="inline-link" href="/admin/collaboration">
+              Open collaboration queue
+            </Link>
+          </article>
+          <article className="card">
             <h3>Audit Logs</h3>
             <p>{overview.auditLogs}</p>
             <a className="inline-link" href="/api/v1/admin/audit-logs">
