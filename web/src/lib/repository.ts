@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/db";
 import { paginateArray } from "@/lib/pagination";
 import {
   mockComments,
@@ -7,10 +6,27 @@ import {
   mockProjects,
   mockUsers,
 } from "@/lib/data/mock-data";
-import type { Comment, Post, Project, Role } from "@/lib/types";
+import type { Comment, CreatorProfile, Post, Project, Role } from "@/lib/types";
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
 type DemoRole = Extract<Role, "admin" | "user">;
+
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+interface Paginated<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
+
+async function getPrisma() {
+  const db = await import("@/lib/db");
+  return db.prisma;
+}
 
 function toProjectDto(project: {
   id: string;
@@ -29,6 +45,31 @@ function toProjectDto(project: {
     ...project,
     demoUrl: project.demoUrl ?? undefined,
     updatedAt: project.updatedAt.toISOString(),
+  };
+}
+
+function toCreatorDto(creator: {
+  id: string;
+  slug: string;
+  userId: string;
+  headline: string;
+  bio: string;
+  skills: string[];
+  collaborationPreference: string;
+}): CreatorProfile {
+  const allowedPreference: CreatorProfile["collaborationPreference"] =
+    creator.collaborationPreference === "invite_only" || creator.collaborationPreference === "closed"
+      ? creator.collaborationPreference
+      : "open";
+
+  return {
+    id: creator.id,
+    slug: creator.slug,
+    userId: creator.userId,
+    headline: creator.headline,
+    bio: creator.bio,
+    skills: creator.skills,
+    collaborationPreference: allowedPreference,
   };
 }
 
@@ -65,7 +106,7 @@ export async function listProjects(params: {
   tag?: string;
   page: number;
   limit: number;
-}) {
+}): Promise<Paginated<Project>> {
   if (useMockData) {
     const filtered = mockProjects.filter((project) => {
       const q = params.query?.toLowerCase().trim();
@@ -106,13 +147,13 @@ export async function listProjects(params: {
   };
 
   const [items, total] = await Promise.all([
-    prisma.project.findMany({
+    (await getPrisma()).project.findMany({
       where,
       orderBy: { updatedAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
     }),
-    prisma.project.count({ where }),
+    (await getPrisma()).project.count({ where }),
   ]);
 
   return {
@@ -131,6 +172,7 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
     return mockProjects.find((project) => project.slug === slug) ?? null;
   }
 
+  const prisma = await getPrisma();
   const project = await prisma.project.findUnique({
     where: { slug },
   });
@@ -164,17 +206,17 @@ export async function listCreators(params: { query?: string; page: number; limit
     : {};
 
   const [items, total] = await Promise.all([
-    prisma.creatorProfile.findMany({
+    (await getPrisma()).creatorProfile.findMany({
       where,
       orderBy: { updatedAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
     }),
-    prisma.creatorProfile.count({ where }),
+    (await getPrisma()).creatorProfile.count({ where }),
   ]);
 
   return {
-    items,
+    items: items.map(toCreatorDto),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -184,17 +226,24 @@ export async function listCreators(params: { query?: string; page: number; limit
   };
 }
 
-export async function getCreatorBySlug(slug: string) {
+export async function getCreatorBySlug(slug: string): Promise<CreatorProfile | null> {
   if (useMockData) {
     return mockCreators.find((creator) => creator.slug === slug) ?? null;
   }
 
-  return prisma.creatorProfile.findUnique({
+  const prisma = await getPrisma();
+  const creator = await prisma.creatorProfile.findUnique({
     where: { slug },
   });
+  return creator ? toCreatorDto(creator) : null;
 }
 
-export async function listPosts(params: { query?: string; tag?: string; page: number; limit: number }) {
+export async function listPosts(params: {
+  query?: string;
+  tag?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<Post>> {
   if (useMockData) {
     const filtered = mockPosts.filter((post) => {
       const q = params.query?.toLowerCase().trim();
@@ -232,13 +281,13 @@ export async function listPosts(params: { query?: string; tag?: string; page: nu
   };
 
   const [items, total] = await Promise.all([
-    prisma.post.findMany({
+    (await getPrisma()).post.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
     }),
-    prisma.post.count({ where }),
+    (await getPrisma()).post.count({ where }),
   ]);
 
   return {
@@ -278,6 +327,7 @@ export async function createPost(input: {
     return post;
   }
 
+  const prisma = await getPrisma();
   const post = await prisma.post.create({
     data: {
       slug: `${slug}-${Date.now()}`,
@@ -292,6 +342,11 @@ export async function createPost(input: {
 
 export async function createComment(input: { postId: string; body: string; authorId: string }) {
   if (useMockData) {
+    const postExists = mockPosts.some((post) => post.id === input.postId);
+    if (!postExists) {
+      throw new Error("POST_NOT_FOUND");
+    }
+
     const comment: Comment = {
       id: `cm_${Date.now()}`,
       postId: input.postId,
@@ -301,6 +356,15 @@ export async function createComment(input: { postId: string; body: string; autho
     };
     mockComments.unshift(comment);
     return comment;
+  }
+
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({
+    where: { id: input.postId },
+    select: { id: true },
+  });
+  if (!post) {
+    throw new Error("POST_NOT_FOUND");
   }
 
   const comment = await prisma.comment.create({

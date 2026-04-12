@@ -1,4 +1,4 @@
-import { PrismaClient, ProjectStatus, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -9,7 +9,7 @@ async function main() {
     create: {
       email: "alice@vibehub.dev",
       name: "Alice",
-      role: Role.admin,
+      role: "admin",
     },
   });
 
@@ -19,7 +19,7 @@ async function main() {
     create: {
       email: "bob@vibehub.dev",
       name: "Bob",
-      role: Role.user,
+      role: "user",
     },
   });
 
@@ -47,7 +47,7 @@ async function main() {
       description: "P1 full-stack MVP",
       techStack: ["Next.js", "PostgreSQL", "Prisma"],
       tags: ["community", "showcase", "agent"],
-      status: ProjectStatus.building,
+      status: "building",
     },
   });
 

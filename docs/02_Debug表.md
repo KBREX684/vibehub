@@ -18,6 +18,8 @@
 | Issue ID | 阶段 | 模块 | 环境 | 复现步骤 | 期望结果 | 实际结果 | 根因 | 修复方案 | 状态 | 责任人 | 验证记录 | 关联提交 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | BUG-P1-001 | P1 | 脚手架 | dev | 运行 `npx create-next-app` | 正常生成 | npm registry 超时 | 网络不可达 | 改为手工搭建 Next.js 工程骨架 | Resolved | Codex | 文件已生成并可进入下一步 | 本次提交 |
+| BUG-P1-002 | P1 | 鉴权 | dev | 构造非法 role 调用 demo-login | 非法 role 不应获得高权限 | 非法 role 可回退到 admin 会话 | role 未白名单且 demo 用户回退逻辑不安全 | 增加 role 白名单 + 取消 admin fallback + 会话签名 | Verified | Codex | 已通过代码审计复核 | `0b24104` |
+| BUG-P1-003 | P1 | 构建 | dev/ci | 执行 `npm run build` | 构建成功 | mock 模式仍触发 Prisma 初始化失败 | repository 顶层静态导入 Prisma | 改为 DB 分支按需动态加载 Prisma | Verified | Codex | 本地 `npm run build` 通过 | 本次提交 |
 
 ## 维护规则
 

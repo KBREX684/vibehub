@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { paginateArray } from "@/lib/pagination";
+import { paginateArray } from "../src/lib/pagination";
 
 describe("paginateArray", () => {
   it("returns proper page window", () => {

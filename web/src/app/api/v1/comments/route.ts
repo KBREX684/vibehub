@@ -30,11 +30,22 @@ export async function POST(request: Request) {
 
     return apiSuccess(comment, 201);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === "POST_NOT_FOUND") {
+      return apiError(
+        {
+          code: "POST_NOT_FOUND",
+          message: "Cannot comment on a non-existent post",
+        },
+        404
+      );
+    }
+
     return apiError(
       {
         code: "COMMENT_CREATE_FAILED",
         message: "Failed to create comment",
-        details: error instanceof Error ? error.message : String(error),
+        details: message,
       },
       400
     );
