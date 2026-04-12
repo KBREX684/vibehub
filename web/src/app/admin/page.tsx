@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminWeeklyMaterializeForm } from "@/components/admin-weekly-materialize-form";
 import { SiteHeader } from "@/components/site-header";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { getAdminOverview } from "@/lib/repository";
@@ -101,6 +102,8 @@ export default async function AdminPage() {
             </div>
           </article>
         </section>
+
+        <AdminWeeklyMaterializeForm />
       </main>
     </>
   );

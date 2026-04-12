@@ -105,7 +105,7 @@ export interface AuditLog {
   id: string;
   actorId: string;
   action: string;
-  entityType: "post" | "moderation_case" | "report_ticket" | "collaboration_intent";
+  entityType: "post" | "moderation_case" | "report_ticket" | "collaboration_intent" | "system";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -130,6 +130,35 @@ export interface LeaderboardProjectRow {
   slug: string;
   title: string;
   intentCount: number;
+}
+
+export type WeeklyLeaderboardKind =
+  | "discussions_by_weekly_comment_count"
+  | "projects_by_weekly_collaboration_intent_count";
+
+export interface WeeklyLeaderboardMaterializedRow {
+  rank: number;
+  entityId: string;
+  slug: string;
+  title: string;
+  score: number;
+}
+
+export interface WeeklyLeaderboardMaterializedSnapshot {
+  weekStart: string;
+  generatedAt: string;
+  kind: WeeklyLeaderboardKind;
+  rows: WeeklyLeaderboardMaterializedRow[];
+}
+
+export type WeeklyLeaderboardSource = "materialized" | "live";
+
+export interface WeeklyLeaderboardPublicPayload {
+  weekStart: string;
+  kind: WeeklyLeaderboardKind;
+  source: WeeklyLeaderboardSource;
+  generatedAt?: string;
+  rows: WeeklyLeaderboardMaterializedRow[];
 }
 
 export interface CollaborationIntentConversionMetrics {

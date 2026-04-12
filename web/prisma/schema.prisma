@@ -31,6 +31,11 @@ enum CollaborationIntentType {
   recruit
 }
 
+enum WeeklyLeaderboardKind {
+  discussions_by_weekly_comment_count
+  projects_by_weekly_collaboration_intent_count
+}
+
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
@@ -193,4 +198,29 @@ model CollaborationIntent {
   @@index([applicantId])
   @@index([status])
   @@index([reviewedBy])
+}
+
+/// UTC week starting Monday 00:00:00. Materialized ranking rows for stable weekly leaderboards.
+model WeeklyLeaderboardSnapshot {
+  id          String               @id @default(cuid())
+  weekStart   DateTime
+  kind        WeeklyLeaderboardKind
+  generatedAt DateTime             @default(now())
+  rows        WeeklyLeaderboardRow[]
+
+  @@unique([weekStart, kind])
+  @@index([weekStart])
+}
+
+model WeeklyLeaderboardRow {
+  id         String                   @id @default(cuid())
+  snapshotId String
+  rank       Int
+  entityId   String
+  score      Int
+  slug       String
+  title      String
+  snapshot   WeeklyLeaderboardSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId])
 }

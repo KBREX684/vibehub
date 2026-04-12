@@ -29,10 +29,50 @@ import type {
   ReviewStatus,
   Role,
   User,
+  WeeklyLeaderboardKind,
+  WeeklyLeaderboardMaterializedRow,
+  WeeklyLeaderboardMaterializedSnapshot,
+  WeeklyLeaderboardPublicPayload,
 } from "@/lib/types";
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
 type DemoRole = Extract<Role, "admin" | "user">;
+
+const mockWeeklySnapshots = new Map<string, WeeklyLeaderboardMaterializedSnapshot>();
+
+/** Monday 00:00:00.000 UTC for the ISO week containing `date`. */
+export function startOfUtcWeekContaining(date: Date): Date {
+  const utc = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dow = utc.getUTCDay();
+  const daysFromMonday = (dow + 6) % 7;
+  utc.setUTCDate(utc.getUTCDate() - daysFromMonday);
+  utc.setUTCHours(0, 0, 0, 0);
+  return utc;
+}
+
+function weeklySnapshotKey(weekStart: Date, kind: WeeklyLeaderboardKind): string {
+  return `${kind}:${weekStart.toISOString()}`;
+}
+
+export function parseUtcWeekStartParam(isoDate: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate.trim());
+  if (!m) {
+    return null;
+  }
+  const y = Number(m[1]);
+  const mo = Number(m[2]) - 1;
+  const d = Number(m[3]);
+  const candidate = new Date(Date.UTC(y, mo, d, 0, 0, 0, 0));
+  const normalized = startOfUtcWeekContaining(candidate);
+  if (
+    normalized.getUTCFullYear() !== candidate.getUTCFullYear() ||
+    normalized.getUTCMonth() !== candidate.getUTCMonth() ||
+    normalized.getUTCDate() !== candidate.getUTCDate()
+  ) {
+    return null;
+  }
+  return normalized;
+}
 
 interface PaginationMeta {
   page: number;
@@ -1329,6 +1369,320 @@ export async function getProjectCollaborationLeaderboard(limit: number): Promise
     title: row.title,
     intentCount: Number(row.intent_count),
   }));
+}
+
+export async function getWeeklyDiscussionLeaderboard(
+  weekStart: Date,
+  limit: number
+): Promise<LeaderboardDiscussionRow[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 50);
+  const weekEnd = new Date(weekStart.getTime());
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+  if (useMockData) {
+    const approved = mockPosts.filter((p) => p.reviewStatus === "approved");
+    const rows: LeaderboardDiscussionRow[] = approved.map((post) => ({
+      postId: post.id,
+      slug: post.slug,
+      title: post.title,
+      commentCount: mockComments.filter((c) => {
+        if (c.postId !== post.id) {
+          return false;
+        }
+        const t = new Date(c.createdAt).getTime();
+        return t >= weekStart.getTime() && t < weekEnd.getTime();
+      }).length,
+    }));
+    rows.sort((a, b) => b.commentCount - a.commentCount || b.title.localeCompare(a.title));
+    return rows.slice(0, safeLimit);
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.$queryRaw<
+    { id: string; slug: string; title: string; comment_count: bigint }[]
+  >`
+    SELECT p.id, p.slug, p.title, COUNT(c.id)::bigint AS comment_count
+    FROM "Post" p
+    LEFT JOIN "Comment" c ON c."postId" = p.id
+      AND c."createdAt" >= ${weekStart}
+      AND c."createdAt" < ${weekEnd}
+    WHERE p."reviewStatus" = 'approved'
+    GROUP BY p.id, p.slug, p.title
+    ORDER BY COUNT(c.id) DESC, p.title ASC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => ({
+    postId: row.id,
+    slug: row.slug,
+    title: row.title,
+    commentCount: Number(row.comment_count),
+  }));
+}
+
+export async function getWeeklyProjectCollaborationLeaderboard(
+  weekStart: Date,
+  limit: number
+): Promise<LeaderboardProjectRow[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 50);
+  const weekEnd = new Date(weekStart.getTime());
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+  if (useMockData) {
+    const rows: LeaderboardProjectRow[] = mockProjects.map((project) => ({
+      projectId: project.id,
+      slug: project.slug,
+      title: project.title,
+      intentCount: mockCollaborationIntents.filter((i) => {
+        if (i.projectId !== project.id) {
+          return false;
+        }
+        const t = new Date(i.createdAt).getTime();
+        return t >= weekStart.getTime() && t < weekEnd.getTime();
+      }).length,
+    }));
+    rows.sort((a, b) => b.intentCount - a.intentCount || a.title.localeCompare(b.title));
+    return rows.slice(0, safeLimit);
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.$queryRaw<
+    { id: string; slug: string; title: string; intent_count: bigint }[]
+  >`
+    SELECT pr.id, pr.slug, pr.title, COUNT(ci.id)::bigint AS intent_count
+    FROM "Project" pr
+    LEFT JOIN "CollaborationIntent" ci ON ci."projectId" = pr.id
+      AND ci."createdAt" >= ${weekStart}
+      AND ci."createdAt" < ${weekEnd}
+    GROUP BY pr.id, pr.slug, pr.title
+    ORDER BY COUNT(ci.id) DESC, pr.title ASC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => ({
+    projectId: row.id,
+    slug: row.slug,
+    title: row.title,
+    intentCount: Number(row.intent_count),
+  }));
+}
+
+export async function getMaterializedWeeklyLeaderboardSnapshot(
+  weekStart: Date,
+  kind: WeeklyLeaderboardKind
+): Promise<WeeklyLeaderboardMaterializedSnapshot | null> {
+  if (useMockData) {
+    return mockWeeklySnapshots.get(weeklySnapshotKey(weekStart, kind)) ?? null;
+  }
+
+  const prisma = await getPrisma();
+  const prismaKind =
+    kind === "discussions_by_weekly_comment_count"
+      ? "discussions_by_weekly_comment_count"
+      : "projects_by_weekly_collaboration_intent_count";
+
+  const snapshot = await prisma.weeklyLeaderboardSnapshot.findUnique({
+    where: {
+      weekStart_kind: { weekStart, kind: prismaKind },
+    },
+    include: {
+      rows: { orderBy: { rank: "asc" } },
+    },
+  });
+
+  if (!snapshot) {
+    return null;
+  }
+
+  return {
+    weekStart: snapshot.weekStart.toISOString(),
+    generatedAt: snapshot.generatedAt.toISOString(),
+    kind: snapshot.kind as WeeklyLeaderboardKind,
+    rows: snapshot.rows.map((r) => ({
+      rank: r.rank,
+      entityId: r.entityId,
+      slug: r.slug,
+      title: r.title,
+      score: r.score,
+    })),
+  };
+}
+
+export async function materializeWeeklyLeaderboardSnapshot(params: {
+  weekStart: Date;
+  kind: WeeklyLeaderboardKind;
+  limit: number;
+  actorId: string;
+}): Promise<WeeklyLeaderboardMaterializedSnapshot> {
+  const safeLimit = Math.min(Math.max(params.limit, 1), 50);
+  const generatedAt = new Date();
+
+  if (useMockData) {
+    const discussionRows = await getWeeklyDiscussionLeaderboard(params.weekStart, safeLimit);
+    const projectRows = await getWeeklyProjectCollaborationLeaderboard(params.weekStart, safeLimit);
+
+    const rows: WeeklyLeaderboardMaterializedRow[] =
+      params.kind === "discussions_by_weekly_comment_count"
+        ? discussionRows.map((r, i) => ({
+            rank: i + 1,
+            entityId: r.postId,
+            slug: r.slug,
+            title: r.title,
+            score: r.commentCount,
+          }))
+        : projectRows.map((r, i) => ({
+            rank: i + 1,
+            entityId: r.projectId,
+            slug: r.slug,
+            title: r.title,
+            score: r.intentCount,
+          }));
+
+    const snapshot: WeeklyLeaderboardMaterializedSnapshot = {
+      weekStart: params.weekStart.toISOString(),
+      generatedAt: generatedAt.toISOString(),
+      kind: params.kind,
+      rows,
+    };
+    mockWeeklySnapshots.set(weeklySnapshotKey(params.weekStart, params.kind), snapshot);
+
+    mockAuditLogs.unshift({
+      id: `log_wk_${Date.now()}`,
+      actorId: params.actorId,
+      action: "weekly_leaderboard_materialized",
+      entityType: "system",
+      entityId: weeklySnapshotKey(params.weekStart, params.kind),
+      metadata: {
+        weekStart: params.weekStart.toISOString(),
+        kind: params.kind,
+        rowCount: rows.length,
+      },
+      createdAt: generatedAt.toISOString(),
+    });
+
+    return snapshot;
+  }
+
+  const prisma = await getPrisma();
+  const prismaKind =
+    params.kind === "discussions_by_weekly_comment_count"
+      ? "discussions_by_weekly_comment_count"
+      : "projects_by_weekly_collaboration_intent_count";
+
+  const discussionRows = await getWeeklyDiscussionLeaderboard(params.weekStart, safeLimit);
+  const projectRows = await getWeeklyProjectCollaborationLeaderboard(params.weekStart, safeLimit);
+
+  const rowsPayload =
+    params.kind === "discussions_by_weekly_comment_count"
+      ? discussionRows.map((r, i) => ({
+          rank: i + 1,
+          entityId: r.postId,
+          score: r.commentCount,
+          slug: r.slug,
+          title: r.title,
+        }))
+      : projectRows.map((r, i) => ({
+          rank: i + 1,
+          entityId: r.projectId,
+          score: r.intentCount,
+          slug: r.slug,
+          title: r.title,
+        }));
+
+  const snapshot = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.weeklyLeaderboardSnapshot.deleteMany({
+      where: { weekStart: params.weekStart, kind: prismaKind },
+    });
+
+    const created = await tx.weeklyLeaderboardSnapshot.create({
+      data: {
+        weekStart: params.weekStart,
+        kind: prismaKind,
+        generatedAt,
+        rows: {
+          create: rowsPayload,
+        },
+      },
+      include: { rows: { orderBy: { rank: "asc" } } },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: params.actorId,
+        action: "weekly_leaderboard_materialized",
+        entityType: "system",
+        entityId: `${prismaKind}:${params.weekStart.toISOString()}`,
+        metadata: {
+          weekStart: params.weekStart.toISOString(),
+          kind: params.kind,
+          rowCount: rowsPayload.length,
+        },
+      },
+    });
+
+    return created;
+  });
+
+  return {
+    weekStart: snapshot.weekStart.toISOString(),
+    generatedAt: snapshot.generatedAt.toISOString(),
+    kind: snapshot.kind as WeeklyLeaderboardKind,
+    rows: snapshot.rows.map((r) => ({
+      rank: r.rank,
+      entityId: r.entityId,
+      slug: r.slug,
+      title: r.title,
+      score: r.score,
+    })),
+  };
+}
+
+export async function getWeeklyLeaderboardPublicPayload(params: {
+  weekStart: Date;
+  kind: WeeklyLeaderboardKind;
+  limit: number;
+}): Promise<WeeklyLeaderboardPublicPayload> {
+  const safeLimit = Math.min(Math.max(params.limit, 1), 50);
+  const materialized = await getMaterializedWeeklyLeaderboardSnapshot(params.weekStart, params.kind);
+  if (materialized) {
+    return {
+      weekStart: materialized.weekStart,
+      kind: materialized.kind,
+      source: "materialized",
+      generatedAt: materialized.generatedAt,
+      rows: materialized.rows.slice(0, safeLimit),
+    };
+  }
+
+  if (params.kind === "discussions_by_weekly_comment_count") {
+    const live = await getWeeklyDiscussionLeaderboard(params.weekStart, safeLimit);
+    return {
+      weekStart: params.weekStart.toISOString(),
+      kind: params.kind,
+      source: "live",
+      rows: live.map((r, i) => ({
+        rank: i + 1,
+        entityId: r.postId,
+        slug: r.slug,
+        title: r.title,
+        score: r.commentCount,
+      })),
+    };
+  }
+
+  const live = await getWeeklyProjectCollaborationLeaderboard(params.weekStart, safeLimit);
+  return {
+    weekStart: params.weekStart.toISOString(),
+    kind: params.kind,
+    source: "live",
+    rows: live.map((r, i) => ({
+      rank: i + 1,
+      entityId: r.projectId,
+      slug: r.slug,
+      title: r.title,
+      score: r.intentCount,
+    })),
+  };
 }
 
 export async function getCollaborationIntentConversionMetrics(): Promise<CollaborationIntentConversionMetrics> {

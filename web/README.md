@@ -8,6 +8,7 @@ Current scope:
 - P2-2: collaboration intent submit/review workflow
 - P2-3: topic collections, leaderboards, collaboration funnel metrics
 - P2-4: discover page (investor/ops radar), extended project filters + facets API
+- P2-5: weekly leaderboards (UTC Monday week) with optional materialized snapshots + admin materialize API
 
 ## 1. Quick Start
 
@@ -94,6 +95,18 @@ Runs `lint + test + build`.
 
 - `GET /api/v1/admin/reports`
 - `GET /api/v1/admin/audit-logs`
+- Weekly leaderboard materialization (P2-5):
+  - `POST /api/v1/admin/leaderboards/weekly/materialize` with JSON body:
+
+```json
+{
+  "weekStart": "2026-04-06",
+  "kind": "discussions_by_weekly_comment_count",
+  "limit": 15
+}
+```
+
+  - `kind` may be `discussions_by_weekly_comment_count` or `projects_by_weekly_collaboration_intent_count`; `weekStart` must be a UTC Monday (`YYYY-MM-DD`) or omit for the current week.
 
 ## 6. P2 Public Endpoints (non-admin)
 
@@ -106,6 +119,8 @@ Runs `lint + test + build`.
 - Leaderboards:
   - `GET /api/v1/leaderboards/discussions?limit=10`
   - `GET /api/v1/leaderboards/projects?limit=10`
+  - `GET /api/v1/leaderboards/weekly/discussions?limit=10&week=YYYY-MM-DD` (Monday, UTC; omit `week` for current week)
+  - `GET /api/v1/leaderboards/weekly/projects?limit=10&week=YYYY-MM-DD`
 - Metrics:
   - `GET /api/v1/metrics/collaboration-intent-funnel`
 - Discovery filters:
