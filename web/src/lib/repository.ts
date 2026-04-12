@@ -10,6 +10,8 @@ import {
   mockPosts,
   mockProjects,
   mockReportTickets,
+  mockTeamMemberships,
+  mockTeams,
   mockUsers,
 } from "@/lib/data/mock-data";
 import type {
@@ -28,6 +30,9 @@ import type {
   ReportTicket,
   ReviewStatus,
   Role,
+  TeamDetail,
+  TeamMember,
+  TeamSummary,
   User,
   WeeklyLeaderboardKind,
   WeeklyLeaderboardMaterializedRow,
@@ -1766,6 +1771,451 @@ export async function getAdminOverview() {
     auditLogs,
     collaborationIntentFunnel,
   };
+}
+
+function slugifyTeamSlug(raw: string): string {
+  const s = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return s || "team";
+}
+
+function mockTeamMemberRows(teamId: string): TeamMember[] {
+  return mockTeamMemberships
+    .filter((m) => m.teamId === teamId)
+    .map((m) => {
+      const user = mockUsers.find((u) => u.id === m.userId);
+      return {
+        userId: m.userId,
+        name: user?.name ?? "Unknown",
+        email: user?.email ?? "",
+        role: m.role,
+        joinedAt: m.joinedAt,
+      };
+    })
+    .sort((a, b) => {
+      if (a.role === "owner") {
+        return -1;
+      }
+      if (b.role === "owner") {
+        return 1;
+      }
+      return a.joinedAt.localeCompare(b.joinedAt);
+    });
+}
+
+function toTeamSummary(team: { id: string; slug: string; name: string; mission: string | null; ownerUserId: string; createdAt: Date }, memberCount: number): TeamSummary {
+  return {
+    id: team.id,
+    slug: team.slug,
+    name: team.name,
+    mission: team.mission ?? undefined,
+    ownerUserId: team.ownerUserId,
+    memberCount,
+    createdAt: team.createdAt.toISOString(),
+  };
+}
+
+export async function listTeams(params: { page: number; limit: number }): Promise<Paginated<TeamSummary>> {
+  if (useMockData) {
+    const sorted = [...mockTeams].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const pageResult = paginateArray(sorted, params.page, params.limit);
+    return {
+      items: pageResult.items.map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        name: t.name,
+        mission: t.mission,
+        ownerUserId: t.ownerUserId,
+        memberCount: mockTeamMemberships.filter((m) => m.teamId === t.id).length,
+        createdAt: t.createdAt,
+      })),
+      pagination: pageResult.pagination,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const skip = (params.page - 1) * params.limit;
+  const [rows, total] = await Promise.all([
+    prisma.team.findMany({
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: params.limit,
+      include: { _count: { select: { memberships: true } } },
+    }),
+    prisma.team.count(),
+  ]);
+
+  return {
+    items: rows.map((t) => toTeamSummary(t, t._count.memberships)),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function getTeamBySlug(slug: string): Promise<TeamDetail | null> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === slug);
+    if (!team) {
+      return null;
+    }
+    const members = mockTeamMemberRows(team.id);
+    return {
+      id: team.id,
+      slug: team.slug,
+      name: team.name,
+      mission: team.mission,
+      ownerUserId: team.ownerUserId,
+      memberCount: members.length,
+      createdAt: team.createdAt,
+      members,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug },
+    include: {
+      _count: { select: { memberships: true } },
+      memberships: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+      },
+    },
+  });
+
+  if (!team) {
+    return null;
+  }
+
+  const members = team.memberships
+    .map((m) => ({
+      userId: m.user.id,
+      name: m.user.name,
+      email: m.user.email,
+      role: (m.role === "owner" ? "owner" : "member") as "owner" | "member",
+      joinedAt: m.joinedAt.toISOString(),
+    }))
+    .sort((a, b) => {
+      if (a.role === "owner") {
+        return -1;
+      }
+      if (b.role === "owner") {
+        return 1;
+      }
+      return a.joinedAt.localeCompare(b.joinedAt);
+    });
+
+  return {
+    ...toTeamSummary(team, team._count.memberships),
+    members,
+  };
+}
+
+export async function createTeam(input: {
+  ownerUserId: string;
+  name: string;
+  slug?: string;
+  mission?: string;
+}): Promise<TeamDetail> {
+  const name = input.name.trim();
+  if (!name) {
+    throw new Error("INVALID_TEAM_NAME");
+  }
+  const baseSlug = slugifyTeamSlug(input.slug?.trim() || name);
+
+  if (useMockData) {
+    const ownerExists = mockUsers.some((u) => u.id === input.ownerUserId);
+    if (!ownerExists) {
+      throw new Error("USER_NOT_FOUND");
+    }
+    let slug = baseSlug;
+    let n = 0;
+    while (mockTeams.some((t) => t.slug === slug)) {
+      n += 1;
+      slug = `${baseSlug}-${n}`;
+    }
+    const id = `team_${Date.now()}`;
+    const createdAt = new Date().toISOString();
+    const team = {
+      id,
+      slug,
+      name,
+      mission: input.mission?.trim() || undefined,
+      ownerUserId: input.ownerUserId,
+      createdAt,
+    };
+    mockTeams.unshift(team);
+    mockTeamMemberships.unshift({
+      id: `tm_${Date.now()}`,
+      teamId: id,
+      userId: input.ownerUserId,
+      role: "owner",
+      joinedAt: createdAt,
+    });
+    mockAuditLogs.unshift({
+      id: `log_team_${Date.now()}`,
+      actorId: input.ownerUserId,
+      action: "team_created",
+      entityType: "team",
+      entityId: id,
+      metadata: { slug, name },
+      createdAt,
+    });
+    const detail = await getTeamBySlug(slug);
+    if (!detail) {
+      throw new Error("TEAM_CREATE_FAILED");
+    }
+    return detail;
+  }
+
+  const prisma = await getPrisma();
+  const owner = await prisma.user.findUnique({ where: { id: input.ownerUserId }, select: { id: true } });
+  if (!owner) {
+    throw new Error("USER_NOT_FOUND");
+  }
+
+  let slug = baseSlug;
+  for (let i = 0; i < 20; i += 1) {
+    const exists = await prisma.team.findUnique({ where: { slug }, select: { id: true } });
+    if (!exists) {
+      break;
+    }
+    slug = `${baseSlug}-${i + 1}`;
+  }
+
+  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const team = await tx.team.create({
+      data: {
+        slug,
+        name,
+        mission: input.mission?.trim() || null,
+        ownerUserId: input.ownerUserId,
+        memberships: {
+          create: { userId: input.ownerUserId, role: "owner" },
+        },
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: input.ownerUserId,
+        action: "team_created",
+        entityType: "team",
+        entityId: team.id,
+        metadata: { slug: team.slug, name: team.name },
+      },
+    });
+    return team;
+  });
+
+  const detail = await getTeamBySlug(created.slug);
+  if (!detail) {
+    throw new Error("TEAM_CREATE_FAILED");
+  }
+  return detail;
+}
+
+export async function joinTeamAsMember(params: { teamSlug: string; userId: string }): Promise<TeamMember> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    const userExists = mockUsers.some((u) => u.id === params.userId);
+    if (!userExists) {
+      throw new Error("USER_NOT_FOUND");
+    }
+    const existing = mockTeamMemberships.find((m) => m.teamId === team.id && m.userId === params.userId);
+    if (existing) {
+      throw new Error("TEAM_ALREADY_MEMBER");
+    }
+    const joinedAt = new Date().toISOString();
+    mockTeamMemberships.push({
+      id: `tm_${Date.now()}`,
+      teamId: team.id,
+      userId: params.userId,
+      role: "member",
+      joinedAt,
+    });
+    const user = mockUsers.find((u) => u.id === params.userId)!;
+    return { userId: params.userId, name: user.name, email: user.email, role: "member", joinedAt };
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: params.teamSlug }, select: { id: true } });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: params.userId },
+    select: { id: true, name: true, email: true },
+  });
+  if (!user) {
+    throw new Error("USER_NOT_FOUND");
+  }
+
+  try {
+    const row = await prisma.teamMembership.create({
+      data: { teamId: team.id, userId: params.userId, role: "member" },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    return {
+      userId: row.user.id,
+      name: row.user.name,
+      email: row.user.email,
+      role: "member",
+      joinedAt: row.joinedAt.toISOString(),
+    };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      throw new Error("TEAM_ALREADY_MEMBER");
+    }
+    throw e;
+  }
+}
+
+export async function addTeamMemberByEmail(params: {
+  teamSlug: string;
+  actorUserId: string;
+  email: string;
+}): Promise<TeamMember> {
+  const email = params.email.trim().toLowerCase();
+  if (!email) {
+    throw new Error("INVALID_EMAIL");
+  }
+
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    if (team.ownerUserId !== params.actorUserId) {
+      throw new Error("FORBIDDEN_NOT_OWNER");
+    }
+    const target = mockUsers.find((u) => u.email.toLowerCase() === email);
+    if (!target) {
+      throw new Error("USER_NOT_FOUND");
+    }
+    const existing = mockTeamMemberships.find((m) => m.teamId === team.id && m.userId === target.id);
+    if (existing) {
+      throw new Error("TEAM_ALREADY_MEMBER");
+    }
+    const joinedAt = new Date().toISOString();
+    mockTeamMemberships.push({
+      id: `tm_${Date.now()}`,
+      teamId: team.id,
+      userId: target.id,
+      role: "member",
+      joinedAt,
+    });
+    return { userId: target.id, name: target.name, email: target.email, role: "member", joinedAt };
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug: params.teamSlug },
+    select: { id: true, ownerUserId: true },
+  });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  if (team.ownerUserId !== params.actorUserId) {
+    throw new Error("FORBIDDEN_NOT_OWNER");
+  }
+  const target = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true, email: true } });
+  if (!target) {
+    throw new Error("USER_NOT_FOUND");
+  }
+
+  try {
+    const row = await prisma.teamMembership.create({
+      data: { teamId: team.id, userId: target.id, role: "member" },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    return {
+      userId: row.user.id,
+      name: row.user.name,
+      email: row.user.email,
+      role: "member",
+      joinedAt: row.joinedAt.toISOString(),
+    };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      throw new Error("TEAM_ALREADY_MEMBER");
+    }
+    throw e;
+  }
+}
+
+export async function removeTeamMember(params: {
+  teamSlug: string;
+  actorUserId: string;
+  memberUserId: string;
+}): Promise<void> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    const membership = mockTeamMemberships.find(
+      (m) => m.teamId === team.id && m.userId === params.memberUserId
+    );
+    if (!membership) {
+      throw new Error("MEMBERSHIP_NOT_FOUND");
+    }
+    if (membership.role === "owner") {
+      throw new Error("CANNOT_REMOVE_OWNER");
+    }
+    const isOwner = team.ownerUserId === params.actorUserId;
+    const isSelf = params.actorUserId === params.memberUserId;
+    if (!isOwner && !isSelf) {
+      throw new Error("FORBIDDEN");
+    }
+    const idx = mockTeamMemberships.findIndex(
+      (m) => m.teamId === team.id && m.userId === params.memberUserId
+    );
+    if (idx >= 0) {
+      mockTeamMemberships.splice(idx, 1);
+    }
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug: params.teamSlug },
+    select: { id: true, ownerUserId: true },
+  });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+
+  const membership = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId: team.id, userId: params.memberUserId } },
+    select: { role: true },
+  });
+  if (!membership) {
+    throw new Error("MEMBERSHIP_NOT_FOUND");
+  }
+  if (membership.role === "owner") {
+    throw new Error("CANNOT_REMOVE_OWNER");
+  }
+
+  const isOwner = team.ownerUserId === params.actorUserId;
+  const isSelf = params.actorUserId === params.memberUserId;
+  if (!isOwner && !isSelf) {
+    throw new Error("FORBIDDEN");
+  }
+
+  await prisma.teamMembership.delete({
+    where: { teamId_userId: { teamId: team.id, userId: params.memberUserId } },
+  });
 }
 
 export function getDemoUser(role: DemoRole = "user") {

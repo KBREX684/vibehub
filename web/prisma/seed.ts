@@ -138,6 +138,36 @@ async function main() {
       },
     });
   }
+
+  const seedTeam = await prisma.team.upsert({
+    where: { slug: "vibehub-core" },
+    update: {
+      name: "VibeHub Core",
+      mission: "Seed team for P3 Team MVP (owner Alice, member Bob).",
+    },
+    create: {
+      slug: "vibehub-core",
+      name: "VibeHub Core",
+      mission: "Seed team for P3 Team MVP (owner Alice, member Bob).",
+      ownerUserId: alice.id,
+    },
+  });
+
+  await prisma.teamMembership.upsert({
+    where: {
+      teamId_userId: { teamId: seedTeam.id, userId: alice.id },
+    },
+    update: { role: "owner" },
+    create: { teamId: seedTeam.id, userId: alice.id, role: "owner" },
+  });
+
+  await prisma.teamMembership.upsert({
+    where: {
+      teamId_userId: { teamId: seedTeam.id, userId: bob.id },
+    },
+    update: { role: "member" },
+    create: { teamId: seedTeam.id, userId: bob.id, role: "member" },
+  });
 }
 
 main()
