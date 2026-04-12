@@ -1,9 +1,10 @@
-import { getSessionUserFromCookie } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { getSessionUserFromRequest } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { listTeamsForUser } from "@/lib/repository";
 
-export async function GET() {
-  const session = await getSessionUserFromCookie();
+export async function GET(request: NextRequest) {
+  const session = await getSessionUserFromRequest(request);
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
   }

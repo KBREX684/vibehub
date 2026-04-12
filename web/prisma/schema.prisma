@@ -76,6 +76,21 @@ model User {
   teamTasksCreated          TeamTask[]            @relation("TeamTaskCreator")
   teamTasksAssigned         TeamTask[]            @relation("TeamTaskAssignee")
   teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
+  apiKeys                   ApiKey[]
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  label      String
+  keyHash    String    @unique
+  prefix     String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model CreatorProfile {

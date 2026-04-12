@@ -1,6 +1,10 @@
 import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { Prisma } from "@prisma/client";
+import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
+import {
+  mockApiKeys,
+} from "@/lib/data/mock-api-keys";
 import {
   mockAuditLogs,
   mockComments,
@@ -18,6 +22,8 @@ import {
   mockUsers,
 } from "@/lib/data/mock-data";
 import type {
+  ApiKeyCreated,
+  ApiKeySummary,
   AuditLog,
   CollaborationIntent,
   CollaborationIntentConversionMetrics,
@@ -33,6 +39,7 @@ import type {
   ReportTicket,
   ReviewStatus,
   Role,
+  SessionUser,
   TeamDetail,
   TeamJoinRequestRow,
   TeamJoinRequestStatus,
@@ -3603,6 +3610,191 @@ export async function removeTeamMember(params: {
   await prisma.teamMembership.delete({
     where: { teamId_userId: { teamId: team.id, userId: params.memberUserId } },
   });
+}
+
+function toApiKeySummary(row: {
+  id: string;
+  label: string;
+  prefix: string;
+  createdAt: Date | string;
+  lastUsedAt?: Date | string | null;
+  revokedAt?: Date | string | null;
+}): ApiKeySummary {
+  return {
+    id: row.id,
+    label: row.label,
+    prefix: row.prefix,
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
+    lastUsedAt: row.lastUsedAt
+      ? typeof row.lastUsedAt === "string"
+        ? row.lastUsedAt
+        : row.lastUsedAt.toISOString()
+      : undefined,
+    revokedAt: row.revokedAt
+      ? typeof row.revokedAt === "string"
+        ? row.revokedAt
+        : row.revokedAt.toISOString()
+      : undefined,
+  };
+}
+
+export async function listApiKeysForUser(userId: string): Promise<ApiKeySummary[]> {
+  if (useMockData) {
+    return mockApiKeys
+      .filter((k) => k.userId === userId)
+      .map((k) => toApiKeySummary(k))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.apiKey.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((r) => toApiKeySummary(r));
+}
+
+export async function createApiKeyForUser(params: {
+  userId: string;
+  label: string;
+}): Promise<ApiKeyCreated> {
+  const label = params.label.trim().slice(0, 80);
+  if (!label) {
+    throw new Error("INVALID_API_KEY_LABEL");
+  }
+
+  const { fullToken, prefix } = generateApiKeyPlaintext();
+  const keyHash = hashApiKeyToken(fullToken);
+  const now = new Date().toISOString();
+
+  if (useMockData) {
+    if (!mockUsers.some((u) => u.id === params.userId)) {
+      throw new Error("USER_NOT_FOUND");
+    }
+    if (mockApiKeys.some((k) => k.keyHash === keyHash)) {
+      throw new Error("API_KEY_HASH_COLLISION");
+    }
+    const id = `apk_${params.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    mockApiKeys.unshift({
+      id,
+      userId: params.userId,
+      label,
+      keyHash,
+      prefix,
+      createdAt: now,
+    });
+    mockAuditLogs.unshift({
+      id: `log_apk_${Date.now()}`,
+      actorId: params.userId,
+      action: "api_key_created",
+      entityType: "api_key",
+      entityId: id,
+      metadata: { prefix },
+      createdAt: now,
+    });
+    return { ...toApiKeySummary(mockApiKeys.find((k) => k.id === id)!), secret: fullToken };
+  }
+
+  const prisma = await getPrisma();
+  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const row = await tx.apiKey.create({
+      data: {
+        userId: params.userId,
+        label,
+        keyHash,
+        prefix,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.userId,
+        action: "api_key_created",
+        entityType: "api_key",
+        entityId: row.id,
+        metadata: { prefix },
+      },
+    });
+    return row;
+  });
+
+  return { ...toApiKeySummary(created), secret: fullToken };
+}
+
+export async function revokeApiKeyForUser(params: { userId: string; keyId: string }): Promise<void> {
+  if (useMockData) {
+    const idx = mockApiKeys.findIndex((k) => k.id === params.keyId && k.userId === params.userId);
+    if (idx < 0) {
+      throw new Error("API_KEY_NOT_FOUND");
+    }
+    if (mockApiKeys[idx].revokedAt) {
+      throw new Error("API_KEY_NOT_FOUND");
+    }
+    const now = new Date().toISOString();
+    mockApiKeys[idx].revokedAt = now;
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const res = await prisma.apiKey.updateMany({
+    where: { id: params.keyId, userId: params.userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  if (res.count === 0) {
+    throw new Error("API_KEY_NOT_FOUND");
+  }
+}
+
+export async function getSessionUserFromApiKeyToken(plaintextToken: string): Promise<SessionUser | null> {
+  const userId = await resolveUserIdFromApiKeyToken(plaintextToken);
+  if (!userId) {
+    return null;
+  }
+  if (useMockData) {
+    const u = mockUsers.find((x) => x.id === userId);
+    if (!u) {
+      return null;
+    }
+    return { userId: u.id, role: u.role, name: u.name };
+  }
+  const prisma = await getPrisma();
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, role: true },
+  });
+  if (!u) {
+    return null;
+  }
+  return { userId: u.id, role: u.role as Role, name: u.name };
+}
+
+export async function resolveUserIdFromApiKeyToken(plaintextToken: string): Promise<string | null> {
+  if (!plaintextToken || !isApiKeyTokenFormat(plaintextToken)) {
+    return null;
+  }
+  const keyHash = hashApiKeyToken(plaintextToken);
+
+  if (useMockData) {
+    const row = mockApiKeys.find((k) => k.keyHash === keyHash && !k.revokedAt);
+    if (!row) {
+      return null;
+    }
+    row.lastUsedAt = new Date().toISOString();
+    return row.userId;
+  }
+
+  const prisma = await getPrisma();
+  const row = await prisma.apiKey.findFirst({
+    where: { keyHash, revokedAt: null },
+    select: { id: true, userId: true },
+  });
+  if (!row) {
+    return null;
+  }
+  await prisma.apiKey.update({
+    where: { id: row.id },
+    data: { lastUsedAt: new Date() },
+  });
+  return row.userId;
 }
 
 export function getDemoUser(role: DemoRole = "user") {

@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
+import { getSessionUserFromApiKeyToken } from "@/lib/repository";
 import type { Role, SessionUser } from "@/lib/types";
 
 const SESSION_COOKIE_KEY = "vibehub_session";
@@ -99,6 +101,36 @@ export function decodeSession(raw?: string): SessionUser | null {
 export async function getSessionUserFromCookie(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   return decodeSession(cookieStore.get(SESSION_COOKIE_KEY)?.value);
+}
+
+function parseBearerToken(authorization: string | null): string | null {
+  if (!authorization) {
+    return null;
+  }
+  const m = /^Bearer\s+(.+)$/i.exec(authorization.trim());
+  return m?.[1]?.trim() || null;
+}
+
+/**
+ * Session cookie first; if missing, optional `Authorization: Bearer <api-key>` (P4).
+ */
+export async function getSessionUserFromRequest(request: NextRequest): Promise<SessionUser | null> {
+  const cookieStore = await cookies();
+  const fromCookie = decodeSession(cookieStore.get(SESSION_COOKIE_KEY)?.value);
+  if (fromCookie) {
+    return fromCookie;
+  }
+
+  const token = parseBearerToken(request.headers.get("authorization"));
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return await getSessionUserFromApiKeyToken(token);
+  } catch {
+    return null;
+  }
 }
 
 export const AuthConstants = {

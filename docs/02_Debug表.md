@@ -60,6 +60,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P3-SWEEP-001 | P3 | `TeamTasksPanel` / `reorderTeamTask` | 单列列表与「分列看板」心智不一致；reorder 可跨状态交换顺序 | 初版按全局 sortOrder 排序 | 三列 UI + reorder 仅在同一 `status` 内相邻交换 | Verified | `npm run check` |
 
+## P4-1 Feature (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P4-1-001 | P4 | `ApiKey` + Bearer | 无程序化访问用户资源能力 | 未实现 | User API keys + `getSessionUserFromRequest` + `/me/api-keys` + `me/teams` Bearer | Verified | `npm run check` |
+
 ## P3 Formal Closure (2026-04-13)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

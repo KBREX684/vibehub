@@ -4,6 +4,8 @@ Next.js full-stack implementation for VibeHub.
 
 **P3 is officially closed** (2026-04-13): team collaboration slices P3-1…P3-7 plus status-column task board are frozen on `main`. Deferred: in-app team notifications, finer task RBAC, billing/subscriptions — see `docs/03_项目日志.md`.
 
+**P4-1 (2026-04-13)**: User **API keys** (`ApiKey` table, hashed secrets), manage at **`/settings/api-keys`** (`GET/POST /api/v1/me/api-keys`, `DELETE /api/v1/me/api-keys/:keyId` with session cookie). **`GET /api/v1/me/teams`** also accepts **`Authorization: Bearer <vh_...>`** for scripts.
+
 Current scope:
 - P1: discussions, project gallery, creator pages, MCP v1 read tools
 - P3-1: teams (list/create/detail, owner invite by email, member leave / owner remove)
@@ -141,7 +143,11 @@ Runs `lint + test + build`.
   - `GET /api/v1/projects?query=&tag=&tech=&status=&team=&page=&limit=`
   - `GET /api/v1/projects/facets`
 - Current user teams (for project team picker):
-  - `GET /api/v1/me/teams`
+  - `GET /api/v1/me/teams` (session cookie **or** `Authorization: Bearer <api-key>` — P4-1)
+- API keys (P4-1, session cookie only for manage endpoints):
+  - `GET /api/v1/me/api-keys`
+  - `POST /api/v1/me/api-keys` body `{ "label": "..." }` — response includes `key.secret` **once**
+  - `DELETE /api/v1/me/api-keys/:keyId`
 - Team milestones (P3-5, team members only):
   - `GET /api/v1/teams/:slug/milestones`
   - `POST /api/v1/teams/:slug/milestones` body `{ "title", "description"?, "targetDate" (ISO), "sortOrder"? }`

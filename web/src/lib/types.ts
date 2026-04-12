@@ -122,7 +122,8 @@ export interface AuditLog {
     | "team"
     | "team_join_request"
     | "team_task"
-    | "team_milestone";
+    | "team_milestone"
+    | "api_key";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -252,6 +253,21 @@ export interface TeamMilestone {
   createdByName: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** P4: user API key metadata (secret never stored; prefix for display). */
+export interface ApiKeySummary {
+  id: string;
+  label: string;
+  prefix: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  revokedAt?: string;
+}
+
+/** Returned only once from create. */
+export interface ApiKeyCreated extends ApiKeySummary {
+  secret: string;
 }
 
 export interface TeamDetail extends TeamSummary {
