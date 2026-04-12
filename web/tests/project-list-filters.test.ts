@@ -33,4 +33,10 @@ describe("listProjects filters (P2-4)", () => {
     expect(facets.tags.length).toBeGreaterThan(0);
     expect(facets.techStack.some((t) => t === "Next.js")).toBe(true);
   });
+
+  it("filters by team slug (P3-3)", async () => {
+    const r = await listProjects({ team: "vibehub-core", page: 1, limit: 20 });
+    expect(r.items.length).toBeGreaterThan(0);
+    expect(r.items.every((p) => p.team?.slug === "vibehub-core")).toBe(true);
+  });
 });

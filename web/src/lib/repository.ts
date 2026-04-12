@@ -35,6 +35,7 @@ import type {
   TeamJoinRequestRow,
   TeamJoinRequestStatus,
   TeamMember,
+  TeamProjectCard,
   TeamSummary,
   User,
   WeeklyLeaderboardKind,
@@ -122,6 +123,7 @@ function toProjectDto(project: {
   id: string;
   slug: string;
   creatorId: string;
+  teamId: string | null;
   title: string;
   oneLiner: string;
   description: string;
@@ -130,12 +132,28 @@ function toProjectDto(project: {
   status: Project["status"];
   demoUrl: string | null;
   updatedAt: Date;
+  team?: { slug: string; name: string } | null;
 }): Project {
-  return {
-    ...project,
+  const base: Project = {
+    id: project.id,
+    slug: project.slug,
+    creatorId: project.creatorId,
+    title: project.title,
+    oneLiner: project.oneLiner,
+    description: project.description,
+    techStack: project.techStack,
+    tags: project.tags,
+    status: project.status,
     demoUrl: project.demoUrl ?? undefined,
     updatedAt: project.updatedAt.toISOString(),
   };
+  if (project.teamId) {
+    base.teamId = project.teamId;
+  }
+  if (project.team) {
+    base.team = { slug: project.team.slug, name: project.team.name };
+  }
+  return base;
 }
 
 function toCreatorDto(creator: {
@@ -322,13 +340,29 @@ export async function listProjects(params: {
   /** Matches if any `techStack` entry equals this string (case-sensitive in DB; mock compares case-insensitively). */
   tech?: string;
   status?: Project["status"];
+  /** Filter by team slug (P3-3). */
+  team?: string;
   page: number;
   limit: number;
 }): Promise<Paginated<Project>> {
   const techFilter = params.tech?.trim();
   const statusFilter = params.status;
+  const teamSlug = params.team?.trim();
 
   if (useMockData) {
+    const teamIdFilter = teamSlug ? mockTeams.find((x) => x.slug === teamSlug)?.id : undefined;
+    if (teamSlug && !teamIdFilter) {
+      return {
+        items: [],
+        pagination: {
+          page: params.page,
+          limit: params.limit,
+          total: 0,
+          totalPages: 1,
+        },
+      };
+    }
+
     const filtered = mockProjects.filter((project) => {
       const q = params.query?.toLowerCase().trim();
       const t = params.tag?.toLowerCase().trim();
@@ -347,7 +381,9 @@ export async function listProjects(params: {
 
       const statusMatch = !statusFilter || project.status === statusFilter;
 
-      return queryMatch && tagMatch && techMatch && statusMatch;
+      const teamMatch = !teamIdFilter || project.teamId === teamIdFilter;
+
+      return queryMatch && tagMatch && techMatch && statusMatch && teamMatch;
     });
 
     return paginateArray(filtered, params.page, params.limit);
@@ -378,6 +414,13 @@ export async function listProjects(params: {
           }
         : {},
       statusFilter ? { status: statusFilter } : {},
+      teamSlug
+        ? {
+            team: {
+              slug: teamSlug,
+            },
+          }
+        : {},
     ],
   };
 
@@ -388,12 +431,13 @@ export async function listProjects(params: {
       orderBy: { updatedAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
+      include: { team: { select: { slug: true, name: true } } },
     }),
     prisma.project.count({ where }),
   ]);
 
   return {
-    items: items.map(toProjectDto),
+    items: items.map((p) => toProjectDto({ ...p, teamId: p.teamId, team: p.team })),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -441,8 +485,127 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
   const prisma = await getPrisma();
   const project = await prisma.project.findUnique({
     where: { slug },
+    include: { team: { select: { slug: true, name: true } } },
   });
-  return project ? toProjectDto(project) : null;
+  return project ? toProjectDto({ ...project, team: project.team }) : null;
+}
+
+export async function updateProjectTeamLink(params: {
+  projectSlug: string;
+  actorUserId: string;
+  teamSlug: string | null;
+}): Promise<Project> {
+  if (useMockData) {
+    const project = mockProjects.find((p) => p.slug === params.projectSlug);
+    if (!project) {
+      throw new Error("PROJECT_NOT_FOUND");
+    }
+    const creator = mockCreators.find((c) => c.id === project.creatorId);
+    if (!creator || creator.userId !== params.actorUserId) {
+      throw new Error("FORBIDDEN_NOT_CREATOR");
+    }
+    if (params.teamSlug === null || params.teamSlug === "") {
+      project.teamId = undefined;
+      project.team = undefined;
+      return { ...project };
+    }
+    const slugTrim = params.teamSlug.trim();
+    const team = mockTeams.find((t) => t.slug === slugTrim);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    const isMember = mockTeamMemberships.some((m) => m.teamId === team.id && m.userId === params.actorUserId);
+    if (!isMember) {
+      throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
+    }
+    project.teamId = team.id;
+    project.team = { slug: team.slug, name: team.name };
+    return { ...project };
+  }
+
+  const prisma = await getPrisma();
+  const project = await prisma.project.findUnique({
+    where: { slug: params.projectSlug },
+    include: { creator: { select: { userId: true } } },
+  });
+  if (!project) {
+    throw new Error("PROJECT_NOT_FOUND");
+  }
+  if (project.creator.userId !== params.actorUserId) {
+    throw new Error("FORBIDDEN_NOT_CREATOR");
+  }
+
+  if (params.teamSlug === null || params.teamSlug === "") {
+    const updated = await prisma.project.update({
+      where: { id: project.id },
+      data: { teamId: null },
+      include: { team: { select: { slug: true, name: true } } },
+    });
+    return toProjectDto({ ...updated, team: updated.team });
+  }
+
+  const slugTrim = params.teamSlug.trim();
+  const team = await prisma.team.findUnique({
+    where: { slug: slugTrim },
+    select: { id: true },
+  });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+
+  const membership = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId: team.id, userId: params.actorUserId } },
+  });
+  if (!membership) {
+    throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
+  }
+
+  const updated = await prisma.project.update({
+    where: { id: project.id },
+    data: { teamId: team.id },
+    include: { team: { select: { slug: true, name: true } } },
+  });
+  return toProjectDto({ ...updated, team: updated.team });
+}
+
+export async function listTeamsForUser(userId: string): Promise<TeamSummary[]> {
+  if (useMockData) {
+    const teamIds = new Set(
+      mockTeamMemberships.filter((m) => m.userId === userId).map((m) => m.teamId)
+    );
+    return mockTeams
+      .filter((t) => teamIds.has(t.id))
+      .map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        name: t.name,
+        mission: t.mission,
+        ownerUserId: t.ownerUserId,
+        memberCount: mockTeamMemberships.filter((m) => m.teamId === t.id).length,
+        projectCount: mockProjects.filter((p) => p.teamId === t.id).length,
+        createdAt: t.createdAt,
+      }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.team.findMany({
+    where: { memberships: { some: { userId } } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { memberships: true, projects: true } },
+    },
+  });
+  return rows.map((t) => ({
+    id: t.id,
+    slug: t.slug,
+    name: t.name,
+    mission: t.mission ?? undefined,
+    ownerUserId: t.ownerUserId,
+    memberCount: t._count.memberships,
+    projectCount: t._count.projects,
+    createdAt: t.createdAt.toISOString(),
+  }));
 }
 
 export async function listCreators(params: {
@@ -505,6 +668,18 @@ export async function getCreatorBySlug(slug: string): Promise<CreatorProfile | n
   const prisma = await getPrisma();
   const creator = await prisma.creatorProfile.findUnique({
     where: { slug },
+  });
+  return creator ? toCreatorDto(creator) : null;
+}
+
+export async function getCreatorProfileById(creatorId: string): Promise<CreatorProfile | null> {
+  if (useMockData) {
+    return mockCreators.find((c) => c.id === creatorId) ?? null;
+  }
+
+  const prisma = await getPrisma();
+  const creator = await prisma.creatorProfile.findUnique({
+    where: { id: creatorId },
   });
   return creator ? toCreatorDto(creator) : null;
 }
@@ -1810,7 +1985,11 @@ function mockTeamMemberRows(teamId: string): TeamMember[] {
     });
 }
 
-function toTeamSummary(team: { id: string; slug: string; name: string; mission: string | null; ownerUserId: string; createdAt: Date }, memberCount: number): TeamSummary {
+function toTeamSummary(
+  team: { id: string; slug: string; name: string; mission: string | null; ownerUserId: string; createdAt: Date },
+  memberCount: number,
+  projectCount: number
+): TeamSummary {
   return {
     id: team.id,
     slug: team.slug,
@@ -1818,6 +1997,7 @@ function toTeamSummary(team: { id: string; slug: string; name: string; mission: 
     mission: team.mission ?? undefined,
     ownerUserId: team.ownerUserId,
     memberCount,
+    projectCount,
     createdAt: team.createdAt.toISOString(),
   };
 }
@@ -1834,6 +2014,7 @@ export async function listTeams(params: { page: number; limit: number }): Promis
         mission: t.mission,
         ownerUserId: t.ownerUserId,
         memberCount: mockTeamMemberships.filter((m) => m.teamId === t.id).length,
+        projectCount: mockProjects.filter((p) => p.teamId === t.id).length,
         createdAt: t.createdAt,
       })),
       pagination: pageResult.pagination,
@@ -1847,13 +2028,13 @@ export async function listTeams(params: { page: number; limit: number }): Promis
       orderBy: { createdAt: "desc" },
       skip,
       take: params.limit,
-      include: { _count: { select: { memberships: true } } },
+      include: { _count: { select: { memberships: true, projects: true } } },
     }),
     prisma.team.count(),
   ]);
 
   return {
-    items: rows.map((t) => toTeamSummary(t, t._count.memberships)),
+    items: rows.map((t) => toTeamSummary(t, t._count.memberships, t._count.projects)),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -1893,6 +2074,9 @@ export async function getTeamBySlug(slug: string, viewerUserId?: string | null):
       return null;
     }
     const members = mockTeamMemberRows(team.id);
+    const teamProjects: TeamProjectCard[] = mockProjects
+      .filter((p) => p.teamId === team.id)
+      .map((p) => ({ slug: p.slug, title: p.title, oneLiner: p.oneLiner }));
     const detail: TeamDetail = {
       id: team.id,
       slug: team.slug,
@@ -1900,8 +2084,10 @@ export async function getTeamBySlug(slug: string, viewerUserId?: string | null):
       mission: team.mission,
       ownerUserId: team.ownerUserId,
       memberCount: members.length,
+      projectCount: teamProjects.length,
       createdAt: team.createdAt,
       members,
+      teamProjects,
     };
     if (viewerUserId) {
       const isMember = members.some((m) => m.userId === viewerUserId);
@@ -1926,10 +2112,15 @@ export async function getTeamBySlug(slug: string, viewerUserId?: string | null):
   const team = await prisma.team.findUnique({
     where: { slug },
     include: {
-      _count: { select: { memberships: true } },
+      _count: { select: { memberships: true, projects: true } },
       memberships: {
         include: { user: { select: { id: true, name: true, email: true } } },
         orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+      },
+      projects: {
+        select: { slug: true, title: true, oneLiner: true },
+        orderBy: { updatedAt: "desc" },
+        take: 50,
       },
     },
   });
@@ -1957,8 +2148,13 @@ export async function getTeamBySlug(slug: string, viewerUserId?: string | null):
     });
 
   const detail: TeamDetail = {
-    ...toTeamSummary(team, team._count.memberships),
+    ...toTeamSummary(team, team._count.memberships, team._count.projects),
     members,
+    teamProjects: team.projects.map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      oneLiner: p.oneLiner,
+    })),
   };
 
   if (viewerUserId) {

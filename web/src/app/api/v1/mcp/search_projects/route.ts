@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const query = url.searchParams.get("query")?.trim() || undefined;
     const tag = url.searchParams.get("tag")?.trim() || undefined;
     const tech = url.searchParams.get("tech")?.trim() || undefined;
+    const team = url.searchParams.get("team")?.trim() || undefined;
     const rawStatus = url.searchParams.get("status");
     const status = parseStatus(rawStatus);
     if (rawStatus && !status) {
@@ -31,11 +32,11 @@ export async function GET(request: Request) {
       );
     }
 
-    const result = await listProjects({ query, tag, tech, status, page, limit });
+    const result = await listProjects({ query, tag, tech, status, team, page, limit });
 
     return apiSuccess({
       tool: "search_projects",
-      input: { query, tag, tech, status, page, limit },
+      input: { query, tag, tech, status, team, page, limit },
       output: result,
     });
   } catch (error) {

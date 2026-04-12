@@ -71,6 +71,8 @@ export const mockProjects: Project[] = [
     id: "p1",
     slug: "vibehub",
     creatorId: "c1",
+    teamId: "team1",
+    team: { slug: "vibehub-core", name: "VibeHub Core" },
     title: "VibeHub",
     oneLiner: "Community + Showcase + Teaming for VibeCoding developers",
     description:

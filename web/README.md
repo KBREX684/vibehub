@@ -6,6 +6,7 @@ Current scope:
 - P1: discussions, project gallery, creator pages, MCP v1 read tools
 - P3-1: teams (list/create/detail, owner invite by email, member leave / owner remove)
 - P3-2: team join **requests** (apply → owner approve/reject); `POST .../join` creates a pending request
+- P3-3: optional **project ↔ team** link (`teamId`), discover filter `team=`, creator `PATCH` to bind
 - P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
 - P2-2: collaboration intent submit/review workflow
 - P2-3: topic collections, leaderboards, collaboration funnel metrics
@@ -63,8 +64,9 @@ Runs `lint + test + build`.
 ## 4. P1 Public Endpoints
 
 - `GET /api/v1/health`
-- `GET /api/v1/projects`
+- `GET /api/v1/projects` (optional `team=<teamSlug>`)
 - `GET /api/v1/projects/:slug`
+- `PATCH /api/v1/projects/:slug` (login required, **creator only**) body `{ "teamSlug": "my-team" | null }` — unlink with `null`
 - `GET /api/v1/creators`
 - `GET /api/v1/creators/:slug`
 - `GET /api/v1/posts` (approved posts only)
@@ -77,7 +79,7 @@ Runs `lint + test + build`.
 - `POST /api/v1/auth/logout`
 
 ### MCP v1
-- `GET /api/v1/mcp/search_projects` (optional `query`, `tag`, `tech`, `status`, `page`, `limit`; invalid `status` returns `400`)
+- `GET /api/v1/mcp/search_projects` (optional `team=`) (optional `query`, `tag`, `tech`, `status`, `page`, `limit`; invalid `status` returns `400`)
 - `GET /api/v1/mcp/get_project_detail?slug=...`
 - `GET /api/v1/mcp/search_creators`
 
@@ -129,8 +131,10 @@ Runs `lint + test + build`.
 - Metrics:
   - `GET /api/v1/metrics/collaboration-intent-funnel`
 - Discovery filters:
-  - `GET /api/v1/projects?query=&tag=&tech=&status=&page=&limit=`
+  - `GET /api/v1/projects?query=&tag=&tech=&status=&team=&page=&limit=`
   - `GET /api/v1/projects/facets`
+- Current user teams (for project team picker):
+  - `GET /api/v1/me/teams`
 - Teams (P3-1 + P3-2):
   - `GET /api/v1/teams?page=&limit=`
   - `POST /api/v1/teams` (login required) body `{ "name", "slug"?, "mission"? }`

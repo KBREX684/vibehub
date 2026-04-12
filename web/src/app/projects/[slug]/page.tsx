@@ -2,7 +2,9 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { CollaborationIntentForm } from "@/components/collaboration-intent-form";
-import { getProjectBySlug, listProjectCollaborationIntents } from "@/lib/repository";
+import { ProjectTeamLinkForm } from "@/components/project-team-link-form";
+import { getSessionUserFromCookie } from "@/lib/auth";
+import { getCreatorProfileById, getProjectBySlug, listProjectCollaborationIntents } from "@/lib/repository";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -28,6 +30,10 @@ export default async function ProjectDetailPage({ params }: Props) {
     limit: 8,
   });
 
+  const session = await getSessionUserFromCookie();
+  const creatorProfile = await getCreatorProfileById(project.creatorId);
+  const canLinkTeam = Boolean(session && creatorProfile && session.userId === creatorProfile.userId);
+
   return (
     <>
       <SiteHeader />
@@ -51,6 +57,8 @@ export default async function ProjectDetailPage({ params }: Props) {
             </p>
           ) : null}
         </article>
+
+        <ProjectTeamLinkForm project={project} canEdit={canLinkTeam} />
 
         <aside className="card">
           <h3>Agent Invocation Example</h3>

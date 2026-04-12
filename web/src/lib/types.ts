@@ -21,10 +21,18 @@ export interface CreatorProfile {
   collaborationPreference: "open" | "invite_only" | "closed";
 }
 
+export interface ProjectTeamSummary {
+  slug: string;
+  name: string;
+}
+
 export interface Project {
   id: string;
   slug: string;
   creatorId: string;
+  /** Present when the project is linked to a Team (P3-3). */
+  teamId?: string;
+  team?: ProjectTeamSummary;
   title: string;
   oneLiner: string;
   description: string;
@@ -177,6 +185,7 @@ export interface TeamSummary {
   mission?: string;
   ownerUserId: string;
   memberCount: number;
+  projectCount: number;
   createdAt: string;
 }
 
@@ -202,8 +211,16 @@ export interface TeamJoinRequestRow {
   createdAt: string;
 }
 
+export interface TeamProjectCard {
+  slug: string;
+  title: string;
+  oneLiner: string;
+}
+
 export interface TeamDetail extends TeamSummary {
   members: TeamMember[];
+  /** Projects linked to this team (P3-3). */
+  teamProjects?: TeamProjectCard[];
   /** Set when the viewer has a pending join request for this team. */
   viewerPendingJoinRequest?: boolean;
   /** Owner-only: pending requests awaiting review. */

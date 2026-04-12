@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { ProjectCard } from "@/components/project-card";
 import { parsePagination } from "@/lib/pagination";
-import { getProjectFilterFacets, listProjects } from "@/lib/repository";
+import { getProjectFilterFacets, listProjects, listTeams } from "@/lib/repository";
 import type { ProjectStatus } from "@/lib/types";
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
@@ -42,6 +42,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   const query = get("query")?.trim();
   const tag = get("tag")?.trim();
   const tech = get("tech")?.trim();
+  const team = get("team")?.trim();
   const statusRaw = get("status")?.trim();
   const pageRaw = get("page");
   const limitRaw = get("limit");
@@ -49,6 +50,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   if (query) params.set("query", query);
   if (tag) params.set("tag", tag);
   if (tech) params.set("tech", tech);
+  if (team) params.set("team", team);
   if (statusRaw) params.set("status", statusRaw);
   if (pageRaw) params.set("page", pageRaw);
   if (limitRaw) params.set("limit", limitRaw);
@@ -59,15 +61,17 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
       ? (statusRaw as ProjectStatus)
       : undefined;
 
-  const [{ items, pagination }, facets] = await Promise.all([
-    listProjects({ query, tag, tech, status, page, limit }),
+  const [{ items, pagination }, facets, teamsPage] = await Promise.all([
+    listProjects({ query, tag, tech, status, team, page, limit }),
     getProjectFilterFacets(),
+    listTeams({ page: 1, limit: 100 }),
   ]);
 
   const baseFilters: Record<string, string | undefined> = {
     query,
     tag,
     tech,
+    team,
     status: statusRaw,
     limit: String(limit),
   };
@@ -123,6 +127,17 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
                 {STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="discover-field">
+              <span>团队（P3-3）</span>
+              <select name="team" defaultValue={team ?? ""}>
+                <option value="">全部</option>
+                {teamsPage.items.map((t) => (
+                  <option key={t.slug} value={t.slug}>
+                    {t.name}
                   </option>
                 ))}
               </select>

@@ -8,6 +8,14 @@ export function ProjectCard({ project }: { project: Project }) {
         <span className="status">{project.status}</span>
         <span className="muted">{new Date(project.updatedAt).toLocaleDateString()}</span>
       </div>
+      {project.team ? (
+        <p className="muted small">
+          团队：{" "}
+          <Link href={`/teams/${encodeURIComponent(project.team.slug)}`} className="inline-link">
+            {project.team.name}
+          </Link>
+        </p>
+      ) : null}
       <h3>{project.title}</h3>
       <p>{project.oneLiner}</p>
       <div className="tag-row">

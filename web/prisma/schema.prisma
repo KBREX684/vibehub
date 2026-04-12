@@ -87,6 +87,7 @@ model Project {
   id          String        @id @default(cuid())
   slug        String        @unique
   creatorId   String
+  teamId      String?
   title       String
   oneLiner    String
   description String
@@ -97,9 +98,11 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   creator     CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  team        Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
   collaborationIntents CollaborationIntent[]
 
   @@index([creatorId])
+  @@index([teamId])
 }
 
 model Post {
@@ -250,6 +253,7 @@ model Team {
   owner       User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   memberships TeamMembership[]
   joinRequests TeamJoinRequest[]
+  projects    Project[]
 
   @@index([ownerUserId])
 }

@@ -33,7 +33,7 @@ export default async function TeamsPage() {
                       {t.name}
                     </Link>
                     <span className="muted small">
-                      /{t.slug} · {t.memberCount} 人
+                      /{t.slug} · {t.memberCount} 人 · {t.projectCount} 个项目
                       {t.mission ? ` · ${t.mission}` : ""}
                     </span>
                   </li>

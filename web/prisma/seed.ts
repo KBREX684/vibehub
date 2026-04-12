@@ -168,6 +168,11 @@ async function main() {
     update: { role: "member" },
     create: { teamId: seedTeam.id, userId: bob.id, role: "member" },
   });
+
+  await prisma.project.update({
+    where: { slug: "vibehub" },
+    data: { teamId: seedTeam.id },
+  });
 }
 
 main()

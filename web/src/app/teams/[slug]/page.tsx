@@ -50,6 +50,31 @@ export default async function TeamDetailPage({ params }: Props) {
           </ol>
         </section>
 
+        <section className="card">
+          <h2>团队项目（{team.projectCount}）</h2>
+          {team.teamProjects && team.teamProjects.length > 0 ? (
+            <ul className="leaderboard-list">
+              {team.teamProjects.map((p) => (
+                <li key={p.slug}>
+                  <Link href={`/projects/${p.slug}`} className="inline-link">
+                    {p.title}
+                  </Link>
+                  <div className="muted small">{p.oneLiner}</div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted small">暂无关联项目。创建者在项目页可绑定本团队。</p>
+          )}
+          <p className="muted small" style={{ marginTop: "0.75rem" }}>
+            在{" "}
+            <Link href={`/discover?team=${encodeURIComponent(team.slug)}`} className="inline-link">
+              发现页按本团队筛选
+            </Link>
+            。
+          </p>
+        </section>
+
         <TeamDetailActions team={team} currentUserId={session?.userId ?? null} />
       </main>
     </>
