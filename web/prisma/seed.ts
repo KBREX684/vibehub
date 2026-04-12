@@ -175,27 +175,6 @@ async function main() {
   });
 
   await prisma.teamTask.deleteMany({ where: { teamId: seedTeam.id } });
-  await prisma.teamTask.createMany({
-    data: [
-      {
-        teamId: seedTeam.id,
-        title: "Review weekly ops checklist",
-        description: "P3-4 seed task for team task board",
-        status: "todo",
-        sortOrder: 0,
-        createdByUserId: alice.id,
-        assigneeUserId: bob.id,
-      },
-      {
-        teamId: seedTeam.id,
-        title: "Link next project to this team",
-        status: "doing",
-        sortOrder: 1,
-        createdByUserId: alice.id,
-      },
-    ],
-  });
-
   await prisma.teamMilestone.deleteMany({ where: { teamId: seedTeam.id } });
   await prisma.teamMilestone.createMany({
     data: [
@@ -213,6 +192,34 @@ async function main() {
         title: "First community launch review",
         targetDate: new Date(Date.UTC(2026, 7, 15)),
         completed: false,
+        sortOrder: 1,
+        createdByUserId: alice.id,
+      },
+    ],
+  });
+  const seedMilestones = await prisma.teamMilestone.findMany({
+    where: { teamId: seedTeam.id },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true },
+  });
+  const primaryMilestoneId = seedMilestones[0]?.id;
+
+  await prisma.teamTask.createMany({
+    data: [
+      {
+        teamId: seedTeam.id,
+        title: "Review weekly ops checklist",
+        description: "P3-4 seed task for team task board",
+        status: "todo",
+        sortOrder: 0,
+        milestoneId: primaryMilestoneId ?? null,
+        createdByUserId: alice.id,
+        assigneeUserId: bob.id,
+      },
+      {
+        teamId: seedTeam.id,
+        title: "Link next project to this team",
+        status: "doing",
         sortOrder: 1,
         createdByUserId: alice.id,
       },

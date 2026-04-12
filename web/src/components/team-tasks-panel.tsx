@@ -2,11 +2,12 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { TeamMember, TeamTask, TeamTaskStatus } from "@/lib/types";
+import type { TeamMember, TeamMilestone, TeamTask, TeamTaskStatus } from "@/lib/types";
 
 interface Props {
   teamSlug: string;
   members: TeamMember[];
+  milestones: TeamMilestone[];
   currentUserId: string | null;
 }
 
@@ -16,7 +17,7 @@ const STATUSES: { value: TeamTaskStatus; label: string }[] = [
   { value: "done", label: "完成" },
 ];
 
-export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
+export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TeamTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,7 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newAssignee, setNewAssignee] = useState("");
+  const [newMilestoneId, setNewMilestoneId] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +66,9 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
       if (newAssignee) {
         body.assigneeUserId = newAssignee;
       }
+      if (newMilestoneId) {
+        body.milestoneId = newMilestoneId;
+      }
       const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks`, {
         method: "POST",
         credentials: "include",
@@ -78,6 +83,7 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
       setNewTitle("");
       setNewDesc("");
       setNewAssignee("");
+      setNewMilestoneId("");
       await load();
       router.refresh();
     } catch (err) {
@@ -175,10 +181,10 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
 
   return (
     <div className="card">
-      <h2>任务板（P3-4 + P3-6）</h2>
+      <h2>任务板（P3-4 + P3-6 + P3-7）</h2>
       <p className="muted small">
-        成员可创建、更新状态、指派与删除；列表按 <code>sortOrder</code> 排序，可用上移/下移调整顺序。接口：GET/POST
-        /api/v1/teams/:slug/tasks；POST …/tasks/:id/reorder
+        成员可创建、更新状态、指派、可选关联里程碑与删除；列表按 <code>sortOrder</code> 排序。接口：GET/POST
+        /api/v1/teams/:slug/tasks（body 含 <code>milestoneId</code> 可选）；PATCH 可改关联；POST …/tasks/:id/reorder
       </p>
 
       <form onSubmit={(ev) => void createTask(ev)} className="discover-filter-grid" style={{ marginTop: "1rem" }}>
@@ -197,6 +203,17 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
             {members.map((m) => (
               <option key={m.userId} value={m.userId}>
                 {m.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="discover-field" style={{ gridColumn: "1 / -1" }}>
+          <span>关联里程碑（可选）</span>
+          <select value={newMilestoneId} onChange={(e) => setNewMilestoneId(e.target.value)}>
+            <option value="">不关联</option>
+            {milestones.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title}
               </option>
             ))}
           </select>
@@ -222,6 +239,7 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
             <p className="muted small">
               创建：{t.createdByName}
               {t.assigneeName ? ` · 指派：${t.assigneeName}` : ""}
+              {t.milestoneTitle ? ` · 里程碑：${t.milestoneTitle}` : ""}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
               <button
@@ -268,6 +286,22 @@ export function TeamTasksPanel({ teamSlug, members, currentUserId }: Props) {
                 {members.map((m) => (
                   <option key={m.userId} value={m.userId}>
                     {m.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={t.milestoneId ?? ""}
+                onChange={(e) =>
+                  void patchTask(t.id, {
+                    milestoneId: e.target.value === "" ? null : e.target.value,
+                  })
+                }
+                aria-label="关联里程碑"
+              >
+                <option value="">不关联里程碑</option>
+                {milestones.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title}
                   </option>
                 ))}
               </select>

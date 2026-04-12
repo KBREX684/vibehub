@@ -48,6 +48,12 @@
 |---|---|---|---|---|---|---|---|
 | AUDIT-P3-COMPLETE-001 | P3 | P3-1…P3-6 主线 | 需可复核的审计结论与合入 `main` 记录 | 增量交付分散在多分支 | 合并 P3-6 分支至 `main`；交叉核对 API/迁移/测试；更新 `docs/01`、`docs/03`、根 README | Verified | `npm run check` on `main` after closure commit |
 
+## P3-7 Feature / Closure (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P3-7-001 | P3 | `TeamTask` ↔ `TeamMilestone` | 任务与里程碑无结构化关联 | 未建模 | `milestoneId` optional FK + API + UI + seed + tests | Verified | `npm run check` |
+
 ## P3-5 Debug Closure (2026-04-12)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

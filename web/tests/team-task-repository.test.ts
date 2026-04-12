@@ -7,11 +7,44 @@ import {
   updateTeamTask,
 } from "../src/lib/repository";
 
-describe("team tasks (P3-4, mock)", () => {
+describe("team tasks (P3-4 + P3-7, mock)", () => {
   it("lists tasks for team member", async () => {
     const tasks = await listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u1" });
     expect(tasks.length).toBeGreaterThan(0);
     expect(tasks.every((x) => typeof x.sortOrder === "number")).toBe(true);
+    const linked = tasks.find((x) => x.id === "tt1");
+    expect(linked?.milestoneId).toBe("ms1");
+    expect(linked?.milestoneTitle).toBeTruthy();
+  });
+
+  it("creates and updates milestone link", async () => {
+    const t = await createTeamTask({
+      teamSlug: "vibehub-core",
+      actorUserId: "u1",
+      title: "Milestone-linked task",
+      milestoneId: "ms2",
+    });
+    expect(t.milestoneId).toBe("ms2");
+    expect(t.milestoneTitle).toBeTruthy();
+    const cleared = await updateTeamTask({
+      teamSlug: "vibehub-core",
+      taskId: t.id,
+      actorUserId: "u1",
+      milestoneId: null,
+    });
+    expect(cleared.milestoneId).toBeUndefined();
+    await deleteTeamTask({ teamSlug: "vibehub-core", taskId: t.id, actorUserId: "u1" });
+  });
+
+  it("rejects milestone from another team or unknown id", async () => {
+    await expect(
+      createTeamTask({
+        teamSlug: "vibehub-core",
+        actorUserId: "u1",
+        title: "Bad milestone",
+        milestoneId: "not-a-real-milestone",
+      })
+    ).rejects.toThrow("TEAM_MILESTONE_NOT_FOUND");
   });
 
   it("reorders tasks with up/down (swap sortOrder)", async () => {

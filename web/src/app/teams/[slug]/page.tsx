@@ -5,7 +5,7 @@ import { TeamDetailActions } from "@/components/team-detail-actions";
 import { TeamMilestonesPanel } from "@/components/team-milestones-panel";
 import { TeamTasksPanel } from "@/components/team-tasks-panel";
 import { getSessionUserFromCookie } from "@/lib/auth";
-import { getTeamBySlug } from "@/lib/repository";
+import { getTeamBySlug, listTeamMilestones } from "@/lib/repository";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,6 +18,12 @@ export default async function TeamDetailPage({ params }: Props) {
   if (!team) {
     notFound();
   }
+
+  const viewerId = session?.userId ?? null;
+  const isMember = viewerId != null && team.members.some((m) => m.userId === viewerId);
+  const taskMilestones = isMember
+    ? await listTeamMilestones({ teamSlug: slug, viewerUserId: viewerId })
+    : [];
 
   return (
     <>
@@ -77,7 +83,12 @@ export default async function TeamDetailPage({ params }: Props) {
           </p>
         </section>
 
-        <TeamTasksPanel teamSlug={team.slug} members={team.members} currentUserId={session?.userId ?? null} />
+        <TeamTasksPanel
+          teamSlug={team.slug}
+          members={team.members}
+          milestones={taskMilestones}
+          currentUserId={session?.userId ?? null}
+        />
 
         <TeamMilestonesPanel teamSlug={team.slug} currentUserId={session?.userId ?? null} />
 

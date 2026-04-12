@@ -307,17 +307,20 @@ model TeamTask {
   description       String?
   status            TeamTaskStatus @default(todo)
   sortOrder         Int            @default(0)
+  milestoneId       String?
   createdByUserId   String
   assigneeUserId    String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   team              Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  milestone         TeamMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   createdBy         User           @relation("TeamTaskCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
   assignee          User?          @relation("TeamTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
 
   @@index([teamId])
   @@index([teamId, status])
   @@index([teamId, sortOrder])
+  @@index([teamId, milestoneId])
 }
 
 model TeamMilestone {
@@ -333,6 +336,7 @@ model TeamMilestone {
   updatedAt         DateTime @updatedAt
   team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdBy         User     @relation("TeamMilestoneCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  tasks             TeamTask[]
 
   @@index([teamId])
   @@index([teamId, completed])

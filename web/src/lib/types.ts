@@ -228,6 +228,9 @@ export interface TeamTask {
   description?: string;
   status: TeamTaskStatus;
   sortOrder: number;
+  /** Optional link to a milestone in the same team (P3-7). */
+  milestoneId?: string;
+  milestoneTitle?: string;
   createdByUserId: string;
   createdByName: string;
   assigneeUserId?: string;

@@ -50,6 +50,7 @@ export interface MockTeamTask {
   description?: string;
   status: TeamTaskStatus;
   sortOrder: number;
+  milestoneId?: string;
   createdByUserId: string;
   assigneeUserId?: string;
   createdAt: string;
@@ -262,6 +263,7 @@ export const mockTeamTasks: MockTeamTask[] = [
     description: "Optional scheduled job or doc for ops.",
     status: "doing",
     sortOrder: 0,
+    milestoneId: "ms1",
     createdByUserId: "u1",
     assigneeUserId: "u2",
     createdAt: new Date().toISOString(),

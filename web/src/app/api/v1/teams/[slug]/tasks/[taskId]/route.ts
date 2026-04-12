@@ -10,6 +10,7 @@ const patchSchema = z.object({
   status: z.enum(["todo", "doing", "done"]).optional(),
   assigneeUserId: z.union([z.string().min(1), z.null()]).optional(),
   sortOrder: z.number().int().optional(),
+  milestoneId: z.union([z.string().min(1), z.null()]).optional(),
 });
 
 interface Params {
@@ -35,6 +36,7 @@ export async function PATCH(request: Request, { params }: Params) {
       status: parsed.status as TeamTaskStatus | undefined,
       assigneeUserId: parsed.assigneeUserId,
       sortOrder: parsed.sortOrder,
+      milestoneId: parsed.milestoneId,
     });
     return apiSuccess(task);
   } catch (error) {
@@ -59,6 +61,9 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     if (msg === "ASSIGNEE_NOT_TEAM_MEMBER") {
       return apiError({ code: "ASSIGNEE_NOT_TEAM_MEMBER", message: "Assignee must be a team member" }, 400);
+    }
+    if (msg === "TEAM_MILESTONE_NOT_FOUND") {
+      return apiError({ code: "TEAM_MILESTONE_NOT_FOUND", message: "Milestone not found for this team" }, 400);
     }
     return apiError(
       {

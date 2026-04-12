@@ -10,6 +10,7 @@ Current scope:
 - P3-4: **TeamTask** board per team (`todo` / `doing` / `done`), members-only API + UI on team page
 - P3-5: **TeamMilestone** timeline (target date, completed, sortOrder), members-only API + UI on team page
 - P3-6: **TeamTask.sortOrder** + list ordering; optional `sortOrder` on create/PATCH; `POST .../tasks/:taskId/reorder` for up/down
+- P3-7: optional **task → milestone** link (`TeamTask.milestoneId`), validated per team; cleared on milestone delete (FK SetNull + mock parity)
 - P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
 - P2-2: collaboration intent submit/review workflow
 - P2-3: topic collections, leaderboards, collaboration funnel metrics
@@ -143,10 +144,10 @@ Runs `lint + test + build`.
   - `POST /api/v1/teams/:slug/milestones` body `{ "title", "description"?, "targetDate" (ISO), "sortOrder"? }`
   - `PATCH /api/v1/teams/:slug/milestones/:milestoneId` body partial `{ "title", "description"|null, "targetDate", "completed", "sortOrder" }`
   - `DELETE /api/v1/teams/:slug/milestones/:milestoneId`
-- Team tasks (P3-4 + P3-6 sort, team members only):
+- Team tasks (P3-4 + P3-6 sort + P3-7 milestone link, team members only):
   - `GET /api/v1/teams/:slug/tasks` (ordered by `sortOrder` asc, then `updatedAt` desc)
-  - `POST /api/v1/teams/:slug/tasks` body `{ "title", "description"?, "status"?, "assigneeUserId"?, "sortOrder"? }`
-  - `PATCH /api/v1/teams/:slug/tasks/:taskId` body partial `{ "title", "description"|null, "status", "assigneeUserId"|null, "sortOrder"? }`
+  - `POST /api/v1/teams/:slug/tasks` body `{ "title", "description"?, "status"?, "assigneeUserId"?, "sortOrder"?, "milestoneId"?|null }`
+  - `PATCH /api/v1/teams/:slug/tasks/:taskId` body partial `{ "title", "description"|null, "status", "assigneeUserId"|null, "sortOrder"?, "milestoneId"|null }`
   - `POST /api/v1/teams/:slug/tasks/:taskId/reorder` body `{ "direction": "up" | "down" }` — swaps with adjacent task in list order
   - `DELETE /api/v1/teams/:slug/tasks/:taskId`
 - Teams (P3-1 + P3-2):

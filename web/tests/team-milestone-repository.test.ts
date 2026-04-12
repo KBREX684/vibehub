@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   createTeamMilestone,
+  createTeamTask,
   deleteTeamMilestone,
+  deleteTeamTask,
   listTeamMilestones,
+  listTeamTasks,
   updateTeamMilestone,
 } from "../src/lib/repository";
 
@@ -37,5 +40,26 @@ describe("team milestones (P3-5, mock)", () => {
     await deleteTeamMilestone({ teamSlug: "vibehub-core", milestoneId: m.id, actorUserId: "u1" });
     const after = await listTeamMilestones({ teamSlug: "vibehub-core", viewerUserId: "u1" });
     expect(after.some((x) => x.id === m.id)).toBe(false);
+  });
+
+  it("clears task milestoneId when milestone is deleted", async () => {
+    const m = await createTeamMilestone({
+      teamSlug: "vibehub-core",
+      actorUserId: "u1",
+      title: "Temp milestone for task link",
+      targetDate: new Date(Date.UTC(2026, 9, 1)).toISOString(),
+    });
+    const task = await createTeamTask({
+      teamSlug: "vibehub-core",
+      actorUserId: "u1",
+      title: "Task under temp milestone",
+      milestoneId: m.id,
+    });
+    expect(task.milestoneId).toBe(m.id);
+    await deleteTeamMilestone({ teamSlug: "vibehub-core", milestoneId: m.id, actorUserId: "u1" });
+    const tasks = await listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u1" });
+    const row = tasks.find((x) => x.id === task.id);
+    expect(row?.milestoneId).toBeUndefined();
+    await deleteTeamTask({ teamSlug: "vibehub-core", taskId: task.id, actorUserId: "u1" });
   });
 });
