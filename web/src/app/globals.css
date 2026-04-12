@@ -290,3 +290,78 @@ pre.code {
     grid-template-columns: 1fr;
   }
 }
+
+.code-inline {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.85em;
+  background: #edf2ff;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.leaderboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.leaderboard-panel h2 {
+  margin-top: 0;
+}
+
+.leaderboard-list {
+  margin: 12px 0 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.leaderboard-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.rank-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #eef2ff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #1d4ed8;
+}
+
+.funnel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.funnel-stat {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.funnel-stat strong {
+  display: block;
+  font-size: 1.35rem;
+}
+
+.funnel-stat span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}

@@ -110,3 +110,35 @@ export interface AuditLog {
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
+
+export interface CollectionTopic {
+  slug: string;
+  title: string;
+  description: string;
+  tag: string;
+}
+
+export interface LeaderboardDiscussionRow {
+  postId: string;
+  slug: string;
+  title: string;
+  commentCount: number;
+}
+
+export interface LeaderboardProjectRow {
+  projectId: string;
+  slug: string;
+  title: string;
+  intentCount: number;
+}
+
+export interface CollaborationIntentConversionMetrics {
+  totalSubmissions: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  /** approved / totalSubmissions (0 if none). */
+  approvalRate: number;
+  /** approved / (approved + rejected); 0 if no reviewed intents. */
+  reviewedApprovalRate: number;
+}
