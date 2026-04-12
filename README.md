@@ -8,7 +8,7 @@ This repository hosts the VibeHub product planning assets and the P1 full-stack 
 - `docs/01_实现计划图.md`: Stage-based implementation map
 - `docs/02_Debug表.md`: Debug tracker template + first entries
 - `docs/03_项目日志.md`: Project log template + kickoff log
-- `web/`: Next.js full-stack website (P1 MVP; **P2** slices P2-1…P2-5; **P3** Team, join requests, project↔team link, team task board — see `docs/01_实现计划图.md` and `docs/03_项目日志.md`)
+- `web/`: Next.js full-stack website (P1 MVP; **P2** slices P2-1…P2-5; **P3** Team, join requests, project↔team link, tasks, milestones — see `docs/01_实现计划图.md` and `docs/03_项目日志.md`)
 
 ## Quick Start (Web)
 

@@ -193,6 +193,29 @@ async function main() {
       },
     ],
   });
+
+  await prisma.teamMilestone.deleteMany({ where: { teamId: seedTeam.id } });
+  await prisma.teamMilestone.createMany({
+    data: [
+      {
+        teamId: seedTeam.id,
+        title: "P3 collaboration slice GA",
+        description: "Teams, tasks, milestones in production",
+        targetDate: new Date(Date.UTC(2026, 5, 1)),
+        completed: false,
+        sortOrder: 0,
+        createdByUserId: alice.id,
+      },
+      {
+        teamId: seedTeam.id,
+        title: "First community launch review",
+        targetDate: new Date(Date.UTC(2026, 7, 15)),
+        completed: false,
+        sortOrder: 1,
+        createdByUserId: alice.id,
+      },
+    ],
+  });
 }
 
 main()

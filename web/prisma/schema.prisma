@@ -75,6 +75,7 @@ model User {
   teamJoinRequests          TeamJoinRequest[]     @relation("TeamJoinApplicant")
   teamTasksCreated          TeamTask[]            @relation("TeamTaskCreator")
   teamTasksAssigned         TeamTask[]            @relation("TeamTaskAssignee")
+  teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
 }
 
 model CreatorProfile {
@@ -263,6 +264,7 @@ model Team {
   joinRequests TeamJoinRequest[]
   projects    Project[]
   tasks       TeamTask[]
+  milestones  TeamMilestone[]
 
   @@index([ownerUserId])
 }
@@ -314,4 +316,23 @@ model TeamTask {
 
   @@index([teamId])
   @@index([teamId, status])
+}
+
+model TeamMilestone {
+  id                String   @id @default(cuid())
+  teamId            String
+  title             String
+  description       String?
+  targetDate        DateTime
+  completed         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  createdByUserId   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy         User     @relation("TeamMilestoneCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([teamId, completed])
+  @@index([teamId, sortOrder])
 }

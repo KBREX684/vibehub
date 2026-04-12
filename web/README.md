@@ -8,6 +8,7 @@ Current scope:
 - P3-2: team join **requests** (apply → owner approve/reject); `POST .../join` creates a pending request
 - P3-3: optional **project ↔ team** link (`teamId`), discover filter `team=`, creator `PATCH` to bind
 - P3-4: **TeamTask** board per team (`todo` / `doing` / `done`), members-only API + UI on team page
+- P3-5: **TeamMilestone** timeline (target date, completed, sortOrder), members-only API + UI on team page
 - P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
 - P2-2: collaboration intent submit/review workflow
 - P2-3: topic collections, leaderboards, collaboration funnel metrics
@@ -136,6 +137,11 @@ Runs `lint + test + build`.
   - `GET /api/v1/projects/facets`
 - Current user teams (for project team picker):
   - `GET /api/v1/me/teams`
+- Team milestones (P3-5, team members only):
+  - `GET /api/v1/teams/:slug/milestones`
+  - `POST /api/v1/teams/:slug/milestones` body `{ "title", "description"?, "targetDate" (ISO), "sortOrder"? }`
+  - `PATCH /api/v1/teams/:slug/milestones/:milestoneId` body partial `{ "title", "description"|null, "targetDate", "completed", "sortOrder" }`
+  - `DELETE /api/v1/teams/:slug/milestones/:milestoneId`
 - Team tasks (P3-4, team members only):
   - `GET /api/v1/teams/:slug/tasks`
   - `POST /api/v1/teams/:slug/tasks` body `{ "title", "description"?, "status"?, "assigneeUserId"? }`

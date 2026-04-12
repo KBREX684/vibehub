@@ -12,6 +12,7 @@ import {
   mockReportTickets,
   mockTeamJoinRequests,
   mockTeamMemberships,
+  mockTeamMilestones,
   mockTeamTasks,
   mockTeams,
   mockUsers,
@@ -36,6 +37,7 @@ import type {
   TeamJoinRequestRow,
   TeamJoinRequestStatus,
   TeamMember,
+  TeamMilestone,
   TeamProjectCard,
   TeamSummary,
   TeamTask,
@@ -916,6 +918,309 @@ export async function deleteTeamTask(params: {
   });
   if (del.count === 0) {
     throw new Error("TEAM_TASK_NOT_FOUND");
+  }
+}
+
+function mockTeamMilestoneToDto(row: {
+  id: string;
+  teamId: string;
+  title: string;
+  description?: string;
+  targetDate: string;
+  completed: boolean;
+  sortOrder: number;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}): TeamMilestone {
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    title: row.title,
+    description: row.description,
+    targetDate: row.targetDate,
+    completed: row.completed,
+    sortOrder: row.sortOrder,
+    createdByUserId: row.createdByUserId,
+    createdByName: userNameById(row.createdByUserId),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function nextMilestoneSortOrder(teamId: string): number {
+  const rows = mockTeamMilestones.filter((m) => m.teamId === teamId);
+  if (rows.length === 0) {
+    return 0;
+  }
+  return Math.max(...rows.map((m) => m.sortOrder)) + 1;
+}
+
+export async function listTeamMilestones(params: { teamSlug: string; viewerUserId: string }): Promise<TeamMilestone[]> {
+  await assertTeamMemberBySlug(params.teamSlug, params.viewerUserId);
+
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug)!;
+    return mockTeamMilestones
+      .filter((m) => m.teamId === team.id)
+      .map(mockTeamMilestoneToDto)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.targetDate.localeCompare(b.targetDate));
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: params.teamSlug }, select: { id: true } });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  const rows = await prisma.teamMilestone.findMany({
+    where: { teamId: team.id },
+    orderBy: [{ sortOrder: "asc" }, { targetDate: "asc" }],
+    include: { createdBy: { select: { id: true, name: true } } },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    teamId: r.teamId,
+    title: r.title,
+    description: r.description ?? undefined,
+    targetDate: r.targetDate.toISOString(),
+    completed: r.completed,
+    sortOrder: r.sortOrder,
+    createdByUserId: r.createdByUserId,
+    createdByName: r.createdBy.name,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  }));
+}
+
+export async function createTeamMilestone(params: {
+  teamSlug: string;
+  actorUserId: string;
+  title: string;
+  description?: string;
+  targetDate: string;
+  sortOrder?: number;
+}): Promise<TeamMilestone> {
+  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const title = params.title.trim();
+  if (!title) {
+    throw new Error("INVALID_MILESTONE_TITLE");
+  }
+  const target = new Date(params.targetDate);
+  if (Number.isNaN(target.getTime())) {
+    throw new Error("INVALID_MILESTONE_DATE");
+  }
+  const desc = params.description?.trim().slice(0, 2000) || undefined;
+
+  if (useMockData) {
+    const now = new Date().toISOString();
+    const sortOrder =
+      params.sortOrder !== undefined && Number.isFinite(params.sortOrder)
+        ? Math.floor(params.sortOrder)
+        : nextMilestoneSortOrder(teamId);
+    const row = {
+      id: `ms_${teamId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      teamId,
+      title,
+      description: desc,
+      targetDate: target.toISOString(),
+      completed: false,
+      sortOrder,
+      createdByUserId: params.actorUserId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    mockTeamMilestones.push(row);
+    mockAuditLogs.unshift({
+      id: `log_ms_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "team_milestone_created",
+      entityType: "team_milestone",
+      entityId: row.id,
+      metadata: { teamId },
+      createdAt: now,
+    });
+    return mockTeamMilestoneToDto(row);
+  }
+
+  const prisma = await getPrisma();
+  let sortOrder: number;
+  if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
+    sortOrder = Math.floor(params.sortOrder);
+  } else {
+    const agg = await prisma.teamMilestone.aggregate({
+      where: { teamId },
+      _max: { sortOrder: true },
+    });
+    sortOrder = agg._max.sortOrder != null ? agg._max.sortOrder + 1 : 0;
+  }
+
+  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const m = await tx.teamMilestone.create({
+      data: {
+        teamId,
+        title,
+        description: desc ?? null,
+        targetDate: target,
+        completed: false,
+        sortOrder,
+        createdByUserId: params.actorUserId,
+      },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.actorUserId,
+        action: "team_milestone_created",
+        entityType: "team_milestone",
+        entityId: m.id,
+        metadata: { teamId },
+      },
+    });
+    return m;
+  });
+
+  return {
+    id: created.id,
+    teamId: created.teamId,
+    title: created.title,
+    description: created.description ?? undefined,
+    targetDate: created.targetDate.toISOString(),
+    completed: created.completed,
+    sortOrder: created.sortOrder,
+    createdByUserId: created.createdByUserId,
+    createdByName: created.createdBy.name,
+    createdAt: created.createdAt.toISOString(),
+    updatedAt: created.updatedAt.toISOString(),
+  };
+}
+
+export async function updateTeamMilestone(params: {
+  teamSlug: string;
+  milestoneId: string;
+  actorUserId: string;
+  title?: string;
+  description?: string | null;
+  targetDate?: string;
+  completed?: boolean;
+  sortOrder?: number;
+}): Promise<TeamMilestone> {
+  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+
+  if (useMockData) {
+    const idx = mockTeamMilestones.findIndex((m) => m.id === params.milestoneId && m.teamId === teamId);
+    if (idx < 0) {
+      throw new Error("TEAM_MILESTONE_NOT_FOUND");
+    }
+    const cur = mockTeamMilestones[idx];
+    if (params.title !== undefined) {
+      const t = params.title.trim();
+      if (!t) {
+        throw new Error("INVALID_MILESTONE_TITLE");
+      }
+      cur.title = t;
+    }
+    if (params.description !== undefined) {
+      cur.description =
+        params.description === null ? undefined : params.description.trim().slice(0, 2000) || undefined;
+    }
+    if (params.targetDate !== undefined) {
+      const d = new Date(params.targetDate);
+      if (Number.isNaN(d.getTime())) {
+        throw new Error("INVALID_MILESTONE_DATE");
+      }
+      cur.targetDate = d.toISOString();
+    }
+    if (params.completed !== undefined) {
+      cur.completed = params.completed;
+    }
+    if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
+      cur.sortOrder = Math.floor(params.sortOrder);
+    }
+    cur.updatedAt = new Date().toISOString();
+    return mockTeamMilestoneToDto(cur);
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.teamMilestone.findFirst({
+    where: { id: params.milestoneId, teamId },
+  });
+  if (!existing) {
+    throw new Error("TEAM_MILESTONE_NOT_FOUND");
+  }
+
+  const data: {
+    title?: string;
+    description?: string | null;
+    targetDate?: Date;
+    completed?: boolean;
+    sortOrder?: number;
+  } = {};
+  if (params.title !== undefined) {
+    const t = params.title.trim();
+    if (!t) {
+      throw new Error("INVALID_MILESTONE_TITLE");
+    }
+    data.title = t;
+  }
+  if (params.description !== undefined) {
+    data.description = params.description === null ? null : params.description.trim().slice(0, 2000) || null;
+  }
+  if (params.targetDate !== undefined) {
+    const d = new Date(params.targetDate);
+    if (Number.isNaN(d.getTime())) {
+      throw new Error("INVALID_MILESTONE_DATE");
+    }
+    data.targetDate = d;
+  }
+  if (params.completed !== undefined) {
+    data.completed = params.completed;
+  }
+  if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
+    data.sortOrder = Math.floor(params.sortOrder);
+  }
+
+  const updated = await prisma.teamMilestone.update({
+    where: { id: params.milestoneId },
+    data,
+    include: { createdBy: { select: { id: true, name: true } } },
+  });
+  return {
+    id: updated.id,
+    teamId: updated.teamId,
+    title: updated.title,
+    description: updated.description ?? undefined,
+    targetDate: updated.targetDate.toISOString(),
+    completed: updated.completed,
+    sortOrder: updated.sortOrder,
+    createdByUserId: updated.createdByUserId,
+    createdByName: updated.createdBy.name,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  };
+}
+
+export async function deleteTeamMilestone(params: {
+  teamSlug: string;
+  milestoneId: string;
+  actorUserId: string;
+}): Promise<void> {
+  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+
+  if (useMockData) {
+    const idx = mockTeamMilestones.findIndex((m) => m.id === params.milestoneId && m.teamId === teamId);
+    if (idx < 0) {
+      throw new Error("TEAM_MILESTONE_NOT_FOUND");
+    }
+    mockTeamMilestones.splice(idx, 1);
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const del = await prisma.teamMilestone.deleteMany({
+    where: { id: params.milestoneId, teamId },
+  });
+  if (del.count === 0) {
+    throw new Error("TEAM_MILESTONE_NOT_FOUND");
   }
 }
 
@@ -2576,7 +2881,7 @@ export async function createTeam(input: {
     };
     mockTeams.unshift(team);
     mockTeamMemberships.unshift({
-      id: `tm_${Date.now()}`,
+      id: `tm_${id}_${input.ownerUserId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       teamId: id,
       userId: input.ownerUserId,
       role: "owner",
@@ -2839,7 +3144,7 @@ export async function reviewTeamJoinRequest(params: {
     }
     mockTeamJoinRequests[idx] = { ...req, status: "approved", reviewedAt };
     mockTeamMemberships.push({
-      id: `tm_${Date.now()}`,
+      id: `tm_${team.id}_${req.applicantId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       teamId: team.id,
       userId: req.applicantId,
       role: "member",
@@ -2975,7 +3280,7 @@ export async function addTeamMemberByEmail(params: {
     }
     const joinedAt = new Date().toISOString();
     mockTeamMemberships.push({
-      id: `tm_${Date.now()}`,
+      id: `tm_${team.id}_${target.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       teamId: team.id,
       userId: target.id,
       role: "member",

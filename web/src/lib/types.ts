@@ -121,7 +121,8 @@ export interface AuditLog {
     | "system"
     | "team"
     | "team_join_request"
-    | "team_task";
+    | "team_task"
+    | "team_milestone";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -231,6 +232,20 @@ export interface TeamTask {
   assigneeUserId?: string;
   assigneeName?: string;
   assigneeEmail?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamMilestone {
+  id: string;
+  teamId: string;
+  title: string;
+  description?: string;
+  targetDate: string;
+  completed: boolean;
+  sortOrder: number;
+  createdByUserId: string;
+  createdByName: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -30,6 +30,19 @@ export interface MockTeamMembership {
   joinedAt: string;
 }
 
+export interface MockTeamMilestone {
+  id: string;
+  teamId: string;
+  title: string;
+  description?: string;
+  targetDate: string;
+  completed: boolean;
+  sortOrder: number;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MockTeamTask {
   id: string;
   teamId: string;
@@ -210,6 +223,35 @@ export const mockTeams: MockTeam[] = [
 ];
 
 export const mockTeamJoinRequests: MockTeamJoinRequest[] = [];
+
+const milestoneT1 = new Date(Date.UTC(2026, 5, 1)).toISOString();
+const milestoneT2 = new Date(Date.UTC(2026, 7, 15)).toISOString();
+
+export const mockTeamMilestones: MockTeamMilestone[] = [
+  {
+    id: "ms1",
+    teamId: "team1",
+    title: "P3 collaboration slice GA",
+    description: "Teams, tasks, milestones live in prod.",
+    targetDate: milestoneT1,
+    completed: false,
+    sortOrder: 0,
+    createdByUserId: "u1",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "ms2",
+    teamId: "team1",
+    title: "First community launch review",
+    targetDate: milestoneT2,
+    completed: false,
+    sortOrder: 1,
+    createdByUserId: "u1",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
 export const mockTeamTasks: MockTeamTask[] = [
   {
