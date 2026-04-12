@@ -60,4 +60,23 @@ describe("teams repository (P3-1, mock)", () => {
       removeTeamMember({ teamSlug: created.slug, actorUserId: "u1", memberUserId: "u1" })
     ).rejects.toThrow("CANNOT_REMOVE_OWNER");
   });
+
+  it("keeps slug <= 48 chars when resolving duplicates", async () => {
+    const baseSlug = "z".repeat(48);
+
+    const first = await createTeam({
+      ownerUserId: "u1",
+      name: "Long Slug Team 1",
+      slug: baseSlug,
+    });
+    const second = await createTeam({
+      ownerUserId: "u1",
+      name: "Long Slug Team 2",
+      slug: baseSlug,
+    });
+
+    expect(first.slug.length).toBeLessThanOrEqual(48);
+    expect(second.slug.length).toBeLessThanOrEqual(48);
+    expect(second.slug).toBe(`${"z".repeat(46)}-1`);
+  });
 });

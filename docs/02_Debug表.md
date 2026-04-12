@@ -47,6 +47,7 @@
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
 |---|---|---|---|---|---|---|---|
 | BUG-P3-1-001 | P3 | `removeTeamMember` mock path | Member leave test flaky / failed: u2 still listed after self-remove | Mock membership rows used `Date.now()` for `id`; duplicate ids could make `findIndex` remove wrong row | Remove membership by `(teamId, userId)` instead of non-unique `id` | Verified | `npm run check`; `tests/team-repository.test.ts` |
+| BUG-P3-1-002 | P3 | `createTeam` slug collision path | Under repeated name collisions, auto-generated slug may exceed 48 chars and violate API contract / DB schema | Collision suffix appended without reserving length budget (`${baseSlug}-${n}`) | Add bounded slug candidate builder that truncates base before suffix and keeps final slug <= 48 in both mock and DB paths | Verified | `npm run check`; added regression in `tests/team-repository.test.ts` |
 
 ## P2 延期 / 未纳入（对照计划书 §4.2，2026-04-12）
 
