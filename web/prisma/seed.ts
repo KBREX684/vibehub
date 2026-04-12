@@ -173,6 +173,26 @@ async function main() {
     where: { slug: "vibehub" },
     data: { teamId: seedTeam.id },
   });
+
+  await prisma.teamTask.deleteMany({ where: { teamId: seedTeam.id } });
+  await prisma.teamTask.createMany({
+    data: [
+      {
+        teamId: seedTeam.id,
+        title: "Review weekly ops checklist",
+        description: "P3-4 seed task for team task board",
+        status: "todo",
+        createdByUserId: alice.id,
+        assigneeUserId: bob.id,
+      },
+      {
+        teamId: seedTeam.id,
+        title: "Link next project to this team",
+        status: "doing",
+        createdByUserId: alice.id,
+      },
+    ],
+  });
 }
 
 main()

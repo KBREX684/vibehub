@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { TeamDetailActions } from "@/components/team-detail-actions";
+import { TeamTasksPanel } from "@/components/team-tasks-panel";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug } from "@/lib/repository";
 
@@ -74,6 +75,8 @@ export default async function TeamDetailPage({ params }: Props) {
             。
           </p>
         </section>
+
+        <TeamTasksPanel teamSlug={team.slug} members={team.members} currentUserId={session?.userId ?? null} />
 
         <TeamDetailActions team={team} currentUserId={session?.userId ?? null} />
       </main>

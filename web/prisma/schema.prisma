@@ -47,6 +47,12 @@ enum TeamJoinRequestStatus {
   rejected
 }
 
+enum TeamTaskStatus {
+  todo
+  doing
+  done
+}
+
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
@@ -67,6 +73,8 @@ model User {
   ownedTeams                Team[]                @relation("TeamOwner")
   teamMemberships           TeamMembership[]
   teamJoinRequests          TeamJoinRequest[]     @relation("TeamJoinApplicant")
+  teamTasksCreated          TeamTask[]            @relation("TeamTaskCreator")
+  teamTasksAssigned         TeamTask[]            @relation("TeamTaskAssignee")
 }
 
 model CreatorProfile {
@@ -254,6 +262,7 @@ model Team {
   memberships TeamMembership[]
   joinRequests TeamJoinRequest[]
   projects    Project[]
+  tasks       TeamTask[]
 
   @@index([ownerUserId])
 }
@@ -287,4 +296,22 @@ model TeamJoinRequest {
   @@unique([teamId, applicantId])
   @@index([teamId, status])
   @@index([applicantId])
+}
+
+model TeamTask {
+  id                String         @id @default(cuid())
+  teamId            String
+  title             String
+  description       String?
+  status            TeamTaskStatus @default(todo)
+  createdByUserId   String
+  assigneeUserId    String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  team              Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy         User           @relation("TeamTaskCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  assignee          User?          @relation("TeamTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+
+  @@index([teamId])
+  @@index([teamId, status])
 }

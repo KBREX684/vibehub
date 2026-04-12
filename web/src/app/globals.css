@@ -227,6 +227,18 @@ a {
   color: #b91c1c;
 }
 
+.status-todo {
+  color: #64748b;
+}
+
+.status-doing {
+  color: #2563eb;
+}
+
+.status-done {
+  color: #15803d;
+}
+
 .detail {
   display: grid;
   grid-template-columns: 2fr 1fr;

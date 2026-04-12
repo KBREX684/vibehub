@@ -120,7 +120,8 @@ export interface AuditLog {
     | "collaboration_intent"
     | "system"
     | "team"
-    | "team_join_request";
+    | "team_join_request"
+    | "team_task";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -215,6 +216,23 @@ export interface TeamProjectCard {
   slug: string;
   title: string;
   oneLiner: string;
+}
+
+export type TeamTaskStatus = "todo" | "doing" | "done";
+
+export interface TeamTask {
+  id: string;
+  teamId: string;
+  title: string;
+  description?: string;
+  status: TeamTaskStatus;
+  createdByUserId: string;
+  createdByName: string;
+  assigneeUserId?: string;
+  assigneeName?: string;
+  assigneeEmail?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TeamDetail extends TeamSummary {

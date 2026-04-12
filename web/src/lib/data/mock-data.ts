@@ -9,6 +9,7 @@ import type {
   ReportTicket,
   TeamJoinRequestStatus,
   TeamRole,
+  TeamTaskStatus,
   User,
 } from "@/lib/types";
 
@@ -27,6 +28,18 @@ export interface MockTeamMembership {
   userId: string;
   role: TeamRole;
   joinedAt: string;
+}
+
+export interface MockTeamTask {
+  id: string;
+  teamId: string;
+  title: string;
+  description?: string;
+  status: TeamTaskStatus;
+  createdByUserId: string;
+  assigneeUserId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface MockTeamJoinRequest {
@@ -197,6 +210,29 @@ export const mockTeams: MockTeam[] = [
 ];
 
 export const mockTeamJoinRequests: MockTeamJoinRequest[] = [];
+
+export const mockTeamTasks: MockTeamTask[] = [
+  {
+    id: "tt1",
+    teamId: "team1",
+    title: "Ship weekly leaderboard materialize cron",
+    description: "Optional scheduled job or doc for ops.",
+    status: "doing",
+    createdByUserId: "u1",
+    assigneeUserId: "u2",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "tt2",
+    teamId: "team1",
+    title: "Review join requests daily",
+    status: "todo",
+    createdByUserId: "u1",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
 export const mockTeamMemberships: MockTeamMembership[] = [
   {

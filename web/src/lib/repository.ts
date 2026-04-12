@@ -12,6 +12,7 @@ import {
   mockReportTickets,
   mockTeamJoinRequests,
   mockTeamMemberships,
+  mockTeamTasks,
   mockTeams,
   mockUsers,
 } from "@/lib/data/mock-data";
@@ -37,6 +38,8 @@ import type {
   TeamMember,
   TeamProjectCard,
   TeamSummary,
+  TeamTask,
+  TeamTaskStatus,
   User,
   WeeklyLeaderboardKind,
   WeeklyLeaderboardMaterializedRow,
@@ -566,6 +569,354 @@ export async function updateProjectTeamLink(params: {
     include: { team: { select: { slug: true, name: true } } },
   });
   return toProjectDto({ ...updated, team: updated.team });
+}
+
+function userNameById(userId: string): string {
+  return mockUsers.find((u) => u.id === userId)?.name ?? "Unknown";
+}
+
+function mockTeamTaskToDto(row: {
+  id: string;
+  teamId: string;
+  title: string;
+  description?: string;
+  status: TeamTaskStatus;
+  createdByUserId: string;
+  assigneeUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+}): TeamTask {
+  const assignee = row.assigneeUserId ? mockUsers.find((u) => u.id === row.assigneeUserId) : undefined;
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    createdByUserId: row.createdByUserId,
+    createdByName: userNameById(row.createdByUserId),
+    assigneeUserId: row.assigneeUserId,
+    assigneeName: assignee?.name,
+    assigneeEmail: assignee?.email,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+async function assertTeamMemberBySlug(teamSlug: string, userId: string): Promise<{ teamId: string }> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === teamSlug);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    const ok = mockTeamMemberships.some((m) => m.teamId === team.id && m.userId === userId);
+    if (!ok) {
+      throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
+    }
+    return { teamId: team.id };
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug: teamSlug },
+    select: { id: true },
+  });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  const m = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId: team.id, userId } },
+  });
+  if (!m) {
+    throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
+  }
+  return { teamId: team.id };
+}
+
+export async function listTeamTasks(params: { teamSlug: string; viewerUserId: string }): Promise<TeamTask[]> {
+  await assertTeamMemberBySlug(params.teamSlug, params.viewerUserId);
+
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug)!;
+    return mockTeamTasks
+      .filter((t) => t.teamId === team.id)
+      .map(mockTeamTaskToDto)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: params.teamSlug }, select: { id: true } });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  const rows = await prisma.teamTask.findMany({
+    where: { teamId: team.id },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    teamId: r.teamId,
+    title: r.title,
+    description: r.description ?? undefined,
+    status: r.status as TeamTaskStatus,
+    createdByUserId: r.createdByUserId,
+    createdByName: r.createdBy.name,
+    assigneeUserId: r.assignee?.id,
+    assigneeName: r.assignee?.name,
+    assigneeEmail: r.assignee?.email,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  }));
+}
+
+export async function createTeamTask(params: {
+  teamSlug: string;
+  actorUserId: string;
+  title: string;
+  description?: string;
+  status?: TeamTaskStatus;
+  assigneeUserId?: string;
+}): Promise<TeamTask> {
+  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const title = params.title.trim();
+  if (!title) {
+    throw new Error("INVALID_TASK_TITLE");
+  }
+  const status: TeamTaskStatus =
+    params.status && ["todo", "doing", "done"].includes(params.status) ? params.status : "todo";
+  const desc = params.description?.trim().slice(0, 2000) || undefined;
+
+  if (useMockData) {
+    if (params.assigneeUserId) {
+      const assigneeMember = mockTeamMemberships.some(
+        (m) => m.teamId === teamId && m.userId === params.assigneeUserId
+      );
+      if (!assigneeMember) {
+        throw new Error("ASSIGNEE_NOT_TEAM_MEMBER");
+      }
+    }
+    const now = new Date().toISOString();
+    const row = {
+      id: `tt_${teamId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      teamId,
+      title,
+      description: desc,
+      status,
+      createdByUserId: params.actorUserId,
+      assigneeUserId: params.assigneeUserId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    mockTeamTasks.unshift(row);
+    mockAuditLogs.unshift({
+      id: `log_tt_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "team_task_created",
+      entityType: "team_task",
+      entityId: row.id,
+      metadata: { teamId },
+      createdAt: now,
+    });
+    return mockTeamTaskToDto(row);
+  }
+
+  const prisma = await getPrisma();
+  if (params.assigneeUserId) {
+    const mem = await prisma.teamMembership.findUnique({
+      where: { teamId_userId: { teamId, userId: params.assigneeUserId } },
+    });
+    if (!mem) {
+      throw new Error("ASSIGNEE_NOT_TEAM_MEMBER");
+    }
+  }
+
+  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const t = await tx.teamTask.create({
+      data: {
+        teamId,
+        title,
+        description: desc ?? null,
+        status,
+        createdByUserId: params.actorUserId,
+        assigneeUserId: params.assigneeUserId ?? null,
+      },
+      include: {
+        createdBy: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true, email: true } },
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.actorUserId,
+        action: "team_task_created",
+        entityType: "team_task",
+        entityId: t.id,
+        metadata: { teamId },
+      },
+    });
+    return t;
+  });
+
+  return {
+    id: created.id,
+    teamId: created.teamId,
+    title: created.title,
+    description: created.description ?? undefined,
+    status: created.status as TeamTaskStatus,
+    createdByUserId: created.createdByUserId,
+    createdByName: created.createdBy.name,
+    assigneeUserId: created.assignee?.id,
+    assigneeName: created.assignee?.name,
+    assigneeEmail: created.assignee?.email,
+    createdAt: created.createdAt.toISOString(),
+    updatedAt: created.updatedAt.toISOString(),
+  };
+}
+
+export async function updateTeamTask(params: {
+  teamSlug: string;
+  taskId: string;
+  actorUserId: string;
+  title?: string;
+  description?: string | null;
+  status?: TeamTaskStatus;
+  assigneeUserId?: string | null;
+}): Promise<TeamTask> {
+  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+
+  if (useMockData) {
+    const idx = mockTeamTasks.findIndex((t) => t.id === params.taskId && t.teamId === teamId);
+    if (idx < 0) {
+      throw new Error("TEAM_TASK_NOT_FOUND");
+    }
+    const cur = mockTeamTasks[idx];
+    if (params.title !== undefined) {
+      const t = params.title.trim();
+      if (!t) {
+        throw new Error("INVALID_TASK_TITLE");
+      }
+      cur.title = t;
+    }
+    if (params.description !== undefined) {
+      cur.description = params.description === null ? undefined : params.description.trim().slice(0, 2000);
+    }
+    if (params.status !== undefined) {
+      if (!["todo", "doing", "done"].includes(params.status)) {
+        throw new Error("INVALID_TASK_STATUS");
+      }
+      cur.status = params.status;
+    }
+    if (params.assigneeUserId !== undefined) {
+      if (params.assigneeUserId === null) {
+        cur.assigneeUserId = undefined;
+      } else {
+        const ok = mockTeamMemberships.some(
+          (m) => m.teamId === teamId && m.userId === params.assigneeUserId
+        );
+        if (!ok) {
+          throw new Error("ASSIGNEE_NOT_TEAM_MEMBER");
+        }
+        cur.assigneeUserId = params.assigneeUserId;
+      }
+    }
+    cur.updatedAt = new Date().toISOString();
+    return mockTeamTaskToDto(cur);
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.teamTask.findFirst({
+    where: { id: params.taskId, teamId },
+  });
+  if (!existing) {
+    throw new Error("TEAM_TASK_NOT_FOUND");
+  }
+
+  if (params.assigneeUserId !== undefined && params.assigneeUserId !== null) {
+    const mem = await prisma.teamMembership.findUnique({
+      where: { teamId_userId: { teamId, userId: params.assigneeUserId } },
+    });
+    if (!mem) {
+      throw new Error("ASSIGNEE_NOT_TEAM_MEMBER");
+    }
+  }
+
+  const data: {
+    title?: string;
+    description?: string | null;
+    status?: "todo" | "doing" | "done";
+    assigneeUserId?: string | null;
+  } = {};
+  if (params.title !== undefined) {
+    const t = params.title.trim();
+    if (!t) {
+      throw new Error("INVALID_TASK_TITLE");
+    }
+    data.title = t;
+  }
+  if (params.description !== undefined) {
+    data.description = params.description === null ? null : params.description.trim().slice(0, 2000) || null;
+  }
+  if (params.status !== undefined) {
+    if (!["todo", "doing", "done"].includes(params.status)) {
+      throw new Error("INVALID_TASK_STATUS");
+    }
+    data.status = params.status;
+  }
+  if (params.assigneeUserId !== undefined) {
+    data.assigneeUserId = params.assigneeUserId;
+  }
+
+  const updated = await prisma.teamTask.update({
+    where: { id: params.taskId },
+    data,
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+    },
+  });
+  return {
+    id: updated.id,
+    teamId: updated.teamId,
+    title: updated.title,
+    description: updated.description ?? undefined,
+    status: updated.status as TeamTaskStatus,
+    createdByUserId: updated.createdByUserId,
+    createdByName: updated.createdBy.name,
+    assigneeUserId: updated.assignee?.id,
+    assigneeName: updated.assignee?.name,
+    assigneeEmail: updated.assignee?.email,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  };
+}
+
+export async function deleteTeamTask(params: {
+  teamSlug: string;
+  taskId: string;
+  actorUserId: string;
+}): Promise<void> {
+  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+
+  if (useMockData) {
+    const idx = mockTeamTasks.findIndex((t) => t.id === params.taskId && t.teamId === teamId);
+    if (idx < 0) {
+      throw new Error("TEAM_TASK_NOT_FOUND");
+    }
+    mockTeamTasks.splice(idx, 1);
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const del = await prisma.teamTask.deleteMany({
+    where: { id: params.taskId, teamId },
+  });
+  if (del.count === 0) {
+    throw new Error("TEAM_TASK_NOT_FOUND");
+  }
 }
 
 export async function listTeamsForUser(userId: string): Promise<TeamSummary[]> {
