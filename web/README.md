@@ -2,6 +2,8 @@
 
 Next.js full-stack implementation for VibeHub.
 
+**P3 is officially closed** (2026-04-13): team collaboration slices P3-1…P3-7 plus status-column task board are frozen on `main`. Deferred: in-app team notifications, finer task RBAC, billing/subscriptions — see `docs/03_项目日志.md`.
+
 Current scope:
 - P1: discussions, project gallery, creator pages, MCP v1 read tools
 - P3-1: teams (list/create/detail, owner invite by email, member leave / owner remove)

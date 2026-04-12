@@ -3069,7 +3069,7 @@ export async function createTeam(input: {
       n += 1;
       slug = buildTeamSlugCandidate(baseSlug, n);
     }
-    const id = `team_${Date.now()}`;
+    const id = `team_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const createdAt = new Date().toISOString();
     const team = {
       id,

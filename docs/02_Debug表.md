@@ -60,6 +60,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P3-SWEEP-001 | P3 | `TeamTasksPanel` / `reorderTeamTask` | 单列列表与「分列看板」心智不一致；reorder 可跨状态交换顺序 | 初版按全局 sortOrder 排序 | 三列 UI + reorder 仅在同一 `status` 内相邻交换 | Verified | `npm run check` |
 
+## P3 Formal Closure (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| AUDIT-P3-FROZEN-001 | P3 | P3-1…P3-7 + sweep | 缺少可复核的「阶段封版」结论与顺延清单 | 功能迭代与路线图表述未收口 | 实现计划图 v2.2、项目日志封版段、README 声明；顺延通知/RBAC/订阅 | Verified | `npm run check` on `main`；与 `docs/01`/`03` 交叉核对 |
+
 ## P3-5 Debug Closure (2026-04-12)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
@@ -90,6 +96,7 @@
 |---|---|---|---|---|---|---|---|
 | BUG-P3-1-001 | P3 | `removeTeamMember` mock path | Member leave test flaky / failed: u2 still listed after self-remove | Mock membership rows used `Date.now()` for `id`; duplicate ids could make `findIndex` remove wrong row | Remove membership by `(teamId, userId)` instead of non-unique `id` | Verified | `npm run check`; `tests/team-repository.test.ts` |
 | BUG-P3-1-002 | P3 | `createTeam` slug collision path | Under repeated name collisions, auto-generated slug may exceed 48 chars and violate API contract / DB schema | Collision suffix appended without reserving length budget (`${baseSlug}-${n}`) | Add bounded slug candidate builder that truncates base before suffix and keeps final slug ≤48 in both mock and DB paths | Verified | `npm run check`; `tests/team-repository.test.ts` |
+| BUG-P3-1-003 | P3 | `createTeam` mock team `id` | `requestTeamJoin` could throw `TEAM_JOIN_REQUEST_PENDING` in Vitest when two teams share `id` in the same ms | Mock team id was `team_${Date.now()}` only | Append random segment: `team_${Date.now()}_${random}` | Verified | `npm run check`; `tests/team-repository.test.ts` |
 
 ## P2 延期 / 未纳入（对照计划书 §4.2，2026-04-12）
 
