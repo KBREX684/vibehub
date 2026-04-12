@@ -74,6 +74,7 @@ If you want real database mode:
 
 ```bash
 # 1) set USE_MOCK_DATA=false and DATABASE_URL in .env.local
+# 2) set SESSION_SECRET in .env.local
 npm run prisma:generate
 npm run prisma:migrate -- --name init
 npm run prisma:seed

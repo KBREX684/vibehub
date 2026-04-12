@@ -2,10 +2,26 @@ import { NextResponse } from "next/server";
 import { AuthConstants, encodeSession } from "@/lib/auth";
 import { getDemoUser } from "@/lib/repository";
 
+function parseDemoRole(value: string | null): "admin" | "user" {
+  return value === "admin" ? "admin" : "user";
+}
+
+function sanitizeRedirectPath(value: string | null): string {
+  if (!value) {
+    return "/";
+  }
+
+  if (!value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+
+  return value;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const role = (url.searchParams.get("role") as "admin" | "user" | null) ?? "user";
-  const redirect = url.searchParams.get("redirect") ?? "/";
+  const role = parseDemoRole(url.searchParams.get("role"));
+  const redirect = sanitizeRedirectPath(url.searchParams.get("redirect"));
   const session = getDemoUser(role);
   const token = encodeSession(session);
 

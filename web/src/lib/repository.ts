@@ -10,6 +10,55 @@ import {
 import type { Comment, Post, Project, Role } from "@/lib/types";
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
+type DemoRole = Extract<Role, "admin" | "user">;
+
+function toProjectDto(project: {
+  id: string;
+  slug: string;
+  creatorId: string;
+  title: string;
+  oneLiner: string;
+  description: string;
+  techStack: string[];
+  tags: string[];
+  status: Project["status"];
+  demoUrl: string | null;
+  updatedAt: Date;
+}): Project {
+  return {
+    ...project,
+    demoUrl: project.demoUrl ?? undefined,
+    updatedAt: project.updatedAt.toISOString(),
+  };
+}
+
+function toPostDto(post: {
+  id: string;
+  slug: string;
+  authorId: string;
+  title: string;
+  body: string;
+  tags: string[];
+  createdAt: Date;
+}): Post {
+  return {
+    ...post,
+    createdAt: post.createdAt.toISOString(),
+  };
+}
+
+function toCommentDto(comment: {
+  id: string;
+  postId: string;
+  authorId: string;
+  body: string;
+  createdAt: Date;
+}): Comment {
+  return {
+    ...comment,
+    createdAt: comment.createdAt.toISOString(),
+  };
+}
 
 export async function listProjects(params: {
   query?: string;
@@ -67,7 +116,7 @@ export async function listProjects(params: {
   ]);
 
   return {
-    items,
+    items: items.map(toProjectDto),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -82,9 +131,10 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
     return mockProjects.find((project) => project.slug === slug) ?? null;
   }
 
-  return prisma.project.findUnique({
+  const project = await prisma.project.findUnique({
     where: { slug },
   });
+  return project ? toProjectDto(project) : null;
 }
 
 export async function listCreators(params: { query?: string; page: number; limit: number }) {
@@ -192,7 +242,7 @@ export async function listPosts(params: { query?: string; tag?: string; page: nu
   ]);
 
   return {
-    items,
+    items: items.map(toPostDto),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -228,7 +278,7 @@ export async function createPost(input: {
     return post;
   }
 
-  return prisma.post.create({
+  const post = await prisma.post.create({
     data: {
       slug: `${slug}-${Date.now()}`,
       title: input.title,
@@ -237,6 +287,7 @@ export async function createPost(input: {
       authorId: input.authorId,
     },
   });
+  return toPostDto(post);
 }
 
 export async function createComment(input: { postId: string; body: string; authorId: string }) {
@@ -252,17 +303,27 @@ export async function createComment(input: { postId: string; body: string; autho
     return comment;
   }
 
-  return prisma.comment.create({
+  const comment = await prisma.comment.create({
     data: {
       postId: input.postId,
       body: input.body,
       authorId: input.authorId,
     },
   });
+  return toCommentDto(comment);
 }
 
-export function getDemoUser(role: Role = "user") {
-  const user = mockUsers.find((item) => item.role === role) ?? mockUsers[0];
+export function getDemoUser(role: DemoRole = "user") {
+  const fallbackUser = mockUsers.find((item) => item.role === "user");
+  const user =
+    (role === "admin"
+      ? mockUsers.find((item) => item.role === "admin")
+      : mockUsers.find((item) => item.role === "user")) ?? fallbackUser;
+
+  if (!user) {
+    throw new Error("Demo user is not configured");
+  }
+
   return {
     userId: user.id,
     role: user.role,
