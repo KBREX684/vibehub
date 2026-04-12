@@ -145,6 +145,8 @@ npm run dev
 
 Apply all pending migrations in `prisma/migrations/` (P2 adds collaboration intents, weekly snapshot tables, and prior admin schema).
 
+**Production / staging:** after setting `DATABASE_URL`, run `npx prisma migrate deploy` (same command CI uses) before starting the app; avoid `migrate dev` on shared databases.
+
 ## 8. Self-Hosted Deployment
 
 See:
