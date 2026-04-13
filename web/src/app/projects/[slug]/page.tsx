@@ -39,7 +39,33 @@ export default async function ProjectDetailPage({ params }: Props) {
       <SiteHeader />
       <main className="container detail">
         <article className="card">
-          <h1>{project.title}</h1>
+          <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+            {project.logoUrl ? (
+              <img
+                src={project.logoUrl}
+                alt={`${project.title} logo`}
+                style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
+              />
+            ) : null}
+            <div>
+              <h1 style={{ margin: 0 }}>{project.title}</h1>
+              <p className="muted" style={{ margin: "4px 0 0" }}>{project.oneLiner}</p>
+            </div>
+          </div>
+
+          {project.screenshots && project.screenshots.length > 0 ? (
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0" }}>
+              {project.screenshots.map((url, i) => (
+                <img
+                  key={`screenshot-${i}`}
+                  src={url}
+                  alt={`Screenshot ${i + 1}`}
+                  style={{ maxHeight: 200, borderRadius: 8, border: "1px solid var(--line)" }}
+                />
+              ))}
+            </div>
+          ) : null}
+
           <p>{project.description}</p>
           <div className="tag-row">
             {project.techStack.map((tech) => (
@@ -48,13 +74,30 @@ export default async function ProjectDetailPage({ params }: Props) {
               </span>
             ))}
           </div>
-          {project.demoUrl ? (
-            <p>
-              Demo:{" "}
-              <a href={project.demoUrl} target="_blank" rel="noreferrer" className="inline-link">
-                {project.demoUrl}
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: 12 }}>
+            {project.demoUrl ? (
+              <a href={project.demoUrl} target="_blank" rel="noreferrer" className="button ghost">
+                Live Demo
               </a>
-            </p>
+            ) : null}
+            {project.repoUrl ? (
+              <a href={project.repoUrl} target="_blank" rel="noreferrer" className="button ghost">
+                Repository
+              </a>
+            ) : null}
+            {project.websiteUrl ? (
+              <a href={project.websiteUrl} target="_blank" rel="noreferrer" className="button ghost">
+                Website
+              </a>
+            ) : null}
+          </div>
+
+          {(project.openSource || project.license) ? (
+            <div className="tag-row" style={{ marginTop: 8 }}>
+              {project.openSource ? <span className="tag">Open Source</span> : null}
+              {project.license ? <span className="tag">{project.license}</span> : null}
+            </div>
           ) : null}
         </article>
 

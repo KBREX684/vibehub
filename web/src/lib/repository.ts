@@ -151,6 +151,12 @@ function toProjectDto(project: {
   tags: string[];
   status: Project["status"];
   demoUrl: string | null;
+  repoUrl?: string | null;
+  websiteUrl?: string | null;
+  screenshots?: string[];
+  logoUrl?: string | null;
+  openSource?: boolean;
+  license?: string | null;
   updatedAt: Date;
   team?: { slug: string; name: string } | null;
 }): Project {
@@ -165,6 +171,12 @@ function toProjectDto(project: {
     tags: project.tags,
     status: project.status,
     demoUrl: project.demoUrl ?? undefined,
+    repoUrl: project.repoUrl ?? undefined,
+    websiteUrl: project.websiteUrl ?? undefined,
+    screenshots: project.screenshots ?? [],
+    logoUrl: project.logoUrl ?? undefined,
+    openSource: project.openSource ?? false,
+    license: project.license ?? undefined,
     updatedAt: project.updatedAt.toISOString(),
   };
   if (project.teamId) {
@@ -1984,6 +1996,114 @@ export async function getCreatorProfileById(creatorId: string): Promise<CreatorP
     where: { id: creatorId },
   });
   return creator ? toCreatorDto(creator) : null;
+}
+
+export async function getCreatorProfileByUserId(userId: string): Promise<CreatorProfile | null> {
+  if (useMockData) {
+    return mockCreators.find((c) => c.userId === userId) ?? null;
+  }
+
+  const prisma = await getPrisma();
+  const creator = await prisma.creatorProfile.findUnique({
+    where: { userId },
+  });
+  return creator ? toCreatorDto(creator) : null;
+}
+
+export interface CreateProfileInput {
+  userId: string;
+  slug: string;
+  headline: string;
+  bio: string;
+  skills: string[];
+  collaborationPreference?: string;
+}
+
+export async function createCreatorProfile(input: CreateProfileInput): Promise<CreatorProfile> {
+  if (useMockData) {
+    const existing = mockCreators.find((c) => c.userId === input.userId);
+    if (existing) {
+      throw new Error("PROFILE_ALREADY_EXISTS");
+    }
+    if (mockCreators.find((c) => c.slug === input.slug)) {
+      throw new Error("SLUG_TAKEN");
+    }
+    const profile: CreatorProfile = {
+      id: `c-${Date.now()}`,
+      slug: input.slug,
+      userId: input.userId,
+      headline: input.headline,
+      bio: input.bio,
+      skills: input.skills,
+      collaborationPreference: (input.collaborationPreference === "invite_only" || input.collaborationPreference === "closed") ? input.collaborationPreference : "open",
+    };
+    mockCreators.push(profile);
+    return profile;
+  }
+
+  const prisma = await getPrisma();
+  try {
+    const created = await prisma.creatorProfile.create({
+      data: {
+        slug: input.slug,
+        userId: input.userId,
+        headline: input.headline,
+        bio: input.bio,
+        skills: input.skills,
+        collaborationPreference: input.collaborationPreference ?? "open",
+      },
+    });
+    return toCreatorDto(created);
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const target = (err.meta?.target as string[]) ?? [];
+      if (target.includes("slug")) throw new Error("SLUG_TAKEN");
+      if (target.includes("userId")) throw new Error("PROFILE_ALREADY_EXISTS");
+    }
+    throw err;
+  }
+}
+
+export interface UpdateProfileInput {
+  headline?: string;
+  bio?: string;
+  skills?: string[];
+  collaborationPreference?: string;
+}
+
+export async function updateCreatorProfile(userId: string, input: UpdateProfileInput): Promise<CreatorProfile> {
+  if (useMockData) {
+    const profile = mockCreators.find((c) => c.userId === userId);
+    if (!profile) {
+      throw new Error("PROFILE_NOT_FOUND");
+    }
+    if (input.headline !== undefined) profile.headline = input.headline;
+    if (input.bio !== undefined) profile.bio = input.bio;
+    if (input.skills !== undefined) profile.skills = input.skills;
+    if (input.collaborationPreference !== undefined) {
+      profile.collaborationPreference =
+        (input.collaborationPreference === "invite_only" || input.collaborationPreference === "closed")
+          ? input.collaborationPreference : "open";
+    }
+    return profile;
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.creatorProfile.findUnique({ where: { userId } });
+  if (!existing) {
+    throw new Error("PROFILE_NOT_FOUND");
+  }
+  const data: Record<string, unknown> = {};
+  if (input.headline !== undefined) data.headline = input.headline;
+  if (input.bio !== undefined) data.bio = input.bio;
+  if (input.skills !== undefined) data.skills = input.skills;
+  if (input.collaborationPreference !== undefined) data.collaborationPreference = input.collaborationPreference;
+
+  const updated = await prisma.creatorProfile.update({
+    where: { userId },
+    data,
+  });
+  return toCreatorDto(updated);
 }
 
 export async function listUsers(params: {
@@ -4343,6 +4463,79 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
     name: u.name,
     apiKeyScopes: effectiveScopes,
     apiKeyId: row.id,
+  };
+}
+
+export interface GitHubUserInput {
+  githubId: number;
+  githubUsername: string;
+  email: string;
+  name: string;
+  avatarUrl: string;
+}
+
+export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<User> {
+  if (useMockData) {
+    let user = mockUsers.find((u) => u.githubId === input.githubId);
+    if (user) {
+      user.name = input.name;
+      user.avatarUrl = input.avatarUrl;
+      user.githubUsername = input.githubUsername;
+      return user;
+    }
+    user = {
+      id: `u-gh-${input.githubId}`,
+      email: input.email,
+      name: input.name,
+      role: "user" as const,
+      githubId: input.githubId,
+      githubUsername: input.githubUsername,
+      avatarUrl: input.avatarUrl,
+    };
+    mockUsers.push(user);
+    return user;
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.user.findUnique({ where: { githubId: input.githubId } });
+  if (existing) {
+    const updated = await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        name: input.name,
+        avatarUrl: input.avatarUrl,
+        githubUsername: input.githubUsername,
+      },
+    });
+    return {
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      role: updated.role as Role,
+      githubId: updated.githubId ?? undefined,
+      githubUsername: updated.githubUsername ?? undefined,
+      avatarUrl: updated.avatarUrl ?? undefined,
+    };
+  }
+
+  const created = await prisma.user.create({
+    data: {
+      email: input.email,
+      name: input.name,
+      role: "user",
+      githubId: input.githubId,
+      githubUsername: input.githubUsername,
+      avatarUrl: input.avatarUrl,
+    },
+  });
+  return {
+    id: created.id,
+    email: created.email,
+    name: created.name,
+    role: created.role as Role,
+    githubId: created.githubId ?? undefined,
+    githubUsername: created.githubUsername ?? undefined,
+    avatarUrl: created.avatarUrl ?? undefined,
   };
 }
 

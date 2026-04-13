@@ -9,6 +9,9 @@ export interface User {
   email: string;
   name: string;
   role: Role;
+  githubId?: number;
+  githubUsername?: string;
+  avatarUrl?: string;
 }
 
 export interface CreatorProfile {
@@ -40,6 +43,12 @@ export interface Project {
   tags: string[];
   status: ProjectStatus;
   demoUrl?: string;
+  repoUrl?: string;
+  websiteUrl?: string;
+  screenshots: string[];
+  logoUrl?: string;
+  openSource: boolean;
+  license?: string;
   updatedAt: string;
 }
 

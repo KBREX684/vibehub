@@ -82,9 +82,9 @@ export interface MockInAppNotification {
 export const mockInAppNotifications: MockInAppNotification[] = [];
 
 export const mockUsers: User[] = [
-  { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin" },
-  { id: "u2", email: "bob@vibehub.dev", name: "Bob", role: "user" },
-  { id: "u3", email: "chen@vibehub.dev", name: "Chen", role: "user" },
+  { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin", githubId: 1001, githubUsername: "alice-ai", avatarUrl: "https://avatars.githubusercontent.com/u/1001" },
+  { id: "u2", email: "bob@vibehub.dev", name: "Bob", role: "user", githubId: 1002, githubUsername: "bob-solo", avatarUrl: "https://avatars.githubusercontent.com/u/1002" },
+  { id: "u3", email: "chen@vibehub.dev", name: "Chen", role: "user", githubId: 1003, githubUsername: "chen-dev", avatarUrl: "https://avatars.githubusercontent.com/u/1003" },
 ];
 
 export const mockCreators: CreatorProfile[] = [
@@ -123,6 +123,12 @@ export const mockProjects: Project[] = [
     tags: ["community", "agent", "showcase"],
     status: "building",
     demoUrl: "https://example.com/vibehub",
+    repoUrl: "https://github.com/vibehub/vibehub",
+    websiteUrl: "https://vibehub.dev",
+    screenshots: [],
+    logoUrl: undefined,
+    openSource: true,
+    license: "MIT",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -137,6 +143,8 @@ export const mockProjects: Project[] = [
     tags: ["prompt", "workflow", "experiment"],
     status: "launched",
     demoUrl: "https://example.com/prompt-lab",
+    screenshots: [],
+    openSource: false,
     updatedAt: new Date().toISOString(),
   },
 ];

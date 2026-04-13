@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MobileNav } from "./mobile-nav";
 
 export function SiteHeader() {
   return (
@@ -7,25 +8,20 @@ export function SiteHeader() {
         <Link href="/" className="brand">
           VibeHub
         </Link>
-        <nav className="links">
+        <nav className="links desktop-only">
           <Link href="/discussions">Discussions</Link>
           <Link href="/collections">Topics</Link>
           <Link href="/leaderboards">Leaderboards</Link>
           <Link href="/discover">Discover</Link>
           <Link href="/teams">Teams</Link>
-          <Link href="/workspace/enterprise">Enterprise</Link>
           <Link href="/notifications">Notifications</Link>
           <Link href="/settings/api-keys">API Keys</Link>
-          <a href="/api/v1/openapi.json" className="button ghost" target="_blank" rel="noreferrer">
-            OpenAPI
-          </a>
-          <Link href="/projects/vibehub">Projects</Link>
-          <Link href="/creators/alice-ai-builder">Creators</Link>
           <Link href="/admin">Admin</Link>
-          <a href="/api/v1/auth/demo-login?role=user&redirect=/" className="button ghost">
-            Demo User
+          <a href="/api/v1/auth/github?redirect=/" className="button ghost">
+            Login
           </a>
         </nav>
+        <MobileNav />
       </div>
     </header>
   );
