@@ -1,52 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  /* Softer, warmer off-white canvas instead of clinical gray */
-  --color-bg-canvas: #fbfbfd;
+  /* Light Warm Canvas */
+  --color-bg-canvas: #faf9f6; /* Soft off-white / beige */
   
-  /* Softer, more opaque glass for cards */
-  --color-bg-surface: rgba(255, 255, 255, 0.85);
-  --color-bg-surface-hover: rgba(255, 255, 255, 0.95);
+  /* Pure white cards for contrast against the warm canvas */
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-hover: #fcfcfc;
   
-  /* Light, breathable glass for headers instead of heavy dark glass */
-  --color-bg-glass: rgba(255, 255, 255, 0.75);
-  
-  /* Softer charcoal text instead of harsh near-black */
-  --color-text-primary: #333336;
-  --color-text-secondary: rgba(60, 60, 67, 0.6);
-  --color-text-tertiary: rgba(60, 60, 67, 0.3);
+  /* Soft Charcoal Text */
+  --color-text-primary: #2d2d2a;
+  --color-text-secondary: #73736e;
+  --color-text-tertiary: #a0a09c;
   --color-text-inverse: #ffffff;
   
-  /* Friendlier, softer iOS Blue instead of stark Apple Blue */
-  --color-accent-apple: #007aff;
-  /* Pastel neon accents to avoid piercing the eyes */
-  --color-accent-warm-beige: #f5ebd4;
-  --color-accent-lake-cyan: #81e6d9;
+  /* Accents */
+  --color-accent-primary: #2d2d2a; /* Dark accent for primary buttons */
+  --color-accent-secondary: #e6e4dc; /* Warm gray/beige for tags and borders */
+  --color-accent-success: #10b981; /* Vercel-style green for copy success */
   
   /* Borders */
-  --color-border-glass: rgba(0, 0, 0, 0.04);
-  --color-border-glass-light: rgba(255, 255, 255, 0.6);
+  --color-border-light: rgba(0, 0, 0, 0.06);
+  --color-border-dark: rgba(255, 255, 255, 0.1);
 
   --radius-macro: 24px;
-  --radius-micro: 16px;
+  --radius-micro: 12px;
   --radius-pill: 980px;
 
-  /* Even lighter, more diffused shadows */
-  --shadow-glass: 0 8px 32px -4px rgba(0, 0, 0, 0.04), 0 0 1px 0 rgba(0, 0, 0, 0.08);
-  --shadow-warm-beige: 0 0 16px rgba(245, 235, 212, 0.3);
-  --shadow-lake-cyan: 0 0 16px rgba(129, 230, 217, 0.3);
+  /* Extremely subtle, warm shadows */
+  --shadow-bento: 0 4px 20px -2px rgba(45, 45, 42, 0.03), 0 0 1px 0 rgba(45, 45, 42, 0.08);
+  --shadow-bento-hover: 0 8px 30px -4px rgba(45, 45, 42, 0.06), 0 0 1px 0 rgba(45, 45, 42, 0.1);
 
-  --font-sans: "SF Pro Display", "SF Pro Text", "Inter", "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter", "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root {
-  --bg: #fbfbfd;
-  --card: rgba(255, 255, 255, 0.85);
-  --text: #333336;
-  --muted: rgba(60, 60, 67, 0.6);
-  --line: rgba(0, 0, 0, 0.04);
-  --brand: #007aff;
+  --bg: #faf9f6;
+  --card: #ffffff;
+  --text: #2d2d2a;
+  --muted: #73736e;
+  --line: rgba(0, 0, 0, 0.06);
+  --brand: #2d2d2a;
 }
 
 * {
@@ -62,7 +57,7 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em; /* Apple's signature tight tracking */
+  letter-spacing: -0.01em;
 }
 
 a {
@@ -70,121 +65,9 @@ a {
   text-decoration: none;
 }
 
-/* 
-  Bento Grid & Glassmorphism Base Classes 
-*/
 .container {
   width: min(1200px, 92vw);
   margin: 0 auto;
-}
-
-/* Changed from dark glass to light, breathable frosted glass */
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: var(--color-bg-glass);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  color: var(--color-text-primary);
-  border-bottom: 1px solid var(--color-border-glass);
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
-}
-
-.brand {
-  font-weight: 600;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
-}
-
-.links {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
-
-.links a {
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  transition: color 0.2s ease;
-}
-
-.links a:hover {
-  color: var(--color-text-primary);
-}
-
-/* 
-  Apple/Cyber Buttons 
-*/
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px;
-  border-radius: var(--radius-micro);
-  font-weight: 500;
-  font-size: 0.95rem;
-  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.button-primary {
-  background: var(--color-accent-apple);
-  color: var(--color-text-inverse);
-}
-
-.button-primary:hover {
-  background: #0062cc; /* Slightly darker iOS blue on hover */
-  box-shadow: var(--shadow-lake-cyan);
-}
-
-.button-pill {
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-accent-apple);
-  color: var(--color-accent-apple);
-  background: transparent;
-}
-
-.button-pill:hover {
-  background: var(--color-accent-apple);
-  color: var(--color-text-inverse);
-}
-
-.button-ghost {
-  background: transparent;
-  color: var(--color-text-primary);
-  border: 1px solid var(--line);
-}
-
-.button-ghost:hover {
-  background: var(--color-bg-surface);
-  border-color: var(--color-accent-warm-beige);
-  box-shadow: var(--shadow-warm-beige);
-}
-
-/* 
-  Bento Cards (Glassmorphism)
-*/
-.card {
-  background: var(--color-bg-surface);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid var(--color-border-glass-light);
-  box-shadow: var(--shadow-glass);
-  border-radius: var(--radius-macro);
-  padding: 24px;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.card:hover {
-  transform: translateY(-2px) scale(1.005);
 }
 
 /* Typography Overrides */
@@ -196,17 +79,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  line-height: 1.07;
-}
-
-h2 {
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-size: clamp(2rem, 4vw, 3rem);
   line-height: 1.1;
 }
 
+h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
 p {
-  line-height: 1.47;
+  line-height: 1.5;
   color: var(--color-text-secondary);
 }
 
@@ -215,7 +98,7 @@ p {
   font-size: 0.9rem;
 }
 
-/* Legacy support for old classes to prevent layout breaking during transition */
+/* Legacy support for old classes */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -237,41 +120,30 @@ p {
 
 .tag {
   font-size: 0.75rem;
-  background: rgba(0, 0, 0, 0.03);
-  color: var(--color-text-secondary);
+  background: var(--color-accent-secondary);
+  color: var(--color-text-primary);
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   font-weight: 500;
 }
 
 .inline-link {
-  color: var(--color-accent-apple);
+  color: var(--color-text-primary);
   font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-light);
+  text-underline-offset: 4px;
 }
 
 .inline-link:hover {
-  text-decoration: underline;
+  text-decoration-color: var(--color-text-primary);
 }
 
-pre.code {
-  background: #2d2d30; /* Softer dark for code blocks */
-  color: #fbfbfd;
-  padding: 16px;
-  border-radius: var(--radius-micro);
-  overflow: auto;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+/* Scrollbar hiding for horizontal lists */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-/* Mobile Nav Overrides */
-.mobile-nav-drawer {
-  background: var(--color-bg-surface);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border-left: 1px solid var(--color-border-glass-light);
-}
-
-.mobile-nav-header, .mobile-nav-footer {
-  border-color: var(--line);
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
