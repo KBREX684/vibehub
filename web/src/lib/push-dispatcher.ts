@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "crypto";
+import { createHmac, randomBytes } from "crypto";
 import type { InAppNotificationKind } from "@/lib/types";
 
 function getWebhookUrl(): string | undefined {
@@ -8,6 +8,11 @@ function getWebhookUrl(): string | undefined {
 
 function getWebhookSecret(): string | undefined {
   return process.env.NOTIFICATION_WEBHOOK_SECRET?.trim() || undefined;
+}
+
+/** HMAC-SHA256(secret, raw JSON body). Exposed for unit tests. */
+export function signNotificationWebhookBody(secret: string, bodyUtf8: string): string {
+  return createHmac("sha256", secret).update(bodyUtf8, "utf8").digest("hex");
 }
 
 function smtpConfigured(): boolean {
@@ -51,8 +56,10 @@ export async function dispatchNotificationPush(params: {
       };
       const secret = getWebhookSecret();
       if (secret) {
-        const sig = createHash("sha256").update(`${secret}:${body}`, "utf8").digest("hex");
+        const sig = signNotificationWebhookBody(secret, body);
+        // GitHub-style prefix: value is HMAC-SHA256(secret, body), not SHA256(secret:body).
         headers["X-VibeHub-Signature"] = `sha256=${sig}`;
+        headers["X-VibeHub-Signature-Version"] = "2";
       }
       const idem = randomBytes(16).toString("hex");
       headers["Idempotency-Key"] = idem;
