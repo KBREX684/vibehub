@@ -33,7 +33,6 @@ import {
   mockSubscriptionPlans,
   mockUserSubscriptions,
 } from "@/lib/data/mock-data";
-import type { MockUserSubscriptionInfo } from "@/lib/data/mock-data";
 import type {
   ApiKeyCreated,
   ApiKeySummary,

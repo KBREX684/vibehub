@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+﻿import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { CollaborationIntentForm } from "@/components/collaboration-intent-form";
@@ -42,10 +43,13 @@ export default async function ProjectDetailPage({ params }: Props) {
         <article className="card">
           <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
             {project.logoUrl ? (
-              <img
+              <Image
                 src={project.logoUrl}
                 alt={`${project.title} logo`}
-                style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
+                width={64}
+                height={64}
+                unoptimized
+                style={{ borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
               />
             ) : null}
             <div>
@@ -57,11 +61,14 @@ export default async function ProjectDetailPage({ params }: Props) {
           {project.screenshots && project.screenshots.length > 0 ? (
             <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0" }}>
               {project.screenshots.map((url, i) => (
-                <img
+                <Image
                   key={`screenshot-${i}`}
                   src={url}
                   alt={`Screenshot ${i + 1}`}
-                  style={{ maxHeight: 200, borderRadius: 8, border: "1px solid var(--line)" }}
+                  width={400}
+                  height={200}
+                  unoptimized
+                  style={{ maxHeight: 200, width: "auto", height: "auto", borderRadius: 8, border: "1px solid var(--line)" }}
                 />
               ))}
             </div>
