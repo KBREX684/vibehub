@@ -46,6 +46,13 @@ npm run check
 
 Runs `lint + test + validate:openapi + build`.
 
+Browser smoke tests (Playwright) run in CI after the production build; locally:
+
+```bash
+npx playwright install chromium   # once per machine
+npm run build && CI=true npm run test:e2e
+```
+
 ## 3. API Conventions
 
 - Base path: `/api/v1`
