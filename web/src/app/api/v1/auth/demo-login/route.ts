@@ -19,8 +19,16 @@ function sanitizeRedirectPath(value: string | null): string {
   return value;
 }
 
+function demoLoginAllowed(): boolean {
+  if (process.env.NODE_ENV !== "production") {
+    return true;
+  }
+  // Browser E2E against `next start` runs with NODE_ENV=production; never enable in real prod.
+  return process.env.E2E_ALLOW_DEMO_LOGIN === "true";
+}
+
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (!demoLoginAllowed()) {
     return apiError(
       { code: "DEMO_LOGIN_DISABLED", message: "Demo login is disabled in production. Use GitHub OAuth." },
       403
