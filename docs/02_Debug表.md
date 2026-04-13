@@ -84,6 +84,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P4-4-001 | P4 | OpenAPI | 集成方无标准契约 | 未导出 | `openapi.json` + `openapi-spec.ts` + tests + nav link | Verified | `npm run check` |
 
+## P4-5 Feature (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P4-5-001 | P4 | OpenAPI validation | Spec 可静默漂移或损坏 | 无构建前校验 | `openapi-validate` + `validate:openapi` + `check` + CI step + Vitest | Verified | `npm run check` |
+
 ## P3 Formal Closure (2026-04-13)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

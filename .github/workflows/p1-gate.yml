@@ -56,6 +56,9 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Validate OpenAPI document
+        run: npm run validate:openapi
+
       - name: Build
         env:
           USE_MOCK_DATA: "true"

@@ -6,6 +6,8 @@ Next.js full-stack implementation for VibeHub.
 
 **P4-4 (2026-04-13)**: **`GET /api/v1/openapi.json`** — OpenAPI **3.0.3** JSON for the curated `/api/v1` surface (envelope, auth, scopes, public mirrors, key routes). Source: `src/lib/openapi-spec.ts`.
 
+**P4-5 (2026-04-13)**: **`npm run validate:openapi`** — Zod structural check + required path allowlist (`src/lib/openapi-validate.ts`); runs in **`npm run check`** and in GitHub Actions **before** `next build`.
+
 **P4-1 / P4-2 / P4-3 (2026-04-13)**: User **API keys** with **scopes**; **`/settings/api-keys`** supports **scope checkboxes** on create. **`Authorization: Bearer`** is **rate-limited** per key hash + client IP (`API_KEY_RATE_LIMIT_PER_MINUTE`, default 120/min; 429 + `Retry-After`). **Anonymous reads** are restored for `GET /api/v1/projects`, `GET /api/v1/projects/:slug`, teams, creators, collection-topics (same as pre–P4-2). Stable no-auth mirrors live under **`/api/v1/public/...`** for crawlers. **`GET /api/v1/me/teams`** and team **tasks/milestones** list still require cookie or scoped Bearer; MCP GET tools require cookie or scoped Bearer.
 
 Current scope:
@@ -40,7 +42,7 @@ Open `http://localhost:3000`.
 npm run check
 ```
 
-Runs `lint + test + build`.
+Runs `lint + test + validate:openapi + build`.
 
 ## 3. API Conventions
 
@@ -128,8 +130,9 @@ Runs `lint + test + build`.
 
 ## 6. P2 Public Endpoints (non-admin)
 
-- **OpenAPI (P4-4)**:
+- **OpenAPI (P4-4 + P4-5)**:
   - `GET /api/v1/openapi.json` — OpenAPI 3.0 document (public)
+  - Local/CI: `npm run validate:openapi` (structural + required paths; see `src/lib/openapi-validate.ts`)
 
 - Collaboration:
   - `GET /api/v1/projects/:slug/collaboration-intents?status=approved|pending|rejected|all`

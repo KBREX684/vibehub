@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "check": "npm run lint && npm run test && npm run build",
+    "validate:openapi": "tsx scripts/validate-openapi.ts",
+    "check": "npm run lint && npm run test && npm run validate:openapi && npm run build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed"
