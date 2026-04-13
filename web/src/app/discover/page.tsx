@@ -4,13 +4,13 @@ import { ProjectCard } from "@/components/project-card";
 import { parsePagination } from "@/lib/pagination";
 import { getProjectFilterFacets, listProjects, listTeams } from "@/lib/repository";
 import type { ProjectStatus } from "@/lib/types";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, Compass } from "lucide-react";
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
-  { value: "idea", label: "构思" },
-  { value: "building", label: "开发中" },
-  { value: "launched", label: "已上线" },
-  { value: "paused", label: "暂停" },
+  { value: "idea", label: "Idea" },
+  { value: "building", label: "Building" },
+  { value: "launched", label: "Launched" },
+  { value: "paused", label: "Paused" },
 ];
 
 function buildDiscoverHref(
@@ -77,35 +77,49 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
     limit: String(limit),
   };
 
+  const selectClasses = "w-full appearance-none bg-black/5 border border-transparent rounded-[12px] px-4 py-2.5 text-[0.95rem] text-[var(--color-text-primary)] outline-none transition-all duration-300 focus:bg-white focus:border-[#81e6d9]/50 focus:shadow-[0_0_16px_rgba(129,230,217,0.3)] cursor-pointer";
+
   return (
     <>
       <SiteHeader />
-      <main className="container section">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-stone-900 mb-3">项目发现</h1>
-          <p className="text-stone-500 max-w-2xl">
-            探索社区中正在构建的有趣项目。按标签、技术栈与阶段筛选，寻找灵感或协作机会。
-          </p>
-        </div>
+      <main className="container pb-24 space-y-8 mt-6">
+        
+        {/* Header Bento */}
+        <section className="p-8 md:p-12 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-[24px] bg-[#81e6d9]/20 flex items-center justify-center text-[#0d9488] shadow-sm">
+              <Compass className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] text-[var(--color-text-primary)] m-0">
+                Discover
+              </h1>
+              <p className="text-[1.05rem] text-[var(--color-text-secondary)] mt-1">
+                Explore projects being built in the community.
+              </p>
+            </div>
+          </div>
+        </section>
 
-        <form className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm mb-10" method="get" action="/discover">
+        {/* Filter Bento */}
+        <form className="p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60" method="get" action="/discover">
           <input type="hidden" name="limit" value={String(limit)} />
           
-          <div className="flex items-center gap-2 mb-6 text-stone-900 font-semibold">
-            <SlidersHorizontal className="w-5 h-5 text-amber-600" />
-            筛选条件
+          <div className="flex items-center gap-2 mb-6 text-[1.05rem] font-semibold text-[var(--color-text-primary)]">
+            <SlidersHorizontal className="w-5 h-5 text-[var(--color-accent-apple)]" />
+            Filters
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">关键词</span>
+              <span className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Search</span>
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
                 <input
-                  className="w-full border border-stone-200 rounded-xl py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
+                  className="w-full bg-black/5 border border-transparent rounded-[12px] py-2.5 pl-9 pr-3 text-[0.95rem] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] outline-none transition-all duration-300 focus:bg-white focus:border-[#81e6d9]/50 focus:shadow-[0_0_16px_rgba(129,230,217,0.3)]"
                   type="search"
                   name="query"
-                  placeholder="搜索标题或描述"
+                  placeholder="Keywords..."
                   defaultValue={query ?? ""}
                   autoComplete="off"
                 />
@@ -113,13 +127,9 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">标签</span>
-              <select 
-                className="w-full border border-stone-200 rounded-xl py-2.5 px-3 text-sm bg-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                name="tag" 
-                defaultValue={tag ?? ""}
-              >
-                <option value="">全部标签</option>
+              <span className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Tag</span>
+              <select className={selectClasses} name="tag" defaultValue={tag ?? ""}>
+                <option value="">All Tags</option>
                 {facets.tags.map((t) => (
                   <option key={t} value={t}>#{t}</option>
                 ))}
@@ -127,13 +137,9 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">技术栈</span>
-              <select 
-                className="w-full border border-stone-200 rounded-xl py-2.5 px-3 text-sm bg-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                name="tech" 
-                defaultValue={tech ?? ""}
-              >
-                <option value="">全部技术</option>
+              <span className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Tech Stack</span>
+              <select className={selectClasses} name="tech" defaultValue={tech ?? ""}>
+                <option value="">All Tech</option>
                 {facets.techStack.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
@@ -141,13 +147,9 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">阶段</span>
-              <select 
-                className="w-full border border-stone-200 rounded-xl py-2.5 px-3 text-sm bg-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                name="status" 
-                defaultValue={statusRaw ?? ""}
-              >
-                <option value="">所有阶段</option>
+              <span className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Stage</span>
+              <select className={selectClasses} name="status" defaultValue={statusRaw ?? ""}>
+                <option value="">All Stages</option>
                 {STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
@@ -155,13 +157,9 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">团队</span>
-              <select 
-                className="w-full border border-stone-200 rounded-xl py-2.5 px-3 text-sm bg-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
-                name="team" 
-                defaultValue={team ?? ""}
-              >
-                <option value="">所有团队</option>
+              <span className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Team</span>
+              <select className={selectClasses} name="team" defaultValue={team ?? ""}>
+                <option value="">All Teams</option>
                 {teamsPage.items.map((t) => (
                   <option key={t.slug} value={t.slug}>{t.name}</option>
                 ))}
@@ -169,34 +167,34 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </label>
           </div>
 
-          <div className="flex items-center gap-3 mt-6 pt-6 border-t border-stone-100">
-            <button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-              应用筛选
+          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-black/5">
+            <button type="submit" className="px-6 py-2.5 rounded-[12px] bg-[var(--color-accent-apple)] text-white text-[0.95rem] font-medium hover:bg-[#0062cc] transition-colors shadow-sm active:scale-[0.98]">
+              Apply Filters
             </button>
             <Link 
               href="/discover" 
-              className="flex items-center gap-1.5 text-stone-500 hover:text-stone-900 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-[12px] text-[0.95rem] font-medium text-[var(--color-text-secondary)] hover:bg-black/5 hover:text-[var(--color-text-primary)] transition-colors active:scale-[0.98]"
             >
-              <X className="w-4 h-4" /> 清除条件
+              <X className="w-4 h-4" /> Clear
             </Link>
           </div>
         </form>
 
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-stone-900">发现结果</h2>
-          <p className="text-sm text-stone-500 font-medium">
-            共 {pagination.total} 个项目 <span className="mx-2 text-stone-300">|</span> 第 {pagination.page} / {pagination.totalPages} 页
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text-primary)]">Results</h2>
+          <p className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">
+            {pagination.total} projects found <span className="mx-2 text-[var(--color-text-tertiary)]">|</span> Page {pagination.page} of {pagination.totalPages}
           </p>
         </div>
 
         {items.length === 0 ? (
-          <div className="bg-white border border-dashed border-stone-200 rounded-3xl p-16 text-center">
-            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-6 h-6 text-stone-400" />
+          <div className="text-center py-24 rounded-[32px] bg-[rgba(255,255,255,0.5)] border border-white/60 shadow-sm">
+            <div className="w-16 h-16 bg-black/5 rounded-[20px] flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-[var(--color-text-tertiary)]" />
             </div>
-            <h3 className="text-lg font-bold text-stone-900 mb-2">暂无匹配项目</h3>
-            <p className="text-stone-500 max-w-md mx-auto">
-              尝试放宽筛选条件，或使用不同的关键词。
+            <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No projects match your criteria</h3>
+            <p className="text-[0.95rem] text-[var(--color-text-secondary)]">
+              Try adjusting your filters or search terms.
             </p>
           </div>
         ) : (
@@ -208,30 +206,30 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
         )}
 
         {pagination.totalPages > 1 && (
-          <nav className="flex justify-center gap-3 mt-12" aria-label="分页">
+          <nav className="flex justify-center gap-3 mt-12" aria-label="Pagination">
             {pagination.page > 1 ? (
               <Link
-                className="px-5 py-2.5 border border-stone-200 rounded-xl text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors bg-white shadow-sm"
+                className="px-6 py-3 rounded-[16px] bg-white border border-black/5 shadow-sm text-[0.95rem] font-medium text-[var(--color-text-primary)] hover:bg-black/5 transition-colors active:scale-[0.98]"
                 href={buildDiscoverHref(baseFilters, { page: String(pagination.page - 1) })}
               >
-                上一页
+                Previous
               </Link>
             ) : (
-              <span className="px-5 py-2.5 border border-stone-100 rounded-xl text-sm font-medium text-stone-300 bg-stone-50 cursor-not-allowed">
-                上一页
+              <span className="px-6 py-3 rounded-[16px] bg-black/5 text-[0.95rem] font-medium text-[var(--color-text-tertiary)] cursor-not-allowed">
+                Previous
               </span>
             )}
             
             {pagination.page < pagination.totalPages ? (
               <Link
-                className="px-5 py-2.5 border border-stone-200 rounded-xl text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors bg-white shadow-sm"
+                className="px-6 py-3 rounded-[16px] bg-white border border-black/5 shadow-sm text-[0.95rem] font-medium text-[var(--color-text-primary)] hover:bg-black/5 transition-colors active:scale-[0.98]"
                 href={buildDiscoverHref(baseFilters, { page: String(pagination.page + 1) })}
               >
-                下一页
+                Next
               </Link>
             ) : (
-              <span className="px-5 py-2.5 border border-stone-100 rounded-xl text-sm font-medium text-stone-300 bg-stone-50 cursor-not-allowed">
-                下一页
+              <span className="px-6 py-3 rounded-[16px] bg-black/5 text-[0.95rem] font-medium text-[var(--color-text-tertiary)] cursor-not-allowed">
+                Next
               </span>
             )}
           </nav>

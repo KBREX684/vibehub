@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { getPostBySlug, listCommentsForPost } from "@/lib/repository";
-import { Clock, ArrowLeft, User } from "lucide-react";
+import { Clock, ArrowLeft, User, Sparkles } from "lucide-react";
+import { CommentThread } from "@/components/comment-thread";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,7 +19,7 @@ export default async function DiscussionDetailPage({ params }: Props) {
 
   const { items: comments, pagination } = await listCommentsForPost({ postId: post.id, page: 1, limit: 50 });
 
-  const date = new Date(post.createdAt).toLocaleDateString("zh-CN", {
+  const date = new Date(post.createdAt).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -29,89 +30,75 @@ export default async function DiscussionDetailPage({ params }: Props) {
   return (
     <>
       <SiteHeader />
-      <main className="container max-w-3xl py-12">
+      <main className="container max-w-4xl pb-24">
         <Link 
           href="/discussions" 
-          className="inline-flex items-center gap-2 text-stone-500 hover:text-amber-600 font-medium mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-[0.95rem] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-accent-apple)] mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          返回讨论广场
+          Back to Discussions
         </Link>
 
-        <article className="bg-white border border-stone-200 rounded-3xl p-8 md:p-12 shadow-sm mb-12">
-          <div className="flex flex-wrap gap-2 mb-6">
-            {post.tags.map((tag) => (
-              <span 
-                key={tag} 
-                className="text-xs font-medium px-3 py-1 bg-amber-50 text-amber-700 rounded-full"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-
-          <h1 className="text-3xl md:text-4xl font-extrabold text-stone-900 mb-6 leading-tight tracking-tight">
-            {post.title}
-          </h1>
-
-          <div className="flex items-center gap-4 text-sm text-stone-500 mb-10 pb-8 border-b border-stone-100">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center">
-                <User className="w-4 h-4 text-stone-400" />
-              </div>
-              <span className="font-medium text-stone-700">{post.authorId}</span>
+        {/* Immersive Hero & Body */}
+        <article className="relative w-full rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60 overflow-hidden mb-12">
+          {/* Decorative Glow */}
+          {post.featuredAt && (
+            <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#f5ebd4] rounded-full blur-[80px] opacity-40 pointer-events-none" />
+          )}
+          
+          <div className="relative z-10 p-8 md:p-16">
+            <div className="flex flex-wrap gap-2 mb-8">
+              {post.featuredAt && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#f5ebd4]/40 text-[#d97706] text-xs font-bold uppercase tracking-wider rounded-[980px]">
+                  <Sparkles className="w-3.5 h-3.5" /> Featured
+                </span>
+              )}
+              {post.tags.map((tag) => (
+                <span 
+                  key={tag} 
+                  className="text-xs font-medium px-3 py-1 bg-black/5 text-[var(--color-text-secondary)] rounded-[980px]"
+                >
+                  #{tag}
+                </span>
+              ))}
             </div>
-            <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4" />
-              {date}
-            </span>
-          </div>
 
-          <div className="prose prose-stone max-w-none text-stone-700 leading-relaxed text-lg">
-            {post.body.split('\n').map((paragraph, i) => (
-              <p key={i} className="mb-4">{paragraph}</p>
-            ))}
+            <h1 className="text-4xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.07] text-[var(--color-text-primary)] mb-8">
+              {post.title}
+            </h1>
+
+            <div className="flex items-center gap-4 text-[0.95rem] text-[var(--color-text-secondary)] mb-12 pb-8 border-b border-black/5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-[12px] bg-[#81e6d9]/20 flex items-center justify-center text-[#0d9488]">
+                  <User className="w-4 h-4" />
+                </div>
+                <span className="font-semibold text-[var(--color-text-primary)]">{post.authorName || post.authorId}</span>
+              </div>
+              <span className="w-1 h-1 rounded-full bg-black/10"></span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <Clock className="w-4 h-4 text-[var(--color-text-tertiary)]" />
+                {date}
+              </span>
+            </div>
+
+            <div className="prose prose-stone max-w-none text-[1.05rem] text-[var(--color-text-secondary)] leading-[1.6] whitespace-pre-wrap">
+              {post.body}
+            </div>
           </div>
         </article>
 
+        {/* Comments Section */}
         <section id="comments" className="scroll-mt-24">
-          <h2 className="text-2xl font-bold text-stone-900 mb-8 flex items-center gap-3">
-            评论 
-            <span className="text-sm font-medium px-3 py-1 bg-stone-100 text-stone-600 rounded-full">
+          <div className="flex items-center gap-3 mb-8 px-4">
+            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">
+              Comments
+            </h2>
+            <span className="text-[0.85rem] font-bold px-3 py-1 bg-black/5 text-[var(--color-text-secondary)] rounded-[980px]">
               {pagination.total}
             </span>
-          </h2>
+          </div>
 
-          {comments.length === 0 ? (
-            <div className="bg-stone-50 border border-dashed border-stone-200 rounded-2xl p-12 text-center">
-              <p className="text-stone-500">还没有人评论，快来抢沙发吧！</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {comments.map((comment) => (
-                <div 
-                  key={comment.id} 
-                  className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                        <User className="w-4 h-4 text-amber-600" />
-                      </div>
-                      <span className="font-bold text-stone-900">{comment.authorId}</span>
-                    </div>
-                    <span className="text-xs text-stone-400">
-                      {new Date(comment.createdAt).toLocaleDateString("zh-CN")}
-                    </span>
-                  </div>
-                  <div className="text-stone-700 leading-relaxed pl-11">
-                    {comment.body}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <CommentThread comments={comments} />
         </section>
       </main>
     </>

@@ -2,7 +2,9 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import type { TeamMember, TeamMilestone, TeamTask, TeamTaskStatus } from "@/lib/types";
+import { KanbanSquare, Plus, User, Trash2, ArrowUp, ArrowDown, ChevronDown, Target } from "lucide-react";
 
 interface Props {
   teamSlug: string;
@@ -11,16 +13,16 @@ interface Props {
   currentUserId: string | null;
 }
 
-const STATUSES: { value: TeamTaskStatus; label: string }[] = [
-  { value: "todo", label: "待办" },
-  { value: "doing", label: "进行中" },
-  { value: "done", label: "完成" },
+const STATUSES: { value: TeamTaskStatus; label: string; color: string; bg: string }[] = [
+  { value: "todo", label: "To Do", color: "text-[var(--color-text-secondary)]", bg: "bg-black/5" },
+  { value: "doing", label: "In Progress", color: "text-[#0d9488]", bg: "bg-[#81e6d9]/20" },
+  { value: "done", label: "Done", color: "text-[#248a3d]", bg: "bg-[#34c759]/10" },
 ];
 
 const BOARD_COLUMNS: { status: TeamTaskStatus; title: string }[] = [
-  { status: "todo", title: "待办" },
-  { status: "doing", title: "进行中" },
-  { status: "done", title: "完成" },
+  { status: "todo", title: "To Do" },
+  { status: "doing", title: "In Progress" },
+  { status: "done", title: "Done" },
 ];
 
 function sortTasksForColumn(rows: TeamTask[]): TeamTask[] {
@@ -37,6 +39,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
   const [newDesc, setNewDesc] = useState("");
   const [newAssignee, setNewAssignee] = useState("");
   const [newMilestoneId, setNewMilestoneId] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const tasksByStatus = useMemo(() => {
     const map: Record<TeamTaskStatus, TeamTask[]> = { todo: [], doing: [], done: [] };
@@ -105,6 +108,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
       setNewDesc("");
       setNewAssignee("");
       setNewMilestoneId("");
+      setIsFormOpen(false);
       await load();
       router.refresh();
     } catch (err) {
@@ -115,6 +119,9 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
   async function patchTask(taskId: string, patch: Record<string, unknown>) {
     setMsg(null);
     try {
+      // Optimistic Update
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...patch } as TeamTask : t));
+
       const res = await fetch(
         `/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(taskId)}`,
         {
@@ -127,12 +134,13 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
         setMsg(json.error?.message ?? "Update failed");
+        await load(); // Revert on failure
         return;
       }
-      await load();
       router.refresh();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : String(err));
+      await load(); // Revert on failure
     }
   }
 
@@ -168,6 +176,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
   }
 
   async function removeTask(taskId: string) {
+    if (!confirm("Are you sure you want to delete this task?")) return;
     setMsg(null);
     try {
       const res = await fetch(
@@ -186,176 +195,226 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
     }
   }
 
-  function renderTaskCard(t: TeamTask, column: TeamTaskStatus) {
-    const col = tasksByStatus[column];
-    const index = col.findIndex((x) => x.id === t.id);
-    return (
-      <li key={t.id} className="card team-task-card">
-        <div className="meta-row">
-          <strong>{t.title}</strong>
-          <span className={`status status-${t.status}`}>{t.status}</span>
-        </div>
-        {t.description ? <p className="muted small">{t.description}</p> : null}
-        <p className="muted small">
-          创建：{t.createdByName}
-          {t.assigneeName ? ` · 指派：${t.assigneeName}` : ""}
-          {t.milestoneTitle ? ` · 里程碑：${t.milestoneTitle}` : ""}
-        </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
-          <button
-            type="button"
-            className="button ghost"
-            disabled={index <= 0}
-            onClick={() => void reorderTask(t.id, "up")}
-            aria-label="列内上移"
-          >
-            上移
-          </button>
-          <button
-            type="button"
-            className="button ghost"
-            disabled={index < 0 || index >= col.length - 1}
-            onClick={() => void reorderTask(t.id, "down")}
-            aria-label="列内下移"
-          >
-            下移
-          </button>
-          <select
-            value={t.status}
-            onChange={(e) => void patchTask(t.id, { status: e.target.value as TeamTaskStatus })}
-            aria-label="任务状态"
-          >
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={t.assigneeUserId ?? ""}
-            onChange={(e) =>
-              void patchTask(t.id, {
-                assigneeUserId: e.target.value === "" ? null : e.target.value,
-              })
-            }
-            aria-label="指派成员"
-          >
-            <option value="">未指派</option>
-            {members.map((m) => (
-              <option key={m.userId} value={m.userId}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={t.milestoneId ?? ""}
-            onChange={(e) =>
-              void patchTask(t.id, {
-                milestoneId: e.target.value === "" ? null : e.target.value,
-              })
-            }
-            aria-label="关联里程碑"
-          >
-            <option value="">不关联里程碑</option>
-            {milestones.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.title}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="button ghost" onClick={() => void removeTask(t.id)}>
-            删除
-          </button>
-        </div>
-      </li>
-    );
-  }
-
   if (!currentUserId) {
     return (
-      <p className="muted small">
-        <a
-          href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}
-          className="inline-link"
-        >
-          Demo 登录
+      <div className="p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] text-center">
+        <KanbanSquare className="w-12 h-12 text-[var(--color-text-tertiary)] mx-auto mb-4" />
+        <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-2">Task Board</h2>
+        <p className="text-[0.95rem] text-[var(--color-text-secondary)] mb-6">
+          Log in to view and manage team tasks.
+        </p>
+        <a href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`} className="inline-flex items-center justify-center px-6 py-3 rounded-[980px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,122,255,0.3)]">
+          Demo Login
         </a>
-        后可查看与维护团队任务板（成员可见）。
-      </p>
+      </div>
     );
   }
 
+  const inputClasses = "w-full bg-black/5 border border-transparent rounded-[12px] px-4 py-3 text-[0.95rem] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] outline-none transition-all duration-300 focus:bg-white focus:border-[#81e6d9]/50 focus:shadow-[0_0_16px_rgba(129,230,217,0.3)]";
+
   return (
-    <div className="card">
-      <h2>任务板（P3 主线扫尾：分列看板）</h2>
-      <p className="muted small">
-        按状态分为三列；列内顺序由 <code>sortOrder</code> 决定，「上移 / 下移」仅在<strong>同一列</strong>内调整。跨列请改状态下拉。接口不变：GET/POST
-        /api/v1/teams/:slug/tasks；PATCH；POST …/tasks/:id/reorder。
-      </p>
-
-      <form onSubmit={(ev) => void createTask(ev)} className="discover-filter-grid" style={{ marginTop: "1rem" }}>
-        <label className="discover-field" style={{ gridColumn: "1 / -1" }}>
-          <span>新任务标题</span>
-          <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} required maxLength={200} />
-        </label>
-        <label className="discover-field" style={{ gridColumn: "1 / -1" }}>
-          <span>描述（可选）</span>
-          <textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={2} maxLength={2000} />
-        </label>
-        <label className="discover-field">
-          <span>指派（可选）</span>
-          <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)}>
-            <option value="">未指派</option>
-            {members.map((m) => (
-              <option key={m.userId} value={m.userId}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="discover-field" style={{ gridColumn: "1 / -1" }}>
-          <span>关联里程碑（可选）</span>
-          <select value={newMilestoneId} onChange={(e) => setNewMilestoneId(e.target.value)}>
-            <option value="">不关联</option>
-            {milestones.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="discover-actions">
-          <button type="submit" className="button">
-            添加任务
-          </button>
+    <div className="p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-[#007aff]/10 flex items-center justify-center text-[#007aff]">
+            <KanbanSquare className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">Task Board</h2>
+            <p className="text-[0.95rem] text-[var(--color-text-secondary)] m-0">Fluid Kanban Workspace</p>
+          </div>
         </div>
-      </form>
-
-      {msg ? <p className="error-text">{msg}</p> : null}
-      {loading ? <p className="muted small">加载中…</p> : null}
-
-      <div className="team-task-board">
-        {BOARD_COLUMNS.map(({ status, title }) => {
-          const col = tasksByStatus[status];
-          return (
-            <section key={status} className="team-task-column" aria-label={title}>
-              <h3>
-                {title}{" "}
-                <span className="muted" style={{ fontWeight: 500 }}>
-                  ({col.length})
-                </span>
-              </h3>
-              {col.length === 0 ? (
-                <p className="muted small">暂无任务</p>
-              ) : (
-                <ul className="admin-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {col.map((t) => renderTaskCard(t, status))}
-                </ul>
-              )}
-            </section>
-          );
-        })}
+        <motion.button 
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          className="flex items-center gap-2 px-4 py-2 rounded-[980px] bg-[var(--color-text-primary)] text-white text-sm font-medium hover:bg-black transition-colors shadow-[0_8px_24px_rgba(0,0,0,0.15)] self-start md:self-auto"
+          whileTap={{ scale: 0.95 }}
+        >
+          <Plus className={`w-4 h-4 transition-transform duration-300 ${isFormOpen ? 'rotate-45' : ''}`} />
+          {isFormOpen ? 'Cancel' : 'New Task'}
+        </motion.button>
       </div>
+
+      <AnimatePresence>
+        {isFormOpen && (
+          <motion.form 
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: "auto", marginBottom: 32 }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            className="overflow-hidden"
+            onSubmit={(ev) => void createTask(ev)}
+          >
+            <div className="p-6 rounded-[24px] bg-black/5 border border-black/5 space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Task Title</label>
+                <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} required maxLength={200} className={inputClasses} placeholder="e.g., Design new landing page" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Description (optional)</label>
+                <textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={2} maxLength={2000} className={`${inputClasses} resize-none`} placeholder="Add more details..." />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2 relative">
+                  <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Assignee (optional)</label>
+                  <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)} className={`${inputClasses} appearance-none pr-10`}>
+                    <option value="">Unassigned</option>
+                    {members.map((m) => (
+                      <option key={m.userId} value={m.userId}>{m.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-10 w-4 h-4 text-[var(--color-text-tertiary)] pointer-events-none" />
+                </div>
+                <div className="flex flex-col gap-2 relative">
+                  <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Milestone (optional)</label>
+                  <select value={newMilestoneId} onChange={(e) => setNewMilestoneId(e.target.value)} className={`${inputClasses} appearance-none pr-10`}>
+                    <option value="">No Milestone</option>
+                    {milestones.map((m) => (
+                      <option key={m.id} value={m.id}>{m.title}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-10 w-4 h-4 text-[var(--color-text-tertiary)] pointer-events-none" />
+                </div>
+              </div>
+              <div className="pt-2 flex justify-end">
+                <motion.button 
+                  type="submit" 
+                  className="px-6 py-2.5 rounded-[12px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-colors shadow-sm"
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Create Task
+                </motion.button>
+              </div>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
+
+      {msg && <p className="text-[0.9rem] font-medium text-[#e11d48] bg-[#fee2e2] px-4 py-3 rounded-[12px] mb-6">{msg}</p>}
+
+      {loading && tasks.length === 0 ? (
+        <div className="flex justify-center py-12 text-[var(--color-text-tertiary)]">
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-6 h-6 border-2 border-current border-t-transparent rounded-full" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {BOARD_COLUMNS.map(({ status, title }) => {
+            const col = tasksByStatus[status];
+            const statusConfig = STATUSES.find(s => s.value === status)!;
+            
+            return (
+              <section key={status} className="flex flex-col gap-4 p-4 rounded-[24px] bg-black/5 border border-black/5 min-h-[400px]">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-[1.05rem] font-semibold tracking-tight text-[var(--color-text-primary)] m-0 flex items-center gap-2">
+                    {title}
+                    <span className="px-2 py-0.5 rounded-[980px] bg-black/10 text-[0.75rem] font-bold text-[var(--color-text-secondary)]">
+                      {col.length}
+                    </span>
+                  </h3>
+                </div>
+
+                <div className="flex flex-col gap-3 flex-1">
+                  <AnimatePresence mode="popLayout">
+                    {col.map((t, index) => (
+                      <motion.div
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
+                        key={t.id}
+                        className="group relative p-5 rounded-[20px] bg-white border border-black/5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] hover:border-[#81e6d9]/40 transition-all duration-300"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <strong className="text-[0.95rem] font-semibold text-[var(--color-text-primary)] leading-snug">
+                            {t.title}
+                          </strong>
+                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => void reorderTask(t.id, "up")} 
+                              disabled={index <= 0}
+                              className="p-1 rounded-md text-[var(--color-text-tertiary)] hover:bg-black/5 hover:text-[var(--color-text-primary)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => void reorderTask(t.id, "down")} 
+                              disabled={index >= col.length - 1}
+                              className="p-1 rounded-md text-[var(--color-text-tertiary)] hover:bg-black/5 hover:text-[var(--color-text-primary)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {t.description && (
+                          <p className="text-[0.85rem] text-[var(--color-text-secondary)] leading-[1.47] mb-4 line-clamp-2">
+                            {t.description}
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          {t.assigneeName && (
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-[980px] bg-black/5 text-[0.75rem] font-medium text-[var(--color-text-secondary)]">
+                              <User className="w-3 h-3" /> {t.assigneeName}
+                            </span>
+                          )}
+                          {t.milestoneTitle && (
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-[980px] bg-[#f5ebd4]/40 text-[#d97706] text-[0.75rem] font-medium">
+                              <Target className="w-3 h-3" /> {t.milestoneTitle}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 pt-3 border-t border-black/5">
+                          <div className="relative flex-1 min-w-[100px]">
+                            <select
+                              value={t.status}
+                              onChange={(e) => void patchTask(t.id, { status: e.target.value as TeamTaskStatus })}
+                              className={`w-full appearance-none pl-3 pr-8 py-1.5 rounded-[8px] text-[0.8rem] font-bold uppercase tracking-wider outline-none cursor-pointer transition-colors ${statusConfig.bg} ${statusConfig.color} hover:brightness-95`}
+                            >
+                              {STATUSES.map((s) => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                              ))}
+                            </select>
+                            <ChevronDown className={`absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${statusConfig.color}`} />
+                          </div>
+
+                          <div className="relative flex-1 min-w-[100px]">
+                            <select
+                              value={t.assigneeUserId ?? ""}
+                              onChange={(e) => void patchTask(t.id, { assigneeUserId: e.target.value === "" ? null : e.target.value })}
+                              className="w-full appearance-none pl-3 pr-8 py-1.5 rounded-[8px] bg-black/5 text-[var(--color-text-secondary)] text-[0.8rem] font-medium outline-none cursor-pointer hover:bg-black/10 transition-colors"
+                            >
+                              <option value="">Unassigned</option>
+                              {members.map((m) => (
+                                <option key={m.userId} value={m.userId}>{m.name}</option>
+                              ))}
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--color-text-tertiary)]" />
+                          </div>
+
+                          <button 
+                            onClick={() => void removeTask(t.id)}
+                            className="p-1.5 rounded-[8px] text-[var(--color-text-tertiary)] hover:bg-[#fee2e2] hover:text-[#e11d48] transition-colors"
+                            aria-label="Delete task"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  
+                  {col.length === 0 && (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-black/10 rounded-[20px] opacity-50">
+                      <p className="text-[0.85rem] font-medium text-[var(--color-text-tertiary)] text-center">No tasks here</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getEnterpriseWorkspaceSummary, getProjectRadar, getTalentRadarLegacy as getTalentRadar } from "@/lib/repository";
-import { LayoutGrid, Users, Activity, Target, Zap, Shield, UserPlus, FolderGit2, Key, CheckCircle, User } from "lucide-react";
+import { LayoutGrid, Users, Activity, Target, Zap, Shield, UserPlus, FolderGit2, Key, CheckCircle, User, Compass } from "lucide-react";
 
 export default async function EnterpriseWorkspacePage() {
   const session = await getSessionUserFromCookie();
@@ -12,27 +12,27 @@ export default async function EnterpriseWorkspacePage() {
       <>
         <SiteHeader />
         <main className="container pb-24">
-          <section className="py-20 md:py-32 flex flex-col items-center text-center relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-50/80 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
+          <section className="py-20 md:py-32 flex flex-col items-center text-center relative max-w-3xl mx-auto">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#81e6d9]/40 rounded-full blur-[100px] -z-10 pointer-events-none" />
             
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-200 text-sm font-medium text-stone-600 mb-8 shadow-sm">
-              <Shield className="w-4 h-4 text-blue-500" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-[980px] bg-white border border-black/5 text-sm font-medium text-[var(--color-text-secondary)] mb-8 shadow-sm">
+              <Shield className="w-4 h-4 text-[#0d9488]" />
               <span>VibeHub Enterprise</span>
             </div>
             
-            <h1 className="text-4xl md:text-6xl font-extrabold text-stone-900 tracking-tight mb-6 max-w-3xl leading-[1.1]">
-              企业级 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">协作与洞察</span> 工作台
+            <h1 className="text-4xl md:text-6xl font-semibold tracking-[-0.03em] text-[var(--color-text-primary)] mb-6 leading-[1.07]">
+              Enterprise <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0d9488] to-[#81e6d9]">Insights</span> Workspace
             </h1>
             
-            <p className="text-xl text-stone-500 max-w-2xl leading-relaxed mb-10">
-              聚合团队管理、协作意向漏斗、项目雷达与人才发现。请登录后访问您的专属工作台。
+            <p className="text-lg md:text-xl text-[var(--color-text-secondary)] leading-[1.47] mb-10">
+              Aggregate team management, collaboration funnels, project radars, and talent discovery. Please log in to access your dedicated workspace.
             </p>
 
             <a 
               href="/api/v1/auth/demo-login?role=user&redirect=/workspace/enterprise" 
-              className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white px-8 py-4 rounded-2xl font-semibold transition-all hover:shadow-lg hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 bg-[var(--color-accent-apple)] hover:bg-[#0062cc] text-white px-8 py-4 rounded-[980px] font-medium transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,122,255,0.3)]"
             >
-              Demo 登录
+              Demo Login
             </a>
           </section>
         </main>
@@ -53,116 +53,122 @@ export default async function EnterpriseWorkspacePage() {
   return (
     <>
       <SiteHeader />
-      <main className="container max-w-7xl py-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                <LayoutGrid className="w-5 h-5 text-blue-600" />
-              </div>
-              <h1 className="text-3xl font-bold text-stone-900 tracking-tight">企业工作台</h1>
+      <main className="container pb-24 space-y-8 mt-6">
+        
+        {/* Header Bento */}
+        <section className="p-8 md:p-12 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-[24px] bg-[#81e6d9]/20 flex items-center justify-center text-[#0d9488] shadow-sm">
+              <LayoutGrid className="w-8 h-8" />
             </div>
-            <p className="text-stone-500 font-medium ml-14">
-              欢迎回来，{session.name}。这是您的专属协作与洞察面板。
-            </p>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] text-[var(--color-text-primary)] m-0">
+                Enterprise Workspace
+              </h1>
+              <p className="text-[1.05rem] text-[var(--color-text-secondary)] mt-1">
+                Welcome back, {session.name}. Your dedicated collaboration and intelligence panel.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          
+          <div className="flex items-center gap-3 self-start md:self-auto">
             <Link 
               href="/settings/api-keys" 
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 text-stone-600 rounded-xl text-sm font-semibold hover:bg-stone-50 transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-black/5 text-[var(--color-text-primary)] rounded-[16px] text-[0.95rem] font-medium hover:bg-black/5 transition-colors shadow-sm active:scale-[0.98]"
             >
-              <Key className="w-4 h-4" /> API Keys
+              <Key className="w-4 h-4 text-[var(--color-text-tertiary)]" /> API Keys
             </Link>
             <a 
               href="/api/v1/mcp/v2/manifest" 
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2d2d30] text-white rounded-[16px] text-[0.95rem] font-medium hover:bg-black transition-colors shadow-[0_8px_24px_rgba(0,0,0,0.15)] active:scale-[0.98]"
             >
-              <Zap className="w-4 h-4" /> MCP v2
+              <Zap className="w-4 h-4 text-[#81e6d9]" /> MCP v2
             </a>
           </div>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
           {/* Left Column: Management & Funnel */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-8 space-y-8">
             
-            {/* Funnel Metrics */}
-            <section className="bg-white border border-stone-200 rounded-3xl p-8 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <Activity className="w-6 h-6 text-emerald-500" />
-                <h2 className="text-xl font-bold text-stone-900">协作意向漏斗</h2>
+            {/* Funnel Metrics Bento */}
+            <section className="p-8 md:p-10 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">
+              <div className="flex items-center gap-3 mb-8">
+                <Activity className="w-6 h-6 text-[#0d9488]" />
+                <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">Collaboration Funnel</h2>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-stone-50 rounded-2xl p-5 border border-stone-100">
-                  <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block mb-1">总提交</span>
-                  <strong className="text-3xl font-extrabold text-stone-900">{funnel.totalSubmissions}</strong>
+                <div className="p-6 rounded-[24px] bg-black/5 border border-black/5 flex flex-col justify-center">
+                  <span className="text-[0.8rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">Total Submissions</span>
+                  <strong className="text-4xl font-mono font-bold text-[var(--color-text-primary)]">{funnel.totalSubmissions}</strong>
                 </div>
-                <div className="bg-stone-50 rounded-2xl p-5 border border-stone-100">
-                  <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block mb-1">待审</span>
-                  <strong className="text-3xl font-extrabold text-amber-600">{funnel.pending}</strong>
+                <div className="p-6 rounded-[24px] bg-[#f5ebd4]/30 border border-[#f5ebd4]/50 flex flex-col justify-center">
+                  <span className="text-[0.8rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">Pending</span>
+                  <strong className="text-4xl font-mono font-bold text-[#d97706]">{funnel.pending}</strong>
                 </div>
-                <div className="bg-stone-50 rounded-2xl p-5 border border-stone-100">
-                  <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block mb-1">已通过 / 拒绝</span>
+                <div className="p-6 rounded-[24px] bg-[#81e6d9]/20 border border-[#81e6d9]/40 flex flex-col justify-center">
+                  <span className="text-[0.8rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">Approved / Rejected</span>
                   <div className="flex items-baseline gap-2">
-                    <strong className="text-3xl font-extrabold text-emerald-600">{funnel.approved}</strong>
-                    <span className="text-stone-400 font-medium">/ {funnel.rejected}</span>
+                    <strong className="text-4xl font-mono font-bold text-[#0d9488]">{funnel.approved}</strong>
+                    <span className="text-[1.05rem] font-medium text-[var(--color-text-tertiary)]">/ {funnel.rejected}</span>
                   </div>
                 </div>
-                <div className="bg-stone-50 rounded-2xl p-5 border border-stone-100">
-                  <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block mb-1">通过率</span>
-                  <strong className="text-3xl font-extrabold text-blue-600">{(funnel.approvalRate * 100).toFixed(1)}%</strong>
+                <div className="p-6 rounded-[24px] bg-[var(--color-accent-apple)]/10 border border-[var(--color-accent-apple)]/20 flex flex-col justify-center">
+                  <span className="text-[0.8rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-2">Approval Rate</span>
+                  <strong className="text-4xl font-mono font-bold text-[var(--color-accent-apple)]">{(funnel.approvalRate * 100).toFixed(1)}%</strong>
                 </div>
               </div>
             </section>
 
-            {/* Pending Join Requests */}
-            <section className="bg-white border border-stone-200 rounded-3xl p-8 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
+            {/* Pending Join Requests Bento */}
+            <section className="p-8 md:p-10 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">
+              <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <UserPlus className="w-6 h-6 text-amber-500" />
-                  <h2 className="text-xl font-bold text-stone-900">待审批入队申请</h2>
+                  <UserPlus className="w-6 h-6 text-[#d97706]" />
+                  <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">Pending Join Requests</h2>
                 </div>
-                <span className="text-xs font-bold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">
-                  需您处理
+                <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#f5ebd4]/40 text-[#d97706] rounded-[980px]">
+                  Action Required
                 </span>
               </div>
 
               {pendingJoinRequests.length === 0 ? (
-                <div className="text-center py-10 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
-                  <CheckCircle className="w-8 h-8 text-stone-300 mx-auto mb-3" />
-                  <p className="text-stone-500 font-medium">暂无待处理的入队申请</p>
+                <div className="text-center py-16 bg-black/5 rounded-[24px] border border-black/5">
+                  <CheckCircle className="w-10 h-10 text-[var(--color-text-tertiary)] mx-auto mb-3 opacity-50" />
+                  <p className="text-[0.95rem] font-medium text-[var(--color-text-secondary)]">No pending requests to review.</p>
                 </div>
               ) : (
                 <ul className="space-y-4">
                   {pendingJoinRequests.map((r) => (
-                    <li key={r.id} className="bg-white border border-stone-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <li key={r.id} className="group bg-white border border-black/5 rounded-[24px] p-6 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] hover:border-[#f5ebd4]/60 transition-all duration-300">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <strong className="text-lg font-bold text-stone-900">{r.applicantName}</strong>
-                            <span className="text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">{r.applicantEmail}</span>
+                          <div className="flex items-center gap-3 mb-2">
+                            <strong className="text-[1.1rem] font-semibold text-[var(--color-text-primary)]">{r.applicantName}</strong>
+                            <span className="text-[0.8rem] font-mono text-[var(--color-text-secondary)] bg-black/5 px-2.5 py-1 rounded-md">{r.applicantEmail}</span>
                           </div>
-                          <div className="text-sm text-stone-600 mb-3">
-                            申请加入团队：
-                            <Link href={`/teams/${encodeURIComponent(r.teamSlug)}`} className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                          <div className="text-[0.95rem] text-[var(--color-text-secondary)] mb-4">
+                            Requested to join: 
+                            <Link href={`/teams/${encodeURIComponent(r.teamSlug)}`} className="font-semibold text-[var(--color-accent-apple)] hover:underline ml-1.5 outline-none">
                               {r.teamName}
                             </Link>
                           </div>
                           {r.message && (
-                            <div className="bg-stone-50 p-3 rounded-xl text-sm text-stone-700 border border-stone-100 italic">
+                            <div className="bg-black/5 p-4 rounded-[16px] text-[0.95rem] text-[var(--color-text-secondary)] italic border border-black/5">
                               &quot;{r.message}&quot;
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
                           <Link 
                             href={`/teams/${encodeURIComponent(r.teamSlug)}`}
-                            className="inline-flex items-center justify-center px-4 py-2 bg-stone-900 text-white text-sm font-semibold rounded-xl hover:bg-stone-800 transition-colors"
+                            className="inline-flex items-center justify-center px-5 py-2.5 bg-[var(--color-text-primary)] text-white text-[0.95rem] font-medium rounded-[16px] hover:bg-black transition-colors shadow-sm active:scale-[0.98]"
                           >
-                            去处理
+                            Review
                           </Link>
                         </div>
                       </div>
@@ -172,37 +178,37 @@ export default async function EnterpriseWorkspacePage() {
               )}
             </section>
 
-            {/* My Teams */}
-            <section className="bg-white border border-stone-200 rounded-3xl p-8 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <Users className="w-6 h-6 text-blue-500" />
-                <h2 className="text-xl font-bold text-stone-900">我的团队</h2>
+            {/* My Teams Bento */}
+            <section className="p-8 md:p-10 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">
+              <div className="flex items-center gap-3 mb-8">
+                <Users className="w-6 h-6 text-[#007aff]" />
+                <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">My Teams</h2>
               </div>
 
               {teams.length === 0 ? (
-                <div className="text-center py-10 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
-                  <p className="text-stone-500 font-medium mb-4">您尚未加入任何团队</p>
-                  <Link href="/teams" className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-stone-200 text-stone-700 font-semibold rounded-xl hover:bg-stone-50 transition-colors shadow-sm">
-                    浏览团队大厅
+                <div className="text-center py-16 bg-black/5 rounded-[24px] border border-black/5">
+                  <p className="text-[0.95rem] font-medium text-[var(--color-text-secondary)] mb-6">You haven&apos;t joined any teams yet.</p>
+                  <Link href="/teams" className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-black/5 text-[var(--color-text-primary)] font-medium rounded-[16px] hover:bg-black/5 transition-colors shadow-sm active:scale-[0.98]">
+                    <Compass className="w-4 h-4" /> Explore Teams
                   </Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {teams.map((t) => (
                     <Link 
                       key={t.id} 
                       href={`/teams/${encodeURIComponent(t.slug)}`}
-                      className="group bg-white border border-stone-200 rounded-2xl p-5 hover:border-blue-300 hover:shadow-md transition-all"
+                      className="group bg-white border border-black/5 rounded-[24px] p-6 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] hover:border-[#007aff]/40 transition-all duration-300 outline-none"
                     >
-                      <h3 className="text-lg font-bold text-stone-900 group-hover:text-blue-600 transition-colors mb-4 truncate">
+                      <h3 className="text-[1.1rem] font-semibold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-apple)] transition-colors mb-5 truncate leading-snug">
                         {t.name}
                       </h3>
-                      <div className="flex items-center gap-4 text-sm font-medium text-stone-500">
-                        <div className="flex items-center gap-1.5 bg-stone-50 px-2.5 py-1 rounded-lg">
-                          <Users className="w-4 h-4" /> {t.memberCount}
+                      <div className="flex items-center gap-3 text-[0.85rem] font-medium text-[var(--color-text-secondary)]">
+                        <div className="flex items-center gap-1.5 bg-black/5 px-3 py-1.5 rounded-[10px]">
+                          <Users className="w-4 h-4 text-[var(--color-text-tertiary)]" /> {t.memberCount}
                         </div>
-                        <div className="flex items-center gap-1.5 bg-stone-50 px-2.5 py-1 rounded-lg">
-                          <FolderGit2 className="w-4 h-4" /> {t.projectCount}
+                        <div className="flex items-center gap-1.5 bg-black/5 px-3 py-1.5 rounded-[10px]">
+                          <FolderGit2 className="w-4 h-4 text-[var(--color-text-tertiary)]" /> {t.projectCount}
                         </div>
                       </div>
                     </Link>
@@ -213,18 +219,20 @@ export default async function EnterpriseWorkspacePage() {
           </div>
 
           {/* Right Column: Radars */}
-          <div className="lg:col-span-1 space-y-8">
+          <div className="lg:col-span-4 space-y-8">
             
-            {/* Project Radar */}
-            <section className="bg-gradient-to-b from-stone-900 to-stone-800 rounded-3xl p-8 shadow-lg text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+            {/* Project Radar (Dark Glass) */}
+            <section className="p-8 rounded-[32px] bg-[#2d2d30] text-white shadow-[0_16px_48px_-8px_rgba(0,0,0,0.15)] relative overflow-hidden">
+              {/* Radar Scan Effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#81e6d9]/10 to-transparent w-[200%] animate-[scan_3s_ease-in-out_infinite] pointer-events-none" />
+              <div className="absolute top-0 right-0 w-48 h-48 bg-[#81e6d9] rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4 opacity-20 pointer-events-none" />
               
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-blue-400" />
-                  <h2 className="text-lg font-bold">项目雷达</h2>
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-3">
+                  <Target className="w-6 h-6 text-[#81e6d9]" />
+                  <h2 className="text-xl font-semibold tracking-tight m-0 text-white">Project Radar</h2>
                 </div>
-                <span className="text-xs font-bold bg-white/10 text-stone-300 px-2 py-1 rounded-md uppercase tracking-wider">
+                <span className="text-[10px] font-bold bg-white/10 text-white/80 px-2.5 py-1 rounded-[980px] uppercase tracking-wider">
                   Top 5
                 </span>
               </div>
@@ -232,21 +240,21 @@ export default async function EnterpriseWorkspacePage() {
               <ul className="space-y-4 relative z-10">
                 {projectRadar.map((p) => (
                   <li key={p.slug} className="group">
-                    <Link href={`/projects/${p.slug}`} className="block bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-4 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <strong className="font-bold text-blue-300 group-hover:text-blue-200 truncate pr-4">
+                    <Link href={`/projects/${p.slug}`} className="block bg-black/40 hover:bg-black/60 border border-white/10 hover:border-[#81e6d9]/40 rounded-[20px] p-5 transition-all duration-300 outline-none">
+                      <div className="flex items-center justify-between mb-3 gap-4">
+                        <strong className="font-semibold text-[1.05rem] text-[#81e6d9] group-hover:text-white truncate">
                           {p.title}
                         </strong>
-                        <span className="text-xs font-mono bg-black/30 px-2 py-1 rounded-md text-stone-400 shrink-0">
+                        <span className="text-[0.75rem] font-mono font-bold bg-white/10 px-2.5 py-1 rounded-md text-white/80 shrink-0">
                           {p.score} pts
                         </span>
                       </div>
-                      <div className="text-xs text-stone-400 line-clamp-1 mb-3">
+                      <div className="text-[0.85rem] text-white/60 line-clamp-2 mb-4 leading-[1.47]">
                         {p.oneLiner}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {p.techStack.slice(0, 3).map(tech => (
-                          <span key={tech} className="text-[10px] font-medium px-2 py-0.5 bg-white/10 text-stone-300 rounded">
+                          <span key={tech} className="text-[10px] font-medium px-2 py-1 bg-white/10 text-white/80 rounded-md">
                             {tech}
                           </span>
                         ))}
@@ -258,40 +266,40 @@ export default async function EnterpriseWorkspacePage() {
             </section>
 
             {/* Talent Radar */}
-            <section className="bg-gradient-to-b from-amber-50 to-orange-50 border border-amber-200/50 rounded-3xl p-8 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+            <section className="p-8 rounded-[32px] bg-gradient-to-br from-[#f5ebd4]/20 to-[#81e6d9]/20 border border-[#81e6d9]/40 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-[#f5ebd4] rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4 opacity-40 pointer-events-none" />
               
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-amber-600" />
-                  <h2 className="text-lg font-bold text-stone-900">人才雷达</h2>
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-3">
+                  <User className="w-6 h-6 text-[#d97706]" />
+                  <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">Talent Radar</h2>
                 </div>
-                <span className="text-xs font-bold bg-amber-200/50 text-amber-800 px-2 py-1 rounded-md uppercase tracking-wider">
+                <span className="text-[10px] font-bold bg-[#f5ebd4]/60 text-[#d97706] px-2.5 py-1 rounded-[980px] uppercase tracking-wider">
                   Top 5
                 </span>
               </div>
 
-              <ul className="space-y-3 relative z-10">
+              <ul className="space-y-4 relative z-10">
                 {talentRadar.map((t) => (
                   <li key={t.creatorSlug}>
-                    <Link href={`/creators/${t.creatorSlug}`} className="block bg-white/80 hover:bg-white border border-white/50 hover:border-amber-200 rounded-2xl p-4 transition-all shadow-sm">
-                      <div className="flex items-center justify-between mb-1">
-                        <strong className="font-bold text-stone-900 truncate pr-2">
+                    <Link href={`/creators/${t.creatorSlug}`} className="block bg-[rgba(255,255,255,0.85)] backdrop-blur-[12px] hover:bg-white border border-white/60 hover:border-[#f5ebd4]/80 rounded-[20px] p-5 transition-all duration-300 shadow-sm hover:shadow-md outline-none group">
+                      <div className="flex items-center justify-between mb-2 gap-4">
+                        <strong className="font-semibold text-[1.05rem] text-[var(--color-text-primary)] truncate group-hover:text-[#d97706] transition-colors">
                           {t.creatorSlug}
                         </strong>
-                        <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded-md shrink-0">
-                          {t.contributionScore} 积分
+                        <span className="text-[0.75rem] font-mono font-bold text-[#d97706] bg-[#f5ebd4]/40 px-2.5 py-1 rounded-md shrink-0">
+                          {t.contributionScore} pts
                         </span>
                       </div>
-                      <div className="text-xs text-stone-500 truncate mb-2">
+                      <div className="text-[0.85rem] text-[var(--color-text-secondary)] truncate mb-4">
                         {t.headline}
                       </div>
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-100/50">
-                        <span className="text-[10px] font-semibold text-stone-400 uppercase">
-                          {t.collaborationPreference === 'open' ? '开放协作' : t.collaborationPreference === 'invite_only' ? '仅限邀请' : '暂不协作'}
+                      <div className="flex items-center justify-between pt-3 border-t border-black/5">
+                        <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider">
+                          {t.collaborationPreference === 'open' ? 'Open' : t.collaborationPreference === 'invite_only' ? 'Invite Only' : 'Closed'}
                         </span>
-                        <span className="text-xs font-medium text-stone-500 flex items-center gap-1">
-                          <FolderGit2 className="w-3 h-3" /> {t.projectCount}
+                        <span className="text-[0.85rem] font-medium text-[var(--color-text-secondary)] flex items-center gap-1.5 bg-black/5 px-2 py-0.5 rounded-md">
+                          <FolderGit2 className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" /> {t.projectCount}
                         </span>
                       </div>
                     </Link>
@@ -303,7 +311,13 @@ export default async function EnterpriseWorkspacePage() {
           </div>
         </div>
       </main>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes scan {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(50%); }
+        }
+      `}} />
     </>
   );
 }
-
