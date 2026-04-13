@@ -8,7 +8,7 @@ This repository hosts the VibeHub product planning assets and the P1 full-stack 
 - `docs/01_实现计划图.md`: Stage-based implementation map
 - `docs/02_Debug表.md`: Debug tracker template + first entries
 - `docs/03_项目日志.md`: Project log template + kickoff log
-- `web/`: Next.js full-stack website (P1 MVP; **P2** slices P2-1…P2-5; **P3 officially closed** on 2026-04-13 with **deferrals shipped 2026-04-14**: in-app notifications + task RBAC); **P4** open API: keys, scopes, rate limits, `/api/v1/public/*`, **`GET /api/v1/openapi.json`**, OpenAPI CI gate, **enterprise workspace**, **MCP v2** — see `docs/01_实现计划图.md` (v2.8) and `docs/03_项目日志.md`)
+- `web/`: Next.js full-stack website (P1 MVP; **P2** slices P2-1…P2-5; **P3 officially closed** on 2026-04-13 with **deferrals shipped 2026-04-14**: in-app notifications + task RBAC); **P4** open API: keys, scopes, **Redis-backed rate limit** (`REDIS_URL`), optional **webhook + SMTP** notification push, **MCP v2 invoke audit** (`/api/v1/admin/mcp-invoke-audits`), `/api/v1/public/*`, **`GET /api/v1/openapi.json`**, OpenAPI CI gate, enterprise workspace, MCP v2 — see `docs/01_实现计划图.md` (v2.9) and `docs/03_项目日志.md`)
 
 ## Quick Start (Web)
 

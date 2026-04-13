@@ -68,6 +68,13 @@ export default async function AdminPage() {
               View audit API
             </a>
           </article>
+          <article className="card">
+            <h3>MCP v2 调用审计</h3>
+            <p className="muted small">按工具、用户、HTTP 状态记录（PostgreSQL）。</p>
+            <a className="inline-link" href="/api/v1/admin/mcp-invoke-audits">
+              View MCP audit API
+            </a>
+          </article>
           <article className="card detail-full">
             <h3>协作意向漏斗（P2-3）</h3>
             <p className="muted small">

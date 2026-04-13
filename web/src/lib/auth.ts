@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
-import { checkApiKeyRateLimit } from "@/lib/api-key-rate-limit";
+import { checkApiKeyRateLimitAsync } from "@/lib/redis-rate-limit";
 import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
@@ -186,7 +186,7 @@ export async function authenticateRequest(
     return { kind: "unauthorized" };
   }
 
-  const rl = checkApiKeyRateLimit(token, request);
+  const rl = await checkApiKeyRateLimitAsync(token, request);
   if (!rl.ok) {
     return { kind: "rate_limited", retryAfterSeconds: rl.retryAfter };
   }

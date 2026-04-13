@@ -96,6 +96,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P3-P4-20260414-001 | P3+P4 | Notifications + tasks + MCP v2 | P3 封版顺延通知/RBAC；P4 路线图缺企业/MCP v2 落地 | 未实现 | `InAppNotification`、任务 RBAC、enterprise workspace API/UI、MCP v2 manifest/invoke、`write:team:tasks` / `read:enterprise:workspace` scopes | Verified | `npm run check` |
 
+## Push + MCP audit + Redis RL (2026-04-14)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P4-INFRA-20260414-001 | P4 | Webhook/SMTP + MCP audit + Redis | 无外发通道；无 MCP 调用留痕；限流单进程 | 未实现 | `push-dispatcher`、`McpInvokeAudit`、admin audits API、Redis optional RL、`apiKeyId` on session | Verified | `npm run check` |
+
 ## P3 Formal Closure (2026-04-13)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

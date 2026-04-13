@@ -85,6 +85,8 @@ export interface SessionUser {
   name: string;
   /** Present when authenticated via API key (P4-2); empty array means unrestricted for backwards compat. */
   apiKeyScopes?: string[];
+  /** Present when authenticated via API key (DB path); used for MCP audit. */
+  apiKeyId?: string;
 }
 
 export interface ModerationCase {
@@ -124,6 +126,19 @@ export interface InAppNotification {
   body: string;
   readAt?: string;
   metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface McpInvokeAuditRow {
+  id: string;
+  tool: string;
+  userId: string;
+  apiKeyId?: string;
+  httpStatus: number;
+  clientIp?: string;
+  userAgent?: string;
+  errorCode?: string;
+  durationMs?: number;
   createdAt: string;
 }
 

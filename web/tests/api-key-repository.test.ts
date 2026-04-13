@@ -20,6 +20,7 @@ describe("API keys (P4-1, mock)", () => {
     const session = await getSessionUserFromApiKeyToken(created.secret);
     expect(session?.userId).toBe("u1");
     expect(session?.apiKeyScopes?.length).toBeGreaterThan(0);
+    expect(session?.apiKeyId).toBe(created.id);
 
     const teams = await listTeamsForUser(session!.userId);
     expect(teams.length).toBeGreaterThan(0);

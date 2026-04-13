@@ -102,6 +102,24 @@ model InAppNotification {
   @@index([userId, createdAt])
 }
 
+/// MCP v2 HTTP invoke audit (Bearer or session).
+model McpInvokeAudit {
+  id           String   @id @default(cuid())
+  tool         String
+  userId       String
+  apiKeyId     String?
+  httpStatus   Int
+  clientIp     String?
+  userAgent    String?
+  errorCode    String?
+  durationMs   Int?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([tool, createdAt])
+}
+
 model ApiKey {
   id         String    @id @default(cuid())
   userId     String

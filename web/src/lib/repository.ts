@@ -1,3 +1,4 @@
+import { dispatchNotificationPush } from "@/lib/push-dispatcher";
 import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { Prisma } from "@prisma/client";
@@ -35,6 +36,7 @@ import type {
   CreatorProfile,
   InAppNotification,
   InAppNotificationKind,
+  McpInvokeAuditRow,
   LeaderboardDiscussionRow,
   LeaderboardProjectRow,
   ModerationCase,
@@ -127,7 +129,7 @@ interface ReviewCollaborationIntentInput {
   adminUserId: string;
 }
 
-async function getPrisma() {
+export async function getPrisma() {
   const db = await import("@/lib/db");
   return db.prisma;
 }
@@ -826,9 +828,100 @@ async function notifyUser(params: {
 }): Promise<void> {
   if (useMockData) {
     pushMockNotification(params);
+    const u = mockUsers.find((x) => x.id === params.userId);
+    if (u) {
+      void dispatchNotificationPush({
+        userId: params.userId,
+        userEmail: u.email,
+        kind: params.kind,
+        title: params.title,
+        body: params.body,
+        metadata: params.metadata,
+      });
+    }
     return;
   }
   await createInAppNotificationDb(params);
+  const prisma = await getPrisma();
+  const u = await prisma.user.findUnique({ where: { id: params.userId }, select: { email: true } });
+  if (u?.email) {
+    void dispatchNotificationPush({
+      userId: params.userId,
+      userEmail: u.email,
+      kind: params.kind,
+      title: params.title,
+      body: params.body,
+      metadata: params.metadata,
+    });
+  }
+}
+
+/** Best-effort MCP v2 invoke audit (no-op in mock mode). */
+export async function logMcpInvoke(params: {
+  tool: string;
+  userId: string;
+  apiKeyId?: string;
+  httpStatus: number;
+  clientIp?: string | null;
+  userAgent?: string | null;
+  errorCode?: string | null;
+  durationMs?: number;
+}): Promise<void> {
+  if (useMockData) {
+    return;
+  }
+  try {
+    const prisma = await getPrisma();
+    await prisma.mcpInvokeAudit.create({
+      data: {
+        tool: params.tool,
+        userId: params.userId,
+        apiKeyId: params.apiKeyId ?? null,
+        httpStatus: params.httpStatus,
+        clientIp: params.clientIp ?? null,
+        userAgent: params.userAgent ?? null,
+        errorCode: params.errorCode ?? null,
+        durationMs: params.durationMs ?? null,
+      },
+    });
+  } catch {
+    /* never break invoke */
+  }
+}
+
+export async function listMcpInvokeAudits(params: {
+  page: number;
+  limit: number;
+}): Promise<{ items: McpInvokeAuditRow[]; total: number }> {
+  if (useMockData) {
+    return { items: [], total: 0 };
+  }
+  const prisma = await getPrisma();
+  const take = Math.min(Math.max(params.limit, 1), 100);
+  const skip = (Math.max(params.page, 1) - 1) * take;
+  const [rows, total] = await Promise.all([
+    prisma.mcpInvokeAudit.findMany({
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.mcpInvokeAudit.count(),
+  ]);
+  return {
+    items: rows.map((r) => ({
+      id: r.id,
+      tool: r.tool,
+      userId: r.userId,
+      apiKeyId: r.apiKeyId ?? undefined,
+      httpStatus: r.httpStatus,
+      clientIp: r.clientIp ?? undefined,
+      userAgent: r.userAgent ?? undefined,
+      errorCode: r.errorCode ?? undefined,
+      durationMs: r.durationMs ?? undefined,
+      createdAt: r.createdAt.toISOString(),
+    })),
+    total,
+  };
 }
 
 export async function listInAppNotifications(params: {
@@ -4220,7 +4313,7 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
       return null;
     }
     const scopeList = row.scopes?.length ? row.scopes : [...DEFAULT_API_KEY_SCOPES];
-    return { userId: u.id, role: u.role, name: u.name, apiKeyScopes: scopeList };
+    return { userId: u.id, role: u.role, name: u.name, apiKeyScopes: scopeList, apiKeyId: row.id };
   }
 
   const prisma = await getPrisma();
@@ -4244,7 +4337,13 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
   }
   const scopeList = parseScopesFromJson(row.scopes);
   const effectiveScopes = scopeList.length ? scopeList : [...DEFAULT_API_KEY_SCOPES];
-  return { userId: u.id, role: u.role as Role, name: u.name, apiKeyScopes: effectiveScopes };
+  return {
+    userId: u.id,
+    role: u.role as Role,
+    name: u.name,
+    apiKeyScopes: effectiveScopes,
+    apiKeyId: row.id,
+  };
 }
 
 export function getDemoUser(role: DemoRole = "user") {
