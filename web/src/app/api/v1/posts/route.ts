@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { createPost, listPosts } from "@/lib/repository";
+import type { PostSortOrder } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getSessionUserFromCookie } from "@/lib/auth";
+
+const VALID_SORT_ORDERS: readonly PostSortOrder[] = ["recent", "hot"];
 
 const createPostSchema = z.object({
   title: z.string().min(3).max(120),
@@ -16,8 +19,19 @@ export async function GET(request: Request) {
     const { page, limit } = parsePagination(url.searchParams);
     const query = url.searchParams.get("query") ?? undefined;
     const tag = url.searchParams.get("tag") ?? undefined;
+    const rawSort = url.searchParams.get("sort");
+    let sort: PostSortOrder | undefined;
+    if (rawSort) {
+      if (!VALID_SORT_ORDERS.includes(rawSort as PostSortOrder)) {
+        return apiError(
+          { code: "INVALID_SORT", message: `sort must be one of: ${VALID_SORT_ORDERS.join(", ")}` },
+          400
+        );
+      }
+      sort = rawSort as PostSortOrder;
+    }
 
-    const result = await listPosts({ query, tag, page, limit });
+    const result = await listPosts({ query, tag, sort, page, limit });
     return apiSuccess(result);
   } catch (error) {
     return apiError(

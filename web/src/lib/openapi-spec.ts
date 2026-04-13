@@ -203,6 +203,122 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: { "200": responses["200"], "404": responses["404"], "500": responses["500"] },
         },
       },
+      "/api/v1/content-guidelines": {
+        get: {
+          tags: ["meta"],
+          summary: "Content guidelines: project templates, post guidelines, quality standards, review rules",
+          responses: { "200": responses["200"] },
+        },
+      },
+      "/api/v1/posts": {
+        get: {
+          tags: ["posts"],
+          summary: "List discussion posts (public; sort=recent|hot)",
+          parameters: [
+            { name: "query", in: "query", schema: { type: "string" } },
+            { name: "tag", in: "query", schema: { type: "string" } },
+            { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot"] } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+          ],
+          responses: { "200": responses["200"], "400": responses["400"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["posts"],
+          summary: "Create a discussion post (session cookie; enters moderation queue)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["title", "body"],
+                  properties: {
+                    title: { type: "string", minLength: 3, maxLength: 120 },
+                    body: { type: "string", minLength: 10 },
+                    tags: { type: "array", items: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/posts/{slug}": {
+        get: {
+          tags: ["posts"],
+          summary: "Get post by slug with comments (anonymous or authenticated)",
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1, description: "Comment pagination page" } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 10, description: "Comment pagination limit" } },
+          ],
+          responses: { "200": responses["200"], "404": responses["404"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/comments": {
+        get: {
+          tags: ["comments"],
+          summary: "List comments for a post",
+          parameters: [
+            { name: "postId", in: "query", required: true, schema: { type: "string" } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+          ],
+          responses: { "200": responses["200"], "400": responses["400"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["comments"],
+          summary: "Create a comment on a post (session cookie)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["postId", "body"],
+                  properties: {
+                    postId: { type: "string" },
+                    body: { type: "string", minLength: 2 },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/comments/{commentId}": {
+        patch: {
+          tags: ["comments"],
+          summary: "Update comment (author only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "commentId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["body"],
+                  properties: { body: { type: "string", minLength: 2 } },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["comments"],
+          summary: "Delete comment (author or admin; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "commentId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
       "/api/v1/projects": {
         get: {
           tags: ["projects"],
@@ -212,6 +328,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             { name: "tag", in: "query", schema: { type: "string" } },
             { name: "tech", in: "query", schema: { type: "string" } },
             { name: "team", in: "query", schema: { type: "string" } },
+            { name: "creatorId", in: "query", schema: { type: "string" } },
             { name: "status", in: "query", schema: { type: "string" } },
             { name: "page", in: "query", schema: { type: "integer" } },
             { name: "limit", in: "query", schema: { type: "integer" } },
@@ -221,6 +338,38 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "400": responses["400"],
             "401": responses["401"],
             "429": responses["429"],
+            "500": responses["500"],
+          },
+        },
+        post: {
+          tags: ["projects"],
+          summary: "Create project (session cookie; requires creator profile)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["title", "oneLiner", "description"],
+                  properties: {
+                    title: { type: "string", minLength: 3, maxLength: 120 },
+                    oneLiner: { type: "string", minLength: 5, maxLength: 200 },
+                    description: { type: "string", minLength: 20 },
+                    techStack: { type: "array", items: { type: "string" } },
+                    tags: { type: "array", items: { type: "string" } },
+                    status: { type: "string", enum: ["idea", "building", "launched", "paused"] },
+                    demoUrl: { type: "string", format: "uri" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
             "500": responses["500"],
           },
         },
@@ -240,7 +389,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         },
         patch: {
           tags: ["projects"],
-          summary: "Link or unlink project to team (creator only; session cookie)",
+          summary: "Update project fields or team link (creator only; session cookie)",
           security: [{ SessionCookie: [] }],
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
           requestBody: {
@@ -249,7 +398,16 @@ export function buildOpenApiDocument(): Record<string, unknown> {
               "application/json": {
                 schema: {
                   type: "object",
-                  properties: { teamSlug: { oneOf: [{ type: "string" }, { type: "null" }] } },
+                  properties: {
+                    teamSlug: { oneOf: [{ type: "string" }, { type: "null" }] },
+                    title: { type: "string" },
+                    oneLiner: { type: "string" },
+                    description: { type: "string" },
+                    techStack: { type: "array", items: { type: "string" } },
+                    tags: { type: "array", items: { type: "string" } },
+                    status: { type: "string", enum: ["idea", "building", "launched", "paused"] },
+                    demoUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                  },
                 },
               },
             },
@@ -257,6 +415,19 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: {
             "200": responses["200"],
             "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "500": responses["500"],
+          },
+        },
+        delete: {
+          tags: ["projects"],
+          summary: "Delete project (creator or admin; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": responses["200"],
             "401": responses["401"],
             "403": responses["403"],
             "404": responses["404"],

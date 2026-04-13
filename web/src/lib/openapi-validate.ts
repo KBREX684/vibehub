@@ -19,6 +19,10 @@ export const REQUIRED_OPENAPI_PATHS = [
   "/api/v1/health",
   "/api/v1/public/projects",
   "/api/v1/projects",
+  "/api/v1/posts",
+  "/api/v1/posts/{slug}",
+  "/api/v1/comments",
+  "/api/v1/comments/{commentId}",
   "/api/v1/me/api-keys",
 ] as const;
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createComment } from "@/lib/repository";
+import { createComment, listCommentsForPost } from "@/lib/repository";
+import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getSessionUserFromCookie } from "@/lib/auth";
 
@@ -7,6 +8,28 @@ const createCommentSchema = z.object({
   postId: z.string().min(1),
   body: z.string().min(2),
 });
+
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const postId = url.searchParams.get("postId");
+    if (!postId) {
+      return apiError({ code: "MISSING_POST_ID", message: "postId query parameter is required" }, 400);
+    }
+    const { page, limit } = parsePagination(url.searchParams);
+    const result = await listCommentsForPost({ postId, page, limit });
+    return apiSuccess(result);
+  } catch (error) {
+    return apiError(
+      {
+        code: "COMMENTS_LIST_FAILED",
+        message: "Failed to list comments",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500
+    );
+  }
+}
 
 export async function POST(request: Request) {
   const sessionUser = await getSessionUserFromCookie();

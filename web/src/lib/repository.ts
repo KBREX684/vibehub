@@ -362,12 +362,15 @@ export async function listProjects(params: {
   status?: Project["status"];
   /** Filter by team slug (P3-3). */
   team?: string;
+  /** Filter by creator profile id (P1 gap fix). */
+  creatorId?: string;
   page: number;
   limit: number;
 }): Promise<Paginated<Project>> {
   const techFilter = params.tech?.trim();
   const statusFilter = params.status;
   const teamSlug = params.team?.trim();
+  const creatorIdFilter = params.creatorId?.trim();
 
   if (useMockData) {
     const teamIdFilter = teamSlug ? mockTeams.find((x) => x.slug === teamSlug)?.id : undefined;
@@ -403,7 +406,9 @@ export async function listProjects(params: {
 
       const teamMatch = !teamIdFilter || project.teamId === teamIdFilter;
 
-      return queryMatch && tagMatch && techMatch && statusMatch && teamMatch;
+      const creatorMatch = !creatorIdFilter || project.creatorId === creatorIdFilter;
+
+      return queryMatch && tagMatch && techMatch && statusMatch && teamMatch && creatorMatch;
     });
 
     return paginateArray(filtered, params.page, params.limit);
@@ -441,6 +446,7 @@ export async function listProjects(params: {
             },
           }
         : {},
+      creatorIdFilter ? { creatorId: creatorIdFilter } : {},
     ],
   };
 
@@ -2033,12 +2039,17 @@ export async function listUsers(params: {
   };
 }
 
+export type PostSortOrder = "recent" | "hot";
+
 export async function listPosts(params: {
   query?: string;
   tag?: string;
+  sort?: PostSortOrder;
   page: number;
   limit: number;
 }): Promise<Paginated<Post>> {
+  const sortBy = params.sort ?? "recent";
+
   if (useMockData) {
     const filtered = mockPosts.filter((post) => {
       const q = params.query?.toLowerCase().trim();
@@ -2052,6 +2063,19 @@ export async function listPosts(params: {
       const approvedOnly = post.reviewStatus === "approved";
       return queryMatch && tagMatch && approvedOnly;
     });
+
+    if (sortBy === "hot") {
+      const commentCounts = new Map<string, number>();
+      for (const c of mockComments) {
+        commentCounts.set(c.postId, (commentCounts.get(c.postId) ?? 0) + 1);
+      }
+      filtered.sort((a, b) => {
+        const scoreA = commentCounts.get(a.id) ?? 0;
+        const scoreB = commentCounts.get(b.id) ?? 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
 
     return paginateArray(filtered, params.page, params.limit);
   }
@@ -2078,6 +2102,36 @@ export async function listPosts(params: {
   };
 
   const prisma = await getPrisma();
+
+  if (sortBy === "hot") {
+    const total = await prisma.post.count({ where });
+    const offset = (params.page - 1) * params.limit;
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT p."id"
+      FROM "Post" p
+      LEFT JOIN "Comment" c ON c."postId" = p."id"
+      WHERE p."reviewStatus" = 'approved'
+      GROUP BY p."id"
+      ORDER BY COUNT(c."id") DESC, p."createdAt" DESC
+      LIMIT ${params.limit} OFFSET ${offset}
+    `;
+    const ids = rows.map((r) => r.id);
+    const posts = ids.length > 0
+      ? await prisma.post.findMany({ where: { id: { in: ids } } })
+      : [];
+    const idOrder = new Map(ids.map((id, i) => [id, i]));
+    posts.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+    return {
+      items: posts.map(toPostDto),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
+
   const [items, total] = await Promise.all([
     prisma.post.findMany({
       where,
@@ -2254,6 +2308,267 @@ export async function createComment(input: { postId: string; body: string; autho
     },
   });
   return toCommentDto(comment);
+}
+
+export async function getPostBySlug(slug: string): Promise<Post | null> {
+  if (useMockData) {
+    const post = mockPosts.find((p) => p.slug === slug && p.reviewStatus === "approved");
+    return post ?? null;
+  }
+
+  const prisma = await getPrisma();
+  const post = await prisma.post.findFirst({
+    where: { slug, reviewStatus: "approved" },
+  });
+  return post ? toPostDto(post) : null;
+}
+
+export async function listCommentsForPost(params: {
+  postId: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<Comment>> {
+  if (useMockData) {
+    const filtered = mockComments
+      .filter((c) => c.postId === params.postId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = { postId: params.postId };
+  const [items, total] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.comment.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toCommentDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function updateComment(params: {
+  commentId: string;
+  actorUserId: string;
+  body: string;
+}): Promise<Comment> {
+  if (useMockData) {
+    const comment = mockComments.find((c) => c.id === params.commentId);
+    if (!comment) {
+      throw new Error("COMMENT_NOT_FOUND");
+    }
+    if (comment.authorId !== params.actorUserId) {
+      throw new Error("FORBIDDEN_NOT_AUTHOR");
+    }
+    comment.body = params.body;
+    return { ...comment };
+  }
+
+  const prisma = await getPrisma();
+  const comment = await prisma.comment.findUnique({ where: { id: params.commentId } });
+  if (!comment) {
+    throw new Error("COMMENT_NOT_FOUND");
+  }
+  if (comment.authorId !== params.actorUserId) {
+    throw new Error("FORBIDDEN_NOT_AUTHOR");
+  }
+  const updated = await prisma.comment.update({
+    where: { id: params.commentId },
+    data: { body: params.body },
+  });
+  return toCommentDto(updated);
+}
+
+export async function deleteComment(params: {
+  commentId: string;
+  actorUserId: string;
+  actorRole: Role;
+}): Promise<void> {
+  if (useMockData) {
+    const idx = mockComments.findIndex((c) => c.id === params.commentId);
+    if (idx === -1) {
+      throw new Error("COMMENT_NOT_FOUND");
+    }
+    if (mockComments[idx].authorId !== params.actorUserId && params.actorRole !== "admin") {
+      throw new Error("FORBIDDEN_NOT_AUTHOR");
+    }
+    mockComments.splice(idx, 1);
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const comment = await prisma.comment.findUnique({ where: { id: params.commentId } });
+  if (!comment) {
+    throw new Error("COMMENT_NOT_FOUND");
+  }
+  if (comment.authorId !== params.actorUserId && params.actorRole !== "admin") {
+    throw new Error("FORBIDDEN_NOT_AUTHOR");
+  }
+  await prisma.comment.delete({ where: { id: params.commentId } });
+}
+
+export async function createProject(input: {
+  title: string;
+  oneLiner: string;
+  description: string;
+  techStack: string[];
+  tags: string[];
+  status: Project["status"];
+  demoUrl?: string;
+  creatorUserId: string;
+}): Promise<Project> {
+  const slug = input.title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+  if (useMockData) {
+    const creator = mockCreators.find((c) => c.userId === input.creatorUserId);
+    if (!creator) {
+      throw new Error("CREATOR_PROFILE_REQUIRED");
+    }
+    const project: Project = {
+      id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      slug: `${slug}-${Date.now()}`,
+      creatorId: creator.id,
+      title: input.title,
+      oneLiner: input.oneLiner,
+      description: input.description,
+      techStack: input.techStack,
+      tags: input.tags,
+      status: input.status,
+      demoUrl: input.demoUrl,
+      updatedAt: new Date().toISOString(),
+    };
+    mockProjects.unshift(project);
+    return project;
+  }
+
+  const prisma = await getPrisma();
+  const creator = await prisma.creatorProfile.findUnique({ where: { userId: input.creatorUserId } });
+  if (!creator) {
+    throw new Error("CREATOR_PROFILE_REQUIRED");
+  }
+  const project = await prisma.project.create({
+    data: {
+      slug: `${slug}-${Date.now()}`,
+      creatorId: creator.id,
+      title: input.title,
+      oneLiner: input.oneLiner,
+      description: input.description,
+      techStack: input.techStack,
+      tags: input.tags,
+      status: input.status,
+      demoUrl: input.demoUrl ?? null,
+    },
+    include: { team: { select: { slug: true, name: true } } },
+  });
+  return toProjectDto({ ...project, team: project.team });
+}
+
+export async function updateProject(params: {
+  projectSlug: string;
+  actorUserId: string;
+  title?: string;
+  oneLiner?: string;
+  description?: string;
+  techStack?: string[];
+  tags?: string[];
+  status?: Project["status"];
+  demoUrl?: string | null;
+}): Promise<Project> {
+  if (useMockData) {
+    const project = mockProjects.find((p) => p.slug === params.projectSlug);
+    if (!project) {
+      throw new Error("PROJECT_NOT_FOUND");
+    }
+    const creator = mockCreators.find((c) => c.id === project.creatorId);
+    if (!creator || creator.userId !== params.actorUserId) {
+      throw new Error("FORBIDDEN_NOT_CREATOR");
+    }
+    if (params.title !== undefined) project.title = params.title;
+    if (params.oneLiner !== undefined) project.oneLiner = params.oneLiner;
+    if (params.description !== undefined) project.description = params.description;
+    if (params.techStack !== undefined) project.techStack = params.techStack;
+    if (params.tags !== undefined) project.tags = params.tags;
+    if (params.status !== undefined) project.status = params.status;
+    if (params.demoUrl !== undefined) project.demoUrl = params.demoUrl ?? undefined;
+    project.updatedAt = new Date().toISOString();
+    return { ...project };
+  }
+
+  const prisma = await getPrisma();
+  const project = await prisma.project.findUnique({
+    where: { slug: params.projectSlug },
+    include: { creator: { select: { userId: true } } },
+  });
+  if (!project) {
+    throw new Error("PROJECT_NOT_FOUND");
+  }
+  if (project.creator.userId !== params.actorUserId) {
+    throw new Error("FORBIDDEN_NOT_CREATOR");
+  }
+
+  const data: Record<string, unknown> = {};
+  if (params.title !== undefined) data.title = params.title;
+  if (params.oneLiner !== undefined) data.oneLiner = params.oneLiner;
+  if (params.description !== undefined) data.description = params.description;
+  if (params.techStack !== undefined) data.techStack = params.techStack;
+  if (params.tags !== undefined) data.tags = params.tags;
+  if (params.status !== undefined) data.status = params.status;
+  if (params.demoUrl !== undefined) data.demoUrl = params.demoUrl;
+
+  const updated = await prisma.project.update({
+    where: { slug: params.projectSlug },
+    data,
+    include: { team: { select: { slug: true, name: true } } },
+  });
+  return toProjectDto({ ...updated, team: updated.team });
+}
+
+export async function deleteProject(params: {
+  projectSlug: string;
+  actorUserId: string;
+  actorRole: Role;
+}): Promise<void> {
+  if (useMockData) {
+    const idx = mockProjects.findIndex((p) => p.slug === params.projectSlug);
+    if (idx === -1) {
+      throw new Error("PROJECT_NOT_FOUND");
+    }
+    const project = mockProjects[idx];
+    const creator = mockCreators.find((c) => c.id === project.creatorId);
+    if ((!creator || creator.userId !== params.actorUserId) && params.actorRole !== "admin") {
+      throw new Error("FORBIDDEN_NOT_CREATOR");
+    }
+    mockProjects.splice(idx, 1);
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const project = await prisma.project.findUnique({
+    where: { slug: params.projectSlug },
+    include: { creator: { select: { userId: true } } },
+  });
+  if (!project) {
+    throw new Error("PROJECT_NOT_FOUND");
+  }
+  if (project.creator.userId !== params.actorUserId && params.actorRole !== "admin") {
+    throw new Error("FORBIDDEN_NOT_CREATOR");
+  }
+  await prisma.project.delete({ where: { slug: params.projectSlug } });
 }
 
 export async function listProjectCollaborationIntents(params: {
