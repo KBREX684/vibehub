@@ -27,6 +27,7 @@ import {
   mockPostBookmarks,
   mockProjectBookmarks,
   mockUserFollows,
+  mockSubscriptions,
 } from "@/lib/data/mock-data";
 import type {
   ApiKeyCreated,
@@ -63,6 +64,7 @@ import type {
   TeamTask,
   TeamTaskStatus,
   User,
+  UserSubscription,
   WeeklyLeaderboardKind,
   WeeklyLeaderboardMaterializedRow,
   WeeklyLeaderboardMaterializedSnapshot,
@@ -2096,6 +2098,156 @@ export async function getCreatorProfileById(creatorId: string): Promise<CreatorP
     where: { id: creatorId },
   });
   return creator ? toCreatorDto(creator) : null;
+}
+
+// ─── M-1: Subscription ────────────────────────────────────────────────────────
+
+function toSubscriptionDto(row: {
+  id: string;
+  userId: string;
+  tier: string;
+  status: string;
+  stripeSubscriptionId: string | null;
+  stripePriceId: string | null;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): UserSubscription {
+  return {
+    id: row.id,
+    userId: row.userId,
+    tier: (row.tier as UserSubscription["tier"]) ?? "free",
+    status: (row.status as UserSubscription["status"]) ?? "active",
+    stripeSubscriptionId: row.stripeSubscriptionId ?? undefined,
+    stripePriceId: row.stripePriceId ?? undefined,
+    currentPeriodEnd: row.currentPeriodEnd?.toISOString(),
+    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export async function getUserSubscription(userId: string): Promise<UserSubscription> {
+  if (useMockData) {
+    const existing = mockSubscriptions.find((s) => s.userId === userId);
+    if (existing) {
+      return {
+        ...existing,
+        tier: existing.tier as UserSubscription["tier"],
+        status: existing.status as UserSubscription["status"],
+      };
+    }
+    return {
+      id: `sub_free_${userId}`,
+      userId,
+      tier: "free",
+      status: "active",
+      cancelAtPeriodEnd: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.userSubscription.findUnique({ where: { userId } });
+  if (!row) {
+    return {
+      id: `sub_free_${userId}`,
+      userId,
+      tier: "free",
+      status: "active",
+      cancelAtPeriodEnd: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  return toSubscriptionDto(row);
+}
+
+export async function upsertUserSubscription(params: {
+  userId: string;
+  tier: UserSubscription["tier"];
+  status: UserSubscription["status"];
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  currentPeriodEnd?: Date;
+  cancelAtPeriodEnd?: boolean;
+}): Promise<UserSubscription> {
+  if (useMockData) {
+    const idx = mockSubscriptions.findIndex((s) => s.userId === params.userId);
+    const now = new Date().toISOString();
+    const row = {
+      id: idx >= 0 ? mockSubscriptions[idx].id : `sub_${Date.now()}`,
+      userId: params.userId,
+      tier: params.tier,
+      status: params.status,
+      stripeSubscriptionId: params.stripeSubscriptionId,
+      stripePriceId: params.stripePriceId,
+      currentPeriodEnd: params.currentPeriodEnd?.toISOString(),
+      cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
+      createdAt: idx >= 0 ? mockSubscriptions[idx].createdAt : now,
+      updatedAt: now,
+    };
+    if (idx >= 0) mockSubscriptions[idx] = row;
+    else mockSubscriptions.push(row);
+    return {
+      ...row,
+      tier: row.tier as UserSubscription["tier"],
+      status: row.status as UserSubscription["status"],
+    };
+  }
+  const prisma = await getPrisma();
+  const data = {
+    tier: params.tier as "free" | "pro" | "team_pro",
+    status: params.status as "active" | "past_due" | "canceled" | "trialing",
+    stripeSubscriptionId: params.stripeSubscriptionId ?? null,
+    stripePriceId: params.stripePriceId ?? null,
+    currentPeriodEnd: params.currentPeriodEnd ?? null,
+    cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
+  };
+  const row = await prisma.userSubscription.upsert({
+    where: { userId: params.userId },
+    update: { ...data, updatedAt: new Date() },
+    create: { userId: params.userId, ...data },
+  });
+  return toSubscriptionDto(row);
+}
+
+export async function getUserTier(userId: string): Promise<UserSubscription["tier"]> {
+  const sub = await getUserSubscription(userId);
+  if (sub.status === "active" || sub.status === "trialing") return sub.tier;
+  return "free";
+}
+
+export async function countUserTeams(userId: string): Promise<number> {
+  if (useMockData) {
+    return mockTeams.filter((t) => t.ownerUserId === userId).length;
+  }
+  const prisma = await getPrisma();
+  return prisma.team.count({ where: { ownerUserId: userId } });
+}
+
+export async function countUserProjects(userId: string): Promise<number> {
+  if (useMockData) {
+    return mockProjects.filter((p) => {
+      const creator = mockCreators.find((c) => c.id === p.creatorId);
+      return creator?.userId === userId;
+    }).length;
+  }
+  const prisma = await getPrisma();
+  const creator = await prisma.creatorProfile.findUnique({ where: { userId }, select: { id: true } });
+  if (!creator) return 0;
+  return prisma.project.count({ where: { creatorId: creator.id } });
+}
+
+export async function upsertStripeCustomer(userId: string, stripeCustomerId: string): Promise<void> {
+  if (useMockData) {
+    const user = mockUsers.find((u) => u.id === userId);
+    if (user) user.stripeCustomerId = stripeCustomerId;
+    return;
+  }
+  const prisma = await getPrisma();
+  await prisma.user.update({ where: { id: userId }, data: { stripeCustomerId } });
 }
 
 export async function getCreatorProfileByUserId(userId: string): Promise<CreatorProfile | null> {

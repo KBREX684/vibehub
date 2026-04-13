@@ -12,6 +12,23 @@ export interface User {
   githubId?: number;
   githubUsername?: string;
   avatarUrl?: string;
+  stripeCustomerId?: string;
+}
+
+export type SubscriptionTier = "free" | "pro" | "team_pro";
+export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
+
+export interface UserSubscription {
+  id: string;
+  userId: string;
+  tier: SubscriptionTier;
+  status: SubscriptionStatus;
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreatorProfile {

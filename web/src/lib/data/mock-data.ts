@@ -370,6 +370,20 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
   },
 ];
 
+// M-1: in-memory subscription store
+export const mockSubscriptions: Array<{
+  id: string;
+  userId: string;
+  tier: "free" | "pro" | "team_pro";
+  status: "active" | "past_due" | "canceled" | "trialing";
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
+
 // C-1: in-memory social interaction stores
 export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockPostBookmarks: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];

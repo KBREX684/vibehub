@@ -13,6 +13,19 @@ enum Role {
   admin
 }
 
+enum SubscriptionTier {
+  free
+  pro
+  team_pro
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+  trialing
+}
+
 enum ProjectStatus {
   idea
   building
@@ -95,6 +108,9 @@ model User {
   teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
   apiKeys                   ApiKey[]
   notifications             InAppNotification[]
+  subscription              UserSubscription?
+  /// M-2: Stripe customer ID
+  stripeCustomerId          String?              @unique
   /// C-1: users this user follows
   following                 UserFollow[]          @relation("Follower")
   /// C-1: users following this user
@@ -102,6 +118,25 @@ model User {
   postLikes                 PostLike[]
   postBookmarks             PostBookmark[]
   projectBookmarks          ProjectBookmark[]
+}
+
+/// M-1: user subscription plan
+model UserSubscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  tier                 SubscriptionTier   @default(free)
+  status               SubscriptionStatus @default(active)
+  /// M-2: Stripe subscription ID
+  stripeSubscriptionId String?            @unique
+  /// M-2: Stripe price ID
+  stripePriceId        String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stripeSubscriptionId])
 }
 
 /// C-1: follow relationship between users

@@ -10,6 +10,8 @@ const NAV_LINKS = [
   { href: "/collections", label: "Topics" },
   { href: "/leaderboards", label: "Leaderboards" },
   { href: "/notifications", label: "Notifications" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/settings/subscription", label: "Subscription" },
   { href: "/settings/api-keys", label: "API Keys" },
   { href: "/admin", label: "Admin" },
 ];
