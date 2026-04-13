@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listUsers } from "@/lib/repository";
 
@@ -8,7 +7,6 @@ export default async function AdminUsersPage() {
   if (!session) {
     return (
       <>
-        <SiteHeader />
         <main className="container section">
           <article className="card">
             <h1>Admin Access Required</h1>
@@ -28,7 +26,6 @@ export default async function AdminUsersPage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container section">
         <h1>User Management</h1>
         <p className="muted">

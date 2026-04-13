@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { PostCard } from "@/components/post-card";
 import { listPosts } from "@/lib/repository";
 import type { PostSortOrder } from "@/lib/types";
@@ -17,7 +16,6 @@ export default async function DiscussionsPage({ searchParams }: Props) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-8">
         
         {/* Header Bento */}

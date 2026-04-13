@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listPostsForModeration } from "@/lib/repository";
 import { AdminReviewActions } from "@/components/admin-review-actions";
@@ -9,7 +8,6 @@ export default async function AdminModerationPage() {
   if (!session) {
     return (
       <>
-        <SiteHeader />
         <main className="container section">
           <article className="card">
             <h1>Admin Access Required</h1>
@@ -30,7 +28,6 @@ export default async function AdminModerationPage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container section">
         <h1>Moderation Queue</h1>
         <p className="muted">

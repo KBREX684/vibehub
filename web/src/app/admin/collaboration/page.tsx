@@ -1,5 +1,4 @@
 ﻿import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listCollaborationIntentsForModeration } from "@/lib/repository";
 import { AdminCollaborationReviewActions } from "@/components/admin-collaboration-review-actions";
@@ -9,7 +8,6 @@ export default async function AdminCollaborationQueuePage() {
   if (!session) {
     return (
       <>
-        <SiteHeader />
         <main className="container section">
           <article className="card">
             <h1>Admin Access Required</h1>
@@ -30,7 +28,6 @@ export default async function AdminCollaborationQueuePage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container section">
         <h1>Collaboration Intent Queue</h1>
         <p className="muted">Review user-submitted collaboration intents (join/recruit).</p>

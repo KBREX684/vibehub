@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { listInAppNotifications } from "@/lib/repository";
 
@@ -8,7 +7,6 @@ export default async function NotificationsPage() {
   if (!session) {
     return (
       <>
-        <SiteHeader />
         <main className="container">
           <article className="card">
             <h1>通知</h1>
@@ -26,7 +24,6 @@ export default async function NotificationsPage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container">
         <article className="card detail-full">
           <h1>通知</h1>

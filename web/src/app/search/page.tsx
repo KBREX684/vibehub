@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/site-header";
 import { unifiedSearch } from "@/lib/repository";
 import Link from "next/link";
 import { Search, Hash, Box, User, Briefcase, MessageSquare } from "lucide-react";
@@ -24,7 +23,6 @@ export default async function SearchPage({ searchParams }: Props) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-8 mt-6">
         
         {/* Header Bento */}

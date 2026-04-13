@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/site-header";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/repository";
 import { getLimits, TIER_PRICING } from "@/lib/subscription";
@@ -24,7 +23,6 @@ export default async function SubscriptionPage({ searchParams }: Props) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container">
         <section className="section" style={{ maxWidth: 600, margin: "0 auto" }}>
           <h1>订阅管理</h1>

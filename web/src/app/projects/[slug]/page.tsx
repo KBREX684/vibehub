@@ -1,6 +1,5 @@
 ﻿import Image from "next/image";
 import { notFound } from "next/navigation";
-import { SiteHeader } from "@/components/site-header";
 import { CollaborationIntentForm } from "@/components/collaboration-intent-form";
 import { ProjectTeamLinkForm } from "@/components/project-team-link-form";
 import { getSessionUserFromCookie } from "@/lib/auth";
@@ -38,7 +37,6 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24">
         
         {/* Immersive Hero Gallery */}

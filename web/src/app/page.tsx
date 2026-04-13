@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { ProjectCard } from "@/components/project-card";
 import { PostCard } from "@/components/post-card";
 import { listPosts, listProjects, listFeaturedProjects } from "@/lib/repository";
@@ -15,7 +14,6 @@ export default async function HomePage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-12">
         {/* Macro Bento Box Hero */}
         <section className="relative w-full rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] border border-[rgba(255,255,255,0.6)] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04),0_0_1px_0_rgba(0,0,0,0.08)] overflow-hidden mt-6">

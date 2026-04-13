@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/site-header";
 import { ChallengeCard } from "@/components/challenge-card";
 import { listChallenges } from "@/lib/repository";
 import { Trophy, Sparkles } from "lucide-react";
@@ -8,7 +7,6 @@ export default async function ChallengesPage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24">
         <section className="py-20 md:py-24 flex flex-col items-center text-center relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-amber-50/80 rounded-full blur-[80px] -z-10 pointer-events-none"></div>

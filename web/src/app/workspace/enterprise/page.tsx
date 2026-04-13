@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getEnterpriseWorkspaceSummary, getProjectRadar, getTalentRadarLegacy as getTalentRadar } from "@/lib/repository";
 import { LayoutGrid, Users, Activity, Target, Zap, Shield, UserPlus, FolderGit2, Key, CheckCircle, User, Compass } from "lucide-react";
@@ -10,7 +9,6 @@ export default async function EnterpriseWorkspacePage() {
   if (!session) {
     return (
       <>
-        <SiteHeader />
         <main className="container pb-24">
           <section className="py-20 md:py-32 flex flex-col items-center text-center relative max-w-3xl mx-auto">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#81e6d9]/40 rounded-full blur-[100px] -z-10 pointer-events-none" />
@@ -52,7 +50,6 @@ export default async function EnterpriseWorkspacePage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-8 mt-6">
         
         {/* Header Bento */}

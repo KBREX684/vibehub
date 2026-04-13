@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SiteHeader } from "@/components/site-header";
 import { PostCard } from "@/components/post-card";
 import { ProjectCard } from "@/components/project-card";
 import { getTopicDiscovery } from "@/lib/repository";
@@ -21,7 +20,6 @@ export default async function CollectionTopicPage({ params }: PageProps) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container section">
         <p className="muted">
           <Link href="/collections" className="inline-link">

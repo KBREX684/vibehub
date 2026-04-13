@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { ProjectCard } from "@/components/project-card";
 import { parsePagination } from "@/lib/pagination";
 import { getProjectFilterFacets, listProjects, listTeams } from "@/lib/repository";
@@ -81,7 +80,6 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-8 mt-6">
         
         {/* Header Bento */}

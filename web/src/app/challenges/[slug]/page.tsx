@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { getChallengeBySlug } from "@/lib/repository";
 import { ArrowLeft, Trophy, Flag, BookOpen, Clock } from "lucide-react";
 
@@ -36,7 +35,6 @@ export default async function ChallengeDetailPage({ params }: Props) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container max-w-4xl py-12">
         <Link 
           href="/challenges" 

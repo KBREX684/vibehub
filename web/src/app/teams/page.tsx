@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CreateTeamForm } from "@/components/create-team-form";
-import { SiteHeader } from "@/components/site-header";
 import { listTeams } from "@/lib/repository";
 
 export default async function TeamsPage() {
@@ -8,7 +7,6 @@ export default async function TeamsPage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container section">
         <h1>团队（P3-1）</h1>
         <p className="muted">

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { AdminWeeklyMaterializeForm } from "@/components/admin-weekly-materialize-form";
-import { SiteHeader } from "@/components/site-header";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { getAdminOverview } from "@/lib/repository";
 import { Users, AlertTriangle, Flag, Link as LinkIcon, ShieldAlert, Activity, Filter } from "lucide-react";
@@ -10,7 +9,6 @@ export default async function AdminPage() {
   if (!session) {
     return (
       <>
-        <SiteHeader />
         <main className="container pb-24">
           <div className="max-w-md mx-auto mt-20 p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] text-center">
             <ShieldAlert className="w-12 h-12 text-[var(--color-text-tertiary)] mx-auto mb-4" />
@@ -31,7 +29,6 @@ export default async function AdminPage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-8">
         {/* Header Bento */}
         <section className="p-8 md:p-12 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { ApiKeysPanel } from "@/components/api-keys-panel";
 import { getSessionUserFromCookie } from "@/lib/auth";
 
@@ -8,7 +7,6 @@ export default async function ApiKeysSettingsPage() {
 
   return (
     <>
-      <SiteHeader />
       <main className="container detail">
         <article className="card detail-full">
           <p className="muted small">

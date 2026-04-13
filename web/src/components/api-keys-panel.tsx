@@ -288,27 +288,27 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`p-6 rounded-[20px] border transition-colors ${
+                className={`p-6 rounded-[16px] border transition-colors ${
                   k.revokedAt 
-                    ? "bg-black/5 border-transparent opacity-60" 
-                    : "bg-white border-black/5 shadow-sm hover:shadow-md hover:border-[#81e6d9]/40"
+                    ? "bg-[#1a1a1a] border-transparent opacity-60" 
+                    : "bg-[#0a0a0a] border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)]"
                 }`}
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
-                      <strong className="text-[1.05rem] font-semibold text-[var(--color-text-primary)]">{k.label}</strong>
+                      <strong className="text-[1.05rem] font-semibold text-white">{k.label}</strong>
                       {k.revokedAt ? (
-                        <span className="px-2.5 py-0.5 rounded-[980px] bg-black/10 text-[var(--color-text-tertiary)] text-[10px] font-bold uppercase tracking-wider">
+                        <span className="px-2.5 py-0.5 rounded-[980px] bg-white/10 text-white/50 text-[10px] font-bold uppercase tracking-wider">
                           Revoked
                         </span>
                       ) : (
-                        <span className="px-2.5 py-0.5 rounded-[980px] bg-[#81e6d9]/20 text-[#0d9488] text-[10px] font-bold uppercase tracking-wider">
+                        <span className="px-2.5 py-0.5 rounded-[980px] bg-[#81e6d9]/20 text-[#81e6d9] text-[10px] font-bold uppercase tracking-wider">
                           Active
                         </span>
                       )}
                     </div>
-                    <code className="text-[0.85rem] font-mono text-[var(--color-text-secondary)] bg-black/5 px-2 py-0.5 rounded-md">
+                    <code className="text-[0.85rem] font-mono text-white/70 bg-white/5 px-2 py-0.5 rounded-md border border-white/10">
                       {k.prefix}••••••••••••••••
                     </code>
                   </div>
@@ -316,7 +316,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                   {!k.revokedAt && (
                     <motion.button 
                       onClick={() => void revoke(k.id)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-[12px] bg-[#fee2e2] text-[#e11d48] text-sm font-medium hover:bg-[#fecdd3] transition-colors self-start md:self-auto"
+                      className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-transparent border border-white/10 text-white/70 text-sm font-medium hover:bg-[#e11d48]/10 hover:text-[#e11d48] hover:border-[#e11d48]/30 transition-colors self-start md:self-auto"
                       whileTap={{ scale: 0.95 }}
                     >
                       <Trash2 className="w-4 h-4" /> Revoke
@@ -324,7 +324,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                   )}
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.85rem] text-[var(--color-text-tertiary)] mb-4">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.85rem] text-white/50 mb-4">
                   <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Created: {new Date(k.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                   {k.lastUsedAt && !k.revokedAt && (
                     <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Last used: {new Date(k.lastUsedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
@@ -334,10 +334,10 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                   )}
                 </div>
                 
-                <div className="pt-4 border-t border-black/5">
+                <div className="pt-4 border-t border-white/10">
                   <div className="flex flex-wrap gap-1.5">
                     {k.scopes.map(scope => (
-                      <span key={scope} className="text-[10px] font-mono px-2 py-1 bg-black/5 text-[var(--color-text-secondary)] rounded-md">
+                      <span key={scope} className="text-[10px] font-mono px-2 py-1 bg-white/5 border border-white/10 text-white/60 rounded-md">
                         {scope}
                       </span>
                     ))}

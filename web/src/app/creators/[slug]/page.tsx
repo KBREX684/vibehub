@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { SiteHeader } from "@/components/site-header";
 import { getCreatorBySlug, listProjects, getCreatorGrowthStats } from "@/lib/repository";
 import { ProjectCard } from "@/components/project-card";
 import { User, Briefcase, Code2, Users, MessageSquare, Star, FolderGit2, Activity, ShieldCheck } from "lucide-react";
@@ -31,7 +30,6 @@ export default async function CreatorDetailPage({ params }: Props) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-8 mt-6">
         
         {/* Bento Resume Layout */}

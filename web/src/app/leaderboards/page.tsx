@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import {
   getDiscussionLeaderboard,
   getProjectCollaborationLeaderboard,
@@ -64,7 +63,6 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container pb-24 space-y-12 mt-6">
         
         {/* Cinematic Hero */}

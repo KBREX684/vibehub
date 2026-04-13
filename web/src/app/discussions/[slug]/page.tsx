@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { getPostBySlug, listCommentsForPost } from "@/lib/repository";
 import { Clock, ArrowLeft, User, Sparkles } from "lucide-react";
 import { CommentThread } from "@/components/comment-thread";
@@ -29,7 +28,6 @@ export default async function DiscussionDetailPage({ params }: Props) {
 
   return (
     <>
-      <SiteHeader />
       <main className="container max-w-4xl pb-24">
         <Link 
           href="/discussions" 

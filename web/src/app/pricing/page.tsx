@@ -1,10 +1,8 @@
-import { SiteHeader } from "@/components/site-header";
 import { PricingCards } from "@/components/pricing-cards";
 
 export default function PricingPage() {
   return (
     <>
-      <SiteHeader />
       <main className="container">
         <section className="section" style={{ textAlign: "center" }}>
           <h1 style={{ marginBottom: 8 }}>简单透明的定价</h1>
