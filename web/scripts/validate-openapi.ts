@@ -7,5 +7,4 @@ import { buildAndValidateOpenApiDocument } from "../src/lib/openapi-validate";
 
 const doc = buildAndValidateOpenApiDocument();
 const pathCount = Object.keys(doc.paths as object).length;
-// eslint-disable-next-line no-console -- CLI script
 console.log(`OpenAPI OK: openapi=${String(doc.openapi)}, paths=${pathCount}`);

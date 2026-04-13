@@ -18,7 +18,6 @@
  */
 
 import { WebSocketServer, WebSocket } from "ws";
-import { IncomingMessage } from "http";
 import { createServer } from "http";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -108,7 +107,7 @@ const httpServer = createServer((req, res) => {
 
 const wss = new WebSocketServer({ server: httpServer });
 
-wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
+wss.on("connection", (ws: WebSocket) => {
   let client: AuthedClient | null = null;
 
   // Authentication timeout — kick unauthenticated clients after 10 s
