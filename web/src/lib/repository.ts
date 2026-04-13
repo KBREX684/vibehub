@@ -2,6 +2,7 @@ import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { Prisma } from "@prisma/client";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
+import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
 import {
   mockApiKeys,
 } from "@/lib/data/mock-api-keys";
@@ -3612,18 +3613,31 @@ export async function removeTeamMember(params: {
   });
 }
 
+function parseScopesFromJson(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((x): x is string => typeof x === "string");
+}
+
 function toApiKeySummary(row: {
   id: string;
   label: string;
   prefix: string;
+  scopes?: unknown;
   createdAt: Date | string;
   lastUsedAt?: Date | string | null;
   revokedAt?: Date | string | null;
 }): ApiKeySummary {
+  const scopes =
+    row.scopes !== undefined && row.scopes !== null
+      ? parseScopesFromJson(row.scopes)
+      : [...DEFAULT_API_KEY_SCOPES];
   return {
     id: row.id,
     label: row.label,
     prefix: row.prefix,
+    scopes,
     createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
     lastUsedAt: row.lastUsedAt
       ? typeof row.lastUsedAt === "string"
@@ -3657,10 +3671,24 @@ export async function listApiKeysForUser(userId: string): Promise<ApiKeySummary[
 export async function createApiKeyForUser(params: {
   userId: string;
   label: string;
+  scopes?: string[];
 }): Promise<ApiKeyCreated> {
   const label = params.label.trim().slice(0, 80);
   if (!label) {
     throw new Error("INVALID_API_KEY_LABEL");
+  }
+  let scopes: string[];
+  try {
+    scopes = normalizeApiKeyScopes(params.scopes);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "INVALID_API_KEY_SCOPE") {
+      throw new Error("INVALID_API_KEY_SCOPE");
+    }
+    if (msg === "API_KEY_SCOPE_READ_PUBLIC_REQUIRED") {
+      throw new Error("API_KEY_SCOPE_READ_PUBLIC_REQUIRED");
+    }
+    throw e;
   }
 
   const { fullToken, prefix } = generateApiKeyPlaintext();
@@ -3681,6 +3709,7 @@ export async function createApiKeyForUser(params: {
       label,
       keyHash,
       prefix,
+      scopes: [...scopes],
       createdAt: now,
     });
     mockAuditLogs.unshift({
@@ -3689,7 +3718,7 @@ export async function createApiKeyForUser(params: {
       action: "api_key_created",
       entityType: "api_key",
       entityId: id,
-      metadata: { prefix },
+      metadata: { prefix, scopes },
       createdAt: now,
     });
     return { ...toApiKeySummary(mockApiKeys.find((k) => k.id === id)!), secret: fullToken };
@@ -3703,6 +3732,7 @@ export async function createApiKeyForUser(params: {
         label,
         keyHash,
         prefix,
+        scopes,
       },
     });
     await tx.auditLog.create({
@@ -3711,7 +3741,7 @@ export async function createApiKeyForUser(params: {
         action: "api_key_created",
         entityType: "api_key",
         entityId: row.id,
-        metadata: { prefix },
+        metadata: { prefix, scopes },
       },
     });
     return row;
@@ -3745,29 +3775,6 @@ export async function revokeApiKeyForUser(params: { userId: string; keyId: strin
 }
 
 export async function getSessionUserFromApiKeyToken(plaintextToken: string): Promise<SessionUser | null> {
-  const userId = await resolveUserIdFromApiKeyToken(plaintextToken);
-  if (!userId) {
-    return null;
-  }
-  if (useMockData) {
-    const u = mockUsers.find((x) => x.id === userId);
-    if (!u) {
-      return null;
-    }
-    return { userId: u.id, role: u.role, name: u.name };
-  }
-  const prisma = await getPrisma();
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, role: true },
-  });
-  if (!u) {
-    return null;
-  }
-  return { userId: u.id, role: u.role as Role, name: u.name };
-}
-
-export async function resolveUserIdFromApiKeyToken(plaintextToken: string): Promise<string | null> {
   if (!plaintextToken || !isApiKeyTokenFormat(plaintextToken)) {
     return null;
   }
@@ -3779,13 +3786,18 @@ export async function resolveUserIdFromApiKeyToken(plaintextToken: string): Prom
       return null;
     }
     row.lastUsedAt = new Date().toISOString();
-    return row.userId;
+    const u = mockUsers.find((x) => x.id === row.userId);
+    if (!u) {
+      return null;
+    }
+    const scopeList = row.scopes?.length ? row.scopes : [...DEFAULT_API_KEY_SCOPES];
+    return { userId: u.id, role: u.role, name: u.name, apiKeyScopes: scopeList };
   }
 
   const prisma = await getPrisma();
   const row = await prisma.apiKey.findFirst({
     where: { keyHash, revokedAt: null },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, scopes: true },
   });
   if (!row) {
     return null;
@@ -3794,7 +3806,16 @@ export async function resolveUserIdFromApiKeyToken(plaintextToken: string): Prom
     where: { id: row.id },
     data: { lastUsedAt: new Date() },
   });
-  return row.userId;
+  const u = await prisma.user.findUnique({
+    where: { id: row.userId },
+    select: { id: true, name: true, role: true },
+  });
+  if (!u) {
+    return null;
+  }
+  const scopeList = parseScopesFromJson(row.scopes);
+  const effectiveScopes = scopeList.length ? scopeList : [...DEFAULT_API_KEY_SCOPES];
+  return { userId: u.id, role: u.role as Role, name: u.name, apiKeyScopes: effectiveScopes };
 }
 
 export function getDemoUser(role: DemoRole = "user") {

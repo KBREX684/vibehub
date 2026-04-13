@@ -5,6 +5,7 @@ import { createApiKeyForUser, listApiKeysForUser } from "@/lib/repository";
 
 const createSchema = z.object({
   label: z.string().min(1).max(80),
+  scopes: z.array(z.string().min(1)).optional(),
 });
 
 export async function GET() {
@@ -37,7 +38,11 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const parsed = createSchema.parse(json);
-    const created = await createApiKeyForUser({ userId: session.userId, label: parsed.label });
+    const created = await createApiKeyForUser({
+      userId: session.userId,
+      label: parsed.label,
+      scopes: parsed.scopes,
+    });
     return apiSuccess({ key: created }, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -49,6 +54,15 @@ export async function POST(request: Request) {
     }
     if (msg === "USER_NOT_FOUND") {
       return apiError({ code: "USER_NOT_FOUND", message: "User not found" }, 404);
+    }
+    if (msg === "INVALID_API_KEY_SCOPE") {
+      return apiError({ code: "INVALID_API_KEY_SCOPE", message: "One or more scopes are invalid" }, 400);
+    }
+    if (msg === "API_KEY_SCOPE_READ_PUBLIC_REQUIRED") {
+      return apiError(
+        { code: "API_KEY_SCOPE_READ_PUBLIC_REQUIRED", message: "scopes must include read:public" },
+        400
+      );
     }
     return apiError(
       {

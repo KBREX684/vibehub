@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { getSessionUserFromCookie } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { authenticateRequest, getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { createTeamMilestone, listTeamMilestones } from "@/lib/repository";
 
@@ -14,10 +15,10 @@ interface Params {
   params: Promise<{ slug: string }>;
 }
 
-export async function GET(_request: Request, { params }: Params) {
-  const session = await getSessionUserFromCookie();
+export async function GET(request: NextRequest, { params }: Params) {
+  const session = await authenticateRequest(request, "read:team:milestones");
   if (!session) {
-    return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:team:milestones required" }, 401);
   }
 
   try {

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { getSessionUserFromCookie } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { authenticateRequest, getSessionUserFromCookie } from "@/lib/auth";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { createTeam, listTeams } from "@/lib/repository";
@@ -10,7 +11,12 @@ const createTeamSchema = z.object({
   mission: z.string().max(500).optional(),
 });
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request, "read:teams:list");
+  if (!auth) {
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:teams:list required" }, 401);
+  }
+
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);

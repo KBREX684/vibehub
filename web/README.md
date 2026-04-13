@@ -4,7 +4,7 @@ Next.js full-stack implementation for VibeHub.
 
 **P3 is officially closed** (2026-04-13): team collaboration slices P3-1…P3-7 plus status-column task board are frozen on `main`. Deferred: in-app team notifications, finer task RBAC, billing/subscriptions — see `docs/03_项目日志.md`.
 
-**P4-1 (2026-04-13)**: User **API keys** (`ApiKey` table, hashed secrets), manage at **`/settings/api-keys`** (`GET/POST /api/v1/me/api-keys`, `DELETE /api/v1/me/api-keys/:keyId` with session cookie). **`GET /api/v1/me/teams`** also accepts **`Authorization: Bearer <vh_...>`** for scripts.
+**P4-1 / P4-2 (2026-04-13)**: User **API keys** with **scopes** (`ApiKey.scopes` JSON); manage at **`/settings/api-keys`**. **`Authorization: Bearer <vh_...>`** works on scoped **GET** routes (projects, teams, team tasks/milestones, creators, collection-topics, `me/teams`, MCP `search_projects` / `search_creators` / `get_project_detail`) when the key includes the route’s required scope. **Cookie session** still grants full access on those routes. **Breaking:** unauthenticated anonymous `GET` on those paths now returns **401** (browser pages keep working via session cookie).
 
 Current scope:
 - P1: discussions, project gallery, creator pages, MCP v1 read tools
@@ -140,29 +140,29 @@ Runs `lint + test + build`.
 - Metrics:
   - `GET /api/v1/metrics/collaboration-intent-funnel`
 - Discovery filters:
-  - `GET /api/v1/projects?query=&tag=&tech=&status=&team=&page=&limit=`
-  - `GET /api/v1/projects/facets`
+  - `GET /api/v1/projects?query=&tag=&tech=&status=&team=&page=&limit=` (**P4-2**: session cookie or Bearer key with scope `read:projects:list`)
+  - `GET /api/v1/projects/facets` (still public; no scope gate in P4-2)
 - Current user teams (for project team picker):
-  - `GET /api/v1/me/teams` (session cookie **or** `Authorization: Bearer <api-key>` — P4-1)
-- API keys (P4-1, session cookie only for manage endpoints):
+  - `GET /api/v1/me/teams` (session cookie or Bearer with `read:teams:self`)
+- API keys (P4-1 + P4-2, session cookie only for manage endpoints):
   - `GET /api/v1/me/api-keys`
-  - `POST /api/v1/me/api-keys` body `{ "label": "..." }` — response includes `key.secret` **once**
+  - `POST /api/v1/me/api-keys` body `{ "label", "scopes"? }` — response includes `key.secret` **once**; default `scopes` include all P4-2 read scopes + `read:public`
   - `DELETE /api/v1/me/api-keys/:keyId`
 - Team milestones (P3-5, team members only):
-  - `GET /api/v1/teams/:slug/milestones`
+  - `GET /api/v1/teams/:slug/milestones` (**P4-2**: GET also accepts Bearer with `read:team:milestones` when caller is a member)
   - `POST /api/v1/teams/:slug/milestones` body `{ "title", "description"?, "targetDate" (ISO), "sortOrder"? }`
   - `PATCH /api/v1/teams/:slug/milestones/:milestoneId` body partial `{ "title", "description"|null, "targetDate", "completed", "sortOrder" }`
   - `DELETE /api/v1/teams/:slug/milestones/:milestoneId`
 - Team tasks (P3-4 + P3-6 sort + P3-7 milestone link, team members only):
-  - `GET /api/v1/teams/:slug/tasks` (ordered by `sortOrder` asc, then `updatedAt` desc)
+  - `GET /api/v1/teams/:slug/tasks` (ordered by `sortOrder` asc, then `updatedAt` desc; **P4-2** Bearer needs `read:team:tasks`)
   - `POST /api/v1/teams/:slug/tasks` body `{ "title", "description"?, "status"?, "assigneeUserId"?, "sortOrder"?, "milestoneId"?|null }`
   - `PATCH /api/v1/teams/:slug/tasks/:taskId` body partial `{ "title", "description"|null, "status", "assigneeUserId"|null, "sortOrder"?, "milestoneId"|null }`
   - `POST /api/v1/teams/:slug/tasks/:taskId/reorder` body `{ "direction": "up" | "down" }` — swaps `sortOrder` with the adjacent task **in the same status column** (todo / doing / done)
   - `DELETE /api/v1/teams/:slug/tasks/:taskId`
 - Teams (P3-1 + P3-2):
-  - `GET /api/v1/teams?page=&limit=`
+  - `GET /api/v1/teams?page=&limit=` (**P4-2**: cookie or Bearer `read:teams:list`)
   - `POST /api/v1/teams` (login required) body `{ "name", "slug"?, "mission"? }`
-  - `GET /api/v1/teams/:slug` (optional cookie session adds `viewerPendingJoinRequest` / owner `pendingJoinRequests`)
+  - `GET /api/v1/teams/:slug` (cookie or Bearer `read:team:detail`; viewer-specific fields use the authenticated user id)
   - `POST /api/v1/teams/:slug/join` (login required) body `{ "message"? }` — creates a **pending join request** (not immediate membership)
   - `POST /api/v1/teams/:slug/join-requests/:requestId/review` (owner only) body `{ "action": "approve" | "reject" }`
   - `POST /api/v1/teams/:slug/members` (owner only) body `{ "email" }` — user must exist (direct add; clears pending request for that user)

@@ -1,0 +1,65 @@
+import type { SessionUser } from "@/lib/types";
+
+/** Minimum scope on every key (public read surfaces). */
+export const API_KEY_SCOPE_READ_PUBLIC = "read:public" as const;
+
+export const API_KEY_SCOPES = [
+  API_KEY_SCOPE_READ_PUBLIC,
+  "read:teams:self",
+  "read:teams:list",
+  "read:team:detail",
+  "read:team:tasks",
+  "read:team:milestones",
+  "read:projects:list",
+  "read:projects:detail",
+  "read:creators:list",
+  "read:creators:detail",
+  "read:topics:list",
+  "read:topics:detail",
+] as const;
+
+export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
+
+const SCOPE_SET = new Set<string>(API_KEY_SCOPES);
+
+/** Default for new keys: public + common read surfaces (P4-2). */
+export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = [
+  API_KEY_SCOPE_READ_PUBLIC,
+  "read:teams:self",
+  "read:teams:list",
+  "read:team:detail",
+  "read:team:tasks",
+  "read:team:milestones",
+  "read:projects:list",
+  "read:projects:detail",
+  "read:creators:list",
+  "read:creators:detail",
+  "read:topics:list",
+  "read:topics:detail",
+];
+
+export function normalizeApiKeyScopes(raw: string[] | undefined): ApiKeyScope[] {
+  if (!raw?.length) {
+    return [...DEFAULT_API_KEY_SCOPES];
+  }
+  const out = new Set<ApiKeyScope>();
+  for (const s of raw) {
+    const t = s.trim();
+    if (!t || !SCOPE_SET.has(t)) {
+      throw new Error("INVALID_API_KEY_SCOPE");
+    }
+    out.add(t as ApiKeyScope);
+  }
+  if (!out.has(API_KEY_SCOPE_READ_PUBLIC)) {
+    throw new Error("API_KEY_SCOPE_READ_PUBLIC_REQUIRED");
+  }
+  return [...out];
+}
+
+/** Cookie sessions have full access; API key sessions must include `required`. */
+export function allowApiKeyScope(session: SessionUser, required: ApiKeyScope): boolean {
+  if (!session.apiKeyScopes?.length) {
+    return true;
+  }
+  return session.apiKeyScopes.includes(required);
+}

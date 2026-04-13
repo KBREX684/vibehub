@@ -83,6 +83,8 @@ export interface SessionUser {
   userId: string;
   role: Role;
   name: string;
+  /** Present when authenticated via API key (P4-2); empty array means unrestricted for backwards compat. */
+  apiKeyScopes?: string[];
 }
 
 export interface ModerationCase {
@@ -260,6 +262,8 @@ export interface ApiKeySummary {
   id: string;
   label: string;
   prefix: string;
+  /** OAuth-style scope strings; always includes `read:public` when created via UI. */
+  scopes: string[];
   createdAt: string;
   lastUsedAt?: string;
   revokedAt?: string;

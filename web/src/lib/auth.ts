@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
+import type { ApiKeyScope } from "@/lib/api-key-scopes";
+import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
 import type { Role, SessionUser } from "@/lib/types";
 
@@ -112,13 +114,27 @@ function parseBearerToken(authorization: string | null): string | null {
 }
 
 /**
- * Session cookie first; if missing, optional `Authorization: Bearer <api-key>` (P4).
+ * Cookie session first; else `Authorization: Bearer <api-key>`.
+ * When `requiredScope` is set, API key sessions must include that scope (cookie sessions always pass).
  */
-export async function getSessionUserFromRequest(request: NextRequest): Promise<SessionUser | null> {
-  const cookieStore = await cookies();
-  const fromCookie = decodeSession(cookieStore.get(SESSION_COOKIE_KEY)?.value);
-  if (fromCookie) {
-    return fromCookie;
+export async function authenticateRequest(
+  request: NextRequest,
+  requiredScope?: ApiKeyScope
+): Promise<SessionUser | null> {
+  const fromRequestCookie = decodeSession(request.cookies.get(SESSION_COOKIE_KEY)?.value);
+  if (fromRequestCookie) {
+    return fromRequestCookie;
+  }
+
+  let fromNextCookies: SessionUser | null = null;
+  try {
+    const cookieStore = await cookies();
+    fromNextCookies = decodeSession(cookieStore.get(SESSION_COOKIE_KEY)?.value);
+  } catch {
+    /* Vitest / non-request context: ignore */
+  }
+  if (fromNextCookies) {
+    return fromNextCookies;
   }
 
   const token = parseBearerToken(request.headers.get("authorization"));
@@ -127,10 +143,22 @@ export async function getSessionUserFromRequest(request: NextRequest): Promise<S
   }
 
   try {
-    return await getSessionUserFromApiKeyToken(token);
+    const user = await getSessionUserFromApiKeyToken(token);
+    if (!user) {
+      return null;
+    }
+    if (requiredScope && !allowApiKeyScope(user, requiredScope)) {
+      return null;
+    }
+    return user;
   } catch {
     return null;
   }
+}
+
+/** Same as `authenticateRequest` without a scope gate (caller enforces scopes itself if needed). */
+export async function getSessionUserFromRequest(request: NextRequest): Promise<SessionUser | null> {
+  return authenticateRequest(request);
 }
 
 export const AuthConstants = {

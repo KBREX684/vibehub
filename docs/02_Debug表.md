@@ -66,6 +66,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P4-1-001 | P4 | `ApiKey` + Bearer | 无程序化访问用户资源能力 | 未实现 | User API keys + `getSessionUserFromRequest` + `/me/api-keys` + `me/teams` Bearer | Verified | `npm run check` |
 
+## P4-2 Feature (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P4-2-001 | P4 | `ApiKey.scopes` + gated GETs | Key 无粒度；公开列表无鉴权 | 未建模 | JSON scopes + per-route `authenticateRequest` scope + MCP parity | Verified | `npm run check` |
+
 ## P3 Formal Closure (2026-04-13)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

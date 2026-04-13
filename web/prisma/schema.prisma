@@ -85,6 +85,8 @@ model ApiKey {
   label      String
   keyHash    String    @unique
   prefix     String
+  /// JSON string[] of scope tokens (e.g. read:public, read:projects:list)
+  scopes     Json
   lastUsedAt DateTime?
   revokedAt  DateTime?
   createdAt  DateTime  @default(now())

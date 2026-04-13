@@ -1,7 +1,14 @@
+import type { NextRequest } from "next/server";
+import { authenticateRequest } from "@/lib/auth";
 import { getProjectBySlug } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request, "read:projects:detail");
+  if (!auth) {
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:projects:detail required" }, 401);
+  }
+
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
 

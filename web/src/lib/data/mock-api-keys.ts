@@ -4,6 +4,7 @@ export interface MockApiKey {
   label: string;
   keyHash: string;
   prefix: string;
+  scopes: string[];
   lastUsedAt?: string;
   revokedAt?: string;
   createdAt: string;

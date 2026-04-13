@@ -1,3 +1,5 @@
+import type { NextRequest } from "next/server";
+import { authenticateRequest } from "@/lib/auth";
 import { listProjects } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
@@ -12,7 +14,12 @@ function parseStatus(raw: string | null): ProjectStatus | undefined {
   return PROJECT_STATUSES.includes(raw as ProjectStatus) ? (raw as ProjectStatus) : undefined;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request, "read:projects:list");
+  if (!auth) {
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:projects:list required" }, 401);
+  }
+
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);

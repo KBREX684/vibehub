@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { getSessionUserFromCookie } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { authenticateRequest, getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { createTeamTask, listTeamTasks } from "@/lib/repository";
 import type { TeamTaskStatus } from "@/lib/types";
@@ -17,10 +18,10 @@ interface Params {
   params: Promise<{ slug: string }>;
 }
 
-export async function GET(_request: Request, { params }: Params) {
-  const session = await getSessionUserFromCookie();
+export async function GET(request: NextRequest, { params }: Params) {
+  const session = await authenticateRequest(request, "read:team:tasks");
   if (!session) {
-    return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:team:tasks required" }, 401);
   }
 
   try {

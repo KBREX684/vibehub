@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { DEFAULT_API_KEY_SCOPES } from "@/lib/api-key-scopes";
 import type { ApiKeyCreated, ApiKeySummary } from "@/lib/types";
 
 interface Props {
@@ -48,7 +49,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newLabel.trim() }),
+        body: JSON.stringify({ label: newLabel.trim(), scopes: [...DEFAULT_API_KEY_SCOPES] }),
       });
       const json = (await res.json()) as { data?: { key?: ApiKeyCreated }; error?: { message?: string } };
       if (!res.ok) {
@@ -97,10 +98,10 @@ export function ApiKeysPanel({ currentUserId }: Props) {
 
   return (
     <div className="card">
-      <h2>API Keys（P4-1）</h2>
+      <h2>API Keys（P4-1 + P4-2）</h2>
       <p className="muted small">
-        用于脚本或集成调用部分接口（当前示例：<code>GET /api/v1/me/teams</code> 支持{" "}
-        <code>Authorization: Bearer &lt;secret&gt;</code>）。密钥仅创建时显示一次，请立即保存。
+        用于脚本或集成；密钥带 <strong>scopes</strong>（当前默认包含公开读、团队列表/详情、任务/里程碑、项目、创作者、专题等）。若干{" "}
+        <code>GET /api/v1/...</code> 与 MCP 搜索在 Bearer 下会校验对应 scope。密钥仅创建时显示一次。
       </p>
 
       <form onSubmit={(ev) => void createKey(ev)} className="discover-filter-grid" style={{ marginTop: "1rem" }}>
@@ -136,6 +137,9 @@ export function ApiKeysPanel({ currentUserId }: Props) {
               创建于 {new Date(k.createdAt).toLocaleString()}
               {k.revokedAt ? ` · 已撤销 ${new Date(k.revokedAt).toLocaleString()}` : ""}
               {k.lastUsedAt && !k.revokedAt ? ` · 最近使用 ${new Date(k.lastUsedAt).toLocaleString()}` : ""}
+            </p>
+            <p className="muted small" style={{ wordBreak: "break-word" }}>
+              scopes: {k.scopes.join(", ")}
             </p>
             {!k.revokedAt ? (
               <button type="button" className="button ghost" onClick={() => void revoke(k.id)}>

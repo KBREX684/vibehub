@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { getSessionUserFromCookie } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { authenticateRequest, getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getProjectBySlug, updateProjectTeamLink } from "@/lib/repository";
 
@@ -11,7 +12,12 @@ interface Params {
   params: Promise<{ slug: string }>;
 }
 
-export async function GET(_: Request, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
+  const auth = await authenticateRequest(request, "read:projects:detail");
+  if (!auth) {
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:projects:detail required" }, 401);
+  }
+
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
 

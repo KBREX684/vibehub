@@ -1,8 +1,15 @@
+import type { NextRequest } from "next/server";
+import { authenticateRequest } from "@/lib/auth";
 import { listCreators } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request, "read:creators:list");
+  if (!auth) {
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:creators:list required" }, 401);
+  }
+
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
