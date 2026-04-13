@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { AuthConstants, encodeSession } from "@/lib/auth";
 
 function getGitHubOAuthConfig() {
   const clientId = process.env.GITHUB_CLIENT_ID;
