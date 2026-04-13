@@ -289,6 +289,69 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: { "200": responses["200"], "404": responses["404"], "500": responses["500"] },
         },
       },
+      "/api/v1/embed/projects/{slug}": {
+        get: {
+          tags: ["embed"],
+          summary: "Embeddable project card JSON (CORS enabled, public)",
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "404": responses["404"] },
+        },
+      },
+      "/api/v1/embed/teams/{slug}": {
+        get: {
+          tags: ["embed"],
+          summary: "Embeddable team card JSON (CORS enabled, public)",
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "404": responses["404"] },
+        },
+      },
+      "/api/v1/oembed": {
+        get: {
+          tags: ["embed"],
+          summary: "oEmbed discovery endpoint (CORS enabled, public)",
+          parameters: [
+            { name: "url", in: "query", required: true, schema: { type: "string" } },
+            { name: "format", in: "query", schema: { type: "string", enum: ["json"], default: "json" } },
+          ],
+          responses: { "200": { description: "oEmbed JSON response" }, "400": responses["400"], "404": responses["404"] },
+        },
+      },
+      "/api/v1/enterprise/project-radar": {
+        get: {
+          tags: ["enterprise"],
+          summary: "Project radar — trending projects ranked by weighted score (session or Bearer read:enterprise:workspace)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
+          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/enterprise/talent-radar": {
+        get: {
+          tags: ["enterprise"],
+          summary: "Talent radar — top creators ranked by contribution score (session or Bearer read:enterprise:workspace)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
+          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/enterprise/due-diligence/{slug}": {
+        get: {
+          tags: ["enterprise"],
+          summary: "Project due diligence summary — deep project info with team, intent, comment stats (session or Bearer read:enterprise:workspace)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/reports/ecosystem": {
+        get: {
+          tags: ["reports"],
+          summary: "Ecosystem report — platform-wide metrics aggregation (session or Bearer read:enterprise:workspace)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [{ name: "period", in: "query", schema: { type: "string", default: "current" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
       "/api/v1/teams/{slug}/activity-log": {
         get: {
           tags: ["teams"],

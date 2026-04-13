@@ -412,3 +412,82 @@ export interface UserSubscriptionInfo {
   currentPeriodEnd: string;
   canceledAt?: string;
 }
+
+/** P4: Embeddable card payload for external sites. */
+export interface EmbedProjectCard {
+  slug: string;
+  title: string;
+  oneLiner: string;
+  status: ProjectStatus;
+  techStack: string[];
+  tags: string[];
+  team?: { slug: string; name: string };
+  updatedAt: string;
+  vibehubUrl: string;
+}
+
+export interface EmbedTeamCard {
+  slug: string;
+  name: string;
+  mission?: string;
+  memberCount: number;
+  projectCount: number;
+  vibehubUrl: string;
+}
+
+/** P4: Project radar entry with trending score. */
+export interface ProjectRadarEntry {
+  slug: string;
+  title: string;
+  oneLiner: string;
+  status: ProjectStatus;
+  techStack: string[];
+  /** Weighted score: recent comments + collaboration intents + recency. */
+  score: number;
+}
+
+/** P4: Talent radar entry. */
+export interface TalentRadarEntry {
+  creatorSlug: string;
+  headline: string;
+  skills: string[];
+  collaborationPreference: string;
+  contributionScore: number;
+  projectCount: number;
+}
+
+/** P4: Due diligence summary for a single project. */
+export interface ProjectDueDiligence {
+  slug: string;
+  title: string;
+  oneLiner: string;
+  description: string;
+  status: ProjectStatus;
+  techStack: string[];
+  tags: string[];
+  team?: { slug: string; name: string; memberCount: number };
+  commentCount: number;
+  collaborationIntentCount: number;
+  creatorSlug?: string;
+  creatorHeadline?: string;
+  updatedAt: string;
+}
+
+/** P4: Ecosystem report payload. */
+export interface EcosystemReport {
+  period: string;
+  generatedAt: string;
+  metrics: {
+    totalUsers: number;
+    totalProjects: number;
+    totalPosts: number;
+    totalComments: number;
+    totalTeams: number;
+    totalCollaborationIntents: number;
+    approvedIntents: number;
+    activeChallenge: number;
+    topProjectsByIntents: Array<{ slug: string; title: string; count: number }>;
+    topDiscussionsByComments: Array<{ slug: string; title: string; count: number }>;
+    topCreatorsByScore: Array<{ userId: string; score: number }>;
+  };
+}

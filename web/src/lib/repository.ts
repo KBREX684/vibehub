@@ -4252,6 +4252,340 @@ export async function getEnterpriseWorkspaceSummary(params: {
   return { pendingJoinRequests, funnel, teams };
 }
 
+// ─── P4: Embed / Widget ─────────────────────────────────
+
+import type {
+  EmbedProjectCard,
+  EmbedTeamCard,
+  ProjectRadarEntry,
+  TalentRadarEntry,
+  ProjectDueDiligence,
+  EcosystemReport,
+} from "@/lib/types";
+
+export async function getEmbedProjectCard(slug: string): Promise<EmbedProjectCard | null> {
+  const project = await getProjectBySlug(slug);
+  if (!project) return null;
+  return {
+    slug: project.slug,
+    title: project.title,
+    oneLiner: project.oneLiner,
+    status: project.status,
+    techStack: project.techStack,
+    tags: project.tags,
+    team: project.team,
+    updatedAt: project.updatedAt,
+    vibehubUrl: `/projects/${project.slug}`,
+  };
+}
+
+export async function getEmbedTeamCard(slug: string): Promise<EmbedTeamCard | null> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === slug);
+    if (!team) return null;
+    const memberCount = mockTeamMemberships.filter((m) => m.teamId === team.id).length;
+    const projectCount = mockProjects.filter((p) => p.teamId === team.id).length;
+    return {
+      slug: team.slug,
+      name: team.name,
+      mission: team.mission,
+      memberCount,
+      projectCount,
+      vibehubUrl: `/teams/${team.slug}`,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug },
+    include: {
+      _count: { select: { memberships: true, projects: true } },
+    },
+  });
+  if (!team) return null;
+  return {
+    slug: team.slug,
+    name: team.name,
+    mission: team.mission ?? undefined,
+    memberCount: team._count.memberships,
+    projectCount: team._count.projects,
+    vibehubUrl: `/teams/${team.slug}`,
+  };
+}
+
+// ─── P4: Enterprise Radar + Due Diligence ───────────────
+
+export async function getProjectRadar(limit: number): Promise<ProjectRadarEntry[]> {
+  if (useMockData) {
+    return mockProjects.map((p) => {
+      const commentCount = mockComments.filter((c) =>
+        mockPosts.some((post) =>
+          post.authorId === mockCreators.find((cr) => cr.id === p.creatorId)?.userId
+        )
+      ).length;
+      const intentCount = mockCollaborationIntents.filter((i) => i.projectId === p.id).length;
+      const recencyBonus = Math.max(0, 30 - Math.floor((Date.now() - new Date(p.updatedAt).getTime()) / (1000 * 60 * 60 * 24)));
+      return {
+        slug: p.slug,
+        title: p.title,
+        oneLiner: p.oneLiner,
+        status: p.status,
+        techStack: p.techStack,
+        score: intentCount * 15 + commentCount * 5 + recencyBonus,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+  }
+
+  const prisma = await getPrisma();
+  const projects = await prisma.project.findMany({
+    include: {
+      _count: { select: { collaborationIntents: true } },
+      team: { select: { slug: true, name: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: limit * 3,
+  });
+
+  return projects
+    .map((p) => {
+      const recencyBonus = Math.max(0, 30 - Math.floor((Date.now() - p.updatedAt.getTime()) / (1000 * 60 * 60 * 24)));
+      return {
+        slug: p.slug,
+        title: p.title,
+        oneLiner: p.oneLiner,
+        status: p.status as ProjectRadarEntry["status"],
+        techStack: p.techStack,
+        score: p._count.collaborationIntents * 15 + recencyBonus,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+export async function getTalentRadar(limit: number): Promise<TalentRadarEntry[]> {
+  if (useMockData) {
+    return mockCreators.map((cr) => {
+      const credit = mockContributionCredits.find((c) => c.userId === cr.userId);
+      const projectCount = mockProjects.filter((p) => p.creatorId === cr.id).length;
+      return {
+        creatorSlug: cr.slug,
+        headline: cr.headline,
+        skills: cr.skills,
+        collaborationPreference: cr.collaborationPreference,
+        contributionScore: credit?.score ?? 0,
+        projectCount,
+      };
+    })
+    .sort((a, b) => b.contributionScore - a.contributionScore)
+    .slice(0, limit);
+  }
+
+  const prisma = await getPrisma();
+  const creators = await prisma.creatorProfile.findMany({
+    include: { _count: { select: { projects: true } } },
+  });
+
+  const credits = await prisma.contributionCredit.findMany();
+  const creditMap = new Map(credits.map((c) => [c.userId, c.score]));
+
+  return creators
+    .map((cr) => ({
+      creatorSlug: cr.slug,
+      headline: cr.headline,
+      skills: cr.skills,
+      collaborationPreference: cr.collaborationPreference,
+      contributionScore: creditMap.get(cr.userId) ?? 0,
+      projectCount: cr._count.projects,
+    }))
+    .sort((a, b) => b.contributionScore - a.contributionScore)
+    .slice(0, limit);
+}
+
+export async function getProjectDueDiligence(slug: string): Promise<ProjectDueDiligence | null> {
+  if (useMockData) {
+    const project = mockProjects.find((p) => p.slug === slug);
+    if (!project) return null;
+    const creator = mockCreators.find((c) => c.id === project.creatorId);
+    const team = project.teamId ? mockTeams.find((t) => t.id === project.teamId) : undefined;
+    const commentCount = mockComments.filter((c) =>
+      mockPosts.some((p) => p.authorId === creator?.userId && p.id === c.postId)
+    ).length;
+    const collaborationIntentCount = mockCollaborationIntents.filter((i) => i.projectId === project.id).length;
+
+    return {
+      slug: project.slug,
+      title: project.title,
+      oneLiner: project.oneLiner,
+      description: project.description,
+      status: project.status,
+      techStack: project.techStack,
+      tags: project.tags,
+      team: team ? { slug: team.slug, name: team.name, memberCount: mockTeamMemberships.filter((m) => m.teamId === team.id).length } : undefined,
+      commentCount,
+      collaborationIntentCount,
+      creatorSlug: creator?.slug,
+      creatorHeadline: creator?.headline,
+      updatedAt: project.updatedAt,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const project = await prisma.project.findUnique({
+    where: { slug },
+    include: {
+      creator: { select: { slug: true, headline: true } },
+      team: {
+        select: {
+          slug: true,
+          name: true,
+          _count: { select: { memberships: true } },
+        },
+      },
+      _count: { select: { collaborationIntents: true } },
+    },
+  });
+  if (!project) return null;
+
+  const commentCount = await prisma.comment.count({
+    where: { post: { authorId: project.creator.slug } },
+  });
+
+  return {
+    slug: project.slug,
+    title: project.title,
+    oneLiner: project.oneLiner,
+    description: project.description,
+    status: project.status as ProjectDueDiligence["status"],
+    techStack: project.techStack,
+    tags: project.tags,
+    team: project.team ? { slug: project.team.slug, name: project.team.name, memberCount: project.team._count.memberships } : undefined,
+    commentCount,
+    collaborationIntentCount: project._count.collaborationIntents,
+    creatorSlug: project.creator.slug,
+    creatorHeadline: project.creator.headline,
+    updatedAt: project.updatedAt.toISOString(),
+  };
+}
+
+// ─── P4: Ecosystem Reports ──────────────────────────────
+
+export async function generateEcosystemReport(period: string): Promise<EcosystemReport> {
+  if (useMockData) {
+    const topProjects = mockProjects
+      .map((p) => ({
+        slug: p.slug,
+        title: p.title,
+        count: mockCollaborationIntents.filter((i) => i.projectId === p.id).length,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const topDiscussions = mockPosts
+      .filter((p) => p.reviewStatus === "approved")
+      .map((p) => ({
+        slug: p.slug,
+        title: p.title,
+        count: mockComments.filter((c) => c.postId === p.id).length,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const topCreators = [...mockContributionCredits]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map((c) => ({ userId: c.userId, score: c.score }));
+
+    return {
+      period,
+      generatedAt: new Date().toISOString(),
+      metrics: {
+        totalUsers: mockUsers.length,
+        totalProjects: mockProjects.length,
+        totalPosts: mockPosts.length,
+        totalComments: mockComments.length,
+        totalTeams: mockTeams.length,
+        totalCollaborationIntents: mockCollaborationIntents.length,
+        approvedIntents: mockCollaborationIntents.filter((i) => i.status === "approved").length,
+        activeChallenge: mockChallenges.filter((c) => c.status === "active").length,
+        topProjectsByIntents: topProjects,
+        topDiscussionsByComments: topDiscussions,
+        topCreatorsByScore: topCreators,
+      },
+    };
+  }
+
+  const prisma = await getPrisma();
+  const [totalUsers, totalProjects, totalPosts, totalComments, totalTeams, totalCollaborationIntents, approvedIntents, activeChallenge] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.project.count(),
+      prisma.post.count({ where: { reviewStatus: "approved" } }),
+      prisma.comment.count(),
+      prisma.team.count(),
+      prisma.collaborationIntent.count(),
+      prisma.collaborationIntent.count({ where: { status: "approved" } }),
+      prisma.challenge.count({ where: { status: "active" } }),
+    ]);
+
+  const topProjectsRaw = await prisma.collaborationIntent.groupBy({
+    by: ["projectId"],
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+    take: 5,
+  });
+  const topProjectIds = topProjectsRaw.map((r) => r.projectId);
+  const topProjectDetails = topProjectIds.length > 0
+    ? await prisma.project.findMany({ where: { id: { in: topProjectIds } }, select: { id: true, slug: true, title: true } })
+    : [];
+  const projectMap = new Map(topProjectDetails.map((p) => [p.id, p]));
+  const topProjectsByIntents = topProjectsRaw.map((r) => {
+    const p = projectMap.get(r.projectId);
+    return { slug: p?.slug ?? "", title: p?.title ?? "", count: r._count.id };
+  });
+
+  const topDiscussionsRaw = await prisma.comment.groupBy({
+    by: ["postId"],
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+    take: 5,
+  });
+  const topPostIds = topDiscussionsRaw.map((r) => r.postId);
+  const topPostDetails = topPostIds.length > 0
+    ? await prisma.post.findMany({ where: { id: { in: topPostIds } }, select: { id: true, slug: true, title: true } })
+    : [];
+  const postMap = new Map(topPostDetails.map((p) => [p.id, p]));
+  const topDiscussionsByComments = topDiscussionsRaw.map((r) => {
+    const p = postMap.get(r.postId);
+    return { slug: p?.slug ?? "", title: p?.title ?? "", count: r._count.id };
+  });
+
+  const topCredits = await prisma.contributionCredit.findMany({
+    orderBy: { score: "desc" },
+    take: 5,
+    select: { userId: true, score: true },
+  });
+
+  return {
+    period,
+    generatedAt: new Date().toISOString(),
+    metrics: {
+      totalUsers,
+      totalProjects,
+      totalPosts,
+      totalComments,
+      totalTeams,
+      totalCollaborationIntents,
+      approvedIntents,
+      activeChallenge,
+      topProjectsByIntents,
+      topDiscussionsByComments,
+      topCreatorsByScore: topCredits,
+    },
+  };
+}
+
 export async function getAdminOverview() {
   const collaborationIntentFunnel = await getCollaborationIntentConversionMetrics();
 

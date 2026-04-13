@@ -31,6 +31,13 @@ export const REQUIRED_OPENAPI_PATHS = [
   "/api/v1/me/subscription",
   "/api/v1/subscription-plans",
   "/api/v1/reputation/leaderboard",
+  "/api/v1/embed/projects/{slug}",
+  "/api/v1/embed/teams/{slug}",
+  "/api/v1/oembed",
+  "/api/v1/enterprise/project-radar",
+  "/api/v1/enterprise/talent-radar",
+  "/api/v1/enterprise/due-diligence/{slug}",
+  "/api/v1/reports/ecosystem",
 ] as const;
 
 /**
