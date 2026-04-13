@@ -23,6 +23,10 @@ import {
   mockTeamTasks,
   mockTeams,
   mockUsers,
+  mockPostLikes,
+  mockPostBookmarks,
+  mockProjectBookmarks,
+  mockUserFollows,
 } from "@/lib/data/mock-data";
 import type {
   ApiKeyCreated,
@@ -34,6 +38,7 @@ import type {
   CollectionTopic,
   Comment,
   CreatorProfile,
+  GitHubRepoStats,
   InAppNotification,
   InAppNotificationKind,
   McpInvokeAuditRow,
@@ -45,6 +50,7 @@ import type {
   ReportTicket,
   ReviewStatus,
   Role,
+  SearchResult,
   SessionUser,
   TeamDetail,
   TeamJoinRequestRow,
@@ -231,6 +237,7 @@ function toPostDto(post: {
   id: string;
   slug: string;
   authorId: string;
+  authorName?: string;
   title: string;
   body: string;
   tags: string[];
@@ -238,12 +245,18 @@ function toPostDto(post: {
   moderationNote: string | null;
   reviewedAt: Date | null;
   reviewedBy: string | null;
+  featuredAt?: Date | null;
+  likeCount?: number;
+  bookmarkCount?: number;
+  viewerHasLiked?: boolean;
+  viewerHasBookmarked?: boolean;
   createdAt: Date;
 }): Post {
   return {
     id: post.id,
     slug: post.slug,
     authorId: post.authorId,
+    authorName: post.authorName,
     title: post.title,
     body: post.body,
     tags: post.tags,
@@ -251,6 +264,11 @@ function toPostDto(post: {
     moderationNote: post.moderationNote ?? undefined,
     reviewedAt: post.reviewedAt?.toISOString(),
     reviewedBy: post.reviewedBy ?? undefined,
+    featuredAt: post.featuredAt?.toISOString(),
+    likeCount: post.likeCount ?? 0,
+    bookmarkCount: post.bookmarkCount ?? 0,
+    viewerHasLiked: post.viewerHasLiked,
+    viewerHasBookmarked: post.viewerHasBookmarked,
     createdAt: post.createdAt.toISOString(),
   };
 }
@@ -259,11 +277,28 @@ function toCommentDto(comment: {
   id: string;
   postId: string;
   authorId: string;
+  authorName?: string;
   body: string;
+  parentCommentId?: string | null;
   createdAt: Date;
+  replies?: Array<{
+    id: string;
+    postId: string;
+    authorId: string;
+    authorName?: string;
+    body: string;
+    parentCommentId?: string | null;
+    createdAt: Date;
+  }>;
 }): Comment {
   return {
-    ...comment,
+    id: comment.id,
+    postId: comment.postId,
+    authorId: comment.authorId,
+    authorName: comment.authorName ?? comment.authorId,
+    body: comment.body,
+    parentCommentId: comment.parentCommentId ?? undefined,
+    replies: comment.replies?.map((r) => toCommentDto(r)),
     createdAt: comment.createdAt.toISOString(),
   };
 }
@@ -2204,12 +2239,18 @@ export async function listPosts(params: {
       orderBy: { createdAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
+      include: {
+        author: { select: { name: true } },
+        _count: { select: { likes: true, bookmarks: true } },
+      },
     }),
     prisma.post.count({ where }),
   ]);
 
   return {
-    items: items.map(toPostDto),
+    items: items.map((p) =>
+      toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })
+    ),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -2288,14 +2329,18 @@ export async function createPost(input: {
     .replace(/(^-|-$)+/g, "");
 
   if (useMockData) {
+    const author = mockUsers.find((u) => u.id === input.authorId);
     const post: Post = {
       id: `post_${Date.now()}`,
       slug: `${slug}-${Date.now()}`,
       authorId: input.authorId,
+      authorName: author?.name,
       title: input.title,
       body: input.body,
       tags: input.tags,
       reviewStatus: "pending",
+      likeCount: 0,
+      bookmarkCount: 0,
       createdAt: new Date().toISOString(),
     };
     mockPosts.unshift(post);
@@ -2339,18 +2384,35 @@ export async function createPost(input: {
   return toPostDto(result);
 }
 
-export async function createComment(input: { postId: string; body: string; authorId: string }) {
+export async function getPostIdBySlug(slug: string): Promise<string | null> {
+  if (useMockData) {
+    return mockPosts.find((p) => p.slug === slug)?.id ?? null;
+  }
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({ where: { slug }, select: { id: true } });
+  return post?.id ?? null;
+}
+
+export async function createComment(input: { postId: string; body: string; authorId: string; parentCommentId?: string }) {
   if (useMockData) {
     const postExists = mockPosts.some((post) => post.id === input.postId);
     if (!postExists) {
       throw new Error("POST_NOT_FOUND");
     }
-
+    if (input.parentCommentId) {
+      const parent = mockComments.find((c) => c.id === input.parentCommentId);
+      if (!parent) throw new Error("PARENT_COMMENT_NOT_FOUND");
+      // max depth 2: parent itself must have no parent (i.e. be a root comment)
+      if (parent.parentCommentId) throw new Error("MAX_NESTING_DEPTH_EXCEEDED");
+    }
+    const author = mockUsers.find((u) => u.id === input.authorId);
     const comment: Comment = {
       id: `cm_${Date.now()}`,
       postId: input.postId,
       authorId: input.authorId,
+      authorName: author?.name ?? input.authorId,
       body: input.body,
+      parentCommentId: input.parentCommentId,
       createdAt: new Date().toISOString(),
     };
     mockComments.unshift(comment);
@@ -2365,15 +2427,376 @@ export async function createComment(input: { postId: string; body: string; autho
   if (!post || post.reviewStatus !== "approved") {
     throw new Error("POST_NOT_FOUND");
   }
-
+  if (input.parentCommentId) {
+    const parent = await prisma.comment.findUnique({ where: { id: input.parentCommentId }, select: { parentCommentId: true } });
+    if (!parent) throw new Error("PARENT_COMMENT_NOT_FOUND");
+    if (parent.parentCommentId) throw new Error("MAX_NESTING_DEPTH_EXCEEDED");
+  }
   const comment = await prisma.comment.create({
     data: {
       postId: input.postId,
       body: input.body,
       authorId: input.authorId,
+      parentCommentId: input.parentCommentId ?? null,
+    },
+    include: { author: { select: { name: true } } },
+  });
+  return toCommentDto({ ...comment, authorName: comment.author.name });
+}
+
+export async function listCommentsForPost(postId: string): Promise<Comment[]> {
+  if (useMockData) {
+    const rootComments = mockComments.filter((c) => c.postId === postId && !c.parentCommentId);
+    return rootComments.map((root) => ({
+      ...root,
+      replies: mockComments.filter((c) => c.parentCommentId === root.id),
+    }));
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.comment.findMany({
+    where: { postId, parentCommentId: null },
+    orderBy: { createdAt: "asc" },
+    include: {
+      author: { select: { name: true } },
+      replies: {
+        orderBy: { createdAt: "asc" },
+        include: { author: { select: { name: true } } },
+      },
     },
   });
-  return toCommentDto(comment);
+  return rows.map((r) =>
+    toCommentDto({
+      ...r,
+      authorName: r.author.name,
+      replies: r.replies.map((reply) => ({ ...reply, authorName: reply.author.name })),
+    })
+  );
+}
+
+// ─── C-1: Social Interactions ───────────────────────────────────────────────
+
+export async function togglePostLike(userId: string, postSlug: string): Promise<{ liked: boolean; likeCount: number }> {
+  if (useMockData) {
+    const post = mockPosts.find((p) => p.slug === postSlug);
+    if (!post) throw new Error("POST_NOT_FOUND");
+    const existing = mockPostLikes.findIndex((l) => l.userId === userId && l.postId === post.id);
+    if (existing >= 0) {
+      mockPostLikes.splice(existing, 1);
+      post.likeCount = Math.max(0, post.likeCount - 1);
+      return { liked: false, likeCount: post.likeCount };
+    }
+    mockPostLikes.push({ id: `like_${Date.now()}`, userId, postId: post.id, createdAt: new Date().toISOString() });
+    post.likeCount = (post.likeCount || 0) + 1;
+    return { liked: true, likeCount: post.likeCount };
+  }
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({ where: { slug: postSlug }, select: { id: true } });
+  if (!post) throw new Error("POST_NOT_FOUND");
+  const existing = await prisma.postLike.findUnique({ where: { userId_postId: { userId, postId: post.id } } });
+  if (existing) {
+    await prisma.postLike.delete({ where: { id: existing.id } });
+    const count = await prisma.postLike.count({ where: { postId: post.id } });
+    return { liked: false, likeCount: count };
+  }
+  await prisma.postLike.create({ data: { userId, postId: post.id } });
+  const count = await prisma.postLike.count({ where: { postId: post.id } });
+  return { liked: true, likeCount: count };
+}
+
+export async function togglePostBookmark(userId: string, postSlug: string): Promise<{ bookmarked: boolean }> {
+  if (useMockData) {
+    const post = mockPosts.find((p) => p.slug === postSlug);
+    if (!post) throw new Error("POST_NOT_FOUND");
+    const existing = mockPostBookmarks.findIndex((b) => b.userId === userId && b.postId === post.id);
+    if (existing >= 0) {
+      mockPostBookmarks.splice(existing, 1);
+      post.bookmarkCount = Math.max(0, post.bookmarkCount - 1);
+      return { bookmarked: false };
+    }
+    mockPostBookmarks.push({ id: `bk_${Date.now()}`, userId, postId: post.id, createdAt: new Date().toISOString() });
+    post.bookmarkCount = (post.bookmarkCount || 0) + 1;
+    return { bookmarked: true };
+  }
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({ where: { slug: postSlug }, select: { id: true } });
+  if (!post) throw new Error("POST_NOT_FOUND");
+  const existing = await prisma.postBookmark.findUnique({ where: { userId_postId: { userId, postId: post.id } } });
+  if (existing) {
+    await prisma.postBookmark.delete({ where: { id: existing.id } });
+    return { bookmarked: false };
+  }
+  await prisma.postBookmark.create({ data: { userId, postId: post.id } });
+  return { bookmarked: true };
+}
+
+export async function toggleProjectBookmark(userId: string, projectSlug: string): Promise<{ bookmarked: boolean }> {
+  if (useMockData) {
+    const project = mockProjects.find((p) => p.slug === projectSlug);
+    if (!project) throw new Error("PROJECT_NOT_FOUND");
+    const existing = mockProjectBookmarks.findIndex((b) => b.userId === userId && b.projectId === project.id);
+    if (existing >= 0) {
+      mockProjectBookmarks.splice(existing, 1);
+      return { bookmarked: false };
+    }
+    mockProjectBookmarks.push({ id: `pbk_${Date.now()}`, userId, projectId: project.id, createdAt: new Date().toISOString() });
+    return { bookmarked: true };
+  }
+  const prisma = await getPrisma();
+  const project = await prisma.project.findUnique({ where: { slug: projectSlug }, select: { id: true } });
+  if (!project) throw new Error("PROJECT_NOT_FOUND");
+  const existing = await prisma.projectBookmark.findUnique({ where: { userId_projectId: { userId, projectId: project.id } } });
+  if (existing) {
+    await prisma.projectBookmark.delete({ where: { id: existing.id } });
+    return { bookmarked: false };
+  }
+  await prisma.projectBookmark.create({ data: { userId, projectId: project.id } });
+  return { bookmarked: true };
+}
+
+export async function toggleUserFollow(followerId: string, followingSlug: string): Promise<{ following: boolean }> {
+  if (useMockData) {
+    // In mock mode, followingSlug is used as userId directly OR as githubUsername
+    const target = mockUsers.find((u) => u.githubUsername === followingSlug || u.id === followingSlug);
+    if (!target) throw new Error("USER_NOT_FOUND");
+    if (target.id === followerId) throw new Error("CANNOT_FOLLOW_SELF");
+    const existing = mockUserFollows.findIndex((f) => f.followerId === followerId && f.followingId === target.id);
+    if (existing >= 0) {
+      mockUserFollows.splice(existing, 1);
+      return { following: false };
+    }
+    mockUserFollows.push({ id: `f_${Date.now()}`, followerId, followingId: target.id, createdAt: new Date().toISOString() });
+    return { following: true };
+  }
+  // In DB mode, resolve slug via CreatorProfile.slug → userId
+  const prisma = await getPrisma();
+  const creator = await prisma.creatorProfile.findUnique({ where: { slug: followingSlug }, select: { userId: true } });
+  if (!creator) throw new Error("USER_NOT_FOUND");
+  const followingId = creator.userId;
+  if (followingId === followerId) throw new Error("CANNOT_FOLLOW_SELF");
+  const existing = await prisma.userFollow.findUnique({ where: { followerId_followingId: { followerId, followingId } } });
+  if (existing) {
+    await prisma.userFollow.delete({ where: { id: existing.id } });
+    return { following: false };
+  }
+  await prisma.userFollow.create({ data: { followerId, followingId } });
+  return { following: true };
+}
+
+export async function getMyBookmarks(userId: string): Promise<{ posts: Post[]; projects: Project[] }> {
+  if (useMockData) {
+    const postIds = mockPostBookmarks.filter((b) => b.userId === userId).map((b) => b.postId);
+    const projectIds = mockProjectBookmarks.filter((b) => b.userId === userId).map((b) => b.projectId);
+    return {
+      posts: mockPosts.filter((p) => postIds.includes(p.id)),
+      projects: mockProjects.filter((p) => projectIds.includes(p.id)),
+    };
+  }
+  const prisma = await getPrisma();
+  const [postBkm, projectBkm] = await Promise.all([
+    prisma.postBookmark.findMany({ where: { userId }, include: { post: true } }),
+    prisma.projectBookmark.findMany({ where: { userId }, include: { project: { include: { team: { select: { slug: true, name: true } } } } } }),
+  ]);
+  return {
+    posts: postBkm.map((b) => toPostDto(b.post as Parameters<typeof toPostDto>[0])),
+    projects: projectBkm.map((b) => toProjectDto(b.project as Parameters<typeof toProjectDto>[0])),
+  };
+}
+
+export async function getFollowFeed(userId: string, params: { page: number; limit: number }): Promise<Paginated<Post>> {
+  if (useMockData) {
+    const followingIds = mockUserFollows.filter((f) => f.followerId === userId).map((f) => f.followingId);
+    const items = mockPosts
+      .filter((p) => followingIds.includes(p.authorId) && p.reviewStatus === "approved")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return paginateArray(items, params.page, params.limit);
+  }
+  const prisma = await getPrisma();
+  const followingRows = await prisma.userFollow.findMany({ where: { followerId: userId }, select: { followingId: true } });
+  const followingIds = followingRows.map((r) => r.followingId);
+  const where = { authorId: { in: followingIds }, reviewStatus: "approved" as const };
+  const [items, total] = await Promise.all([
+    prisma.post.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+      include: { author: { select: { name: true } }, _count: { select: { likes: true, bookmarks: true } } },
+    }),
+    prisma.post.count({ where }),
+  ]);
+  return {
+    items: items.map((p) => toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })),
+    pagination: { page: params.page, limit: params.limit, total, totalPages: Math.max(1, Math.ceil(total / params.limit)) },
+  };
+}
+
+// ─── C-5: Project Daily Featured ─────────────────────────────────────────────
+
+export async function featureProjectToday(projectSlug: string, rank: number): Promise<Project> {
+  if (useMockData) {
+    const project = mockProjects.find((p) => p.slug === projectSlug);
+    if (!project) throw new Error("PROJECT_NOT_FOUND");
+    (project as Project & { featuredRank?: number; featuredAt?: string }).featuredRank = rank;
+    (project as Project & { featuredRank?: number; featuredAt?: string }).featuredAt = new Date().toISOString();
+    return project;
+  }
+  const prisma = await getPrisma();
+  const updated = await prisma.project.update({
+    where: { slug: projectSlug },
+    data: { featuredRank: rank, featuredAt: new Date() },
+    include: { team: { select: { slug: true, name: true } } },
+  });
+  return toProjectDto({ ...updated, team: updated.team });
+}
+
+export async function clearExpiredFeaturedProjects(): Promise<number> {
+  if (useMockData) {
+    const now = new Date();
+    const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    let cleared = 0;
+    for (const p of mockProjects) {
+      const ext = p as Project & { featuredRank?: number; featuredAt?: string };
+      if (ext.featuredAt && new Date(ext.featuredAt) < midnight) {
+        delete ext.featuredRank;
+        delete ext.featuredAt;
+        cleared++;
+      }
+    }
+    return cleared;
+  }
+  const prisma = await getPrisma();
+  const midnight = new Date();
+  midnight.setUTCHours(0, 0, 0, 0);
+  const res = await prisma.project.updateMany({
+    where: { featuredAt: { lt: midnight }, featuredRank: { not: null } },
+    data: { featuredRank: null, featuredAt: null },
+  });
+  return res.count;
+}
+
+export async function listFeaturedProjects(): Promise<Project[]> {
+  if (useMockData) {
+    return mockProjects
+      .filter((p) => (p as Project & { featuredRank?: number }).featuredRank != null)
+      .sort((a, b) => {
+        const ra = (a as Project & { featuredRank?: number }).featuredRank ?? 999;
+        const rb = (b as Project & { featuredRank?: number }).featuredRank ?? 999;
+        return ra - rb;
+      });
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.project.findMany({
+    where: { featuredRank: { not: null } },
+    orderBy: { featuredRank: "asc" },
+    include: { team: { select: { slug: true, name: true } } },
+  });
+  return rows.map((r) => toProjectDto({ ...r, team: r.team }));
+}
+
+// ─── C-6: GitHub Repo Stats Cache ────────────────────────────────────────────
+
+const githubStatsCache = new Map<string, { stats: GitHubRepoStats; expiresAt: number }>();
+
+export async function getGitHubRepoStats(repoUrl: string): Promise<GitHubRepoStats | null> {
+  const cached = githubStatsCache.get(repoUrl);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.stats;
+  }
+  try {
+    const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+    if (!match) return null;
+    const [, owner, repo] = match;
+    const cleanRepo = repo.replace(/\.git$/, "");
+    const res = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`, {
+      headers: { Accept: "application/vnd.github+json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    interface GHRepo { stargazers_count: number; forks_count: number; language: string | null; pushed_at: string; open_issues_count: number; }
+    const data = await res.json() as GHRepo;
+    const stats: GitHubRepoStats = {
+      stars: data.stargazers_count,
+      forks: data.forks_count,
+      language: data.language,
+      lastPushedAt: data.pushed_at,
+      openIssues: data.open_issues_count,
+      cachedAt: new Date().toISOString(),
+    };
+    githubStatsCache.set(repoUrl, { stats, expiresAt: Date.now() + 3_600_000 });
+    return stats;
+  } catch {
+    return null;
+  }
+}
+
+// ─── C-7: Unified Full-Text Search ───────────────────────────────────────────
+
+export async function unifiedSearch(query: string, type?: "post" | "project" | "creator"): Promise<SearchResult[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  if (useMockData) {
+    const ql = q.toLowerCase();
+    const results: SearchResult[] = [];
+    if (!type || type === "post") {
+      mockPosts
+        .filter((p) => p.reviewStatus === "approved" && (p.title.toLowerCase().includes(ql) || p.body.toLowerCase().includes(ql)))
+        .forEach((p) => results.push({ type: "post", id: p.id, slug: p.slug, title: p.title, excerpt: p.body.slice(0, 120), tags: p.tags }));
+    }
+    if (!type || type === "project") {
+      mockProjects
+        .filter((p) => p.title.toLowerCase().includes(ql) || p.oneLiner.toLowerCase().includes(ql) || p.description.toLowerCase().includes(ql))
+        .forEach((p) => results.push({ type: "project", id: p.id, slug: p.slug, title: p.title, excerpt: p.oneLiner, tags: p.tags }));
+    }
+    if (!type || type === "creator") {
+      mockCreators
+        .filter((c) => c.slug.toLowerCase().includes(ql) || c.bio.toLowerCase().includes(ql) || c.skills.some((s) => s.toLowerCase().includes(ql)))
+        .forEach((c) => results.push({ type: "creator", id: c.id, slug: c.slug, title: c.slug, excerpt: c.bio.slice(0, 120) }));
+    }
+    return results;
+  }
+
+  const prisma = await getPrisma();
+  const results: SearchResult[] = [];
+
+  if (!type || type === "post") {
+    const posts = await prisma.$queryRaw<Array<{ id: string; slug: string; title: string; body: string; tags: string[] }>>`
+      SELECT id, slug, title, body, tags
+      FROM "Post"
+      WHERE "reviewStatus" = 'approved'
+        AND "searchVector" @@ plainto_tsquery('english', ${q})
+      ORDER BY ts_rank("searchVector", plainto_tsquery('english', ${q})) DESC
+      LIMIT 10
+    `;
+    posts.forEach((p) => results.push({ type: "post", id: p.id, slug: p.slug, title: p.title, excerpt: p.body.slice(0, 120), tags: p.tags }));
+  }
+
+  if (!type || type === "project") {
+    const projects = await prisma.$queryRaw<Array<{ id: string; slug: string; title: string; "oneLiner": string; tags: string[] }>>`
+      SELECT id, slug, title, "oneLiner", tags
+      FROM "Project"
+      WHERE "searchVector" @@ plainto_tsquery('english', ${q})
+      ORDER BY ts_rank("searchVector", plainto_tsquery('english', ${q})) DESC
+      LIMIT 10
+    `;
+    projects.forEach((p) => results.push({ type: "project", id: p.id, slug: p.slug, title: p.title, excerpt: p.oneLiner, tags: p.tags }));
+  }
+
+  if (!type || type === "creator") {
+    const creators = await prisma.creatorProfile.findMany({
+      where: {
+        OR: [
+          { slug: { contains: q, mode: "insensitive" } },
+          { bio: { contains: q, mode: "insensitive" } },
+          { headline: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      take: 10,
+    });
+    creators.forEach((c) => results.push({ type: "creator", id: c.id, slug: c.slug, title: c.slug, excerpt: c.bio.slice(0, 120) }));
+  }
+
+  return results;
 }
 
 export async function listProjectCollaborationIntents(params: {

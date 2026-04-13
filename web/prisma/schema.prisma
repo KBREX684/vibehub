@@ -58,6 +58,13 @@ enum InAppNotificationKind {
   team_join_approved
   team_join_rejected
   team_task_assigned
+  post_commented
+  comment_replied
+  post_liked
+  project_bookmarked
+  user_followed
+  project_intent_received
+  post_featured
 }
 
 model User {
@@ -88,6 +95,68 @@ model User {
   teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
   apiKeys                   ApiKey[]
   notifications             InAppNotification[]
+  /// C-1: users this user follows
+  following                 UserFollow[]          @relation("Follower")
+  /// C-1: users following this user
+  followers                 UserFollow[]          @relation("Following")
+  postLikes                 PostLike[]
+  postBookmarks             PostBookmark[]
+  projectBookmarks          ProjectBookmark[]
+}
+
+/// C-1: follow relationship between users
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+/// C-1: post like
+model PostLike {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+/// C-1: post bookmark
+model PostBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+}
+
+/// C-1: project bookmark
+model ProjectBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
 }
 
 model InAppNotification {
@@ -171,14 +240,20 @@ model Project {
   logoUrl     String?
   openSource  Boolean       @default(false)
   license     String?
+  /// C-5: admin-set daily featured rank (null = not featured today)
+  featuredRank Int?
+  /// C-5: when featuredRank was last set (for auto-clear next UTC day)
+  featuredAt  DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   creator     CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   team        Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
   collaborationIntents CollaborationIntent[]
+  bookmarks            ProjectBookmark[]
 
   @@index([creatorId])
   @@index([teamId])
+  @@index([featuredRank])
 }
 
 model Post {
@@ -192,6 +267,8 @@ model Post {
   moderationNote   String?
   reviewedAt       DateTime?
   reviewedBy       String?
+  /// C-4: admin-curated featured post (non-null = featured today)
+  featuredAt       DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   author           User            @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
@@ -199,24 +276,32 @@ model Post {
   comments         Comment[]
   moderationCases  ModerationCase[]
   reportTickets    ReportTicket[]
+  likes            PostLike[]
+  bookmarks        PostBookmark[]
 
   @@index([authorId])
   @@index([reviewStatus])
   @@index([reviewedBy])
+  @@index([featuredAt])
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  postId    String
-  authorId  String
-  body      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  postId          String
+  authorId        String
+  body            String
+  /// C-2: optional parent for nested replies (max depth 2)
+  parentCommentId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  post            Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies         Comment[] @relation("CommentReplies")
 
   @@index([postId])
   @@index([authorId])
+  @@index([parentCommentId])
 }
 
 model ModerationCase {

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import type { Project } from "@/lib/types";
 
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({ project, featured }: { project: Project; featured?: boolean }) {
   return (
-    <article className="card">
+    <article className="card" style={featured ? { borderColor: "#f59e0b", borderWidth: 2 } : undefined}>
       <div className="meta-row">
         <span className="status">{project.status}</span>
+        {featured ? <span className="tag" style={{ background: "#fef3c7", color: "#92400e" }}>✨ 今日精选</span> : null}
         <span className="muted">{new Date(project.updatedAt).toLocaleDateString()}</span>
       </div>
       {project.team ? (

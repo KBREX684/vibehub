@@ -34,6 +34,14 @@ export function PostCard({
           </span>
         ))}
       </div>
+      <div className="meta-row" style={{ marginTop: 8 }}>
+        {post.authorName ? <span className="muted small">{post.authorName}</span> : null}
+        <span className="muted small">
+          {post.likeCount > 0 ? `❤ ${post.likeCount}` : null}
+          {post.likeCount > 0 && post.bookmarkCount > 0 ? " · " : null}
+          {post.bookmarkCount > 0 ? `🔖 ${post.bookmarkCount}` : null}
+        </span>
+      </div>
     </article>
   );
 }

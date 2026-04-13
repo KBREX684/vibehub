@@ -154,34 +154,43 @@ export const mockPosts: Post[] = [
     id: "post1",
     slug: "how-i-built-an-agent-ready-project-page",
     authorId: "u1",
+    authorName: "Alice",
     title: "How I built an Agent-ready project page",
     body: "Sharing a practical structure for project metadata that both humans and agents can consume.",
     tags: ["agent", "metadata", "project-page"],
     reviewStatus: "approved",
     reviewedBy: "u1",
     reviewedAt: new Date().toISOString(),
+    likeCount: 0,
+    bookmarkCount: 0,
     createdAt: new Date().toISOString(),
   },
   {
     id: "post2",
     slug: "weekly-vibecoding-stack-review",
     authorId: "u2",
+    authorName: "Bob",
     title: "Weekly VibeCoding stack review",
     body: "My best stack picks this week for solo founders shipping fast.",
     tags: ["tech-stack", "weekly", "solo-founder"],
     reviewStatus: "approved",
     reviewedBy: "u1",
     reviewedAt: new Date().toISOString(),
+    likeCount: 0,
+    bookmarkCount: 0,
     createdAt: new Date().toISOString(),
   },
   {
     id: "post3",
     slug: "need-review-agent-template",
     authorId: "u3",
+    authorName: "Chen",
     title: "Need review: Agent prompt template",
     body: "Drafting an experimental template. Looking for moderator review before publishing.",
     tags: ["prompt", "review-needed"],
     reviewStatus: "pending",
+    likeCount: 0,
+    bookmarkCount: 0,
     createdAt: new Date().toISOString(),
   },
 ];
@@ -191,6 +200,7 @@ export const mockComments: Comment[] = [
     id: "cm1",
     postId: "post1",
     authorId: "u3",
+    authorName: "Chen",
     body: "Great breakdown. Could you share your schema for tags?",
     createdAt: new Date().toISOString(),
   },
@@ -198,6 +208,7 @@ export const mockComments: Comment[] = [
     id: "cm2",
     postId: "post2",
     authorId: "u1",
+    authorName: "Alice",
     body: "Solid picks — would add a lightweight analytics hook for solo launches.",
     createdAt: new Date().toISOString(),
   },
@@ -205,6 +216,7 @@ export const mockComments: Comment[] = [
     id: "cm3",
     postId: "post2",
     authorId: "u3",
+    authorName: "Chen",
     body: "Thanks, adding observability early saved me weeks last quarter.",
     createdAt: new Date().toISOString(),
   },
@@ -344,3 +356,9 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
     createdAt: new Date().toISOString(),
   },
 ];
+
+// C-1: in-memory social interaction stores
+export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
+export const mockPostBookmarks: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
+export const mockProjectBookmarks: Array<{ id: string; userId: string; projectId: string; createdAt: string }> = [];
+export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [];

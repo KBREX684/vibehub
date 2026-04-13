@@ -56,6 +56,7 @@ export interface Post {
   id: string;
   slug: string;
   authorId: string;
+  authorName?: string;
   title: string;
   body: string;
   tags: string[];
@@ -63,6 +64,11 @@ export interface Post {
   moderationNote?: string;
   reviewedAt?: string;
   reviewedBy?: string;
+  featuredAt?: string;
+  likeCount: number;
+  bookmarkCount: number;
+  viewerHasLiked?: boolean;
+  viewerHasBookmarked?: boolean;
   createdAt: string;
 }
 
@@ -70,8 +76,57 @@ export interface Comment {
   id: string;
   postId: string;
   authorId: string;
+  authorName: string;
   body: string;
+  parentCommentId?: string;
+  replies?: Comment[];
   createdAt: string;
+}
+
+export interface PostLike {
+  id: string;
+  userId: string;
+  postId: string;
+  createdAt: string;
+}
+
+export interface PostBookmark {
+  id: string;
+  userId: string;
+  postId: string;
+  createdAt: string;
+}
+
+export interface ProjectBookmark {
+  id: string;
+  userId: string;
+  projectId: string;
+  createdAt: string;
+}
+
+export interface UserFollow {
+  id: string;
+  followerId: string;
+  followingId: string;
+  createdAt: string;
+}
+
+export interface GitHubRepoStats {
+  stars: number;
+  forks: number;
+  language: string | null;
+  lastPushedAt: string | null;
+  openIssues: number;
+  cachedAt: string;
+}
+
+export interface SearchResult {
+  type: "post" | "project" | "creator";
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  tags?: string[];
 }
 
 export interface CollaborationIntent {
@@ -126,7 +181,14 @@ export type InAppNotificationKind =
   | "team_join_request"
   | "team_join_approved"
   | "team_join_rejected"
-  | "team_task_assigned";
+  | "team_task_assigned"
+  | "post_commented"
+  | "comment_replied"
+  | "post_liked"
+  | "project_bookmarked"
+  | "user_followed"
+  | "project_intent_received"
+  | "post_featured";
 
 export interface InAppNotification {
   id: string;
