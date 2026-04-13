@@ -30,6 +30,9 @@ export function SiteHeader() {
           <Link href="/workspace/enterprise" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors flex items-center gap-1.5">
             <LayoutGrid className="w-4 h-4" /> 工作台
           </Link>
+          <Link href="/pricing" className="px-3 py-2 rounded-lg text-sm font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 transition-colors flex items-center gap-1.5">
+            升级 Pro
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">

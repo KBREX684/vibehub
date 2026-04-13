@@ -6,8 +6,9 @@ import {
   getWeeklyLeaderboardPublicPayload,
   parseUtcWeekStartParam,
   startOfUtcWeekContaining,
+  listContributionLeaderboard,
 } from "@/lib/repository";
-import { Trophy, Flame, Users, Calendar, ChevronLeft, ChevronRight, Medal } from "lucide-react";
+import { Trophy, Flame, Users, Calendar, ChevronLeft, ChevronRight, Medal, Star } from "lucide-react";
 
 function formatWeekRangeLabel(weekStart: Date): string {
   const end = new Date(weekStart.getTime());
@@ -45,7 +46,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
   const nowWeek = startOfUtcWeekContaining(new Date());
   const invalidWeek = weekRaw && weekRaw.trim() && !weekStart;
 
-  const [discussions, projects, weeklyDiscussions, weeklyProjects] = await Promise.all([
+  const [discussions, projects, weeklyDiscussions, weeklyProjects, contributionLeaderboard] = await Promise.all([
     getDiscussionLeaderboard(10),
     getProjectCollaborationLeaderboard(10),
     getWeeklyLeaderboardPublicPayload({
@@ -58,6 +59,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
       kind: "projects_by_weekly_collaboration_intent_count",
       limit: 10,
     }),
+    listContributionLeaderboard(10),
   ]);
 
   return (
@@ -117,7 +119,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
           )}
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto mb-12">
           {/* Weekly Discussions */}
           <section className="bg-white border border-stone-200 rounded-3xl p-8 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 opacity-60 pointer-events-none"></div>
@@ -197,7 +199,49 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
               )}
             </ol>
           </section>
+        </div>
 
+        {/* P3: Contribution Leaderboard */}
+        <div className="max-w-6xl mx-auto mb-12">
+          <section className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center shadow-inner">
+                  <Star className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-stone-900">社区信誉总榜</h2>
+                  <p className="text-sm text-stone-500 font-medium">按累计贡献积分 (Contribution Credit) 排序</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {contributionLeaderboard.map((user, index) => (
+                <div key={user.userId} className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-2xl p-5 flex items-center gap-4 hover:bg-white transition-colors shadow-sm">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-inner ${
+                    index === 0 ? 'bg-yellow-100 text-yellow-700' : 
+                    index === 1 ? 'bg-slate-200 text-slate-700' : 
+                    index === 2 ? 'bg-amber-200 text-amber-800' : 
+                    'bg-stone-100 text-stone-500'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0 flex-grow">
+                    <div className="text-stone-900 font-bold truncate text-lg">
+                      {user.userId}
+                    </div>
+                    <div className="text-sm font-semibold text-amber-600 mt-0.5">
+                      {user.score} <span className="text-stone-400 font-medium text-xs ml-1">积分</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* All-time Discussions */}
           <section className="bg-stone-50 border border-stone-200 rounded-3xl p-8">
             <div className="flex items-center gap-3 mb-8">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Challenge } from "@/lib/types";
-import { Calendar, Users, Trophy } from "lucide-react";
+import { Calendar, Trophy } from "lucide-react";
 
 export function ChallengeCard({ challenge }: { challenge: Challenge }) {
   const statusColors: Record<string, string> = {

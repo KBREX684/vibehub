@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { getChallengeBySlug } from "@/lib/repository";
-import { Calendar, ArrowLeft, Trophy, Flag, BookOpen, Clock } from "lucide-react";
+import { ArrowLeft, Trophy, Flag, BookOpen, Clock } from "lucide-react";
 
 interface Props {
   params: Promise<{ slug: string }>;
