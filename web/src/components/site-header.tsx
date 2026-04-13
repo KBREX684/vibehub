@@ -14,6 +14,9 @@ export function SiteHeader() {
           <Link href="/discover">Discover</Link>
           <Link href="/teams">Teams</Link>
           <Link href="/settings/api-keys">API Keys</Link>
+          <a href="/api/v1/openapi.json" className="button ghost" target="_blank" rel="noreferrer">
+            OpenAPI
+          </a>
           <Link href="/projects/vibehub">Projects</Link>
           <Link href="/creators/alice-ai-builder">Creators</Link>
           <Link href="/admin">Admin</Link>

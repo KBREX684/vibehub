@@ -78,6 +78,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P4-3-001 | P4 | Rate limit + public routes | P4-2 匿名断裂；Key 无节流 | 设计缺口 | In-memory RL + `resolveReadAuth` + `/public/*` + scope UI | Verified | `npm run check` |
 
+## P4-4 Feature (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P4-4-001 | P4 | OpenAPI | 集成方无标准契约 | 未导出 | `openapi.json` + `openapi-spec.ts` + tests + nav link | Verified | `npm run check` |
+
 ## P3 Formal Closure (2026-04-13)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

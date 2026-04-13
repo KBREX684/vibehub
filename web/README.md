@@ -4,6 +4,8 @@ Next.js full-stack implementation for VibeHub.
 
 **P3 is officially closed** (2026-04-13): team collaboration slices P3-1…P3-7 plus status-column task board are frozen on `main`. Deferred: in-app team notifications, finer task RBAC, billing/subscriptions — see `docs/03_项目日志.md`.
 
+**P4-4 (2026-04-13)**: **`GET /api/v1/openapi.json`** — OpenAPI **3.0.3** JSON for the curated `/api/v1` surface (envelope, auth, scopes, public mirrors, key routes). Source: `src/lib/openapi-spec.ts`.
+
 **P4-1 / P4-2 / P4-3 (2026-04-13)**: User **API keys** with **scopes**; **`/settings/api-keys`** supports **scope checkboxes** on create. **`Authorization: Bearer`** is **rate-limited** per key hash + client IP (`API_KEY_RATE_LIMIT_PER_MINUTE`, default 120/min; 429 + `Retry-After`). **Anonymous reads** are restored for `GET /api/v1/projects`, `GET /api/v1/projects/:slug`, teams, creators, collection-topics (same as pre–P4-2). Stable no-auth mirrors live under **`/api/v1/public/...`** for crawlers. **`GET /api/v1/me/teams`** and team **tasks/milestones** list still require cookie or scoped Bearer; MCP GET tools require cookie or scoped Bearer.
 
 Current scope:
@@ -125,6 +127,9 @@ Runs `lint + test + build`.
   - `kind` may be `discussions_by_weekly_comment_count` or `projects_by_weekly_collaboration_intent_count`; `weekStart` must be a UTC Monday (`YYYY-MM-DD`) or omit for the current week.
 
 ## 6. P2 Public Endpoints (non-admin)
+
+- **OpenAPI (P4-4)**:
+  - `GET /api/v1/openapi.json` — OpenAPI 3.0 document (public)
 
 - Collaboration:
   - `GET /api/v1/projects/:slug/collaboration-intents?status=approved|pending|rejected|all`
