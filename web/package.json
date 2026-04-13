@@ -17,11 +17,9 @@
     "prisma:seed": "prisma db seed",
     "mcp:serve": "tsx mcp-server.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@prisma/client": "^6.6.0",
+    "dotenv": "^16.5.0",
     "framer-motion": "^12.38.0",
     "ioredis": "5.10.1",
     "lucide-react": "^1.8.0",
