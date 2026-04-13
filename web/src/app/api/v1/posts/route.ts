@@ -5,7 +5,7 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getSessionUserFromCookie } from "@/lib/auth";
 
-const VALID_SORT_ORDERS: readonly PostSortOrder[] = ["recent", "hot"];
+const VALID_SORT_ORDERS: readonly PostSortOrder[] = ["recent", "hot", "featured"];
 
 const createPostSchema = z.object({
   title: z.string().min(3).max(120),

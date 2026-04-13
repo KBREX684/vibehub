@@ -1,5 +1,7 @@
 import type {
   AuditLog,
+  Challenge,
+  ChallengeStatus,
   Comment,
   CollaborationIntent,
   CreatorProfile,
@@ -152,6 +154,8 @@ export const mockPosts: Post[] = [
     reviewStatus: "approved",
     reviewedBy: "u1",
     reviewedAt: new Date().toISOString(),
+    featuredAt: new Date().toISOString(),
+    featuredBy: "u1",
     createdAt: new Date().toISOString(),
   },
   {
@@ -334,5 +338,35 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
     reviewedAt: new Date().toISOString(),
     reviewedBy: "u1",
     createdAt: new Date().toISOString(),
+  },
+];
+
+export const mockChallenges: Challenge[] = [
+  {
+    id: "ch1",
+    slug: "vibecoding-week-2026-q2",
+    title: "VibeCoding 周赛 2026-Q2",
+    description: "在一周内完成一个 AI 辅助开发的 MVP 项目，提交到 VibeHub 并分享你的构建过程。",
+    rules: "1. 项目必须在活动期间启动。\n2. 使用至少一种 AI 编程工具。\n3. 提交包含项目链接和构建日志的帖子。",
+    tags: ["vibecoding", "mvp", "challenge"],
+    status: "active" as ChallengeStatus,
+    startDate: new Date(Date.UTC(2026, 3, 14)).toISOString(),
+    endDate: new Date(Date.UTC(2026, 3, 21)).toISOString(),
+    createdByUserId: "u1",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "ch2",
+    slug: "prompt-engineering-battle",
+    title: "Prompt 工程大赛",
+    description: "设计最有效的 Prompt 模板，让 AI 生成高质量的代码和文档。社区投票决出优胜者。",
+    tags: ["prompt", "competition"],
+    status: "draft" as ChallengeStatus,
+    startDate: new Date(Date.UTC(2026, 4, 1)).toISOString(),
+    endDate: new Date(Date.UTC(2026, 4, 15)).toISOString(),
+    createdByUserId: "u1",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];

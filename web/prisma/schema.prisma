@@ -85,6 +85,8 @@ model User {
   teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
   apiKeys                   ApiKey[]
   notifications             InAppNotification[]
+  featuredPosts             Post[]               @relation("PostFeaturedBy")
+  challengesCreated         Challenge[]          @relation("ChallengeCreator")
 }
 
 model InAppNotification {
@@ -183,10 +185,14 @@ model Post {
   moderationNote   String?
   reviewedAt       DateTime?
   reviewedBy       String?
+  /// P2: non-null when an admin marks this post as featured (精华).
+  featuredAt       DateTime?
+  featuredBy       String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   author           User            @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   reviewer         User?           @relation("PostReviewer", fields: [reviewedBy], references: [id])
+  featuredByUser   User?           @relation("PostFeaturedBy", fields: [featuredBy], references: [id])
   comments         Comment[]
   moderationCases  ModerationCase[]
   reportTickets    ReportTicket[]
@@ -194,6 +200,7 @@ model Post {
   @@index([authorId])
   @@index([reviewStatus])
   @@index([reviewedBy])
+  @@index([featuredAt])
 }
 
 model Comment {
@@ -399,4 +406,30 @@ model TeamMilestone {
   @@index([teamId])
   @@index([teamId, completed])
   @@index([teamId, sortOrder])
+}
+
+enum ChallengeStatus {
+  draft
+  active
+  closed
+}
+
+/// P2: 挑战赛/活动页
+model Challenge {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  description     String
+  rules           String?
+  tags            String[]
+  status          ChallengeStatus @default(draft)
+  startDate       DateTime
+  endDate         DateTime
+  createdByUserId String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdBy       User            @relation("ChallengeCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([startDate, endDate])
 }

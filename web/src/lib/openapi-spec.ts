@@ -210,14 +210,109 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: { "200": responses["200"] },
         },
       },
+      "/api/v1/posts/featured": {
+        get: {
+          tags: ["posts"],
+          summary: "List featured (精华) posts only, sorted by featuredAt desc",
+          parameters: [
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+          ],
+          responses: { "200": responses["200"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/challenges": {
+        get: {
+          tags: ["challenges"],
+          summary: "List challenges / campaigns (public; filter by status)",
+          parameters: [
+            { name: "status", in: "query", schema: { type: "string", enum: ["draft", "active", "closed"] } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+          ],
+          responses: { "200": responses["200"], "400": responses["400"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["challenges"],
+          summary: "Create a challenge (admin only)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["title", "description", "startDate", "endDate"],
+                  properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    rules: { type: "string" },
+                    tags: { type: "array", items: { type: "string" } },
+                    status: { type: "string", enum: ["draft", "active", "closed"] },
+                    startDate: { type: "string", format: "date-time" },
+                    endDate: { type: "string", format: "date-time" },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/challenges/{slug}": {
+        get: {
+          tags: ["challenges"],
+          summary: "Get challenge by slug",
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "404": responses["404"], "500": responses["500"] },
+        },
+        patch: {
+          tags: ["challenges"],
+          summary: "Update challenge (admin only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["challenges"],
+          summary: "Delete challenge (admin only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/creators/{slug}/growth": {
+        get: {
+          tags: ["creators"],
+          summary: "Creator growth stats (post/comment/project counts, featured, collaboration intents, received comments)",
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/admin/posts/{postId}/feature": {
+        post: {
+          tags: ["admin"],
+          summary: "Mark post as featured / 精华 (admin only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "postId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["admin"],
+          summary: "Remove featured status from post (admin only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "postId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
       "/api/v1/posts": {
         get: {
           tags: ["posts"],
-          summary: "List discussion posts (public; sort=recent|hot)",
+          summary: "List discussion posts (public; sort=recent|hot|featured)",
           parameters: [
             { name: "query", in: "query", schema: { type: "string" } },
             { name: "tag", in: "query", schema: { type: "string" } },
-            { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot"] } },
+            { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot", "featured"] } },
             { name: "page", in: "query", schema: { type: "integer", default: 1 } },
             { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
           ],

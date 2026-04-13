@@ -9,6 +9,7 @@ import {
 } from "@/lib/data/mock-api-keys";
 import {
   mockAuditLogs,
+  mockChallenges,
   mockComments,
   mockCollaborationIntents,
   mockCreators,
@@ -28,11 +29,14 @@ import type {
   ApiKeyCreated,
   ApiKeySummary,
   AuditLog,
+  Challenge,
+  ChallengeStatus,
   CollaborationIntent,
   CollaborationIntentConversionMetrics,
   CollaborationIntentType,
   CollectionTopic,
   Comment,
+  CreatorGrowthStats,
   CreatorProfile,
   InAppNotification,
   InAppNotificationKind,
@@ -226,6 +230,8 @@ function toPostDto(post: {
   moderationNote: string | null;
   reviewedAt: Date | null;
   reviewedBy: string | null;
+  featuredAt?: Date | null;
+  featuredBy?: string | null;
   createdAt: Date;
 }): Post {
   return {
@@ -239,6 +245,8 @@ function toPostDto(post: {
     moderationNote: post.moderationNote ?? undefined,
     reviewedAt: post.reviewedAt?.toISOString(),
     reviewedBy: post.reviewedBy ?? undefined,
+    featuredAt: post.featuredAt?.toISOString(),
+    featuredBy: post.featuredBy ?? undefined,
     createdAt: post.createdAt.toISOString(),
   };
 }
@@ -2039,12 +2047,14 @@ export async function listUsers(params: {
   };
 }
 
-export type PostSortOrder = "recent" | "hot";
+export type PostSortOrder = "recent" | "hot" | "featured";
 
 export async function listPosts(params: {
   query?: string;
   tag?: string;
   sort?: PostSortOrder;
+  /** If true, only return featured posts. */
+  featuredOnly?: boolean;
   page: number;
   limit: number;
 }): Promise<Paginated<Post>> {
@@ -2061,7 +2071,8 @@ export async function listPosts(params: {
         post.tags.some((tag) => tag.toLowerCase().includes(q));
       const tagMatch = !t || post.tags.some((tag) => tag.toLowerCase() === t);
       const approvedOnly = post.reviewStatus === "approved";
-      return queryMatch && tagMatch && approvedOnly;
+      const featuredFilter = !params.featuredOnly || !!post.featuredAt;
+      return queryMatch && tagMatch && approvedOnly && featuredFilter;
     });
 
     if (sortBy === "hot") {
@@ -2073,6 +2084,13 @@ export async function listPosts(params: {
         const scoreA = commentCounts.get(a.id) ?? 0;
         const scoreB = commentCounts.get(b.id) ?? 0;
         if (scoreB !== scoreA) return scoreB - scoreA;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    } else if (sortBy === "featured") {
+      filtered.sort((a, b) => {
+        const fa = a.featuredAt ? new Date(a.featuredAt).getTime() : 0;
+        const fb = b.featuredAt ? new Date(b.featuredAt).getTime() : 0;
+        if (fb !== fa) return fb - fa;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
     }
@@ -2098,10 +2116,32 @@ export async function listPosts(params: {
             },
           }
         : {},
+      params.featuredOnly ? { featuredAt: { not: null } } : {},
     ],
   };
 
   const prisma = await getPrisma();
+
+  if (sortBy === "featured") {
+    const [items, total] = await Promise.all([
+      prisma.post.findMany({
+        where,
+        orderBy: [{ featuredAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+        skip: (params.page - 1) * params.limit,
+        take: params.limit,
+      }),
+      prisma.post.count({ where }),
+    ]);
+    return {
+      items: items.map(toPostDto),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
 
   if (sortBy === "hot") {
     const total = await prisma.post.count({ where });
@@ -2569,6 +2609,304 @@ export async function deleteProject(params: {
     throw new Error("FORBIDDEN_NOT_CREATOR");
   }
   await prisma.project.delete({ where: { slug: params.projectSlug } });
+}
+
+// ─── P2: 精华机制 ───────────────────────────────────────
+
+export async function featurePost(params: {
+  postId: string;
+  adminUserId: string;
+}): Promise<Post> {
+  if (useMockData) {
+    const post = mockPosts.find((p) => p.id === params.postId);
+    if (!post) throw new Error("POST_NOT_FOUND");
+    if (post.reviewStatus !== "approved") throw new Error("POST_NOT_APPROVED");
+    post.featuredAt = new Date().toISOString();
+    post.featuredBy = params.adminUserId;
+    return { ...post };
+  }
+
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({ where: { id: params.postId } });
+  if (!post) throw new Error("POST_NOT_FOUND");
+  if (post.reviewStatus !== "approved") throw new Error("POST_NOT_APPROVED");
+  const updated = await prisma.post.update({
+    where: { id: params.postId },
+    data: { featuredAt: new Date(), featuredBy: params.adminUserId },
+  });
+  return toPostDto(updated);
+}
+
+export async function unfeaturePost(params: {
+  postId: string;
+}): Promise<Post> {
+  if (useMockData) {
+    const post = mockPosts.find((p) => p.id === params.postId);
+    if (!post) throw new Error("POST_NOT_FOUND");
+    post.featuredAt = undefined;
+    post.featuredBy = undefined;
+    return { ...post };
+  }
+
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({ where: { id: params.postId } });
+  if (!post) throw new Error("POST_NOT_FOUND");
+  const updated = await prisma.post.update({
+    where: { id: params.postId },
+    data: { featuredAt: null, featuredBy: null },
+  });
+  return toPostDto(updated);
+}
+
+// ─── P2: 挑战赛活动页 ──────────────────────────────────
+
+function toChallengeDto(c: {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  rules: string | null;
+  tags: string[];
+  status: string;
+  startDate: Date;
+  endDate: Date;
+  createdByUserId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): Challenge {
+  return {
+    id: c.id,
+    slug: c.slug,
+    title: c.title,
+    description: c.description,
+    rules: c.rules ?? undefined,
+    tags: c.tags,
+    status: c.status as ChallengeStatus,
+    startDate: c.startDate.toISOString(),
+    endDate: c.endDate.toISOString(),
+    createdByUserId: c.createdByUserId,
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
+  };
+}
+
+export async function listChallenges(params: {
+  status?: ChallengeStatus;
+  page: number;
+  limit: number;
+}): Promise<Paginated<Challenge>> {
+  if (useMockData) {
+    const filtered = mockChallenges.filter((ch) => {
+      return !params.status || ch.status === params.status;
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+
+  const prisma = await getPrisma();
+  const where = params.status ? { status: params.status } : {};
+  const [items, total] = await Promise.all([
+    prisma.challenge.findMany({
+      where,
+      orderBy: { startDate: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.challenge.count({ where }),
+  ]);
+  return {
+    items: items.map(toChallengeDto),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function getChallengeBySlug(slug: string): Promise<Challenge | null> {
+  if (useMockData) {
+    const ch = mockChallenges.find((c) => c.slug === slug);
+    return ch ?? null;
+  }
+
+  const prisma = await getPrisma();
+  const ch = await prisma.challenge.findUnique({ where: { slug } });
+  return ch ? toChallengeDto(ch) : null;
+}
+
+export async function createChallenge(input: {
+  title: string;
+  description: string;
+  rules?: string;
+  tags: string[];
+  status?: ChallengeStatus;
+  startDate: string;
+  endDate: string;
+  createdByUserId: string;
+}): Promise<Challenge> {
+  const slug = input.title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+  if (useMockData) {
+    const ch: Challenge = {
+      id: `ch_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      slug: `${slug}-${Date.now()}`,
+      title: input.title,
+      description: input.description,
+      rules: input.rules,
+      tags: input.tags,
+      status: input.status ?? "draft",
+      startDate: input.startDate,
+      endDate: input.endDate,
+      createdByUserId: input.createdByUserId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    mockChallenges.unshift(ch);
+    return ch;
+  }
+
+  const prisma = await getPrisma();
+  const ch = await prisma.challenge.create({
+    data: {
+      slug: `${slug}-${Date.now()}`,
+      title: input.title,
+      description: input.description,
+      rules: input.rules ?? null,
+      tags: input.tags,
+      status: input.status ?? "draft",
+      startDate: new Date(input.startDate),
+      endDate: new Date(input.endDate),
+      createdByUserId: input.createdByUserId,
+    },
+  });
+  return toChallengeDto(ch);
+}
+
+export async function updateChallenge(params: {
+  challengeSlug: string;
+  title?: string;
+  description?: string;
+  rules?: string | null;
+  tags?: string[];
+  status?: ChallengeStatus;
+  startDate?: string;
+  endDate?: string;
+}): Promise<Challenge> {
+  if (useMockData) {
+    const ch = mockChallenges.find((c) => c.slug === params.challengeSlug);
+    if (!ch) throw new Error("CHALLENGE_NOT_FOUND");
+    if (params.title !== undefined) ch.title = params.title;
+    if (params.description !== undefined) ch.description = params.description;
+    if (params.rules !== undefined) ch.rules = params.rules ?? undefined;
+    if (params.tags !== undefined) ch.tags = params.tags;
+    if (params.status !== undefined) ch.status = params.status;
+    if (params.startDate !== undefined) ch.startDate = params.startDate;
+    if (params.endDate !== undefined) ch.endDate = params.endDate;
+    ch.updatedAt = new Date().toISOString();
+    return { ...ch };
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.challenge.findUnique({ where: { slug: params.challengeSlug } });
+  if (!existing) throw new Error("CHALLENGE_NOT_FOUND");
+  const data: Record<string, unknown> = {};
+  if (params.title !== undefined) data.title = params.title;
+  if (params.description !== undefined) data.description = params.description;
+  if (params.rules !== undefined) data.rules = params.rules;
+  if (params.tags !== undefined) data.tags = params.tags;
+  if (params.status !== undefined) data.status = params.status;
+  if (params.startDate !== undefined) data.startDate = new Date(params.startDate);
+  if (params.endDate !== undefined) data.endDate = new Date(params.endDate);
+  const updated = await prisma.challenge.update({
+    where: { slug: params.challengeSlug },
+    data,
+  });
+  return toChallengeDto(updated);
+}
+
+export async function deleteChallenge(slug: string): Promise<void> {
+  if (useMockData) {
+    const idx = mockChallenges.findIndex((c) => c.slug === slug);
+    if (idx === -1) throw new Error("CHALLENGE_NOT_FOUND");
+    mockChallenges.splice(idx, 1);
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const ch = await prisma.challenge.findUnique({ where: { slug } });
+  if (!ch) throw new Error("CHALLENGE_NOT_FOUND");
+  await prisma.challenge.delete({ where: { slug } });
+}
+
+// ─── P2: 创作者成长面板 ─────────────────────────────────
+
+export async function getCreatorGrowthStats(creatorSlug: string): Promise<CreatorGrowthStats | null> {
+  if (useMockData) {
+    const creator = mockCreators.find((c) => c.slug === creatorSlug);
+    if (!creator) return null;
+
+    const postCount = mockPosts.filter((p) => p.authorId === creator.userId && p.reviewStatus === "approved").length;
+    const commentCount = mockComments.filter((c) => c.authorId === creator.userId).length;
+    const projectCount = mockProjects.filter((p) => p.creatorId === creator.id).length;
+    const featuredPostCount = mockPosts.filter((p) => p.authorId === creator.userId && !!p.featuredAt).length;
+    const collaborationIntentCount = mockCollaborationIntents.filter(
+      (i) => mockProjects.some((p) => p.id === i.projectId && p.creatorId === creator.id)
+    ).length;
+    const authorPostIds = new Set(
+      mockPosts.filter((p) => p.authorId === creator.userId).map((p) => p.id)
+    );
+    const receivedCommentCount = mockComments.filter((c) => authorPostIds.has(c.postId)).length;
+
+    return {
+      creatorId: creator.id,
+      slug: creator.slug,
+      headline: creator.headline,
+      postCount,
+      commentCount,
+      projectCount,
+      featuredPostCount,
+      collaborationIntentCount,
+      receivedCommentCount,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const creator = await prisma.creatorProfile.findUnique({
+    where: { slug: creatorSlug },
+    select: { id: true, slug: true, headline: true, userId: true },
+  });
+  if (!creator) return null;
+
+  const [postCount, commentCount, projectCount, featuredPostCount, collaborationIntentCount, receivedCommentCount] =
+    await Promise.all([
+      prisma.post.count({ where: { authorId: creator.userId, reviewStatus: "approved" } }),
+      prisma.comment.count({ where: { authorId: creator.userId } }),
+      prisma.project.count({ where: { creatorId: creator.id } }),
+      prisma.post.count({ where: { authorId: creator.userId, featuredAt: { not: null } } }),
+      prisma.collaborationIntent.count({
+        where: { project: { creatorId: creator.id } },
+      }),
+      prisma.comment.count({
+        where: { post: { authorId: creator.userId } },
+      }),
+    ]);
+
+  return {
+    creatorId: creator.id,
+    slug: creator.slug,
+    headline: creator.headline,
+    postCount,
+    commentCount,
+    projectCount,
+    featuredPostCount,
+    collaborationIntentCount,
+    receivedCommentCount,
+  };
 }
 
 export async function listProjectCollaborationIntents(params: {

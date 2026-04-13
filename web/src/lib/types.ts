@@ -54,7 +54,42 @@ export interface Post {
   moderationNote?: string;
   reviewedAt?: string;
   reviewedBy?: string;
+  /** P2: non-null when marked as 精华 by an admin. */
+  featuredAt?: string;
+  featuredBy?: string;
   createdAt: string;
+}
+
+export type ChallengeStatus = "draft" | "active" | "closed";
+
+/** P2: 挑战赛/活动 */
+export interface Challenge {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  rules?: string;
+  tags: string[];
+  status: ChallengeStatus;
+  startDate: string;
+  endDate: string;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** P2: 创作者成长面板数据 */
+export interface CreatorGrowthStats {
+  creatorId: string;
+  slug: string;
+  headline: string;
+  postCount: number;
+  commentCount: number;
+  projectCount: number;
+  featuredPostCount: number;
+  collaborationIntentCount: number;
+  /** Comment count on all of this creator's posts */
+  receivedCommentCount: number;
 }
 
 export interface Comment {
