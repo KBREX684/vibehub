@@ -2,102 +2,127 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { Star, GitFork, Zap, Users } from "lucide-react";
 import type { Project } from "@/lib/types";
-import { Sparkles, ExternalLink } from "lucide-react";
 
-export function ProjectCard({ project, featured }: { project: Project; featured?: boolean }) {
+const STATUS_COLORS: Record<string, string> = {
+  idea: "tag-violet",
+  building: "tag-blue",
+  launched: "tag-green",
+  paused: "tag",
+};
+
+export function ProjectCard({
+  project,
+  featured,
+}: {
+  project: Project;
+  featured?: boolean;
+}) {
   return (
-    <motion.article 
-      className="relative flex flex-col h-full bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] rounded-[24px] p-6 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] overflow-hidden cursor-pointer"
-      whileHover={{ y: -4, scale: 1.01, boxShadow: "0 16px 48px -8px rgba(0,0,0,0.08)" }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-    >
-      {/* Featured Glow Background */}
+    <article className="relative group card hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
       {featured && (
-        <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#f5ebd4] rounded-full blur-[64px] opacity-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-featured-subtle)] to-transparent pointer-events-none rounded-[var(--radius-lg)]" />
       )}
 
-      <Link href={`/projects/${project.slug}`} className="absolute inset-0 z-10" aria-label={`View ${project.title}`} />
+      <Link
+        href={`/projects/${project.slug}`}
+        className="absolute inset-0 z-10"
+        aria-label={`View ${project.title}`}
+      />
 
-      <div className="relative z-20 flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-3">
           {project.logoUrl ? (
-            <div className="w-12 h-12 rounded-[12px] overflow-hidden bg-black/5 flex-shrink-0">
-              <Image 
-                src={project.logoUrl} 
-                alt={`${project.title} logo`} 
-                width={48} 
-                height={48} 
+            <div className="w-10 h-10 rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-bg-elevated)] flex-shrink-0 border border-[var(--color-border)]">
+              <Image
+                src={project.logoUrl}
+                alt={`${project.title} logo`}
+                width={40}
+                height={40}
                 unoptimized
                 className="w-full h-full object-cover"
               />
             </div>
           ) : (
-            <div className="w-12 h-12 rounded-[12px] bg-black/5 flex items-center justify-center flex-shrink-0 text-xl font-bold text-[var(--color-text-tertiary)]">
+            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center flex-shrink-0 text-base font-bold text-[var(--color-primary-hover)]">
               {project.title.charAt(0)}
             </div>
           )}
-          <div>
-            <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text-primary)] leading-tight m-0">
-              {project.title}
-            </h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">
-                {project.status}
-              </span>
-              {featured && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#f5ebd4] bg-[#f5ebd4]/10 px-2 py-0.5 rounded-full">
-                  <Sparkles className="w-3 h-3" /> Featured
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] leading-tight truncate">
+                {project.title}
+              </h3>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {featured && (
+                  <span className="tag tag-yellow flex items-center gap-1">
+                    <Zap className="w-2.5 h-2.5" />
+                    Featured
+                  </span>
+                )}
+                <span className={`tag ${STATUS_COLORS[project.status] ?? "tag"} capitalize`}>
+                  {project.status}
                 </span>
-              )}
+              </div>
             </div>
+            {project.team && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Users className="w-3 h-3 text-[var(--color-text-muted)]" />
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  {project.team.name}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* One-liner */}
+        <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed mb-3">
+          {project.oneLiner}
+        </p>
+
+        {/* Screenshot */}
+        {project.screenshots?.[0] && (
+          <div className="w-full h-28 mb-3 rounded-[var(--radius-sm)] overflow-hidden bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+            <Image
+              src={project.screenshots[0]}
+              alt="Project preview"
+              width={400}
+              height={112}
+              unoptimized
+              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+            />
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-subtle)]">
+          <div className="tag-row">
+            {project.tags.slice(0, 3).map((tag) => (
+              <span key={tag} className="tag">
+                {tag}
+              </span>
+            ))}
+            {project.tags.length > 3 && (
+              <span className="text-xs text-[var(--color-text-muted)]">
+                +{project.tags.length - 3}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
+            <span className="flex items-center gap-1">
+              <Star className="w-3 h-3" />
+              {project.techStack?.length ?? 0}
+            </span>
+            <span className="flex items-center gap-1">
+              <GitFork className="w-3 h-3" />
+              {project.screenshots?.length ?? 0}
+            </span>
           </div>
         </div>
       </div>
-
-      <p className="text-[0.95rem] text-[var(--color-text-secondary)] leading-[1.47] mb-6 flex-grow line-clamp-2">
-        {project.oneLiner}
-      </p>
-
-      {project.screenshots && project.screenshots.length > 0 && (
-        <div className="w-full h-32 mb-6 rounded-[16px] overflow-hidden bg-black/5">
-          <Image 
-            src={project.screenshots[0]} 
-            alt="Project preview" 
-            width={400} 
-            height={200}
-            unoptimized
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-
-      <div className="mt-auto pt-4 flex items-center justify-between border-t border-black/5 relative z-20">
-        <div className="flex flex-wrap gap-1.5">
-          {project.tags.slice(0, 2).map((tag) => (
-            <span key={`${project.id}-${tag}`} className="text-[11px] font-medium px-2.5 py-1 bg-black/5 text-[var(--color-text-secondary)] rounded-[980px]">
-              {tag}
-            </span>
-          ))}
-          {project.tags.length > 2 && (
-            <span className="text-[11px] font-medium px-2 py-1 text-[var(--color-text-tertiary)]">
-              +{project.tags.length - 2}
-            </span>
-          )}
-        </div>
-
-        {project.team && (
-          <Link 
-            href={`/teams/${encodeURIComponent(project.team.slug)}`}
-            className="text-[12px] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-accent-apple)] transition-colors flex items-center gap-1 z-20 relative"
-          >
-            {project.team.name}
-            <ExternalLink className="w-3 h-3" />
-          </Link>
-        )}
-      </div>
-    </motion.article>
+    </article>
   );
 }
