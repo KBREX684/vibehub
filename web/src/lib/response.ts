@@ -20,7 +20,7 @@ export function apiSuccess<T>(data: T, status = 200) {
   );
 }
 
-export function apiError(payload: ErrorPayload, status = 400) {
+export function apiError(payload: ErrorPayload, status = 400, headers?: Record<string, string>) {
   return NextResponse.json(
     {
       error: payload,
@@ -29,6 +29,6 @@ export function apiError(payload: ErrorPayload, status = 400) {
         timestamp: new Date().toISOString(),
       },
     },
-    { status }
+    { status, headers }
   );
 }

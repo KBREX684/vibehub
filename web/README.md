@@ -4,7 +4,7 @@ Next.js full-stack implementation for VibeHub.
 
 **P3 is officially closed** (2026-04-13): team collaboration slices P3-1…P3-7 plus status-column task board are frozen on `main`. Deferred: in-app team notifications, finer task RBAC, billing/subscriptions — see `docs/03_项目日志.md`.
 
-**P4-1 / P4-2 (2026-04-13)**: User **API keys** with **scopes** (`ApiKey.scopes` JSON); manage at **`/settings/api-keys`**. **`Authorization: Bearer <vh_...>`** works on scoped **GET** routes (projects, teams, team tasks/milestones, creators, collection-topics, `me/teams`, MCP `search_projects` / `search_creators` / `get_project_detail`) when the key includes the route’s required scope. **Cookie session** still grants full access on those routes. **Breaking:** unauthenticated anonymous `GET` on those paths now returns **401** (browser pages keep working via session cookie).
+**P4-1 / P4-2 / P4-3 (2026-04-13)**: User **API keys** with **scopes**; **`/settings/api-keys`** supports **scope checkboxes** on create. **`Authorization: Bearer`** is **rate-limited** per key hash + client IP (`API_KEY_RATE_LIMIT_PER_MINUTE`, default 120/min; 429 + `Retry-After`). **Anonymous reads** are restored for `GET /api/v1/projects`, `GET /api/v1/projects/:slug`, teams, creators, collection-topics (same as pre–P4-2). Stable no-auth mirrors live under **`/api/v1/public/...`** for crawlers. **`GET /api/v1/me/teams`** and team **tasks/milestones** list still require cookie or scoped Bearer; MCP GET tools require cookie or scoped Bearer.
 
 Current scope:
 - P1: discussions, project gallery, creator pages, MCP v1 read tools
@@ -130,8 +130,17 @@ Runs `lint + test + build`.
   - `GET /api/v1/projects/:slug/collaboration-intents?status=approved|pending|rejected|all`
   - `POST /api/v1/projects/:slug/collaboration-intents`
 - Topics:
-  - `GET /api/v1/collection-topics`
+  - `GET /api/v1/collection-topics` (anonymous or cookie or Bearer with `read:topics:list`)
   - `GET /api/v1/collection-topics/:slug`
+- Public mirrors (P4-3, **no auth**, same payloads as canonical GETs):
+  - `GET /api/v1/public/projects?...`
+  - `GET /api/v1/public/projects/:slug`
+  - `GET /api/v1/public/teams?...`
+  - `GET /api/v1/public/teams/:slug`
+  - `GET /api/v1/public/creators?...`
+  - `GET /api/v1/public/creators/:slug`
+  - `GET /api/v1/public/collection-topics`
+  - `GET /api/v1/public/collection-topics/:slug`
 - Leaderboards:
   - `GET /api/v1/leaderboards/discussions?limit=10`
   - `GET /api/v1/leaderboards/projects?limit=10`
@@ -140,13 +149,13 @@ Runs `lint + test + build`.
 - Metrics:
   - `GET /api/v1/metrics/collaboration-intent-funnel`
 - Discovery filters:
-  - `GET /api/v1/projects?query=&tag=&tech=&status=&team=&page=&limit=` (**P4-2**: session cookie or Bearer key with scope `read:projects:list`)
-  - `GET /api/v1/projects/facets` (still public; no scope gate in P4-2)
+  - `GET /api/v1/projects?query=&tag=&tech=&status=&team=&page=&limit=` (anonymous **or** cookie **or** Bearer with `read:projects:list`; Bearer is rate-limited)
+  - `GET /api/v1/projects/facets` (still public)
 - Current user teams (for project team picker):
-  - `GET /api/v1/me/teams` (session cookie or Bearer with `read:teams:self`)
-- API keys (P4-1 + P4-2, session cookie only for manage endpoints):
+  - `GET /api/v1/me/teams` (session cookie or Bearer with `read:teams:self`; Bearer rate-limited)
+- API keys (P4-1…P4-3, session cookie only for manage endpoints):
   - `GET /api/v1/me/api-keys`
-  - `POST /api/v1/me/api-keys` body `{ "label", "scopes"? }` — response includes `key.secret` **once**; default `scopes` include all P4-2 read scopes + `read:public`
+  - `POST /api/v1/me/api-keys` body `{ "label", "scopes"? }` — response includes `key.secret` **once**; UI sends `read:public` plus checked scopes (defaults match former full read set)
   - `DELETE /api/v1/me/api-keys/:keyId`
 - Team milestones (P3-5, team members only):
   - `GET /api/v1/teams/:slug/milestones` (**P4-2**: GET also accepts Bearer with `read:team:milestones` when caller is a member)

@@ -1,8 +1,10 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
+import { checkApiKeyRateLimit } from "@/lib/api-key-rate-limit";
 import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
+import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
 import type { Role, SessionUser } from "@/lib/types";
 
@@ -113,17 +115,59 @@ function parseBearerToken(authorization: string | null): string | null {
   return m?.[1]?.trim() || null;
 }
 
+export type AuthResult =
+  | { kind: "ok"; user: SessionUser }
+  | { kind: "unauthorized" }
+  | { kind: "rate_limited"; retryAfterSeconds: number };
+
+/**
+ * After `authenticateRequest`: map to optional user for read routes.
+ * - `allowAnonymous`: missing auth yields `user: null` (public read).
+ * - Otherwise: missing auth is 401; rate limit is always 429.
+ */
+export function resolveReadAuth(
+  auth: AuthResult,
+  allowAnonymous: boolean
+):
+  | { ok: true; user: SessionUser | null }
+  | { ok: false; status: 401 | 429; retryAfterSeconds?: number } {
+  if (auth.kind === "rate_limited") {
+    return { ok: false, status: 429, retryAfterSeconds: auth.retryAfterSeconds };
+  }
+  if (auth.kind === "ok") {
+    return { ok: true, user: auth.user };
+  }
+  if (allowAnonymous) {
+    return { ok: true, user: null };
+  }
+  return { ok: false, status: 401 };
+}
+
+/** When `authenticateRequest` returned rate_limited, build the 429 response (with Retry-After). */
+export function rateLimitedResponse(retryAfterSeconds: number) {
+  return apiError(
+    {
+      code: "RATE_LIMITED",
+      message: "Too many API key requests",
+      details: { retryAfterSeconds },
+    },
+    429,
+    { "Retry-After": String(retryAfterSeconds) }
+  );
+}
+
 /**
  * Cookie session first; else `Authorization: Bearer <api-key>`.
  * When `requiredScope` is set, API key sessions must include that scope (cookie sessions always pass).
+ * Bearer path is rate-limited per key hash + client IP (429).
  */
 export async function authenticateRequest(
   request: NextRequest,
   requiredScope?: ApiKeyScope
-): Promise<SessionUser | null> {
+): Promise<AuthResult> {
   const fromRequestCookie = decodeSession(request.cookies.get(SESSION_COOKIE_KEY)?.value);
   if (fromRequestCookie) {
-    return fromRequestCookie;
+    return { kind: "ok", user: fromRequestCookie };
   }
 
   let fromNextCookies: SessionUser | null = null;
@@ -134,31 +178,37 @@ export async function authenticateRequest(
     /* Vitest / non-request context: ignore */
   }
   if (fromNextCookies) {
-    return fromNextCookies;
+    return { kind: "ok", user: fromNextCookies };
   }
 
   const token = parseBearerToken(request.headers.get("authorization"));
   if (!token) {
-    return null;
+    return { kind: "unauthorized" };
+  }
+
+  const rl = checkApiKeyRateLimit(token, request);
+  if (!rl.ok) {
+    return { kind: "rate_limited", retryAfterSeconds: rl.retryAfter };
   }
 
   try {
     const user = await getSessionUserFromApiKeyToken(token);
     if (!user) {
-      return null;
+      return { kind: "unauthorized" };
     }
     if (requiredScope && !allowApiKeyScope(user, requiredScope)) {
-      return null;
+      return { kind: "unauthorized" };
     }
-    return user;
+    return { kind: "ok", user };
   } catch {
-    return null;
+    return { kind: "unauthorized" };
   }
 }
 
 /** Same as `authenticateRequest` without a scope gate (caller enforces scopes itself if needed). */
 export async function getSessionUserFromRequest(request: NextRequest): Promise<SessionUser | null> {
-  return authenticateRequest(request);
+  const r = await authenticateRequest(request);
+  return r.kind === "ok" ? r.user : null;
 }
 
 export const AuthConstants = {

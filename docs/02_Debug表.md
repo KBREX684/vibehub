@@ -72,6 +72,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P4-2-001 | P4 | `ApiKey.scopes` + gated GETs | Key 无粒度；公开列表无鉴权 | 未建模 | JSON scopes + per-route `authenticateRequest` scope + MCP parity | Verified | `npm run check` |
 
+## P4-3 Feature (2026-04-13)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P4-3-001 | P4 | Rate limit + public routes | P4-2 匿名断裂；Key 无节流 | 设计缺口 | In-memory RL + `resolveReadAuth` + `/public/*` + scope UI | Verified | `npm run check` |
+
 ## P3 Formal Closure (2026-04-13)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

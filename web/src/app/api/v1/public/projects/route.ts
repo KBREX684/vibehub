@@ -1,5 +1,3 @@
-import type { NextRequest } from "next/server";
-import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { listProjects } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
@@ -14,16 +12,8 @@ function parseStatus(raw: string | null): ProjectStatus | undefined {
   return PROJECT_STATUSES.includes(raw as ProjectStatus) ? (raw as ProjectStatus) : undefined;
 }
 
-export async function GET(request: NextRequest) {
-  const auth = await authenticateRequest(request, "read:projects:list");
-  const gate = resolveReadAuth(auth, true);
-  if (!gate.ok) {
-    if (gate.status === 429) {
-      return rateLimitedResponse(gate.retryAfterSeconds ?? 60);
-    }
-    return apiError({ code: "UNAUTHORIZED", message: "API key with read:projects:list required" }, 401);
-  }
-
+/** Anonymous-safe project list (P4-3). Same query params as `/api/v1/projects` GET. */
+export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
@@ -44,17 +34,12 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await listProjects({ query, tag, tech, status, team, page, limit });
-
-    return apiSuccess({
-      tool: "search_projects",
-      input: { query, tag, tech, status, team, page, limit },
-      output: result,
-    });
+    return apiSuccess(result);
   } catch (error) {
     return apiError(
       {
-        code: "MCP_SEARCH_PROJECTS_FAILED",
-        message: "Failed to execute MCP tool search_projects",
+        code: "PUBLIC_PROJECTS_LIST_FAILED",
+        message: "Failed to list projects",
         details: error instanceof Error ? error.message : String(error),
       },
       500

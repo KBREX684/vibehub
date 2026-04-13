@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { NextRequest } from "next/server";
-import { authenticateRequest, getSessionUserFromCookie } from "@/lib/auth";
+import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { createTeamMilestone, listTeamMilestones } from "@/lib/repository";
 
@@ -16,10 +16,15 @@ interface Params {
 }
 
 export async function GET(request: NextRequest, { params }: Params) {
-  const session = await authenticateRequest(request, "read:team:milestones");
-  if (!session) {
+  const auth = await authenticateRequest(request, "read:team:milestones");
+  const gate = resolveReadAuth(auth, false);
+  if (!gate.ok) {
+    if (gate.status === 429) {
+      return rateLimitedResponse(gate.retryAfterSeconds ?? 60);
+    }
     return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:team:milestones required" }, 401);
   }
+  const session = gate.user!;
 
   try {
     const { slug } = await params;

@@ -1,8 +1,14 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { DEFAULT_API_KEY_SCOPES } from "@/lib/api-key-scopes";
+import {
+  API_KEY_SCOPE_READ_PUBLIC,
+  API_KEY_SCOPES,
+  DEFAULT_API_KEY_SCOPES,
+} from "@/lib/api-key-scopes";
 import type { ApiKeyCreated, ApiKeySummary } from "@/lib/types";
+
+const OPTIONAL_SCOPES = API_KEY_SCOPES.filter((s) => s !== API_KEY_SCOPE_READ_PUBLIC);
 
 interface Props {
   currentUserId: string | null;
@@ -14,6 +20,15 @@ export function ApiKeysPanel({ currentUserId }: Props) {
   const [msg, setMsg] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [lastSecret, setLastSecret] = useState<string | null>(null);
+  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    for (const x of DEFAULT_API_KEY_SCOPES) {
+      if (x !== API_KEY_SCOPE_READ_PUBLIC) {
+        s.add(x);
+      }
+    }
+    return s;
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,7 +64,10 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newLabel.trim(), scopes: [...DEFAULT_API_KEY_SCOPES] }),
+        body: JSON.stringify({
+          label: newLabel.trim(),
+          scopes: [API_KEY_SCOPE_READ_PUBLIC, ...selectedScopes],
+        }),
       });
       const json = (await res.json()) as { data?: { key?: ApiKeyCreated }; error?: { message?: string } };
       if (!res.ok) {
@@ -98,10 +116,11 @@ export function ApiKeysPanel({ currentUserId }: Props) {
 
   return (
     <div className="card">
-      <h2>API Keys（P4-1 + P4-2）</h2>
+      <h2>API Keys（P4-1 + P4-2 + P4-3）</h2>
       <p className="muted small">
-        用于脚本或集成；密钥带 <strong>scopes</strong>（当前默认包含公开读、团队列表/详情、任务/里程碑、项目、创作者、专题等）。若干{" "}
-        <code>GET /api/v1/...</code> 与 MCP 搜索在 Bearer 下会校验对应 scope。密钥仅创建时显示一次。
+        用于脚本或集成；创建时可勾选 <strong>scopes</strong>（必选 <code>read:public</code>）。Bearer 访问受 per-key 速率限制（见{" "}
+        <code>API_KEY_RATE_LIMIT_PER_MINUTE</code>
+        ）。匿名爬虫请使用 <code>/api/v1/public/...</code> 镜像端点。密钥仅创建时显示一次。
       </p>
 
       <form onSubmit={(ev) => void createKey(ev)} className="discover-filter-grid" style={{ marginTop: "1rem" }}>
@@ -109,6 +128,37 @@ export function ApiKeysPanel({ currentUserId }: Props) {
           <span>标签</span>
           <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} required maxLength={80} />
         </label>
+        <fieldset className="discover-field" style={{ gridColumn: "1 / -1", border: "1px solid var(--line)", borderRadius: 10, padding: "0.75rem" }}>
+          <legend className="muted small" style={{ padding: "0 0.35rem" }}>
+            Scopes（除 read:public 外可取消勾选）
+          </legend>
+          <label className="muted small" style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: 6 }}>
+            <input type="checkbox" checked disabled />
+            <code>{API_KEY_SCOPE_READ_PUBLIC}</code>（必选）
+          </label>
+          <div className="discover-filter-grid" style={{ marginTop: 4 }}>
+            {OPTIONAL_SCOPES.map((s) => (
+              <label key={s} className="muted small" style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                <input
+                  type="checkbox"
+                  checked={selectedScopes.has(s)}
+                  onChange={() => {
+                    setSelectedScopes((prev) => {
+                      const n = new Set(prev);
+                      if (n.has(s)) {
+                        n.delete(s);
+                      } else {
+                        n.add(s);
+                      }
+                      return n;
+                    });
+                  }}
+                />
+                <code>{s}</code>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="discover-actions">
           <button type="submit" className="button">
             生成密钥

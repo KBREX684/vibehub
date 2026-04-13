@@ -1,13 +1,17 @@
 import type { NextRequest } from "next/server";
-import { authenticateRequest } from "@/lib/auth";
+import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { listTeamsForUser } from "@/lib/repository";
 
 export async function GET(request: NextRequest) {
-  const session = await authenticateRequest(request, "read:teams:self");
-  if (!session) {
-    return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
+  const auth = await authenticateRequest(request, "read:teams:self");
+  if (auth.kind === "rate_limited") {
+    return rateLimitedResponse(auth.retryAfterSeconds);
   }
+  if (auth.kind !== "ok") {
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:teams:self required" }, 401);
+  }
+  const session = auth.user;
 
   try {
     const teams = await listTeamsForUser(session.userId);

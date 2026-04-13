@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { NextRequest } from "next/server";
-import { authenticateRequest, getSessionUserFromCookie } from "@/lib/auth";
+import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { createTeamTask, listTeamTasks } from "@/lib/repository";
 import type { TeamTaskStatus } from "@/lib/types";
@@ -19,10 +19,15 @@ interface Params {
 }
 
 export async function GET(request: NextRequest, { params }: Params) {
-  const session = await authenticateRequest(request, "read:team:tasks");
-  if (!session) {
+  const auth = await authenticateRequest(request, "read:team:tasks");
+  const gate = resolveReadAuth(auth, false);
+  if (!gate.ok) {
+    if (gate.status === 429) {
+      return rateLimitedResponse(gate.retryAfterSeconds ?? 60);
+    }
     return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:team:tasks required" }, 401);
   }
+  const session = gate.user!;
 
   try {
     const { slug } = await params;
