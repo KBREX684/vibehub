@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Post } from "@/lib/types";
+import { MessageSquare, Clock } from "lucide-react";
 
 export function PostCard({
   post,
@@ -15,25 +16,64 @@ export function PostCard({
       ? `${post.body.slice(0, truncateBody).trim()}…`
       : post.body;
 
-  return (
-    <article className="card" id={post.slug}>
-      {detailHref ? (
-        <h3>
-          <Link href={detailHref} className="inline-link">
-            {post.title}
-          </Link>
-        </h3>
-      ) : (
-        <h3>{post.title}</h3>
-      )}
-      <p>{body}</p>
-      <div className="tag-row">
-        {post.tags.map((tag) => (
-          <span key={`${post.id}-${tag}`} className="tag">
-            #{tag}
-          </span>
-        ))}
+  const date = new Date(post.createdAt).toLocaleDateString("zh-CN", {
+    month: "short",
+    day: "numeric",
+  });
+
+  const CardContent = (
+    <article 
+      className="bg-white border border-stone-200 rounded-2xl p-6 h-full flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+      id={post.slug}
+    >
+      <div className="flex items-center gap-3 text-xs font-medium text-stone-500 mb-3">
+        <span className="flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5" />
+          {date}
+        </span>
+      </div>
+      
+      <h3 className="text-xl font-bold text-stone-900 mb-3 leading-snug line-clamp-2">
+        {post.title}
+      </h3>
+      
+      <p className="text-stone-600 text-sm leading-relaxed flex-grow line-clamp-3 mb-5">
+        {body}
+      </p>
+      
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-4 border-t border-stone-100">
+        <div className="flex flex-wrap gap-2">
+          {post.tags.slice(0, 3).map((tag) => (
+            <span 
+              key={`${post.id}-${tag}`} 
+              className="text-xs font-medium px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full"
+            >
+              #{tag}
+            </span>
+          ))}
+          {post.tags.length > 3 && (
+            <span className="text-xs font-medium px-2 py-1 text-stone-400">
+              +{post.tags.length - 3}
+            </span>
+          )}
+        </div>
+        
+        {/* Placeholder for comment count if we had it in the Post object, 
+            but we can just show an icon for now */}
+        <div className="flex items-center gap-1.5 text-stone-400">
+          <MessageSquare className="w-4 h-4" />
+        </div>
       </div>
     </article>
   );
+
+  if (detailHref) {
+    return (
+      <Link href={detailHref} className="block h-full group">
+        {CardContent}
+      </Link>
+    );
+  }
+
+  return CardContent;
 }
