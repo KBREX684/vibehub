@@ -356,21 +356,23 @@ model AuditLog {
 }
 
 model CollaborationIntent {
-  id          String                  @id @default(cuid())
-  projectId   String
-  applicantId String
-  intentType  CollaborationIntentType
-  message     String
-  contact     String?
-  status      ReviewStatus            @default(pending)
-  reviewNote  String?
-  reviewedAt  DateTime?
-  reviewedBy  String?
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
-  project     Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  applicant   User                    @relation("CollaborationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
-  reviewer    User?                   @relation("CollaborationReviewer", fields: [reviewedBy], references: [id])
+  id                         String                  @id @default(cuid())
+  projectId                  String
+  applicantId                String
+  intentType                 CollaborationIntentType
+  message                    String
+  contact                    String?
+  status                     ReviewStatus            @default(pending)
+  reviewNote                 String?
+  reviewedAt                 DateTime?
+  reviewedBy                 String?
+  /// T-4: true when intent led to a TeamMembership
+  convertedToTeamMembership  Boolean                 @default(false)
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  project                    Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  applicant                  User                    @relation("CollaborationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  reviewer                   User?                   @relation("CollaborationReviewer", fields: [reviewedBy], references: [id])
 
   @@index([projectId])
   @@index([applicantId])
@@ -404,19 +406,26 @@ model WeeklyLeaderboardRow {
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  name        String
-  mission     String?
-  ownerUserId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  owner       User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
-  memberships TeamMembership[]
-  joinRequests TeamJoinRequest[]
-  projects    Project[]
-  tasks       TeamTask[]
-  milestones  TeamMilestone[]
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  mission       String?
+  ownerUserId   String
+  /// T-1: external chat links (optional)
+  discordUrl    String?
+  telegramUrl   String?
+  slackUrl      String?
+  /// T-3: GitHub org or repo URL for the team
+  githubOrgUrl  String?
+  githubRepoUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  owner         User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  memberships   TeamMembership[]
+  joinRequests  TeamJoinRequest[]
+  projects      Project[]
+  tasks         TeamTask[]
+  milestones    TeamMilestone[]
 
   @@index([ownerUserId])
 }
@@ -483,6 +492,10 @@ model TeamMilestone {
   targetDate        DateTime
   completed         Boolean  @default(false)
   sortOrder         Int      @default(0)
+  /// T-2: "team_only" | "public" visibility
+  visibility        String   @default("team_only")
+  /// T-2: 0-100 progress percentage
+  progress          Int      @default(0)
   createdByUserId   String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -493,4 +506,5 @@ model TeamMilestone {
   @@index([teamId])
   @@index([teamId, completed])
   @@index([teamId, sortOrder])
+  @@index([teamId, visibility])
 }

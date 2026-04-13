@@ -140,6 +140,8 @@ export interface CollaborationIntent {
   reviewNote?: string;
   reviewedAt?: string;
   reviewedBy?: string;
+  /** T-4: tracks whether this intent was converted to a team membership */
+  convertedToTeamMembership: boolean;
   createdAt: string;
 }
 
@@ -294,6 +296,13 @@ export interface TeamSummary {
   ownerUserId: string;
   memberCount: number;
   projectCount: number;
+  /** T-1: external chat links */
+  discordUrl?: string;
+  telegramUrl?: string;
+  slackUrl?: string;
+  /** T-3: GitHub integration */
+  githubOrgUrl?: string;
+  githubRepoUrl?: string;
   createdAt: string;
 }
 
@@ -354,6 +363,10 @@ export interface TeamMilestone {
   targetDate: string;
   completed: boolean;
   sortOrder: number;
+  /** T-2: "team_only" | "public" */
+  visibility: "team_only" | "public";
+  /** T-2: 0–100 progress percentage */
+  progress: number;
   createdByUserId: string;
   createdByName: string;
   createdAt: string;

@@ -314,6 +314,7 @@ function toCollaborationIntentDto(item: {
   reviewNote: string | null;
   reviewedAt: Date | null;
   reviewedBy: string | null;
+  convertedToTeamMembership?: boolean;
   createdAt: Date;
 }): CollaborationIntent {
   const intentType: CollaborationIntentType = item.intentType === "recruit" ? "recruit" : "join";
@@ -329,6 +330,7 @@ function toCollaborationIntentDto(item: {
     reviewNote: item.reviewNote ?? undefined,
     reviewedAt: item.reviewedAt?.toISOString(),
     reviewedBy: item.reviewedBy ?? undefined,
+    convertedToTeamMembership: item.convertedToTeamMembership ?? false,
     createdAt: item.createdAt.toISOString(),
   };
 }
@@ -1612,6 +1614,8 @@ function mockTeamMilestoneToDto(row: {
   targetDate: string;
   completed: boolean;
   sortOrder: number;
+  visibility?: "team_only" | "public";
+  progress?: number;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -1624,6 +1628,8 @@ function mockTeamMilestoneToDto(row: {
     targetDate: row.targetDate,
     completed: row.completed,
     sortOrder: row.sortOrder,
+    visibility: row.visibility ?? "team_only",
+    progress: row.progress ?? 0,
     createdByUserId: row.createdByUserId,
     createdByName: userNameById(row.createdByUserId),
     createdAt: row.createdAt,
@@ -1668,6 +1674,43 @@ export async function listTeamMilestones(params: { teamSlug: string; viewerUserI
     targetDate: r.targetDate.toISOString(),
     completed: r.completed,
     sortOrder: r.sortOrder,
+    visibility: (r.visibility === "public" ? "public" : "team_only") as "team_only" | "public",
+    progress: r.progress,
+    createdByUserId: r.createdByUserId,
+    createdByName: r.createdBy.name,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  }));
+}
+
+export async function listPublicMilestonesForProject(projectId: string): Promise<TeamMilestone[]> {
+  if (useMockData) {
+    // Find team linked to this project
+    const project = mockProjects.find((p) => p.id === projectId);
+    if (!project?.teamId) return [];
+    return mockTeamMilestones
+      .filter((m) => m.teamId === project.teamId && m.visibility === "public")
+      .map(mockTeamMilestoneToDto)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+  const prisma = await getPrisma();
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { teamId: true } });
+  if (!project?.teamId) return [];
+  const rows = await prisma.teamMilestone.findMany({
+    where: { teamId: project.teamId, visibility: "public" },
+    orderBy: [{ sortOrder: "asc" }],
+    include: { createdBy: { select: { id: true, name: true } } },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    teamId: r.teamId,
+    title: r.title,
+    description: r.description ?? undefined,
+    targetDate: r.targetDate.toISOString(),
+    completed: r.completed,
+    sortOrder: r.sortOrder,
+    visibility: "public" as const,
+    progress: r.progress,
     createdByUserId: r.createdByUserId,
     createdByName: r.createdBy.name,
     createdAt: r.createdAt.toISOString(),
@@ -1708,6 +1751,8 @@ export async function createTeamMilestone(params: {
       targetDate: target.toISOString(),
       completed: false,
       sortOrder,
+      visibility: "team_only" as const,
+      progress: 0,
       createdByUserId: params.actorUserId,
       createdAt: now,
       updatedAt: now,
@@ -1770,6 +1815,8 @@ export async function createTeamMilestone(params: {
     targetDate: created.targetDate.toISOString(),
     completed: created.completed,
     sortOrder: created.sortOrder,
+    visibility: (created.visibility === "public" ? "public" : "team_only") as "team_only" | "public",
+    progress: created.progress,
     createdByUserId: created.createdByUserId,
     createdByName: created.createdBy.name,
     createdAt: created.createdAt.toISOString(),
@@ -1786,6 +1833,8 @@ export async function updateTeamMilestone(params: {
   targetDate?: string;
   completed?: boolean;
   sortOrder?: number;
+  visibility?: "team_only" | "public";
+  progress?: number;
 }): Promise<TeamMilestone> {
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
 
@@ -1819,6 +1868,12 @@ export async function updateTeamMilestone(params: {
     if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
       cur.sortOrder = Math.floor(params.sortOrder);
     }
+    if (params.visibility !== undefined) {
+      cur.visibility = params.visibility;
+    }
+    if (params.progress !== undefined && Number.isFinite(params.progress)) {
+      cur.progress = Math.max(0, Math.min(100, Math.floor(params.progress)));
+    }
     cur.updatedAt = new Date().toISOString();
     return mockTeamMilestoneToDto(cur);
   }
@@ -1837,6 +1892,8 @@ export async function updateTeamMilestone(params: {
     targetDate?: Date;
     completed?: boolean;
     sortOrder?: number;
+    visibility?: string;
+    progress?: number;
   } = {};
   if (params.title !== undefined) {
     const t = params.title.trim();
@@ -1861,6 +1918,12 @@ export async function updateTeamMilestone(params: {
   if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
     data.sortOrder = Math.floor(params.sortOrder);
   }
+  if (params.visibility !== undefined) {
+    data.visibility = params.visibility;
+  }
+  if (params.progress !== undefined && Number.isFinite(params.progress)) {
+    data.progress = Math.max(0, Math.min(100, Math.floor(params.progress)));
+  }
 
   const updated = await prisma.teamMilestone.update({
     where: { id: params.milestoneId },
@@ -1875,6 +1938,8 @@ export async function updateTeamMilestone(params: {
     targetDate: updated.targetDate.toISOString(),
     completed: updated.completed,
     sortOrder: updated.sortOrder,
+    visibility: (updated.visibility === "public" ? "public" : "team_only") as "team_only" | "public",
+    progress: updated.progress,
     createdByUserId: updated.createdByUserId,
     createdByName: updated.createdBy.name,
     createdAt: updated.createdAt.toISOString(),
@@ -2844,6 +2909,37 @@ export async function listProjectCollaborationIntents(params: {
   };
 }
 
+/** T-4 alias: submit by applicant, checks creator profile + duplicate */
+export async function submitCollaborationIntent(input: {
+  projectId: string;
+  applicantId: string;
+  intentType: CollaborationIntentType;
+  message: string;
+  contact?: string;
+}): Promise<CollaborationIntent> {
+  // Verify applicant has a creator profile
+  const profile = useMockData
+    ? mockCreators.find((c) => c.userId === input.applicantId)
+    : await (await getPrisma()).creatorProfile.findUnique({ where: { userId: input.applicantId } });
+  if (!profile) throw new Error("CREATOR_PROFILE_REQUIRED");
+
+  // Prevent duplicate pending/approved intents
+  if (useMockData) {
+    const dup = mockCollaborationIntents.find(
+      (i) => i.projectId === input.projectId && i.applicantId === input.applicantId && i.status !== "rejected"
+    );
+    if (dup) throw new Error("DUPLICATE_INTENT");
+  } else {
+    const prisma = await getPrisma();
+    const dup = await prisma.collaborationIntent.findFirst({
+      where: { projectId: input.projectId, applicantId: input.applicantId, status: { not: "rejected" } },
+    });
+    if (dup) throw new Error("DUPLICATE_INTENT");
+  }
+
+  return createCollaborationIntent(input);
+}
+
 export async function createCollaborationIntent(input: {
   projectId: string;
   applicantId: string;
@@ -2872,6 +2968,7 @@ export async function createCollaborationIntent(input: {
       message,
       contact: contact || undefined,
       status: "pending",
+      convertedToTeamMembership: false,
       createdAt: new Date().toISOString(),
     };
     mockCollaborationIntents.unshift(intent);
@@ -3861,7 +3958,19 @@ function mockTeamMemberRows(teamId: string): TeamMember[] {
 }
 
 function toTeamSummary(
-  team: { id: string; slug: string; name: string; mission: string | null; ownerUserId: string; createdAt: Date },
+  team: {
+    id: string;
+    slug: string;
+    name: string;
+    mission: string | null;
+    ownerUserId: string;
+    discordUrl?: string | null;
+    telegramUrl?: string | null;
+    slackUrl?: string | null;
+    githubOrgUrl?: string | null;
+    githubRepoUrl?: string | null;
+    createdAt: Date;
+  },
   memberCount: number,
   projectCount: number
 ): TeamSummary {
@@ -3873,6 +3982,11 @@ function toTeamSummary(
     ownerUserId: team.ownerUserId,
     memberCount,
     projectCount,
+    discordUrl: team.discordUrl ?? undefined,
+    telegramUrl: team.telegramUrl ?? undefined,
+    slackUrl: team.slackUrl ?? undefined,
+    githubOrgUrl: team.githubOrgUrl ?? undefined,
+    githubRepoUrl: team.githubRepoUrl ?? undefined,
     createdAt: team.createdAt.toISOString(),
   };
 }
@@ -3890,6 +4004,11 @@ export async function listTeams(params: { page: number; limit: number }): Promis
         ownerUserId: t.ownerUserId,
         memberCount: mockTeamMemberships.filter((m) => m.teamId === t.id).length,
         projectCount: mockProjects.filter((p) => p.teamId === t.id).length,
+        discordUrl: t.discordUrl,
+        telegramUrl: t.telegramUrl,
+        slackUrl: t.slackUrl,
+        githubOrgUrl: t.githubOrgUrl,
+        githubRepoUrl: t.githubRepoUrl,
         createdAt: t.createdAt,
       })),
       pagination: pageResult.pagination,
@@ -3960,6 +4079,11 @@ export async function getTeamBySlug(slug: string, viewerUserId?: string | null):
       ownerUserId: team.ownerUserId,
       memberCount: members.length,
       projectCount: teamProjects.length,
+      discordUrl: team.discordUrl,
+      telegramUrl: team.telegramUrl,
+      slackUrl: team.slackUrl,
+      githubOrgUrl: team.githubOrgUrl,
+      githubRepoUrl: team.githubRepoUrl,
       createdAt: team.createdAt,
       members,
       teamProjects,
@@ -4168,6 +4292,141 @@ export async function createTeam(input: {
     throw new Error("TEAM_CREATE_FAILED");
   }
   return detail;
+}
+
+// ─── T-1 + T-3: Update team links ────────────────────────────────────────────
+
+export async function updateTeamLinks(params: {
+  teamSlug: string;
+  actorUserId: string;
+  discordUrl?: string | null;
+  telegramUrl?: string | null;
+  slackUrl?: string | null;
+  githubOrgUrl?: string | null;
+  githubRepoUrl?: string | null;
+}): Promise<TeamDetail> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug);
+    if (!team) throw new Error("TEAM_NOT_FOUND");
+    if (team.ownerUserId !== params.actorUserId) throw new Error("FORBIDDEN_NOT_OWNER");
+    if (params.discordUrl !== undefined) team.discordUrl = params.discordUrl ?? undefined;
+    if (params.telegramUrl !== undefined) team.telegramUrl = params.telegramUrl ?? undefined;
+    if (params.slackUrl !== undefined) team.slackUrl = params.slackUrl ?? undefined;
+    if (params.githubOrgUrl !== undefined) team.githubOrgUrl = params.githubOrgUrl ?? undefined;
+    if (params.githubRepoUrl !== undefined) team.githubRepoUrl = params.githubRepoUrl ?? undefined;
+    const detail = await getTeamBySlug(params.teamSlug);
+    if (!detail) throw new Error("TEAM_NOT_FOUND");
+    return detail;
+  }
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: params.teamSlug }, select: { id: true, ownerUserId: true } });
+  if (!team) throw new Error("TEAM_NOT_FOUND");
+  if (team.ownerUserId !== params.actorUserId) throw new Error("FORBIDDEN_NOT_OWNER");
+  const data: Record<string, string | null> = {};
+  if (params.discordUrl !== undefined) data.discordUrl = params.discordUrl;
+  if (params.telegramUrl !== undefined) data.telegramUrl = params.telegramUrl;
+  if (params.slackUrl !== undefined) data.slackUrl = params.slackUrl;
+  if (params.githubOrgUrl !== undefined) data.githubOrgUrl = params.githubOrgUrl;
+  if (params.githubRepoUrl !== undefined) data.githubRepoUrl = params.githubRepoUrl;
+  await prisma.team.update({ where: { id: team.id }, data });
+  const detail = await getTeamBySlug(params.teamSlug, params.actorUserId);
+  if (!detail) throw new Error("TEAM_NOT_FOUND");
+  return detail;
+}
+
+// ─── T-4: Project-owner collaboration intent review ──────────────────────────
+
+export async function reviewCollaborationIntentByOwner(params: {
+  intentId: string;
+  ownerUserId: string;
+  action: "approve" | "reject";
+  note?: string;
+  /** If approve + teamSlug provided, auto-invite applicant to this team */
+  inviteToTeamSlug?: string;
+}): Promise<CollaborationIntent> {
+  const nextStatus: ReviewStatus = params.action === "approve" ? "approved" : "rejected";
+  const note = normalizeModerationNote(params.note);
+
+  if (useMockData) {
+    const intent = mockCollaborationIntents.find((i) => i.id === params.intentId);
+    if (!intent) throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+    // Verify ownership via project
+    const project = mockProjects.find((p) => p.id === intent.projectId);
+    const creator = project ? mockCreators.find((c) => c.id === project.creatorId) : null;
+    if (!creator || creator.userId !== params.ownerUserId) throw new Error("FORBIDDEN_NOT_PROJECT_OWNER");
+
+    intent.status = nextStatus;
+    intent.reviewNote = note;
+    intent.reviewedAt = new Date().toISOString();
+    intent.reviewedBy = params.ownerUserId;
+
+    if (nextStatus === "approved" && params.inviteToTeamSlug) {
+      const team = mockTeams.find((t) => t.slug === params.inviteToTeamSlug);
+      if (team && team.ownerUserId === params.ownerUserId) {
+        const alreadyMember = mockTeamMemberships.some((m) => m.teamId === team.id && m.userId === intent.applicantId);
+        if (!alreadyMember) {
+          mockTeamMemberships.push({
+            id: `tm_conv_${Date.now()}`,
+            teamId: team.id,
+            userId: intent.applicantId,
+            role: "member",
+            joinedAt: new Date().toISOString(),
+          });
+          intent.convertedToTeamMembership = true;
+        }
+      }
+    }
+    return intent;
+  }
+
+  const prisma = await getPrisma();
+  const intent = await prisma.collaborationIntent.findUnique({
+    where: { id: params.intentId },
+    include: { project: { include: { creator: { select: { userId: true } } } } },
+  });
+  if (!intent) throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+  if (intent.project.creator.userId !== params.ownerUserId) throw new Error("FORBIDDEN_NOT_PROJECT_OWNER");
+
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const u = await tx.collaborationIntent.update({
+      where: { id: params.intentId },
+      data: { status: nextStatus, reviewNote: note ?? null, reviewedAt: new Date(), reviewedBy: params.ownerUserId },
+    });
+    if (nextStatus === "approved" && params.inviteToTeamSlug) {
+      const team = await tx.team.findFirst({ where: { slug: params.inviteToTeamSlug, ownerUserId: params.ownerUserId } });
+      if (team) {
+        const alreadyMember = await tx.teamMembership.findUnique({ where: { teamId_userId: { teamId: team.id, userId: intent.applicantId } } });
+        if (!alreadyMember) {
+          await tx.teamMembership.create({ data: { teamId: team.id, userId: intent.applicantId, role: "member" } });
+          await tx.collaborationIntent.update({ where: { id: params.intentId }, data: { convertedToTeamMembership: true } });
+        }
+      }
+    }
+    await tx.auditLog.create({
+      data: {
+        actorId: params.ownerUserId,
+        action: `collaboration_intent_${nextStatus}_by_owner`,
+        entityType: "collaboration_intent",
+        entityId: params.intentId,
+        metadata: { note, inviteToTeamSlug: params.inviteToTeamSlug },
+      },
+    });
+    return u;
+  });
+  return {
+    id: updated.id,
+    projectId: updated.projectId,
+    applicantId: updated.applicantId,
+    intentType: updated.intentType as CollaborationIntentType,
+    message: updated.message,
+    contact: updated.contact ?? undefined,
+    status: updated.status as ReviewStatus,
+    reviewNote: updated.reviewNote ?? undefined,
+    reviewedAt: updated.reviewedAt?.toISOString(),
+    reviewedBy: updated.reviewedBy ?? undefined,
+    convertedToTeamMembership: updated.convertedToTeamMembership,
+    createdAt: updated.createdAt.toISOString(),
+  };
 }
 
 export async function requestTeamJoin(params: {

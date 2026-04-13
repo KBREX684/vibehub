@@ -5,7 +5,7 @@ import { TeamDetailActions } from "@/components/team-detail-actions";
 import { TeamMilestonesPanel } from "@/components/team-milestones-panel";
 import { TeamTasksPanel } from "@/components/team-tasks-panel";
 import { getSessionUserFromCookie } from "@/lib/auth";
-import { getTeamBySlug, listTeamMilestones } from "@/lib/repository";
+import { getTeamBySlug, listTeamMilestones, getGitHubRepoStats } from "@/lib/repository";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -25,6 +25,11 @@ export default async function TeamDetailPage({ params }: Props) {
     ? await listTeamMilestones({ teamSlug: slug, viewerUserId: viewerId })
     : [];
 
+  // T-3: GitHub repo stats (non-blocking, best-effort)
+  const githubStats = (team.githubRepoUrl || team.githubOrgUrl)
+    ? await getGitHubRepoStats(team.githubRepoUrl ?? team.githubOrgUrl ?? "").catch(() => null)
+    : null;
+
   return (
     <>
       <SiteHeader />
@@ -38,6 +43,42 @@ export default async function TeamDetailPage({ params }: Props) {
           <h1>{team.name}</h1>
           <p className="muted">/{team.slug}</p>
           {team.mission ? <p>{team.mission}</p> : null}
+
+          {/* T-1: External chat links */}
+          {(team.discordUrl || team.telegramUrl || team.slackUrl) ? (
+            <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+              {team.discordUrl ? (
+                <a href={team.discordUrl} target="_blank" rel="noreferrer" className="button ghost">
+                  💬 Discord
+                </a>
+              ) : null}
+              {team.telegramUrl ? (
+                <a href={team.telegramUrl} target="_blank" rel="noreferrer" className="button ghost">
+                  ✈️ Telegram
+                </a>
+              ) : null}
+              {team.slackUrl ? (
+                <a href={team.slackUrl} target="_blank" rel="noreferrer" className="button ghost">
+                  💼 Slack
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* T-3: GitHub repo stats */}
+          {(team.githubRepoUrl || team.githubOrgUrl) ? (
+            <div style={{ marginTop: 12 }}>
+              <a href={team.githubRepoUrl ?? team.githubOrgUrl} target="_blank" rel="noreferrer" className="inline-link">
+                GitHub {team.githubOrgUrl && !team.githubRepoUrl ? "组织" : "仓库"}
+              </a>
+              {githubStats ? (
+                <span className="muted small" style={{ marginLeft: 12 }}>
+                  ⭐ {githubStats.stars} · 🍴 {githubStats.forks}
+                  {githubStats.language ? ` · ${githubStats.language}` : ""}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </article>
 
         <section className="card">

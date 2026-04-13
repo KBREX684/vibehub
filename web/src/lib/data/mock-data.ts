@@ -20,6 +20,11 @@ export interface MockTeam {
   name: string;
   mission?: string;
   ownerUserId: string;
+  discordUrl?: string;
+  telegramUrl?: string;
+  slackUrl?: string;
+  githubOrgUrl?: string;
+  githubRepoUrl?: string;
   createdAt: string;
 }
 
@@ -39,6 +44,8 @@ export interface MockTeamMilestone {
   targetDate: string;
   completed: boolean;
   sortOrder: number;
+  visibility: "team_only" | "public";
+  progress: number;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -272,6 +279,8 @@ export const mockTeamMilestones: MockTeamMilestone[] = [
     targetDate: milestoneT1,
     completed: false,
     sortOrder: 0,
+    visibility: "public",
+    progress: 60,
     createdByUserId: "u1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -283,6 +292,8 @@ export const mockTeamMilestones: MockTeamMilestone[] = [
     targetDate: milestoneT2,
     completed: false,
     sortOrder: 1,
+    visibility: "team_only",
+    progress: 0,
     createdByUserId: "u1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -341,6 +352,7 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
     message: "I want to contribute to API contracts and integration tests for VibeHub.",
     contact: "chen@vibehub.dev",
     status: "pending",
+    convertedToTeamMembership: false,
     createdAt: new Date().toISOString(),
   },
   {
@@ -351,6 +363,7 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
     message: "Looking for a collaborator to ship prompt evaluation exports.",
     contact: "alice@vibehub.dev",
     status: "approved",
+    convertedToTeamMembership: false,
     reviewedAt: new Date().toISOString(),
     reviewedBy: "u1",
     createdAt: new Date().toISOString(),

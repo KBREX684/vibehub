@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { CollaborationIntentForm } from "@/components/collaboration-intent-form";
 import { ProjectTeamLinkForm } from "@/components/project-team-link-form";
 import { getSessionUserFromCookie } from "@/lib/auth";
-import { getCreatorProfileById, getProjectBySlug, listProjectCollaborationIntents } from "@/lib/repository";
+import { getCreatorProfileById, getProjectBySlug, listProjectCollaborationIntents, listPublicMilestonesForProject } from "@/lib/repository";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -33,6 +33,7 @@ export default async function ProjectDetailPage({ params }: Props) {
   const session = await getSessionUserFromCookie();
   const creatorProfile = await getCreatorProfileById(project.creatorId);
   const canLinkTeam = Boolean(session && creatorProfile && session.userId === creatorProfile.userId);
+  const publicMilestones = await listPublicMilestonesForProject(project.id);
 
   return (
     <>
@@ -102,6 +103,38 @@ export default async function ProjectDetailPage({ params }: Props) {
         </article>
 
         <ProjectTeamLinkForm project={project} canEdit={canLinkTeam} />
+
+        {/* T-2: Public milestones from linked team */}
+        {publicMilestones.length > 0 ? (
+          <aside className="card">
+            <h3>项目里程碑</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              {publicMilestones.map((ms) => (
+                <div key={ms.id}>
+                  <div className="meta-row">
+                    <strong>{ms.title}</strong>
+                    <span className={ms.completed ? "status status-approved" : "muted small"}>
+                      {ms.completed ? "✓ 已完成" : `${new Date(ms.targetDate).toLocaleDateString("zh-CN")}`}
+                    </span>
+                  </div>
+                  {ms.description ? <p className="muted small" style={{ margin: "4px 0" }}>{ms.description}</p> : null}
+                  <div style={{ background: "var(--line)", borderRadius: 999, height: 6, marginTop: 6 }}>
+                    <div
+                      style={{
+                        width: `${ms.progress}%`,
+                        background: ms.completed ? "#16a34a" : "var(--brand)",
+                        height: "100%",
+                        borderRadius: 999,
+                        transition: "width 0.3s",
+                      }}
+                    />
+                  </div>
+                  <span className="muted small">{ms.progress}%</span>
+                </div>
+              ))}
+            </div>
+          </aside>
+        ) : null}
 
         <aside className="card">
           <h3>Agent Invocation Example</h3>

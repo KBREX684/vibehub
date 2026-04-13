@@ -180,8 +180,30 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
               </div>
               <div className="muted small">
                 目标：{new Date(m.targetDate).toLocaleDateString()} · 创建：{m.createdByName}
+                {" · "}
+                <span style={{ color: m.visibility === "public" ? "#15803d" : "#6b7280" }}>
+                  {m.visibility === "public" ? "🌐 公开" : "🔒 仅团队"}
+                </span>
               </div>
               {m.description ? <p className="muted small">{m.description}</p> : null}
+              {/* T-2: progress bar */}
+              <div style={{ marginTop: 6 }}>
+                <div style={{ background: "var(--line)", borderRadius: 999, height: 6 }}>
+                  <div style={{ width: `${m.progress}%`, background: m.completed ? "#16a34a" : "var(--brand)", height: "100%", borderRadius: 999 }} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <span className="muted small">{m.progress}%</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={m.progress}
+                    style={{ flex: 1 }}
+                    onChange={(e) => void patchMilestone(m.id, { progress: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.35rem" }}>
                 <label className="muted small" style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <input
@@ -190,6 +212,14 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                     onChange={(e) => void patchMilestone(m.id, { completed: e.target.checked })}
                   />
                   标记完成
+                </label>
+                <label className="muted small" style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={m.visibility === "public"}
+                    onChange={(e) => void patchMilestone(m.id, { visibility: e.target.checked ? "public" : "team_only" })}
+                  />
+                  公开展示
                 </label>
                 <button type="button" className="button ghost" onClick={() => void removeMilestone(m.id)}>
                   删除
