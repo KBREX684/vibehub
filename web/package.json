@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "ws:serve": "tsx ws-server.ts",
     "prebuild": "prisma generate",
     "build": "next build",
     "start": "next start",
@@ -29,6 +30,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "stripe": "^22.0.1",
+    "ws": "^8.20.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -37,6 +39,7 @@
     "@types/nodemailer": "6.4.23",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/ws": "^8.18.1",
     "eslint": "^9.22.0",
     "eslint-config-next": "^15.2.4",
     "prisma": "^6.6.0",

@@ -124,6 +124,7 @@ model User {
   notifications             InAppNotification[]
   challengesCreated         Challenge[]           @relation("ChallengeCreator")
   subscription              UserSubscription?
+  teamChatMessages          TeamChatMessage[]
   /// C-1: social graph
   following                 UserFollow[]          @relation("Follower")
   followers                 UserFollow[]          @relation("Following")
@@ -393,6 +394,8 @@ model Team {
   /// T-3: GitHub integration
   githubOrgUrl  String?
   githubRepoUrl String?
+  /// Chat capacity: max concurrent WebSocket connections (default 50)
+  chatCapacity  Int      @default(50)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   owner         User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
@@ -401,6 +404,7 @@ model Team {
   projects      Project[]
   tasks         TeamTask[]
   milestones    TeamMilestone[]
+  chatMessages  TeamChatMessage[]
 
   @@index([ownerUserId])
 }
@@ -601,4 +605,20 @@ model ProjectBookmark {
   @@unique([userId, projectId])
   @@index([userId])
   @@index([projectId])
+}
+
+// ─── Team Chat ────────────────────────────────────────────────────────────────
+
+/// Real-time team chat message. Retained for 7 days then eligible for cleanup.
+model TeamChatMessage {
+  id        String   @id @default(cuid())
+  teamId    String
+  authorId  String
+  body      String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([createdAt])
 }

@@ -454,3 +454,30 @@ export const mockSubscriptionPlans: SubscriptionPlanInfo[] = [
 export const mockUserSubscriptions: MockUserSubscriptionInfo[] = [
   { id: "sub_1", userId: "u1", plan: mockSubscriptionPlans[1], status: "active", currentPeriodStart: new Date(Date.UTC(2026, 3, 1)).toISOString(), currentPeriodEnd: new Date(Date.UTC(2026, 4, 1)).toISOString() },
 ];
+
+// ─── Team Chat ────────────────────────────────────────────────────────────────
+
+export interface MockTeamChatMessage {
+  id: string;
+  teamId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+}
+
+export const mockTeamChatMessages: MockTeamChatMessage[] = [
+  {
+    id: "tcm1",
+    teamId: "team1",
+    authorId: "u1",
+    body: "Welcome to the VibeHub Core team chat! 🚀",
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "tcm2",
+    teamId: "team1",
+    authorId: "u2",
+    body: "Hey everyone! Excited to collaborate here.",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+];

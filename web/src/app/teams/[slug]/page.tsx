@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { TeamDetailActions } from "@/components/team-detail-actions";
 import { TeamMilestonesPanel } from "@/components/team-milestones-panel";
 import { TeamTasksPanel } from "@/components/team-tasks-panel";
+import { TeamChatPanel } from "@/components/team-chat-panel";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug, listTeamMilestones, getGitHubRepoStats } from "@/lib/repository";
 import {
@@ -11,7 +12,6 @@ import {
   GitFork,
   Star,
   GitBranch,
-  MessageSquare,
   Globe,
   ExternalLink,
 } from "lucide-react";
@@ -100,31 +100,24 @@ export default async function TeamDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* External links */}
-          {(team.discordUrl || team.telegramUrl || team.slackUrl || team.githubOrgUrl || team.githubRepoUrl) && (
+          {/* External links — kept for GitHub only; chat is now in-app */}
+          {(team.githubRepoUrl || team.githubOrgUrl) && (
             <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-[var(--color-border-subtle)]">
+              <a href={team.githubRepoUrl ?? team.githubOrgUrl ?? "#"} target="_blank" rel="noreferrer" className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+                <GitBranch className="w-3.5 h-3.5" />
+                GitHub
+              </a>
+              {/* Legacy external chat links shown as reference only */}
               {team.discordUrl && (
-                <a href={team.discordUrl} target="_blank" rel="noreferrer" className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Discord
+                <a href={team.discordUrl} target="_blank" rel="noreferrer" className="btn btn-ghost text-xs px-3 py-1.5 flex items-center gap-1.5 text-[var(--color-text-muted)]">
+                  <Globe className="w-3.5 h-3.5" />
+                  Discord ↗
                 </a>
               )}
               {team.telegramUrl && (
-                <a href={team.telegramUrl} target="_blank" rel="noreferrer" className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+                <a href={team.telegramUrl} target="_blank" rel="noreferrer" className="btn btn-ghost text-xs px-3 py-1.5 flex items-center gap-1.5 text-[var(--color-text-muted)]">
                   <Globe className="w-3.5 h-3.5" />
-                  Telegram
-                </a>
-              )}
-              {team.slackUrl && (
-                <a href={team.slackUrl} target="_blank" rel="noreferrer" className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5" />
-                  Slack
-                </a>
-              )}
-              {(team.githubRepoUrl || team.githubOrgUrl) && (
-                <a href={team.githubRepoUrl ?? team.githubOrgUrl ?? "#"} target="_blank" rel="noreferrer" className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
-                  <GitBranch className="w-3.5 h-3.5" />
-                  GitHub
+                  Telegram ↗
                 </a>
               )}
             </div>
@@ -214,6 +207,20 @@ export default async function TeamDetailPage({ params }: Props) {
           />
 
           <TeamMilestonesPanel teamSlug={team.slug} currentUserId={session?.userId ?? null} />
+
+          {/* Team Chat — in-app real-time chat (replaces external links) */}
+          <TeamChatPanel
+            teamSlug={team.slug}
+            currentUser={
+              session
+                ? {
+                    id:   session.userId,
+                    name: session.name,
+                  }
+                : null
+            }
+            isMember={isMember}
+          />
         </div>
 
         {/* Sidebar */}
