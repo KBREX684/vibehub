@@ -32,6 +32,7 @@ import {
   mockContributionCredits,
   mockSubscriptionPlans,
   mockUserSubscriptions,
+  mockTeamChatMessages,
 } from "@/lib/data/mock-data";
 import type {
   ApiKeyCreated,
@@ -87,6 +88,7 @@ import type {
   WeeklyLeaderboardMaterializedRow,
   WeeklyLeaderboardMaterializedSnapshot,
   WeeklyLeaderboardPublicPayload,
+  TeamChatMessage,
 } from "@/lib/types";
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
@@ -4646,6 +4648,145 @@ export async function updateTeamLinks(params: {
   return detail;
 }
 
+// ─── Team Chat ────────────────────────────────────────────────────────────────
+
+const CHAT_RETAIN_DAYS = parseInt(process.env.CHAT_RETAIN_DAYS ?? "7", 10);
+
+/** Returns the cutoff date for chat retention (now - CHAT_RETAIN_DAYS). */
+export function chatRetentionCutoff(): Date {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - CHAT_RETAIN_DAYS);
+  return d;
+}
+
+/**
+ * Persist a chat message. Used by the REST fallback endpoint.
+ * The WS server maintains its own in-memory history; this function
+ * writes to the DB for durable history + cleanup.
+ */
+export async function createTeamChatMessage(input: {
+  teamSlug: string;
+  authorId: string;
+  body: string;
+}): Promise<TeamChatMessage> {
+  const body = input.body.trim();
+  if (!body || Buffer.byteLength(body, "utf8") > 2000) throw new Error("INVALID_BODY");
+
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === input.teamSlug);
+    if (!team) throw new Error("TEAM_NOT_FOUND");
+    const author = mockUsers.find((u) => u.id === input.authorId);
+    const msg = {
+      id: `tcm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      teamId: team.id,
+      authorId: input.authorId,
+      body,
+      createdAt: new Date().toISOString(),
+    };
+    mockTeamChatMessages.unshift(msg);
+    return {
+      id: msg.id,
+      teamId: team.id,
+      teamSlug: input.teamSlug,
+      authorId: input.authorId,
+      authorName: author?.name ?? input.authorId,
+      body,
+      createdAt: msg.createdAt,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: input.teamSlug }, select: { id: true, slug: true } });
+  if (!team) throw new Error("TEAM_NOT_FOUND");
+  const row = await prisma.teamChatMessage.create({
+    data: { teamId: team.id, authorId: input.authorId, body },
+    include: { author: { select: { name: true } } },
+  });
+  return {
+    id:         row.id,
+    teamId:     team.id,
+    teamSlug:   team.slug,
+    authorId:   row.authorId,
+    authorName: row.author.name,
+    body:       row.body,
+    createdAt:  row.createdAt.toISOString(),
+  };
+}
+
+/**
+ * List the last N chat messages for a team, only those within the retention window.
+ */
+export async function listTeamChatMessages(input: {
+  teamSlug: string;
+  limit?: number;
+}): Promise<TeamChatMessage[]> {
+  const limit = Math.min(input.limit ?? 50, 200);
+  const cutoff = chatRetentionCutoff();
+
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === input.teamSlug);
+    if (!team) throw new Error("TEAM_NOT_FOUND");
+    return mockTeamChatMessages
+      .filter((m) => m.teamId === team.id && new Date(m.createdAt) >= cutoff)
+      .slice(0, limit)
+      .map((m) => {
+        const author = mockUsers.find((u) => u.id === m.authorId);
+        return {
+          id:         m.id,
+          teamId:     team.id,
+          teamSlug:   input.teamSlug,
+          authorId:   m.authorId,
+          authorName: author?.name ?? m.authorId,
+          body:       m.body,
+          createdAt:  m.createdAt,
+        };
+      });
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: input.teamSlug }, select: { id: true, slug: true } });
+  if (!team) throw new Error("TEAM_NOT_FOUND");
+  const rows = await prisma.teamChatMessage.findMany({
+    where: { teamId: team.id, createdAt: { gte: cutoff } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: { author: { select: { name: true } } },
+  });
+  return rows.reverse().map((r) => ({
+    id:         r.id,
+    teamId:     team.id,
+    teamSlug:   team.slug,
+    authorId:   r.authorId,
+    authorName: r.author.name,
+    body:       r.body,
+    createdAt:  r.createdAt.toISOString(),
+  }));
+}
+
+/**
+ * Delete chat messages older than CHAT_RETAIN_DAYS.
+ * Returns the count of deleted rows.
+ */
+export async function pruneOldTeamChatMessages(): Promise<number> {
+  const cutoff = chatRetentionCutoff();
+
+  if (useMockData) {
+    const before = mockTeamChatMessages.length;
+    for (let i = mockTeamChatMessages.length - 1; i >= 0; i--) {
+      if (new Date(mockTeamChatMessages[i].createdAt) < cutoff) {
+        mockTeamChatMessages.splice(i, 1);
+      }
+    }
+    return before - mockTeamChatMessages.length;
+  }
+
+  const prisma = await getPrisma();
+  const { count } = await prisma.teamChatMessage.deleteMany({
+    where: { createdAt: { lt: cutoff } },
+  });
+  return count;
+}
+
 // ─── T-4: Project-owner collaboration intent review ──────────────────────────
 
 export async function reviewCollaborationIntentByOwner(params: {
@@ -5608,6 +5749,52 @@ export async function deleteComment(params: {
     throw new Error("FORBIDDEN_NOT_AUTHOR");
   }
   await prisma.comment.delete({ where: { id: params.commentId } });
+}
+
+// ─── Comment retention cleanup (7 days) ──────────────────────────────────────
+
+const COMMENT_RETAIN_DAYS = parseInt(process.env.COMMENT_RETAIN_DAYS ?? "7", 10);
+
+/** Returns the cutoff date for comment retention (now - COMMENT_RETAIN_DAYS). */
+export function commentRetentionCutoff(): Date {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - COMMENT_RETAIN_DAYS);
+  return d;
+}
+
+/**
+ * Delete comments (and their replies) older than COMMENT_RETAIN_DAYS days.
+ * Returns the count of deleted root comments.
+ */
+export async function pruneOldComments(): Promise<number> {
+  const cutoff = commentRetentionCutoff();
+
+  if (useMockData) {
+    const before = mockComments.length;
+    // Remove comments older than cutoff, along with any orphaned replies
+    const oldIds = new Set(
+      mockComments
+        .filter((c) => new Date(c.createdAt) < cutoff)
+        .map((c) => c.id)
+    );
+    // Also remove replies whose parents are being deleted
+    const toRemove = new Set(
+      mockComments
+        .filter((c) => oldIds.has(c.id) || (c.parentCommentId && oldIds.has(c.parentCommentId)))
+        .map((c) => c.id)
+    );
+    for (let i = mockComments.length - 1; i >= 0; i--) {
+      if (toRemove.has(mockComments[i].id)) mockComments.splice(i, 1);
+    }
+    return before - mockComments.length;
+  }
+
+  const prisma = await getPrisma();
+  // Delete root comments older than cutoff; replies cascade via DB FK
+  const { count } = await prisma.comment.deleteMany({
+    where: { createdAt: { lt: cutoff }, parentCommentId: null },
+  });
+  return count;
 }
 
 export async function createProject(input: {

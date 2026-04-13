@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { MessageSquare, Heart, Bookmark, Star } from "lucide-react";
 import type { Post } from "@/lib/types";
-import { MessageSquare, Heart, Bookmark } from "lucide-react";
 
 export function PostCard({
   post,
@@ -24,80 +23,71 @@ export function PostCard({
     day: "numeric",
   });
 
-  const CardContent = (
-    <motion.article 
-      id={post.slug}
-      className="relative flex flex-col h-full bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] rounded-[24px] p-6 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] cursor-pointer"
-      whileHover={{ y: -2, scale: 1.01, boxShadow: "0 12px 40px -8px rgba(0,0,0,0.06)" }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-    >
-      <div className="flex items-center justify-between mb-3">
+  const inner = (
+    <article className="card group hover:-translate-y-0.5 transition-all duration-200 p-5">
+      {/* Author row */}
+      <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          {post.authorName && (
-            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
-              {post.authorName}
-            </span>
-          )}
-          <span className="text-xs font-medium text-[var(--color-text-tertiary)]">
-            • {date}
+          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-xs font-semibold text-[var(--color-primary-hover)]">
+            {post.authorName?.charAt(0)?.toUpperCase() ?? "A"}
           </span>
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">
+            {post.authorName ?? "Anonymous"}
+          </span>
+          <span className="text-xs text-[var(--color-text-muted)]">· {date}</span>
         </div>
         {post.featuredAt && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-[980px] bg-[#f5ebd4]/10 text-[#f5ebd4] text-[10px] font-bold uppercase tracking-wider">
+          <span className="tag tag-yellow flex items-center gap-1">
+            <Star className="w-2.5 h-2.5" />
             Featured
           </span>
         )}
       </div>
-      
-      <h3 className="text-xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-2 leading-[1.2] line-clamp-2">
+
+      {/* Title */}
+      <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-1.5 line-clamp-2 leading-snug group-hover:text-[var(--color-primary-hover)] transition-colors">
         {post.title}
       </h3>
-      
-      <p className="text-[0.95rem] text-[var(--color-text-secondary)] leading-[1.47] flex-grow line-clamp-3 mb-5">
+
+      {/* Excerpt */}
+      <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed mb-3">
         {body}
       </p>
-      
-      <div className="flex items-center justify-between mt-auto pt-4 border-t border-black/5">
-        <div className="flex flex-wrap gap-1.5">
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-subtle)]">
+        <div className="tag-row">
           {post.tags.slice(0, 3).map((tag) => (
-            <span 
-              key={`${post.id}-${tag}`} 
-              className="text-[11px] font-medium px-2.5 py-1 bg-black/5 text-[var(--color-text-secondary)] rounded-[980px]"
-            >
+            <span key={tag} className="tag">
               {tag}
             </span>
           ))}
         </div>
-        
-        <div className="flex items-center gap-1 relative z-20">
+        <div className="flex items-center gap-1 z-20 relative">
           {post.likeCount > 0 && (
-            <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[var(--color-text-tertiary)] hover:text-[#f5ebd4] hover:bg-[#f5ebd4]/10 transition-colors">
-              <Heart className="w-4 h-4" />
-              <span className="text-xs font-medium">{post.likeCount}</span>
+            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-warning)] hover:bg-[var(--color-warning-subtle)] transition-colors">
+              <Heart className="w-3 h-3" />
+              <span>{post.likeCount}</span>
             </button>
           )}
           {post.bookmarkCount > 0 && (
-            <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-apple)] hover:bg-[var(--color-accent-apple)]/10 transition-colors">
-              <Bookmark className="w-4 h-4" />
-              <span className="text-xs font-medium">{post.bookmarkCount}</span>
+            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)] transition-colors">
+              <Bookmark className="w-3 h-3" />
+              <span>{post.bookmarkCount}</span>
             </button>
           )}
-          <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-black/5 transition-colors">
-            <MessageSquare className="w-4 h-4" />
+          <button className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] transition-colors">
+            <MessageSquare className="w-3 h-3" />
           </button>
         </div>
       </div>
-    </motion.article>
+    </article>
   );
 
-  if (detailHref) {
-    return (
-      <Link href={detailHref} className="block h-full outline-none">
-        {CardContent}
-      </Link>
-    );
-  }
-
-  return CardContent;
+  const href = detailHref ?? `/discussions/${post.slug}`;
+  return (
+    <Link href={href} className="block outline-none">
+      {inner}
+    </Link>
+  );
 }

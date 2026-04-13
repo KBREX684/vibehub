@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createComment, listCommentsForPost } from "@/lib/repository";
+import { createComment, listCommentsForPost, pruneOldComments } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getSessionUserFromCookie } from "@/lib/auth";
@@ -19,6 +19,10 @@ export async function GET(request: Request) {
     }
     const { page, limit } = parsePagination(url.searchParams);
     const result = await listCommentsForPost({ postId, page, limit });
+
+    // Background prune old comments (7-day retention, fire-and-forget)
+    pruneOldComments().catch(() => {});
+
     return apiSuccess(result);
   } catch (error) {
     return apiError(

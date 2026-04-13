@@ -619,3 +619,23 @@ export interface SearchResult {
   excerpt: string;
   tags?: string[];
 }
+
+// ─── Team Chat ────────────────────────────────────────────────────────────────
+
+/** Persisted team chat message (REST history, not live WS). */
+export interface TeamChatMessage {
+  id: string;
+  teamId: string;
+  teamSlug: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
+/** Response from GET /api/v1/teams/[slug]/chat/messages */
+export interface TeamChatHistoryResponse {
+  messages: TeamChatMessage[];
+  /** ISO timestamp — messages older than this are cleaned up */
+  retainedSince: string;
+}
