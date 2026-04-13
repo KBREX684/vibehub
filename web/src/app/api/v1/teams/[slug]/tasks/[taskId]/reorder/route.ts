@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { getSessionUserFromCookie } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { reorderTeamTask } from "@/lib/repository";
 
@@ -11,11 +12,16 @@ interface Params {
   params: Promise<{ slug: string; taskId: string }>;
 }
 
-export async function POST(request: Request, { params }: Params) {
-  const session = await getSessionUserFromCookie();
-  if (!session) {
-    return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
+export async function POST(request: NextRequest, { params }: Params) {
+  const auth = await authenticateRequest(request, "write:team:tasks");
+  const gate = resolveReadAuth(auth, false);
+  if (!gate.ok) {
+    if (gate.status === 429) {
+      return rateLimitedResponse(gate.retryAfterSeconds ?? 60);
+    }
+    return apiError({ code: "UNAUTHORIZED", message: "Session or API key with write:team:tasks required" }, 401);
   }
+  const session = gate.user!;
 
   try {
     const { slug, taskId } = await params;
@@ -38,6 +44,12 @@ export async function POST(request: Request, { params }: Params) {
     }
     if (msg === "FORBIDDEN_NOT_TEAM_MEMBER") {
       return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
+    }
+    if (msg === "FORBIDDEN_TASK_UPDATE") {
+      return apiError(
+        { code: "FORBIDDEN", message: "Only task creator, assignee, or team owner may reorder this task" },
+        403
+      );
     }
     if (msg === "TEAM_TASK_NOT_FOUND") {
       return apiError({ code: "TEAM_TASK_NOT_FOUND", message: "Task not found" }, 404);

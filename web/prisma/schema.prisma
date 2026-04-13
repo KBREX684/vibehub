@@ -53,6 +53,13 @@ enum TeamTaskStatus {
   done
 }
 
+enum InAppNotificationKind {
+  team_join_request
+  team_join_approved
+  team_join_rejected
+  team_task_assigned
+}
+
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
@@ -77,6 +84,22 @@ model User {
   teamTasksAssigned         TeamTask[]            @relation("TeamTaskAssignee")
   teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
   apiKeys                   ApiKey[]
+  notifications             InAppNotification[]
+}
+
+model InAppNotification {
+  id        String                @id @default(cuid())
+  userId    String
+  kind      InAppNotificationKind
+  title     String
+  body      String
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 model ApiKey {

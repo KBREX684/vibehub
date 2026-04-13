@@ -111,6 +111,22 @@ export interface ReportTicket {
   resolvedBy?: string;
 }
 
+export type InAppNotificationKind =
+  | "team_join_request"
+  | "team_join_approved"
+  | "team_join_rejected"
+  | "team_task_assigned";
+
+export interface InAppNotification {
+  id: string;
+  kind: InAppNotificationKind;
+  title: string;
+  body: string;
+  readAt?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface AuditLog {
   id: string;
   actorId: string;
@@ -125,7 +141,8 @@ export interface AuditLog {
     | "team_join_request"
     | "team_task"
     | "team_milestone"
-    | "api_key";
+    | "api_key"
+    | "in_app_notification";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;

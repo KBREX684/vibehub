@@ -85,7 +85,7 @@ describe("team tasks (P3-4 + P3-7, mock)", () => {
   });
 
   it("rejects list for non-member", async () => {
-    await expect(listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u3" })).rejects.toThrow(
+    await expect(listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u99" })).rejects.toThrow(
       "FORBIDDEN_NOT_TEAM_MEMBER"
     );
   });
@@ -119,5 +119,38 @@ describe("team tasks (P3-4 + P3-7, mock)", () => {
         assigneeUserId: "u3",
       })
     ).rejects.toThrow("ASSIGNEE_NOT_TEAM_MEMBER");
+  });
+
+  it("member may update only own-created or assigned tasks; owner may update any", async () => {
+    await expect(
+      updateTeamTask({
+        teamSlug: "vibehub-core",
+        taskId: "tt2",
+        actorUserId: "u2",
+        title: "Hijack",
+      })
+    ).rejects.toThrow("FORBIDDEN_TASK_UPDATE");
+    const asAssignee = await updateTeamTask({
+      teamSlug: "vibehub-core",
+      taskId: "tt1",
+      actorUserId: "u2",
+      status: "done",
+    });
+    expect(asAssignee.status).toBe("done");
+    await updateTeamTask({
+      teamSlug: "vibehub-core",
+      taskId: "tt1",
+      actorUserId: "u1",
+      status: "doing",
+    });
+  });
+
+  it("only creator or team owner may delete a task", async () => {
+    await expect(
+      deleteTeamTask({ teamSlug: "vibehub-core", taskId: "tt2", actorUserId: "u2" })
+    ).rejects.toThrow("FORBIDDEN_TASK_DELETE");
+    await deleteTeamTask({ teamSlug: "vibehub-core", taskId: "tt2", actorUserId: "u1" });
+    const tasks = await listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u1" });
+    expect(tasks.some((t) => t.id === "tt2")).toBe(false);
   });
 });

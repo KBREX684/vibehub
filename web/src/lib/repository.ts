@@ -18,6 +18,7 @@ import {
   mockTeamJoinRequests,
   mockTeamMemberships,
   mockTeamMilestones,
+  mockInAppNotifications,
   mockTeamTasks,
   mockTeams,
   mockUsers,
@@ -32,6 +33,8 @@ import type {
   CollectionTopic,
   Comment,
   CreatorProfile,
+  InAppNotification,
+  InAppNotificationKind,
   LeaderboardDiscussionRow,
   LeaderboardProjectRow,
   ModerationCase,
@@ -47,6 +50,7 @@ import type {
   TeamMember,
   TeamMilestone,
   TeamProjectCard,
+  TeamRole,
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
@@ -670,6 +674,294 @@ async function assertTeamMemberBySlug(teamSlug: string, userId: string): Promise
   return { teamId: team.id };
 }
 
+async function assertTeamMemberRoleBySlug(
+  teamSlug: string,
+  userId: string
+): Promise<{ teamId: string; role: TeamRole }> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === teamSlug);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    const m = mockTeamMemberships.find((x) => x.teamId === team.id && x.userId === userId);
+    if (!m) {
+      throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
+    }
+    return { teamId: team.id, role: m.role };
+  }
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug: teamSlug },
+    select: { id: true },
+  });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  const m = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId: team.id, userId } },
+    select: { role: true },
+  });
+  if (!m) {
+    throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
+  }
+  return { teamId: team.id, role: m.role as TeamRole };
+}
+
+async function assertTeamTaskMutateAllowed(params: {
+  teamSlug: string;
+  actorUserId: string;
+  taskId: string;
+  op: "update" | "delete";
+}): Promise<{ teamId: string }> {
+  const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
+  if (role === "owner") {
+    return { teamId };
+  }
+
+  if (useMockData) {
+    const row = mockTeamTasks.find((t) => t.id === params.taskId && t.teamId === teamId);
+    if (!row) {
+      throw new Error("TEAM_TASK_NOT_FOUND");
+    }
+    if (params.op === "delete") {
+      if (row.createdByUserId !== params.actorUserId) {
+        throw new Error("FORBIDDEN_TASK_DELETE");
+      }
+      return { teamId };
+    }
+    if (row.createdByUserId === params.actorUserId || row.assigneeUserId === params.actorUserId) {
+      return { teamId };
+    }
+    throw new Error("FORBIDDEN_TASK_UPDATE");
+  }
+
+  const prisma = await getPrisma();
+  const row = await prisma.teamTask.findFirst({
+    where: { id: params.taskId, teamId },
+    select: { createdByUserId: true, assigneeUserId: true },
+  });
+  if (!row) {
+    throw new Error("TEAM_TASK_NOT_FOUND");
+  }
+  if (params.op === "delete") {
+    if (row.createdByUserId !== params.actorUserId) {
+      throw new Error("FORBIDDEN_TASK_DELETE");
+    }
+    return { teamId };
+  }
+  if (row.createdByUserId === params.actorUserId || row.assigneeUserId === params.actorUserId) {
+    return { teamId };
+  }
+  throw new Error("FORBIDDEN_TASK_UPDATE");
+}
+
+function toInAppNotificationDto(row: {
+  id: string;
+  kind: InAppNotificationKind;
+  title: string;
+  body: string;
+  readAt?: string | Date | null;
+  metadata?: unknown;
+  createdAt: string | Date;
+}): InAppNotification {
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    body: row.body,
+    readAt: row.readAt ? (typeof row.readAt === "string" ? row.readAt : row.readAt.toISOString()) : undefined,
+    metadata:
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : undefined,
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
+  };
+}
+
+async function createInAppNotificationDb(params: {
+  userId: string;
+  kind: InAppNotificationKind;
+  title: string;
+  body: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  const prisma = await getPrisma();
+  await prisma.inAppNotification.create({
+    data: {
+      userId: params.userId,
+      kind: params.kind,
+      title: params.title,
+      body: params.body,
+      metadata: (params.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
+    },
+  });
+}
+
+function pushMockNotification(params: {
+  userId: string;
+  kind: InAppNotificationKind;
+  title: string;
+  body: string;
+  metadata?: Record<string, unknown>;
+}): void {
+  const now = new Date().toISOString();
+  const id = `n_${params.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  mockInAppNotifications.unshift({
+    id,
+    userId: params.userId,
+    kind: params.kind,
+    title: params.title,
+    body: params.body,
+    metadata: params.metadata,
+    createdAt: now,
+  });
+}
+
+async function notifyUser(params: {
+  userId: string;
+  kind: InAppNotificationKind;
+  title: string;
+  body: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  if (useMockData) {
+    pushMockNotification(params);
+    return;
+  }
+  await createInAppNotificationDb(params);
+}
+
+export async function listInAppNotifications(params: {
+  userId: string;
+  unreadOnly?: boolean;
+  limit?: number;
+}): Promise<InAppNotification[]> {
+  const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
+  if (useMockData) {
+    let rows = mockInAppNotifications.filter((n) => n.userId === params.userId);
+    if (params.unreadOnly) {
+      rows = rows.filter((n) => !n.readAt);
+    }
+    return rows
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit)
+      .map((n) =>
+        toInAppNotificationDto({
+          id: n.id,
+          kind: n.kind,
+          title: n.title,
+          body: n.body,
+          readAt: n.readAt,
+          metadata: n.metadata,
+          createdAt: n.createdAt,
+        })
+      );
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.inAppNotification.findMany({
+    where: {
+      userId: params.userId,
+      ...(params.unreadOnly ? { readAt: null } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return rows.map((r) =>
+    toInAppNotificationDto({
+      id: r.id,
+      kind: r.kind as InAppNotificationKind,
+      title: r.title,
+      body: r.body,
+      readAt: r.readAt,
+      metadata: r.metadata,
+      createdAt: r.createdAt,
+    })
+  );
+}
+
+export async function markInAppNotificationsRead(params: {
+  userId: string;
+  ids?: string[];
+  markAll?: boolean;
+}): Promise<{ updated: number }> {
+  if (useMockData) {
+    let n = 0;
+    if (params.markAll) {
+      for (const row of mockInAppNotifications) {
+        if (row.userId === params.userId && !row.readAt) {
+          row.readAt = new Date().toISOString();
+          n += 1;
+        }
+      }
+      return { updated: n };
+    }
+    const idSet = new Set(params.ids ?? []);
+    for (const row of mockInAppNotifications) {
+      if (row.userId === params.userId && idSet.has(row.id) && !row.readAt) {
+        row.readAt = new Date().toISOString();
+        n += 1;
+      }
+    }
+    return { updated: n };
+  }
+  const prisma = await getPrisma();
+  if (params.markAll) {
+    const res = await prisma.inAppNotification.updateMany({
+      where: { userId: params.userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+    return { updated: res.count };
+  }
+  if (!params.ids?.length) {
+    return { updated: 0 };
+  }
+  const res = await prisma.inAppNotification.updateMany({
+    where: { userId: params.userId, id: { in: params.ids }, readAt: null },
+    data: { readAt: new Date() },
+  });
+  return { updated: res.count };
+}
+
+export async function listPendingJoinRequestsForOwner(params: {
+  ownerUserId: string;
+}): Promise<Array<TeamJoinRequestRow & { teamSlug: string; teamName: string }>> {
+  if (useMockData) {
+    const owned = mockTeams.filter((t) => t.ownerUserId === params.ownerUserId);
+    const out: Array<TeamJoinRequestRow & { teamSlug: string; teamName: string }> = [];
+    for (const team of owned) {
+      for (const r of mockTeamJoinRequests) {
+        if (r.teamId === team.id && r.status === "pending") {
+          const row = toTeamJoinRequestRowMock(r);
+          out.push({ ...row, teamSlug: team.slug, teamName: team.name });
+        }
+      }
+    }
+    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.teamJoinRequest.findMany({
+    where: { status: "pending", team: { ownerUserId: params.ownerUserId } },
+    include: {
+      team: { select: { slug: true, name: true } },
+      applicant: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    teamId: r.teamId,
+    applicantId: r.applicant.id,
+    applicantName: r.applicant.name,
+    applicantEmail: r.applicant.email,
+    message: r.message,
+    status: r.status as TeamJoinRequestStatus,
+    reviewedAt: r.reviewedAt?.toISOString(),
+    createdAt: r.createdAt.toISOString(),
+    teamSlug: r.team.slug,
+    teamName: r.team.name,
+  }));
+}
+
 export async function listTeamTasks(params: { teamSlug: string; viewerUserId: string }): Promise<TeamTask[]> {
   await assertTeamMemberBySlug(params.teamSlug, params.viewerUserId);
 
@@ -725,6 +1017,7 @@ export async function createTeamTask(params: {
   milestoneId?: string | null;
 }): Promise<TeamTask> {
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const teamSlug = params.teamSlug;
   const title = params.title.trim();
   if (!title) {
     throw new Error("INVALID_TASK_TITLE");
@@ -771,7 +1064,17 @@ export async function createTeamTask(params: {
       metadata: { teamId },
       createdAt: now,
     });
-    return mockTeamTaskToDto(row);
+    const dto = mockTeamTaskToDto(row);
+    if (params.assigneeUserId && params.assigneeUserId !== params.actorUserId) {
+      void notifyUser({
+        userId: params.assigneeUserId,
+        kind: "team_task_assigned",
+        title: "你被分配到团队任务",
+        body: `${userNameById(params.actorUserId)} 在团队 /${teamSlug} 将任务「${title}」分配给你。`,
+        metadata: { teamSlug, taskId: row.id },
+      });
+    }
+    return dto;
   }
 
   const prisma = await getPrisma();
@@ -839,6 +1142,21 @@ export async function createTeamTask(params: {
     return t;
   });
 
+  if (params.assigneeUserId && params.assigneeUserId !== params.actorUserId) {
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { slug: true },
+    });
+    const slug = team?.slug ?? teamSlug;
+    void notifyUser({
+      userId: params.assigneeUserId,
+      kind: "team_task_assigned",
+      title: "你被分配到团队任务",
+      body: `在团队 /${slug} 有新任务「${title}」分配给你。`,
+      metadata: { teamSlug: slug, taskId: created.id },
+    });
+  }
+
   return {
     id: created.id,
     teamId: created.teamId,
@@ -864,7 +1182,12 @@ export async function reorderTeamTask(params: {
   actorUserId: string;
   direction: "up" | "down";
 }): Promise<TeamTask[]> {
-  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const { teamId } = await assertTeamTaskMutateAllowed({
+    teamSlug: params.teamSlug,
+    actorUserId: params.actorUserId,
+    taskId: params.taskId,
+    op: "update",
+  });
 
   if (useMockData) {
     const row = mockTeamTasks.find((t) => t.id === params.taskId && t.teamId === teamId);
@@ -942,7 +1265,12 @@ export async function updateTeamTask(params: {
   sortOrder?: number;
   milestoneId?: string | null;
 }): Promise<TeamTask> {
-  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const { teamId } = await assertTeamTaskMutateAllowed({
+    teamSlug: params.teamSlug,
+    actorUserId: params.actorUserId,
+    taskId: params.taskId,
+    op: "update",
+  });
 
   if (useMockData) {
     const idx = mockTeamTasks.findIndex((t) => t.id === params.taskId && t.teamId === teamId);
@@ -976,7 +1304,18 @@ export async function updateTeamTask(params: {
         if (!ok) {
           throw new Error("ASSIGNEE_NOT_TEAM_MEMBER");
         }
+        const prevAssignee = cur.assigneeUserId;
         cur.assigneeUserId = params.assigneeUserId;
+        if (params.assigneeUserId !== params.actorUserId && params.assigneeUserId !== prevAssignee) {
+          const team = mockTeams.find((t) => t.id === teamId);
+          void notifyUser({
+            userId: params.assigneeUserId,
+            kind: "team_task_assigned",
+            title: "你被分配到团队任务",
+            body: `${userNameById(params.actorUserId)} 在团队 /${team?.slug ?? ""} 将「${cur.title}」分配给你。`,
+            metadata: { teamSlug: team?.slug, taskId: cur.id },
+          });
+        }
       }
     }
     if (params.sortOrder !== undefined && Number.isFinite(params.sortOrder)) {
@@ -1051,6 +1390,7 @@ export async function updateTeamTask(params: {
     data.milestoneId = params.milestoneId;
   }
 
+  const prevAssignee = existing.assigneeUserId;
   const updated = await prisma.teamTask.update({
     where: { id: params.taskId },
     data,
@@ -1060,6 +1400,21 @@ export async function updateTeamTask(params: {
       milestone: { select: { id: true, title: true } },
     },
   });
+  if (
+    params.assigneeUserId !== undefined &&
+    params.assigneeUserId !== null &&
+    params.assigneeUserId !== params.actorUserId &&
+    params.assigneeUserId !== prevAssignee
+  ) {
+    const team = await prisma.team.findUnique({ where: { id: teamId }, select: { slug: true } });
+    void notifyUser({
+      userId: params.assigneeUserId,
+      kind: "team_task_assigned",
+      title: "你被分配到团队任务",
+      body: `在团队 /${team?.slug ?? params.teamSlug} 的任务「${updated.title}」已分配给你。`,
+      metadata: { teamSlug: team?.slug ?? params.teamSlug, taskId: updated.id },
+    });
+  }
   return {
     id: updated.id,
     teamId: updated.teamId,
@@ -1084,7 +1439,12 @@ export async function deleteTeamTask(params: {
   taskId: string;
   actorUserId: string;
 }): Promise<void> {
-  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const { teamId } = await assertTeamTaskMutateAllowed({
+    teamSlug: params.teamSlug,
+    actorUserId: params.actorUserId,
+    taskId: params.taskId,
+    op: "delete",
+  });
 
   if (useMockData) {
     const idx = mockTeamTasks.findIndex((t) => t.id === params.taskId && t.teamId === teamId);
@@ -2753,6 +3113,21 @@ export async function getCollaborationIntentConversionMetrics(): Promise<Collabo
   };
 }
 
+export async function getEnterpriseWorkspaceSummary(params: {
+  viewerUserId: string;
+}): Promise<{
+  pendingJoinRequests: Array<TeamJoinRequestRow & { teamSlug: string; teamName: string }>;
+  funnel: CollaborationIntentConversionMetrics;
+  teams: TeamSummary[];
+}> {
+  const [pendingJoinRequests, funnel, teams] = await Promise.all([
+    listPendingJoinRequestsForOwner({ ownerUserId: params.viewerUserId }),
+    getCollaborationIntentConversionMetrics(),
+    listTeamsForUser(params.viewerUserId),
+  ]);
+  return { pendingJoinRequests, funnel, teams };
+}
+
 export async function getAdminOverview() {
   const collaborationIntentFunnel = await getCollaborationIntentConversionMetrics();
 
@@ -3201,14 +3576,21 @@ export async function requestTeamJoin(params: {
         reviewedAt: undefined,
         createdAt,
       };
-      mockAuditLogs.unshift({
-        id: `log_tjr_${Date.now()}`,
-        actorId: params.userId,
-        action: "team_join_requested",
-        entityType: "team_join_request",
-        entityId: prev.id,
-        metadata: { teamId: team.id, teamSlug: team.slug, reopened: true },
-        createdAt,
+    mockAuditLogs.unshift({
+      id: `log_tjr_${Date.now()}`,
+      actorId: params.userId,
+      action: "team_join_requested",
+      entityType: "team_join_request",
+      entityId: prev.id,
+      metadata: { teamId: team.id, teamSlug: team.slug, reopened: true },
+      createdAt,
+    });
+      void notifyUser({
+        userId: team.ownerUserId,
+        kind: "team_join_request",
+        title: "新的入队申请",
+        body: `${userNameById(params.userId)} 申请加入团队「${team.name}」（/${team.slug}）。`,
+        metadata: { teamSlug: team.slug, requestId: prev.id },
       });
       return toTeamJoinRequestRowMock(mockTeamJoinRequests[rejectedIdx]);
     }
@@ -3229,6 +3611,13 @@ export async function requestTeamJoin(params: {
       entityId: row.id,
       metadata: { teamId: team.id, teamSlug: team.slug },
       createdAt,
+    });
+    void notifyUser({
+      userId: team.ownerUserId,
+      kind: "team_join_request",
+      title: "新的入队申请",
+      body: `${userNameById(params.userId)} 申请加入团队「${team.name}」（/${team.slug}）。`,
+      metadata: { teamSlug: team.slug, requestId: row.id },
     });
     return toTeamJoinRequestRowMock(row);
   }
@@ -3302,6 +3691,17 @@ export async function requestTeamJoin(params: {
       });
       return r;
     });
+    const meta = await prisma.team.findUnique({
+      where: { id: team.id },
+      select: { slug: true, name: true },
+    });
+    void notifyUser({
+      userId: team.ownerUserId,
+      kind: "team_join_request",
+      title: "新的入队申请",
+      body: `${user.name} 申请加入团队「${meta?.name ?? ""}」（/${meta?.slug ?? params.teamSlug}）。`,
+      metadata: { teamSlug: meta?.slug ?? params.teamSlug, requestId: created.id },
+    });
     return {
       id: created.id,
       teamId: created.teamId,
@@ -3346,6 +3746,13 @@ export async function reviewTeamJoinRequest(params: {
     const reviewedAt = new Date().toISOString();
     if (params.action === "reject") {
       mockTeamJoinRequests[idx] = { ...req, status: "rejected", reviewedAt };
+      void notifyUser({
+        userId: req.applicantId,
+        kind: "team_join_rejected",
+        title: "入队申请未通过",
+        body: `队长未通过你加入「${team.name}」（/${team.slug}）的申请。`,
+        metadata: { teamSlug: team.slug, requestId: req.id },
+      });
       return toTeamJoinRequestRowMock(mockTeamJoinRequests[idx]);
     }
     const existingMember = mockTeamMemberships.find((m) => m.teamId === team.id && m.userId === req.applicantId);
@@ -3369,13 +3776,20 @@ export async function reviewTeamJoinRequest(params: {
       metadata: { teamId: team.id, applicantId: req.applicantId },
       createdAt: reviewedAt,
     });
+    void notifyUser({
+      userId: req.applicantId,
+      kind: "team_join_approved",
+      title: "已加入团队",
+      body: `你已通过审批，加入团队「${team.name}」（/${team.slug}）。`,
+      metadata: { teamSlug: team.slug, requestId: req.id },
+    });
     return toTeamJoinRequestRowMock(mockTeamJoinRequests[idx]);
   }
 
   const prisma = await getPrisma();
   const team = await prisma.team.findUnique({
     where: { slug: params.teamSlug },
-    select: { id: true, ownerUserId: true },
+    select: { id: true, ownerUserId: true, name: true, slug: true },
   });
   if (!team) {
     throw new Error("TEAM_NOT_FOUND");
@@ -3413,6 +3827,13 @@ export async function reviewTeamJoinRequest(params: {
       });
       return r;
     });
+    void notifyUser({
+      userId: updated.applicantId,
+      kind: "team_join_rejected",
+      title: "入队申请未通过",
+      body: `队长未通过你加入「${team.name}」（/${team.slug}）的申请。`,
+      metadata: { teamSlug: team.slug, requestId: updated.id },
+    });
     return {
       id: updated.id,
       teamId: updated.teamId,
@@ -3447,6 +3868,14 @@ export async function reviewTeamJoinRequest(params: {
       },
     });
     return r;
+  });
+
+  void notifyUser({
+    userId: updated.applicantId,
+    kind: "team_join_approved",
+    title: "已加入团队",
+    body: `你已通过审批，加入团队「${team.name}」（/${team.slug}）。`,
+    metadata: { teamSlug: team.slug, requestId: updated.id },
   });
 
   return {

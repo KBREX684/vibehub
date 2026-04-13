@@ -84,7 +84,8 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       { name: "projects", description: "Project gallery" },
       { name: "teams", description: "Teams and membership" },
       { name: "me", description: "Current user" },
-      { name: "mcp", description: "MCP-style read tools" },
+      { name: "mcp", description: "MCP-style read tools (v1 GET)" },
+      { name: "mcp-v2", description: "MCP v2 HTTP: manifest + scoped POST invoke" },
       { name: "auth", description: "Demo session" },
       { name: "health", description: "Liveness" },
     ],
@@ -343,10 +344,16 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         },
         post: {
           tags: ["teams"],
-          summary: "Create team task (session cookie)",
-          security: [{ SessionCookie: [] }],
+          summary: "Create team task (session or Bearer write:team:tasks)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
-          responses: { "201": responses["200"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+          responses: {
+            "201": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/teams/{slug}/milestones": {
@@ -375,6 +382,51 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         get: {
           tags: ["me"],
           summary: "List teams for current user (session or Bearer read:teams:self)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
+        },
+      },
+      "/api/v1/me/notifications": {
+        get: {
+          tags: ["me"],
+          summary: "List in-app notifications (session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "unread", in: "query", schema: { type: "string", enum: ["1", "true"] } },
+            { name: "limit", in: "query", schema: { type: "integer" } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        patch: {
+          tags: ["me"],
+          summary: "Mark notifications read (session cookie)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ids: { type: "array", items: { type: "string" } },
+                    markAll: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/enterprise/workspace": {
+        get: {
+          tags: ["me"],
+          summary: "Enterprise workspace summary (session or Bearer read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           responses: {
             "200": responses["200"],
@@ -420,6 +472,52 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           security: [{ SessionCookie: [] }],
           parameters: [{ name: "keyId", in: "path", required: true, schema: { type: "string" } }],
           responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/mcp/v2/manifest": {
+        get: {
+          tags: ["mcp-v2"],
+          summary: "MCP v2 tool manifest (public JSON)",
+          responses: { "200": { description: "Manifest" } },
+        },
+      },
+      "/api/v1/mcp/v2/invoke": {
+        post: {
+          tags: ["mcp-v2"],
+          summary: "MCP v2 invoke tool by name (session or Bearer; scope per tool)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["tool"],
+                  properties: {
+                    tool: {
+                      type: "string",
+                      enum: [
+                        "search_projects",
+                        "search_creators",
+                        "get_project_detail",
+                        "workspace_summary",
+                        "list_teams",
+                      ],
+                    },
+                    input: { type: "object", additionalProperties: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "404": responses["404"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/mcp/search_projects": {

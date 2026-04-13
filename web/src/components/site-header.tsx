@@ -13,6 +13,8 @@ export function SiteHeader() {
           <Link href="/leaderboards">Leaderboards</Link>
           <Link href="/discover">Discover</Link>
           <Link href="/teams">Teams</Link>
+          <Link href="/workspace/enterprise">Enterprise</Link>
+          <Link href="/notifications">Notifications</Link>
           <Link href="/settings/api-keys">API Keys</Link>
           <a href="/api/v1/openapi.json" className="button ghost" target="_blank" rel="noreferrer">
             OpenAPI

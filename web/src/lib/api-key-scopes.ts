@@ -10,12 +10,14 @@ export const API_KEY_SCOPES = [
   "read:team:detail",
   "read:team:tasks",
   "read:team:milestones",
+  "read:enterprise:workspace",
   "read:projects:list",
   "read:projects:detail",
   "read:creators:list",
   "read:creators:detail",
   "read:topics:list",
   "read:topics:detail",
+  "write:team:tasks",
 ] as const;
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];

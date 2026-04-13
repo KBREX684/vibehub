@@ -3,6 +3,7 @@ import type {
   Comment,
   CollaborationIntent,
   CreatorProfile,
+  InAppNotificationKind,
   ModerationCase,
   Post,
   Project,
@@ -66,6 +67,19 @@ export interface MockTeamJoinRequest {
   reviewedAt?: string;
   createdAt: string;
 }
+
+export interface MockInAppNotification {
+  id: string;
+  userId: string;
+  kind: InAppNotificationKind;
+  title: string;
+  body: string;
+  readAt?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export const mockInAppNotifications: MockInAppNotification[] = [];
 
 export const mockUsers: User[] = [
   { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin" },

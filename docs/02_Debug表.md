@@ -90,6 +90,12 @@
 |---|---|---|---|---|---|---|---|
 | FEAT-P4-5-001 | P4 | OpenAPI validation | Spec 可静默漂移或损坏 | 无构建前校验 | `openapi-validate` + `validate:openapi` + `check` + CI step + Vitest | Verified | `npm run check` |
 
+## P3 deferral + P4 enterprise slice (2026-04-14)
+
+| Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |
+|---|---|---|---|---|---|---|---|
+| FEAT-P3-P4-20260414-001 | P3+P4 | Notifications + tasks + MCP v2 | P3 封版顺延通知/RBAC；P4 路线图缺企业/MCP v2 落地 | 未实现 | `InAppNotification`、任务 RBAC、enterprise workspace API/UI、MCP v2 manifest/invoke、`write:team:tasks` / `read:enterprise:workspace` scopes | Verified | `npm run check` |
+
 ## P3 Formal Closure (2026-04-13)
 
 | Issue ID | Stage | Module | Symptom | Root Cause | Fix | Status | Verification |

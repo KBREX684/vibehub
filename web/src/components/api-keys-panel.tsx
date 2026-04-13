@@ -118,7 +118,8 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     <div className="card">
       <h2>API Keys（P4-1 + P4-2 + P4-3）</h2>
       <p className="muted small">
-        用于脚本或集成；创建时可勾选 <strong>scopes</strong>（必选 <code>read:public</code>）。Bearer 访问受 per-key 速率限制（见{" "}
+        用于脚本或集成；创建时可勾选 <strong>scopes</strong>（必选 <code>read:public</code>）。可选{" "}
+        <code>read:enterprise:workspace</code>、<code>write:team:tasks</code> 等用于企业工作台与团队任务写入。Bearer 访问受 per-key 速率限制（见{" "}
         <code>API_KEY_RATE_LIMIT_PER_MINUTE</code>
         ）。匿名爬虫请使用 <code>/api/v1/public/...</code> 镜像端点。密钥仅创建时显示一次。
       </p>
