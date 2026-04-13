@@ -4318,7 +4318,7 @@ export async function getEmbedTeamCard(slug: string): Promise<EmbedTeamCard | nu
 export async function getProjectRadar(limit: number): Promise<ProjectRadarEntry[]> {
   if (useMockData) {
     return mockProjects.map((p) => {
-      const commentCount = mockComments.filter((c) =>
+      const commentCount = mockComments.filter(() =>
         mockPosts.some((post) =>
           post.authorId === mockCreators.find((cr) => cr.id === p.creatorId)?.userId
         )

@@ -1,7 +1,6 @@
 import { getEmbedProjectCard } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { corsHeaders, corsPreflightResponse } from "@/lib/cors";
-import { NextResponse } from "next/server";
 
 interface Params {
   params: Promise<{ slug: string }>;
