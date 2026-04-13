@@ -17,6 +17,8 @@ export const API_KEY_SCOPES = [
   "read:creators:detail",
   "read:topics:list",
   "read:topics:detail",
+  "read:posts:list",
+  "read:posts:detail",
   "write:team:tasks",
 ] as const;
 
@@ -38,6 +40,8 @@ export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = [
   "read:creators:detail",
   "read:topics:list",
   "read:topics:detail",
+  "read:posts:list",
+  "read:posts:detail",
 ];
 
 export function normalizeApiKeyScopes(raw: string[] | undefined): ApiKeyScope[] {

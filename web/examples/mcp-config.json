@@ -1,0 +1,44 @@
+{
+  "_comment": "VibeHub MCP configuration examples for Claude Desktop and Cursor.",
+
+  "claude_desktop": {
+    "_file": "~/Library/Application Support/Claude/claude_desktop_config.json",
+    "mcpServers": {
+      "vibehub": {
+        "command": "npx",
+        "args": ["tsx", "/absolute/path/to/vibehub/web/mcp-server.ts"],
+        "env": {
+          "USE_MOCK_DATA": "true"
+        }
+      }
+    }
+  },
+
+  "cursor": {
+    "_file": "~/.cursor/mcp.json",
+    "mcpServers": {
+      "vibehub": {
+        "command": "npx",
+        "args": ["tsx", "/absolute/path/to/vibehub/web/mcp-server.ts"],
+        "env": {
+          "USE_MOCK_DATA": "true"
+        }
+      }
+    }
+  },
+
+  "production_with_real_db": {
+    "_note": "Set USE_MOCK_DATA=false and provide a real DATABASE_URL to query live data.",
+    "mcpServers": {
+      "vibehub": {
+        "command": "npx",
+        "args": ["tsx", "/absolute/path/to/vibehub/web/mcp-server.ts"],
+        "env": {
+          "USE_MOCK_DATA": "false",
+          "DATABASE_URL": "postgresql://user:password@host:5432/vibehub",
+          "SESSION_SECRET": "your-production-session-secret"
+        }
+      }
+    }
+  }
+}

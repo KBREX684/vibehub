@@ -13,7 +13,8 @@
     "check": "npm run lint && npm run test && npm run validate:openapi && npm run build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "mcp:serve": "tsx mcp-server.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

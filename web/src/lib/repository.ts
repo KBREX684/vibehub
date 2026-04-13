@@ -2381,6 +2381,32 @@ export async function listPostsForModeration(params: {
   };
 }
 
+export async function getPostBySlug(slug: string): Promise<Post | null> {
+  if (useMockData) {
+    const post = mockPosts.find((p) => p.slug === slug && p.reviewStatus === "approved");
+    return post ?? null;
+  }
+  const prisma = await getPrisma();
+  const p = await prisma.post.findUnique({
+    where: { slug },
+    include: {
+      author: { select: { name: true } },
+      _count: { select: { likes: true, bookmarks: true } },
+    },
+  });
+  if (!p || p.reviewStatus !== "approved") return null;
+  return toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks });
+}
+
+/** Deterministic 100-char excerpt — no AI dep, available immediately. */
+export function generatePostSummary(body: string): string {
+  const clean = body.replace(/\s+/g, " ").trim();
+  if (clean.length <= 120) return clean;
+  const cut = clean.slice(0, 120);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 80 ? cut.slice(0, lastSpace) : cut) + "…";
+}
+
 export async function createPost(input: {
   title: string;
   body: string;
@@ -2737,6 +2763,98 @@ export async function clearExpiredFeaturedProjects(): Promise<number> {
     data: { featuredRank: null, featuredAt: null },
   });
   return res.count;
+}
+
+export interface ProjectMetadata {
+  slug: string;
+  title: string;
+  oneLiner: string;
+  status: string;
+  techStack: string[];
+  tags: string[];
+  repoUrl?: string;
+  websiteUrl?: string;
+  demoUrl?: string;
+  openSource: boolean;
+  license?: string;
+  logoUrl?: string;
+  screenshots: string[];
+  team?: { slug: string; name: string } | null;
+  publicMilestones: Array<{ title: string; progress: number; completed: boolean; targetDate: string }>;
+  githubStats?: GitHubRepoStats | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── A-2: Talent Radar ───────────────────────────────────────────────────────
+
+export async function getTalentRadar(params: {
+  skill?: string;
+  collaborationPreference?: string;
+  page: number;
+  limit: number;
+}): Promise<{ items: CreatorProfile[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
+  if (useMockData) {
+    const filtered = mockCreators.filter((c) => {
+      const skillMatch = !params.skill || c.skills.some((s) => s.toLowerCase().includes(params.skill!.toLowerCase()));
+      const prefMatch = !params.collaborationPreference || c.collaborationPreference === params.collaborationPreference;
+      return skillMatch && prefMatch;
+    });
+    return paginateArray(filtered, params.page, params.limit);
+  }
+  const prisma = await getPrisma();
+  const where: Record<string, unknown> = {};
+  if (params.collaborationPreference) {
+    where.collaborationPreference = params.collaborationPreference;
+  }
+  if (params.skill) {
+    where.skills = { has: params.skill };
+  }
+  const [items, total] = await Promise.all([
+    prisma.creatorProfile.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.creatorProfile.count({ where }),
+  ]);
+  return {
+    items: items.map(toCreatorDto),
+    pagination: { page: params.page, limit: params.limit, total, totalPages: Math.max(1, Math.ceil(total / params.limit)) },
+  };
+}
+
+export async function getProjectMetadata(slug: string): Promise<ProjectMetadata | null> {
+  const project = await getProjectBySlug(slug);
+  if (!project) return null;
+  const milestones = await listPublicMilestonesForProject(project.id);
+  const githubStats = project.repoUrl ? await getGitHubRepoStats(project.repoUrl).catch(() => null) : null;
+  return {
+    slug: project.slug,
+    title: project.title,
+    oneLiner: project.oneLiner,
+    status: project.status,
+    techStack: project.techStack,
+    tags: project.tags,
+    repoUrl: project.repoUrl,
+    websiteUrl: project.websiteUrl,
+    demoUrl: project.demoUrl,
+    openSource: project.openSource,
+    license: project.license,
+    logoUrl: project.logoUrl,
+    screenshots: project.screenshots,
+    team: project.team ?? null,
+    publicMilestones: milestones.map((m) => ({
+      title: m.title,
+      progress: m.progress,
+      completed: m.completed,
+      targetDate: m.targetDate,
+    })),
+    githubStats,
+    createdAt: project.updatedAt,
+    updatedAt: project.updatedAt,
+  };
 }
 
 export async function listFeaturedProjects(): Promise<Project[]> {
