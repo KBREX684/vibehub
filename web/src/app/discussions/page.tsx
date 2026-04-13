@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { PostCard } from "@/components/post-card";
 import { listPosts } from "@/lib/repository";
-import type { PostSortOrder } from "@/lib/repository";
+import type { PostSortOrder } from "@/lib/types";
 
 interface Props {
   searchParams: Promise<{ sort?: string; page?: string }>;

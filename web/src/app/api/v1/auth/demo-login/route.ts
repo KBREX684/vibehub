@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AuthConstants, encodeSession } from "@/lib/auth";
 import { getDemoUser } from "@/lib/repository";
+import { apiError } from "@/lib/response";
 
 function parseDemoRole(value: string | null): "admin" | "user" {
   return value === "admin" ? "admin" : "user";
@@ -19,6 +20,13 @@ function sanitizeRedirectPath(value: string | null): string {
 }
 
 export async function GET(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return apiError(
+      { code: "DEMO_LOGIN_DISABLED", message: "Demo login is disabled in production. Use GitHub OAuth." },
+      403
+    );
+  }
+
   const url = new URL(request.url);
   const role = parseDemoRole(url.searchParams.get("role"));
   const redirect = sanitizeRedirectPath(url.searchParams.get("redirect"));
@@ -30,7 +38,7 @@ export async function GET(request: Request) {
     httpOnly: true,
     path: "/",
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: false,
     maxAge: 60 * 60 * 24 * 7,
   });
 

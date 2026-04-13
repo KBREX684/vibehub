@@ -58,6 +58,36 @@ enum InAppNotificationKind {
   team_join_approved
   team_join_rejected
   team_task_assigned
+  /// C-3 social events
+  post_commented
+  comment_replied
+  post_liked
+  project_bookmarked
+  user_followed
+  project_intent_received
+  post_featured
+}
+
+/// P2: Challenge campaign status
+enum ChallengeStatus {
+  draft
+  active
+  closed
+}
+
+/// M-1/M-2: Subscription tiers
+enum SubscriptionTier {
+  free
+  pro
+  team_pro
+}
+
+/// M-1/M-2: Subscription status
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+  trialing
 }
 
 model User {
@@ -65,11 +95,18 @@ model User {
   email                     String           @unique
   name                      String
   role                      Role             @default(user)
+  /// F-1: GitHub OAuth
+  githubId                  Int?             @unique
+  githubUsername            String?          @unique
+  avatarUrl                 String?
+  /// M-2: Stripe customer
+  stripeCustomerId          String?          @unique
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
   creatorProfile            CreatorProfile?
   posts                     Post[]           @relation("PostAuthor")
   reviewedPosts             Post[]           @relation("PostReviewer")
+  featuredPosts             Post[]           @relation("PostFeaturedBy")
   comments                  Comment[]
   resolvedModerationCases   ModerationCase[] @relation("ModerationResolvedBy")
   reportTickets             ReportTicket[]   @relation("ReportReporter")
@@ -85,9 +122,14 @@ model User {
   teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
   apiKeys                   ApiKey[]
   notifications             InAppNotification[]
-  featuredPosts             Post[]               @relation("PostFeaturedBy")
-  challengesCreated         Challenge[]          @relation("ChallengeCreator")
-  subscriptions             UserSubscription[]
+  challengesCreated         Challenge[]           @relation("ChallengeCreator")
+  subscription              UserSubscription?
+  /// C-1: social graph
+  following                 UserFollow[]          @relation("Follower")
+  followers                 UserFollow[]          @relation("Following")
+  postLikes                 PostLike[]
+  postBookmarks             PostBookmark[]
+  projectBookmarks          ProjectBookmark[]
 }
 
 model InAppNotification {
@@ -154,25 +196,37 @@ model CreatorProfile {
 }
 
 model Project {
-  id          String        @id @default(cuid())
-  slug        String        @unique
-  creatorId   String
-  teamId      String?
-  title       String
-  oneLiner    String
-  description String
-  techStack   String[]
-  tags        String[]
-  status      ProjectStatus @default(idea)
-  demoUrl     String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  creator     CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  team        Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  creatorId    String
+  teamId       String?
+  title        String
+  oneLiner     String
+  description  String
+  techStack    String[]
+  tags         String[]
+  status       ProjectStatus @default(idea)
+  demoUrl      String?
+  /// F-3: extra display fields
+  repoUrl      String?
+  websiteUrl   String?
+  screenshots  String[]
+  logoUrl      String?
+  openSource   Boolean       @default(false)
+  license      String?
+  /// C-5: daily featured rank (admin-set)
+  featuredRank Int?
+  featuredAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  team         Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
   collaborationIntents CollaborationIntent[]
+  bookmarks            ProjectBookmark[]
 
   @@index([creatorId])
   @@index([teamId])
+  @@index([featuredRank])
 }
 
 model Post {
@@ -186,7 +240,7 @@ model Post {
   moderationNote   String?
   reviewedAt       DateTime?
   reviewedBy       String?
-  /// P2: non-null when an admin marks this post as featured (精华).
+  /// P2/C-4: admin featured post
   featuredAt       DateTime?
   featuredBy       String?
   createdAt        DateTime        @default(now())
@@ -197,6 +251,8 @@ model Post {
   comments         Comment[]
   moderationCases  ModerationCase[]
   reportTickets    ReportTicket[]
+  likes            PostLike[]
+  bookmarks        PostBookmark[]
 
   @@index([authorId])
   @@index([reviewStatus])
@@ -205,17 +261,22 @@ model Post {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  postId    String
-  authorId  String
-  body      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  postId          String
+  authorId        String
+  body            String
+  /// C-2: nested replies (max depth 2)
+  parentCommentId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  post            Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies         Comment[] @relation("CommentReplies")
 
   @@index([postId])
   @@index([authorId])
+  @@index([parentCommentId])
 }
 
 model ModerationCase {
@@ -270,21 +331,23 @@ model AuditLog {
 }
 
 model CollaborationIntent {
-  id          String                  @id @default(cuid())
-  projectId   String
-  applicantId String
-  intentType  CollaborationIntentType
-  message     String
-  contact     String?
-  status      ReviewStatus            @default(pending)
-  reviewNote  String?
-  reviewedAt  DateTime?
-  reviewedBy  String?
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
-  project     Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  applicant   User                    @relation("CollaborationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
-  reviewer    User?                   @relation("CollaborationReviewer", fields: [reviewedBy], references: [id])
+  id                        String                  @id @default(cuid())
+  projectId                 String
+  applicantId               String
+  intentType                CollaborationIntentType
+  message                   String
+  contact                   String?
+  status                    ReviewStatus            @default(pending)
+  reviewNote                String?
+  reviewedAt                DateTime?
+  reviewedBy                String?
+  /// T-4: tracks conversion to team membership
+  convertedToTeamMembership Boolean                 @default(false)
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  project                   Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  applicant                 User                    @relation("CollaborationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  reviewer                  User?                   @relation("CollaborationReviewer", fields: [reviewedBy], references: [id])
 
   @@index([projectId])
   @@index([applicantId])
@@ -318,19 +381,26 @@ model WeeklyLeaderboardRow {
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  name        String
-  mission     String?
-  ownerUserId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  owner       User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
-  memberships TeamMembership[]
-  joinRequests TeamJoinRequest[]
-  projects    Project[]
-  tasks       TeamTask[]
-  milestones  TeamMilestone[]
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  mission       String?
+  ownerUserId   String
+  /// T-1: external chat links
+  discordUrl    String?
+  telegramUrl   String?
+  slackUrl      String?
+  /// T-3: GitHub integration
+  githubOrgUrl  String?
+  githubRepoUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  owner         User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  memberships   TeamMembership[]
+  joinRequests  TeamJoinRequest[]
+  projects      Project[]
+  tasks         TeamTask[]
+  milestones    TeamMilestone[]
 
   @@index([ownerUserId])
 }
@@ -397,6 +467,9 @@ model TeamMilestone {
   targetDate        DateTime
   completed         Boolean  @default(false)
   sortOrder         Int      @default(0)
+  /// T-2: public visibility + progress
+  visibility        String   @default("team_only")
+  progress          Int      @default(0)
   createdByUserId   String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -407,13 +480,10 @@ model TeamMilestone {
   @@index([teamId])
   @@index([teamId, completed])
   @@index([teamId, sortOrder])
+  @@index([teamId, visibility])
 }
 
-enum ChallengeStatus {
-  draft
-  active
-  closed
-}
+// ─── P2: 挑战赛 (Challenges) ─────────────────────────────────────────────────
 
 /// P2: 挑战赛/活动页
 model Challenge {
@@ -435,7 +505,7 @@ model Challenge {
   @@index([startDate, endDate])
 }
 
-// ─── P3: 信誉系统 (Reputation / Contribution Credits) ───
+// ─── P3: 信誉系统 (Contribution Credits) ─────────────────────────────────────
 
 /// Aggregated public collaboration credit for a user.
 model ContributionCredit {
@@ -455,47 +525,80 @@ model ContributionCredit {
   @@index([score])
 }
 
-// ─── P3: 商业化首发 (Subscription / Pro Membership) ────
+// ─── M-1/M-2: 商业化订阅 (Subscription) ──────────────────────────────────────
 
-enum SubscriptionTier {
-  free
-  pro
-  team_pro
-}
-
-enum SubscriptionStatus {
-  active
-  canceled
-  past_due
-}
-
-model SubscriptionPlan {
-  id            String           @id @default(cuid())
-  tier          SubscriptionTier @unique
-  name          String
-  description   String
-  priceMonthly  Int              @default(0)
-  features      String[]
-  apiQuota      Int              @default(0)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  subscriptions UserSubscription[]
-}
-
+/// M-1: per-user subscription (Stripe-backed)
 model UserSubscription {
-  id             String             @id @default(cuid())
-  userId         String
-  planId         String
-  status         SubscriptionStatus @default(active)
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  canceledAt     DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan           SubscriptionPlan   @relation(fields: [planId], references: [id])
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  tier                 SubscriptionTier   @default(free)
+  status               SubscriptionStatus @default(active)
+  /// M-2: Stripe subscription ID
+  stripeSubscriptionId String?            @unique
+  /// M-2: Stripe price ID
+  stripePriceId        String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, planId])
+  @@index([stripeSubscriptionId])
+}
+
+// ─── C-1: Social interactions ────────────────────────────────────────────────
+
+/// C-1: follow relationship between users
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+/// C-1: post like
+model PostLike {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+/// C-1: post bookmark
+model PostBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
   @@index([userId])
-  @@index([status])
+  @@index([postId])
+}
+
+/// C-1: project bookmark
+model ProjectBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
 }

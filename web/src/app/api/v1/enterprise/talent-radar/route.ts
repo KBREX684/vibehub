@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
-import { getTalentRadar } from "@/lib/repository";
+import { getTalentRadarLegacy as getTalentRadar } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 
 export async function GET(request: NextRequest) {

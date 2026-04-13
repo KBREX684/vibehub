@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createPost, listPosts } from "@/lib/repository";
-import type { PostSortOrder } from "@/lib/repository";
+import type { PostSortOrder } from "@/lib/types";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getSessionUserFromCookie } from "@/lib/auth";

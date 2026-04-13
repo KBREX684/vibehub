@@ -9,6 +9,8 @@ const patchSchema = z.object({
   targetDate: z.string().min(1).optional(),
   completed: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  visibility: z.enum(["team_only", "public"]).optional(),
+  progress: z.number().int().min(0).max(100).optional(),
 });
 
 interface Params {
@@ -34,6 +36,8 @@ export async function PATCH(request: Request, { params }: Params) {
       targetDate: parsed.targetDate,
       completed: parsed.completed,
       sortOrder: parsed.sortOrder,
+      visibility: parsed.visibility,
+      progress: parsed.progress,
     });
     return apiSuccess(m);
   } catch (error) {

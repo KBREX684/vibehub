@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { getSessionUserFromCookie } from "@/lib/auth";
-import { getEnterpriseWorkspaceSummary, getProjectRadar, getTalentRadar } from "@/lib/repository";
+import { getEnterpriseWorkspaceSummary, getProjectRadar, getTalentRadarLegacy as getTalentRadar } from "@/lib/repository";
 import { LayoutGrid, Users, Activity, Target, Zap, Shield, UserPlus, FolderGit2, Key, CheckCircle, User } from "lucide-react";
 
 export default async function EnterpriseWorkspacePage() {

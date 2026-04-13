@@ -16,11 +16,7 @@ export default async function DiscussionDetailPage({ params }: Props) {
     notFound();
   }
 
-  const { items: comments, pagination } = await listCommentsForPost({
-    postId: post.id,
-    page: 1,
-    limit: 50,
-  });
+  const { items: comments, pagination } = await listCommentsForPost({ postId: post.id, page: 1, limit: 50 });
 
   const date = new Date(post.createdAt).toLocaleDateString("zh-CN", {
     year: "numeric",

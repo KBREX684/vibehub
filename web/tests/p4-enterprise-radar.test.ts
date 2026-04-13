@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getProjectRadar, getTalentRadar, getProjectDueDiligence } from "../src/lib/repository";
+import { getProjectRadar, getTalentRadarLegacy as getTalentRadar, getProjectDueDiligence } from "../src/lib/repository";
 
 describe("getProjectRadar", () => {
   it("returns projects sorted by score descending", async () => {

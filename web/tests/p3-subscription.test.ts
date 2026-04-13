@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getSubscriptionPlans,
-  getUserSubscription,
+  getUserSubscriptionLegacy as getUserSubscription,
   createUserSubscription,
   cancelUserSubscription,
 } from "../src/lib/repository";

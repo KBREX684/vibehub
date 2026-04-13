@@ -17,8 +17,18 @@ import type {
   TeamRole,
   TeamTaskStatus,
   User,
-  UserSubscriptionInfo,
 } from "@/lib/types";
+
+// P3: SubscriptionPlanInfo and UserSubscriptionInfo for mock data
+export interface MockUserSubscriptionInfo {
+  id: string;
+  userId: string;
+  plan: SubscriptionPlanInfo;
+  status: "active" | "canceled" | "past_due";
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  canceledAt?: string;
+}
 
 export interface MockTeam {
   id: string;
@@ -26,6 +36,11 @@ export interface MockTeam {
   name: string;
   mission?: string;
   ownerUserId: string;
+  discordUrl?: string;
+  telegramUrl?: string;
+  slackUrl?: string;
+  githubOrgUrl?: string;
+  githubRepoUrl?: string;
   createdAt: string;
 }
 
@@ -45,6 +60,8 @@ export interface MockTeamMilestone {
   targetDate: string;
   completed: boolean;
   sortOrder: number;
+  visibility: "team_only" | "public";
+  progress: number;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -88,9 +105,9 @@ export interface MockInAppNotification {
 export const mockInAppNotifications: MockInAppNotification[] = [];
 
 export const mockUsers: User[] = [
-  { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin" },
-  { id: "u2", email: "bob@vibehub.dev", name: "Bob", role: "user" },
-  { id: "u3", email: "chen@vibehub.dev", name: "Chen", role: "user" },
+  { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin", githubId: 1001, githubUsername: "alice-ai", avatarUrl: "https://avatars.githubusercontent.com/u/1001" },
+  { id: "u2", email: "bob@vibehub.dev", name: "Bob", role: "user", githubId: 1002, githubUsername: "bob-solo", avatarUrl: "https://avatars.githubusercontent.com/u/1002" },
+  { id: "u3", email: "chen@vibehub.dev", name: "Chen", role: "user", githubId: 1003, githubUsername: "chen-dev", avatarUrl: "https://avatars.githubusercontent.com/u/1003" },
 ];
 
 export const mockCreators: CreatorProfile[] = [
@@ -129,6 +146,12 @@ export const mockProjects: Project[] = [
     tags: ["community", "agent", "showcase"],
     status: "building",
     demoUrl: "https://example.com/vibehub",
+    repoUrl: "https://github.com/vibehub/vibehub",
+    websiteUrl: "https://vibehub.dev",
+    screenshots: [],
+    logoUrl: undefined,
+    openSource: true,
+    license: "MIT",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -143,6 +166,8 @@ export const mockProjects: Project[] = [
     tags: ["prompt", "workflow", "experiment"],
     status: "launched",
     demoUrl: "https://example.com/prompt-lab",
+    screenshots: [],
+    openSource: false,
     updatedAt: new Date().toISOString(),
   },
 ];
@@ -152,36 +177,43 @@ export const mockPosts: Post[] = [
     id: "post1",
     slug: "how-i-built-an-agent-ready-project-page",
     authorId: "u1",
+    authorName: "Alice",
     title: "How I built an Agent-ready project page",
     body: "Sharing a practical structure for project metadata that both humans and agents can consume.",
     tags: ["agent", "metadata", "project-page"],
     reviewStatus: "approved",
     reviewedBy: "u1",
     reviewedAt: new Date().toISOString(),
-    featuredAt: new Date().toISOString(),
-    featuredBy: "u1",
+    likeCount: 0,
+    bookmarkCount: 0,
     createdAt: new Date().toISOString(),
   },
   {
     id: "post2",
     slug: "weekly-vibecoding-stack-review",
     authorId: "u2",
+    authorName: "Bob",
     title: "Weekly VibeCoding stack review",
     body: "My best stack picks this week for solo founders shipping fast.",
     tags: ["tech-stack", "weekly", "solo-founder"],
     reviewStatus: "approved",
     reviewedBy: "u1",
     reviewedAt: new Date().toISOString(),
+    likeCount: 0,
+    bookmarkCount: 0,
     createdAt: new Date().toISOString(),
   },
   {
     id: "post3",
     slug: "need-review-agent-template",
     authorId: "u3",
+    authorName: "Chen",
     title: "Need review: Agent prompt template",
     body: "Drafting an experimental template. Looking for moderator review before publishing.",
     tags: ["prompt", "review-needed"],
     reviewStatus: "pending",
+    likeCount: 0,
+    bookmarkCount: 0,
     createdAt: new Date().toISOString(),
   },
 ];
@@ -191,6 +223,7 @@ export const mockComments: Comment[] = [
     id: "cm1",
     postId: "post1",
     authorId: "u3",
+    authorName: "Chen",
     body: "Great breakdown. Could you share your schema for tags?",
     createdAt: new Date().toISOString(),
   },
@@ -198,6 +231,7 @@ export const mockComments: Comment[] = [
     id: "cm2",
     postId: "post2",
     authorId: "u1",
+    authorName: "Alice",
     body: "Solid picks — would add a lightweight analytics hook for solo launches.",
     createdAt: new Date().toISOString(),
   },
@@ -205,6 +239,7 @@ export const mockComments: Comment[] = [
     id: "cm3",
     postId: "post2",
     authorId: "u3",
+    authorName: "Chen",
     body: "Thanks, adding observability early saved me weeks last quarter.",
     createdAt: new Date().toISOString(),
   },
@@ -260,6 +295,8 @@ export const mockTeamMilestones: MockTeamMilestone[] = [
     targetDate: milestoneT1,
     completed: false,
     sortOrder: 0,
+    visibility: "public",
+    progress: 60,
     createdByUserId: "u1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -271,6 +308,8 @@ export const mockTeamMilestones: MockTeamMilestone[] = [
     targetDate: milestoneT2,
     completed: false,
     sortOrder: 1,
+    visibility: "team_only",
+    progress: 0,
     createdByUserId: "u1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -329,6 +368,7 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
     message: "I want to contribute to API contracts and integration tests for VibeHub.",
     contact: "chen@vibehub.dev",
     status: "pending",
+    convertedToTeamMembership: false,
     createdAt: new Date().toISOString(),
   },
   {
@@ -339,12 +379,34 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
     message: "Looking for a collaborator to ship prompt evaluation exports.",
     contact: "alice@vibehub.dev",
     status: "approved",
+    convertedToTeamMembership: false,
     reviewedAt: new Date().toISOString(),
     reviewedBy: "u1",
     createdAt: new Date().toISOString(),
   },
 ];
 
+// M-1: in-memory subscription store
+export const mockSubscriptions: Array<{
+  id: string;
+  userId: string;
+  tier: "free" | "pro" | "team_pro";
+  status: "active" | "past_due" | "canceled" | "trialing";
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
+
+// C-1: in-memory social interaction stores
+export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
+export const mockPostBookmarks: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
+export const mockProjectBookmarks: Array<{ id: string; userId: string; projectId: string; createdAt: string }> = [];
+export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [];
+
+// P2: Challenges
 export const mockChallenges: Challenge[] = [
   {
     id: "ch1",
@@ -375,70 +437,20 @@ export const mockChallenges: Challenge[] = [
   },
 ];
 
+// P3: Contribution credits
 export const mockContributionCredits: ContributionCreditProfile[] = [
-  {
-    userId: "u1",
-    score: 420,
-    tasksCompleted: 12,
-    milestonesHit: 3,
-    joinRequestsMade: 1,
-    postsAuthored: 2,
-    commentsAuthored: 5,
-    projectsCreated: 3,
-    intentsApproved: 2,
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    userId: "u2",
-    score: 180,
-    tasksCompleted: 5,
-    milestonesHit: 1,
-    joinRequestsMade: 2,
-    postsAuthored: 1,
-    commentsAuthored: 3,
-    projectsCreated: 1,
-    intentsApproved: 0,
-    updatedAt: new Date().toISOString(),
-  },
+  { userId: "u1", score: 420, tasksCompleted: 12, milestonesHit: 3, joinRequestsMade: 1, postsAuthored: 2, commentsAuthored: 5, projectsCreated: 3, intentsApproved: 2, updatedAt: new Date().toISOString() },
+  { userId: "u2", score: 180, tasksCompleted: 5, milestonesHit: 1, joinRequestsMade: 2, postsAuthored: 1, commentsAuthored: 3, projectsCreated: 1, intentsApproved: 0, updatedAt: new Date().toISOString() },
 ];
 
+// P3: Subscription plans (display/reference data)
 export const mockSubscriptionPlans: SubscriptionPlanInfo[] = [
-  {
-    id: "plan_free",
-    tier: "free" as SubscriptionTier,
-    name: "Free",
-    description: "社区基础功能，适合个人探索。",
-    priceMonthly: 0,
-    features: ["讨论广场", "项目画廊", "基础检索", "MCP v1 只读"],
-    apiQuota: 120,
-  },
-  {
-    id: "plan_pro",
-    tier: "pro" as SubscriptionTier,
-    name: "Pro",
-    description: "个人 Pro：高级检索、深度分析、优先曝光、协作增强。",
-    priceMonthly: 29,
-    features: ["所有 Free 功能", "精华帖优先曝光", "高级项目检索", "API 配额 1000/分钟", "创作者成长面板"],
-    apiQuota: 1000,
-  },
-  {
-    id: "plan_team_pro",
-    tier: "team_pro" as SubscriptionTier,
-    name: "Team Pro",
-    description: "团队 Pro：团队协作空间高级能力与管理能力。",
-    priceMonthly: 99,
-    features: ["所有 Pro 功能", "团队任务看板高级功能", "里程碑分析", "团队协作日志", "API 配额 5000/分钟", "优先客服"],
-    apiQuota: 5000,
-  },
+  { id: "plan_free", tier: "free" as SubscriptionTier, name: "Free", description: "社区基础功能。", priceMonthly: 0, features: ["讨论广场", "项目画廊", "基础检索", "MCP v1 只读"], apiQuota: 120 },
+  { id: "plan_pro", tier: "pro" as SubscriptionTier, name: "Pro", description: "个人 Pro：高级能力。", priceMonthly: 29, features: ["所有 Free 功能", "精华帖优先曝光", "高级检索", "API 1000/分钟"], apiQuota: 1000 },
+  { id: "plan_team_pro", tier: "team_pro" as SubscriptionTier, name: "Team Pro", description: "团队 Pro：高级协作。", priceMonthly: 99, features: ["所有 Pro 功能", "团队协作日志", "API 5000/分钟", "优先客服"], apiQuota: 5000 },
 ];
 
-export const mockUserSubscriptions: UserSubscriptionInfo[] = [
-  {
-    id: "sub_1",
-    userId: "u1",
-    plan: mockSubscriptionPlans[1],
-    status: "active",
-    currentPeriodStart: new Date(Date.UTC(2026, 3, 1)).toISOString(),
-    currentPeriodEnd: new Date(Date.UTC(2026, 4, 1)).toISOString(),
-  },
+// P3: User subscriptions (legacy P3 format; M-1 uses mockSubscriptions for Stripe-backed)
+export const mockUserSubscriptions: MockUserSubscriptionInfo[] = [
+  { id: "sub_1", userId: "u1", plan: mockSubscriptionPlans[1], status: "active", currentPeriodStart: new Date(Date.UTC(2026, 3, 1)).toISOString(), currentPeriodEnd: new Date(Date.UTC(2026, 4, 1)).toISOString() },
 ];

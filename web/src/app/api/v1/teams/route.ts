@@ -8,7 +8,8 @@ import {
 } from "@/lib/auth";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
-import { createTeam, listTeams } from "@/lib/repository";
+import { createTeam, listTeams, getUserTier, countUserTeams } from "@/lib/repository";
+import { checkTeamLimit } from "@/lib/subscription";
 
 const createTeamSchema = z.object({
   name: z.string().min(2).max(80),
@@ -52,6 +53,24 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const parsed = createTeamSchema.parse(json);
+
+    // M-1: enforce team limit per subscription tier
+    const [tier, teamCount] = await Promise.all([
+      getUserTier(session.userId),
+      countUserTeams(session.userId),
+    ]);
+    const gate = checkTeamLimit(tier, teamCount);
+    if (!gate.allowed) {
+      return apiError(
+        {
+          code: "TEAM_LIMIT_REACHED",
+          message: "You have reached the maximum number of teams for your plan.",
+          details: { upgradeReason: gate.upgradeReason, currentTier: tier },
+        },
+        403
+      );
+    }
+
     const team = await createTeam({
       ownerUserId: session.userId,
       name: parsed.name,

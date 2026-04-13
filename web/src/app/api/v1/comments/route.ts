@@ -6,7 +6,8 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 
 const createCommentSchema = z.object({
   postId: z.string().min(1),
-  body: z.string().min(2),
+  body: z.string().min(2).max(2000),
+  parentCommentId: z.string().optional(),
 });
 
 export async function GET(request: Request) {

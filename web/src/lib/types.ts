@@ -1,15 +1,31 @@
-export type Role = "guest" | "user" | "admin";
+// ─── Core enums ───────────────────────────────────────────────────────────────
 
+export type Role = "guest" | "user" | "admin";
+/** P2: Post sort order */
+export type PostSortOrder = "recent" | "hot" | "featured";
 export type ProjectStatus = "idea" | "building" | "launched" | "paused";
 export type ReviewStatus = "pending" | "approved" | "rejected";
 export type CollaborationIntentType = "join" | "recruit";
+export type ChallengeStatus = "draft" | "active" | "closed";
+export type SubscriptionTier = "free" | "pro" | "team_pro";
+export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
+
+// ─── User ─────────────────────────────────────────────────────────────────────
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: Role;
+  /** F-1: GitHub OAuth */
+  githubId?: number;
+  githubUsername?: string;
+  avatarUrl?: string;
+  /** M-2: Stripe */
+  stripeCustomerId?: string;
 }
+
+// ─── Creator / Project ────────────────────────────────────────────────────────
 
 export interface CreatorProfile {
   id: string;
@@ -30,7 +46,7 @@ export interface Project {
   id: string;
   slug: string;
   creatorId: string;
-  /** Present when the project is linked to a Team (P3-3). */
+  /** Present when the project is linked to a Team. */
   teamId?: string;
   team?: ProjectTeamSummary;
   title: string;
@@ -40,13 +56,23 @@ export interface Project {
   tags: string[];
   status: ProjectStatus;
   demoUrl?: string;
+  /** F-3: extra display fields */
+  repoUrl?: string;
+  websiteUrl?: string;
+  screenshots: string[];
+  logoUrl?: string;
+  openSource: boolean;
+  license?: string;
   updatedAt: string;
 }
+
+// ─── Post / Comment ───────────────────────────────────────────────────────────
 
 export interface Post {
   id: string;
   slug: string;
   authorId: string;
+  authorName?: string;
   title: string;
   body: string;
   tags: string[];
@@ -54,13 +80,30 @@ export interface Post {
   moderationNote?: string;
   reviewedAt?: string;
   reviewedBy?: string;
-  /** P2: non-null when marked as 精华 by an admin. */
+  /** P2/C-4: admin featured */
   featuredAt?: string;
   featuredBy?: string;
+  /** C-1: social counts */
+  likeCount: number;
+  bookmarkCount: number;
+  viewerHasLiked?: boolean;
+  viewerHasBookmarked?: boolean;
   createdAt: string;
 }
 
-export type ChallengeStatus = "draft" | "active" | "closed";
+export interface Comment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  /** C-2: nested replies (max depth 2) */
+  parentCommentId?: string;
+  replies?: Comment[];
+  createdAt: string;
+}
+
+// ─── P2: Challenge ────────────────────────────────────────────────────────────
 
 /** P2: 挑战赛/活动 */
 export interface Challenge {
@@ -88,17 +131,10 @@ export interface CreatorGrowthStats {
   projectCount: number;
   featuredPostCount: number;
   collaborationIntentCount: number;
-  /** Comment count on all of this creator's posts */
   receivedCommentCount: number;
 }
 
-export interface Comment {
-  id: string;
-  postId: string;
-  authorId: string;
-  body: string;
-  createdAt: string;
-}
+// ─── Collaboration ────────────────────────────────────────────────────────────
 
 export interface CollaborationIntent {
   id: string;
@@ -111,18 +147,24 @@ export interface CollaborationIntent {
   reviewNote?: string;
   reviewedAt?: string;
   reviewedBy?: string;
+  /** T-4: tracks conversion to team membership */
+  convertedToTeamMembership: boolean;
   createdAt: string;
 }
+
+// ─── Session / Auth ───────────────────────────────────────────────────────────
 
 export interface SessionUser {
   userId: string;
   role: Role;
   name: string;
-  /** Present when authenticated via API key (P4-2); empty array means unrestricted for backwards compat. */
+  /** Present when authenticated via API key; empty array means unrestricted. */
   apiKeyScopes?: string[];
   /** Present when authenticated via API key (DB path); used for MCP audit. */
   apiKeyId?: string;
 }
+
+// ─── Moderation ───────────────────────────────────────────────────────────────
 
 export interface ModerationCase {
   id: string;
@@ -148,11 +190,21 @@ export interface ReportTicket {
   resolvedBy?: string;
 }
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
 export type InAppNotificationKind =
   | "team_join_request"
   | "team_join_approved"
   | "team_join_rejected"
-  | "team_task_assigned";
+  | "team_task_assigned"
+  // C-3 social events
+  | "post_commented"
+  | "comment_replied"
+  | "post_liked"
+  | "project_bookmarked"
+  | "user_followed"
+  | "project_intent_received"
+  | "post_featured";
 
 export interface InAppNotification {
   id: string;
@@ -163,6 +215,8 @@ export interface InAppNotification {
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
+
+// ─── API Keys / Audit ─────────────────────────────────────────────────────────
 
 export interface McpInvokeAuditRow {
   id: string;
@@ -197,6 +251,24 @@ export interface AuditLog {
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
+
+/** User API key metadata (secret never stored; prefix for display). */
+export interface ApiKeySummary {
+  id: string;
+  label: string;
+  prefix: string;
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt?: string;
+  revokedAt?: string;
+}
+
+/** Returned only once from create. */
+export interface ApiKeyCreated extends ApiKeySummary {
+  secret: string;
+}
+
+// ─── Topics / Leaderboards ────────────────────────────────────────────────────
 
 export interface CollectionTopic {
   slug: string;
@@ -248,6 +320,8 @@ export interface WeeklyLeaderboardPublicPayload {
   rows: WeeklyLeaderboardMaterializedRow[];
 }
 
+// ─── Teams ────────────────────────────────────────────────────────────────────
+
 export type TeamRole = "owner" | "member";
 
 export interface TeamSummary {
@@ -258,6 +332,13 @@ export interface TeamSummary {
   ownerUserId: string;
   memberCount: number;
   projectCount: number;
+  /** T-1: external chat links */
+  discordUrl?: string;
+  telegramUrl?: string;
+  slackUrl?: string;
+  /** T-3: GitHub integration */
+  githubOrgUrl?: string;
+  githubRepoUrl?: string;
   createdAt: string;
 }
 
@@ -298,7 +379,6 @@ export interface TeamTask {
   description?: string;
   status: TeamTaskStatus;
   sortOrder: number;
-  /** Optional link to a milestone in the same team (P3-7). */
   milestoneId?: string;
   milestoneTitle?: string;
   createdByUserId: string;
@@ -318,36 +398,20 @@ export interface TeamMilestone {
   targetDate: string;
   completed: boolean;
   sortOrder: number;
+  /** T-2: visibility */
+  visibility: "team_only" | "public";
+  /** T-2: 0-100 progress */
+  progress: number;
   createdByUserId: string;
   createdByName: string;
   createdAt: string;
   updatedAt: string;
 }
 
-/** P4: user API key metadata (secret never stored; prefix for display). */
-export interface ApiKeySummary {
-  id: string;
-  label: string;
-  prefix: string;
-  /** OAuth-style scope strings; always includes `read:public` when created via UI. */
-  scopes: string[];
-  createdAt: string;
-  lastUsedAt?: string;
-  revokedAt?: string;
-}
-
-/** Returned only once from create. */
-export interface ApiKeyCreated extends ApiKeySummary {
-  secret: string;
-}
-
 export interface TeamDetail extends TeamSummary {
   members: TeamMember[];
-  /** Projects linked to this team (P3-3). */
   teamProjects?: TeamProjectCard[];
-  /** Set when the viewer has a pending join request for this team. */
   viewerPendingJoinRequest?: boolean;
-  /** Owner-only: pending requests awaiting review. */
   pendingJoinRequests?: TeamJoinRequestRow[];
 }
 
@@ -356,11 +420,11 @@ export interface CollaborationIntentConversionMetrics {
   pending: number;
   approved: number;
   rejected: number;
-  /** approved / totalSubmissions (0 if none). */
   approvalRate: number;
-  /** approved / (approved + rejected); 0 if no reviewed intents. */
   reviewedApprovalRate: number;
 }
+
+// ─── P3: Reputation / Contribution Credits ────────────────────────────────────
 
 /** P3: Team-scoped activity log entry. */
 export interface TeamActivityLogEntry {
@@ -374,7 +438,7 @@ export interface TeamActivityLogEntry {
   createdAt: string;
 }
 
-/** P3: 信誉系统 — public contribution credit profile. */
+/** P3: Public contribution credit profile. */
 export interface ContributionCreditProfile {
   userId: string;
   score: number;
@@ -388,10 +452,20 @@ export interface ContributionCreditProfile {
   updatedAt: string;
 }
 
-export type SubscriptionTier = "free" | "pro" | "team_pro";
-export type SubscriptionStatus = "active" | "canceled" | "past_due";
+// ─── M-1/M-2: Subscription ────────────────────────────────────────────────────
 
-/** P3: 商业化 — subscription plan definition. */
+/** P3: Legacy subscription info format (plan-based). */
+export interface UserSubscriptionInfo {
+  id: string;
+  userId: string;
+  plan: SubscriptionPlanInfo;
+  status: SubscriptionStatus;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  canceledAt?: string;
+}
+
+/** P3: Subscription plan definition. */
 export interface SubscriptionPlanInfo {
   id: string;
   tier: SubscriptionTier;
@@ -402,16 +476,21 @@ export interface SubscriptionPlanInfo {
   apiQuota: number;
 }
 
-/** P3: 商业化 — user subscription state. */
-export interface UserSubscriptionInfo {
+/** M-1: Per-user subscription record (Stripe-backed). */
+export interface UserSubscription {
   id: string;
   userId: string;
-  plan: SubscriptionPlanInfo;
+  tier: SubscriptionTier;
   status: SubscriptionStatus;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  canceledAt?: string;
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
+
+// ─── P4: Enterprise / Embed ───────────────────────────────────────────────────
 
 /** P4: Embeddable card payload for external sites. */
 export interface EmbedProjectCard {
@@ -442,7 +521,6 @@ export interface ProjectRadarEntry {
   oneLiner: string;
   status: ProjectStatus;
   techStack: string[];
-  /** Weighted score: recent comments + collaboration intents + recency. */
   score: number;
 }
 
@@ -490,4 +568,54 @@ export interface EcosystemReport {
     topDiscussionsByComments: Array<{ slug: string; title: string; count: number }>;
     topCreatorsByScore: Array<{ userId: string; score: number }>;
   };
+}
+
+// ─── C-1: Social Interactions ─────────────────────────────────────────────────
+
+export interface PostLike {
+  id: string;
+  userId: string;
+  postId: string;
+  createdAt: string;
+}
+
+export interface PostBookmark {
+  id: string;
+  userId: string;
+  postId: string;
+  createdAt: string;
+}
+
+export interface ProjectBookmark {
+  id: string;
+  userId: string;
+  projectId: string;
+  createdAt: string;
+}
+
+export interface UserFollow {
+  id: string;
+  followerId: string;
+  followingId: string;
+  createdAt: string;
+}
+
+// ─── C-6/A-3: GitHub / Search ─────────────────────────────────────────────────
+
+export interface GitHubRepoStats {
+  stars: number;
+  forks: number;
+  language: string | null;
+  lastPushedAt: string | null;
+  openIssues: number;
+  cachedAt: string;
+}
+
+export interface SearchResult {
+  type: "post" | "project" | "creator";
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  tags?: string[];
 }
