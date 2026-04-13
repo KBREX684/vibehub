@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Search, User, Key, LayoutGrid, MessageSquare, Users, ShieldAlert } from "lucide-react";
+import { Sparkles, Search, User, Key, LayoutGrid, MessageSquare, Users, ShieldAlert, Trophy } from "lucide-react";
 
 export function SiteHeader() {
   return (
@@ -23,6 +23,9 @@ export function SiteHeader() {
           </Link>
           <Link href="/teams" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors flex items-center gap-1.5">
             <Users className="w-4 h-4" /> 团队
+          </Link>
+          <Link href="/challenges" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors flex items-center gap-1.5">
+            <Trophy className="w-4 h-4" /> 挑战赛
           </Link>
           <Link href="/workspace/enterprise" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors flex items-center gap-1.5">
             <LayoutGrid className="w-4 h-4" /> 工作台

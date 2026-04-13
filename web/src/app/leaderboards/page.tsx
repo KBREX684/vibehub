@@ -7,13 +7,14 @@ import {
   parseUtcWeekStartParam,
   startOfUtcWeekContaining,
 } from "@/lib/repository";
+import { Trophy, Flame, Users, Calendar, ChevronLeft, ChevronRight, Medal } from "lucide-react";
 
 function formatWeekRangeLabel(weekStart: Date): string {
   const end = new Date(weekStart.getTime());
   end.setUTCDate(end.getUTCDate() + 6);
   const fmt = (d: Date) =>
-    `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-  return `${fmt(weekStart)} – ${fmt(end)}（UTC）`;
+    `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${String(d.getUTCDate()).padStart(2, "0")}`;
+  return `${fmt(weekStart)} - ${fmt(end)}`;
 }
 
 function addDaysUtc(d: Date, days: number): Date {
@@ -45,128 +46,206 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
   const invalidWeek = weekRaw && weekRaw.trim() && !weekStart;
 
   const [discussions, projects, weeklyDiscussions, weeklyProjects] = await Promise.all([
-    getDiscussionLeaderboard(15),
-    getProjectCollaborationLeaderboard(15),
+    getDiscussionLeaderboard(10),
+    getProjectCollaborationLeaderboard(10),
     getWeeklyLeaderboardPublicPayload({
       weekStart: effectiveWeek,
       kind: "discussions_by_weekly_comment_count",
-      limit: 15,
+      limit: 10,
     }),
     getWeeklyLeaderboardPublicPayload({
       weekStart: effectiveWeek,
       kind: "projects_by_weekly_collaboration_intent_count",
-      limit: 15,
+      limit: 10,
     }),
   ]);
 
   return (
     <>
       <SiteHeader />
-      <main className="container section">
-        <h1>榜单</h1>
-        <p className="muted">
-          P2-3：全量历史榜（讨论按评论总数、项目按协作意向总数）。P2-5：UTC 自然周（周一至周日）周榜；管理员可物化快照后公开接口优先读快照。周榜接口：{" "}
-          <code className="code-inline">GET /api/v1/leaderboards/weekly/discussions</code>、{" "}
-          <code className="code-inline">GET /api/v1/leaderboards/weekly/projects</code>
-          （可选 <code className="code-inline">week=YYYY-MM-DD</code> 须为周一）。
-        </p>
-
-        {invalidWeek ? (
-          <p className="error-text" style={{ marginBottom: "1rem" }}>
-            无效的 week 参数：请使用 UTC 周一的日期（YYYY-MM-DD）。已改为当前周。
+      <main className="container pb-24">
+        <section className="py-16 md:py-24 flex flex-col items-center text-center relative">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-amber-50/80 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
+          
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-200 text-sm font-medium text-stone-600 mb-8 shadow-sm">
+            <Medal className="w-4 h-4 text-amber-500" />
+            <span>VibeHub 社区榜单</span>
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-extrabold text-stone-900 tracking-tight mb-6 max-w-3xl leading-[1.1]">
+            发现社区中最具 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">影响力</span> 的内容
+          </h1>
+          
+          <p className="text-xl text-stone-500 max-w-2xl leading-relaxed mb-8">
+            追踪每周最热讨论与最受关注的协作项目，不错过任何重要趋势。
           </p>
-        ) : null}
 
-        <nav className="discover-pagination" aria-label="周切换" style={{ marginBottom: "1.25rem" }}>
-          <Link href={`/leaderboards?week=${toWeekQueryParam(prevWeek)}`} className="button ghost">
-            上一周
-          </Link>
-          <span className="muted small" style={{ alignSelf: "center" }}>
-            {formatWeekRangeLabel(effectiveWeek)}
-          </span>
-          <Link href={`/leaderboards?week=${toWeekQueryParam(nextWeek)}`} className="button ghost">
-            下一周
-          </Link>
-          {effectiveWeek.getTime() !== nowWeek.getTime() ? (
-            <Link href="/leaderboards" className="button ghost">
-              本周
+          <div className="flex items-center gap-4 bg-white border border-stone-200 rounded-2xl p-2 shadow-sm">
+            <Link 
+              href={`/leaderboards?week=${toWeekQueryParam(prevWeek)}`} 
+              className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
             </Link>
-          ) : null}
-        </nav>
+            
+            <div className="flex items-center gap-2 px-4 font-semibold text-stone-700">
+              <Calendar className="w-4 h-4 text-amber-600" />
+              {formatWeekRangeLabel(effectiveWeek)}
+            </div>
 
-        <div className="leaderboard-grid">
-          <section className="card leaderboard-panel">
-            <h2>讨论热度（全量）</h2>
-            <p className="muted small">已发布帖子 · 按评论总数</p>
-            <ol className="leaderboard-list">
+            <Link 
+              href={`/leaderboards?week=${toWeekQueryParam(nextWeek)}`} 
+              className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Link>
+
+            {effectiveWeek.getTime() !== nowWeek.getTime() && (
+              <Link 
+                href="/leaderboards" 
+                className="ml-2 px-4 py-2 text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
+              >
+                回到本周
+              </Link>
+            )}
+          </div>
+          
+          {invalidWeek && (
+            <p className="text-red-500 text-sm mt-4 font-medium">
+              无效的日期参数，已为您展示当前周数据。
+            </p>
+          )}
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          {/* Weekly Discussions */}
+          <section className="bg-white border border-stone-200 rounded-3xl p-8 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 opacity-60 pointer-events-none"></div>
+            
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
+                  <Flame className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-stone-900">本周最热讨论</h2>
+                  <p className="text-sm text-stone-500 font-medium">按周内新增评论数排序</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 bg-stone-100 text-stone-500 rounded-lg">
+                {weeklyDiscussions.source === "materialized" ? "已快照" : "实时"}
+              </span>
+            </div>
+
+            <ol className="space-y-4 relative z-10">
+              {weeklyDiscussions.rows.length === 0 ? (
+                <div className="text-center py-12 text-stone-500">本周暂无数据</div>
+              ) : (
+                weeklyDiscussions.rows.map((row, i) => (
+                  <li key={row.entityId} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-stone-50 transition-colors border border-transparent hover:border-stone-100">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${i < 3 ? 'bg-orange-100 text-orange-700' : 'bg-stone-100 text-stone-500'}`}>
+                      {row.rank}
+                    </div>
+                    <div className="min-w-0 flex-grow">
+                      <Link href={`/discussions/${row.slug}`} className="text-stone-900 font-bold hover:text-orange-600 transition-colors truncate block">
+                        {row.title}
+                      </Link>
+                      <div className="text-sm text-stone-500 mt-1">{row.score} 条新增评论</div>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ol>
+          </section>
+
+          {/* Weekly Projects */}
+          <section className="bg-white border border-stone-200 rounded-3xl p-8 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 opacity-60 pointer-events-none"></div>
+            
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-stone-900">本周活跃项目</h2>
+                  <p className="text-sm text-stone-500 font-medium">按周内新增协作意向排序</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 bg-stone-100 text-stone-500 rounded-lg">
+                {weeklyProjects.source === "materialized" ? "已快照" : "实时"}
+              </span>
+            </div>
+
+            <ol className="space-y-4 relative z-10">
+              {weeklyProjects.rows.length === 0 ? (
+                <div className="text-center py-12 text-stone-500">本周暂无数据</div>
+              ) : (
+                weeklyProjects.rows.map((row, i) => (
+                  <li key={row.entityId} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-stone-50 transition-colors border border-transparent hover:border-stone-100">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${i < 3 ? 'bg-blue-100 text-blue-700' : 'bg-stone-100 text-stone-500'}`}>
+                      {row.rank}
+                    </div>
+                    <div className="min-w-0 flex-grow">
+                      <Link href={`/projects/${row.slug}`} className="text-stone-900 font-bold hover:text-blue-600 transition-colors truncate block">
+                        {row.title}
+                      </Link>
+                      <div className="text-sm text-stone-500 mt-1">{row.score} 条新增意向</div>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ol>
+          </section>
+
+          {/* All-time Discussions */}
+          <section className="bg-stone-50 border border-stone-200 rounded-3xl p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <Trophy className="w-6 h-6 text-stone-400" />
+              <div>
+                <h2 className="text-xl font-bold text-stone-900">历史讨论总榜</h2>
+                <p className="text-sm text-stone-500 font-medium">按累计评论总数排序</p>
+              </div>
+            </div>
+
+            <ol className="space-y-3">
               {discussions.map((row, index) => (
-                <li key={row.postId}>
-                  <span className="rank-pill">{index + 1}</span>
-                  <div>
-                    <Link href={`/discussions#${row.slug}`} className="inline-link">
+                <li key={row.postId} className="flex items-center gap-4 p-3 rounded-xl hover:bg-white transition-colors">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-stone-200 text-stone-600">
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0 flex-grow flex items-center justify-between gap-4">
+                    <Link href={`/discussions/${row.slug}`} className="text-stone-700 font-semibold hover:text-stone-900 transition-colors truncate">
                       {row.title}
                     </Link>
-                    <div className="muted small">{row.commentCount} 条评论</div>
+                    <span className="text-xs font-bold text-stone-400 shrink-0">{row.commentCount} 评</span>
                   </div>
                 </li>
               ))}
             </ol>
           </section>
 
-          <section className="card leaderboard-panel">
-            <h2>协作意向活跃项目（全量）</h2>
-            <p className="muted small">全部意向提交数（含待审核）</p>
-            <ol className="leaderboard-list">
+          {/* All-time Projects */}
+          <section className="bg-stone-50 border border-stone-200 rounded-3xl p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <Trophy className="w-6 h-6 text-stone-400" />
+              <div>
+                <h2 className="text-xl font-bold text-stone-900">历史项目总榜</h2>
+                <p className="text-sm text-stone-500 font-medium">按累计协作意向总数排序</p>
+              </div>
+            </div>
+
+            <ol className="space-y-3">
               {projects.map((row, index) => (
-                <li key={row.projectId}>
-                  <span className="rank-pill">{index + 1}</span>
-                  <div>
-                    <Link href={`/projects/${row.slug}`} className="inline-link">
-                      {row.title}
-                    </Link>
-                    <div className="muted small">{row.intentCount} 条协作意向</div>
+                <li key={row.projectId} className="flex items-center gap-4 p-3 rounded-xl hover:bg-white transition-colors">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-stone-200 text-stone-600">
+                    {index + 1}
                   </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <section className="card leaderboard-panel">
-            <h2>讨论周榜</h2>
-            <p className="muted small">
-              周内新增评论数 · 来源：{weeklyDiscussions.source === "materialized" ? "物化快照" : "实时计算"}
-              {weeklyDiscussions.generatedAt ? ` · ${weeklyDiscussions.generatedAt}` : ""}
-            </p>
-            <ol className="leaderboard-list">
-              {weeklyDiscussions.rows.map((row) => (
-                <li key={row.entityId}>
-                  <span className="rank-pill">{row.rank}</span>
-                  <div>
-                    <Link href={`/discussions#${row.slug}`} className="inline-link">
+                  <div className="min-w-0 flex-grow flex items-center justify-between gap-4">
+                    <Link href={`/projects/${row.slug}`} className="text-stone-700 font-semibold hover:text-stone-900 transition-colors truncate">
                       {row.title}
                     </Link>
-                    <div className="muted small">{row.score} 条本周评论</div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <section className="card leaderboard-panel">
-            <h2>项目周榜</h2>
-            <p className="muted small">
-              周内新增协作意向 · 来源：{weeklyProjects.source === "materialized" ? "物化快照" : "实时计算"}
-              {weeklyProjects.generatedAt ? ` · ${weeklyProjects.generatedAt}` : ""}
-            </p>
-            <ol className="leaderboard-list">
-              {weeklyProjects.rows.map((row) => (
-                <li key={row.entityId}>
-                  <span className="rank-pill">{row.rank}</span>
-                  <div>
-                    <Link href={`/projects/${row.slug}`} className="inline-link">
-                      {row.title}
-                    </Link>
-                    <div className="muted small">{row.score} 条本周意向</div>
+                    <span className="text-xs font-bold text-stone-400 shrink-0">{row.intentCount} 意向</span>
                   </div>
                 </li>
               ))}

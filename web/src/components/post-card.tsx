@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Post } from "@/lib/types";
-import { MessageSquare, Clock } from "lucide-react";
+import { MessageSquare, Clock, Star } from "lucide-react";
 
 export function PostCard({
   post,
@@ -26,11 +26,19 @@ export function PostCard({
       className="bg-white border border-stone-200 rounded-2xl p-6 h-full flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
       id={post.slug}
     >
-      <div className="flex items-center gap-3 text-xs font-medium text-stone-500 mb-3">
-        <span className="flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5" />
-          {date}
-        </span>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3 text-xs font-medium text-stone-500">
+          <span className="flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5" />
+            {date}
+          </span>
+        </div>
+        {post.featuredAt && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 text-xs font-bold tracking-wide">
+            <Star className="w-3 h-3 fill-amber-600" />
+            精华
+          </span>
+        )}
       </div>
       
       <h3 className="text-xl font-bold text-stone-900 mb-3 leading-snug line-clamp-2">

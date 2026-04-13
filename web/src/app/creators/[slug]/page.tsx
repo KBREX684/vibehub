@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { getCreatorBySlug, listProjects } from "@/lib/repository";
+import { getCreatorBySlug, listProjects, getCreatorGrowthStats } from "@/lib/repository";
 import { ProjectCard } from "@/components/project-card";
-import { User, Briefcase, Code2, Users } from "lucide-react";
+import { User, Briefcase, Code2, Users, TrendingUp, MessageSquare, Star, FolderGit2 } from "lucide-react";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -15,8 +15,13 @@ export default async function CreatorDetailPage({ params }: Props) {
     notFound();
   }
 
-  // Use the new creatorId filter for proper pagination
-  const { items: creatorProjects } = await listProjects({ creatorId: creator.id, page: 1, limit: 20 });
+  const [
+    { items: creatorProjects },
+    stats
+  ] = await Promise.all([
+    listProjects({ creatorId: creator.id, page: 1, limit: 20 }),
+    getCreatorGrowthStats(slug)
+  ]);
 
   const prefMap: Record<string, string> = {
     open: "开放协作",
@@ -28,8 +33,7 @@ export default async function CreatorDetailPage({ params }: Props) {
     <>
       <SiteHeader />
       <main className="container max-w-4xl py-12">
-        <article className="bg-white border border-stone-200 rounded-3xl p-8 md:p-12 shadow-sm mb-12 relative overflow-hidden">
-          {/* Decorative background element */}
+        <article className="bg-white border border-stone-200 rounded-3xl p-8 md:p-12 shadow-sm mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 opacity-60 pointer-events-none"></div>
           
           <div className="relative z-10">
@@ -79,6 +83,38 @@ export default async function CreatorDetailPage({ params }: Props) {
             </div>
           </div>
         </article>
+
+        {/* P2: Creator Growth Dashboard */}
+        {stats && (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <TrendingUp className="w-6 h-6 text-amber-600" />
+              <h2 className="text-2xl font-bold text-stone-900">成长数据</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                <FolderGit2 className="w-6 h-6 text-blue-500 mb-3" />
+                <strong className="text-3xl font-extrabold text-stone-900 mb-1">{stats.projectCount}</strong>
+                <span className="text-sm font-medium text-stone-500">发布项目</span>
+              </div>
+              <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                <MessageSquare className="w-6 h-6 text-emerald-500 mb-3" />
+                <strong className="text-3xl font-extrabold text-stone-900 mb-1">{stats.postCount}</strong>
+                <span className="text-sm font-medium text-stone-500">发起讨论</span>
+              </div>
+              <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                <Star className="w-6 h-6 text-amber-500 mb-3" />
+                <strong className="text-3xl font-extrabold text-stone-900 mb-1">{stats.featuredPostCount}</strong>
+                <span className="text-sm font-medium text-stone-500">获得精华</span>
+              </div>
+              <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                <Users className="w-6 h-6 text-purple-500 mb-3" />
+                <strong className="text-3xl font-extrabold text-stone-900 mb-1">{stats.collaborationIntentCount}</strong>
+                <span className="text-sm font-medium text-stone-500">收到协作意向</span>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="scroll-mt-24">
           <div className="flex items-center gap-3 mb-8">

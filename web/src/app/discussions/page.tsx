@@ -10,7 +10,7 @@ interface Props {
 
 export default async function DiscussionsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const sort = (params.sort === "hot" ? "hot" : "recent") as PostSortOrder;
+  const sort = (["recent", "hot", "featured"].includes(params.sort || "") ? params.sort : "recent") as PostSortOrder;
   const page = parseInt(params.page || "1", 10) || 1;
   const { items, pagination } = await listPosts({ sort, page, limit: 12 });
 
@@ -37,6 +37,12 @@ export default async function DiscussionsPage({ searchParams }: Props) {
               className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sort === 'hot' ? 'bg-white text-amber-600 shadow-sm' : 'text-stone-500 hover:text-stone-900'}`}
             >
               最热
+            </Link>
+            <Link 
+              href="/discussions?sort=featured" 
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1 ${sort === 'featured' ? 'bg-white text-amber-600 shadow-sm' : 'text-stone-500 hover:text-stone-900'}`}
+            >
+              精华
             </Link>
           </div>
         </div>
