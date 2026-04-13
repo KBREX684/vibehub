@@ -289,6 +289,84 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: { "200": responses["200"], "404": responses["404"], "500": responses["500"] },
         },
       },
+      "/api/v1/teams/{slug}/activity-log": {
+        get: {
+          tags: ["teams"],
+          summary: "Team collaboration activity log (members: session or Bearer read:team:detail)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/reputation": {
+        get: {
+          tags: ["me"],
+          summary: "Get current user's contribution credit profile (session cookie)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["me"],
+          summary: "Refresh (recompute) current user's contribution credit (session cookie)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/reputation/leaderboard": {
+        get: {
+          tags: ["reputation"],
+          summary: "Public contribution credit leaderboard (top users by score)",
+          parameters: [
+            { name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } },
+          ],
+          responses: { "200": responses["200"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/subscription-plans": {
+        get: {
+          tags: ["subscription"],
+          summary: "List available subscription plans (public)",
+          responses: { "200": responses["200"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/subscription": {
+        get: {
+          tags: ["me"],
+          summary: "Get current user's active subscription (session cookie)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["me"],
+          summary: "Subscribe to a plan (session cookie)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["planTier"],
+                  properties: {
+                    planTier: { type: "string", enum: ["free", "pro", "team_pro"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["me"],
+          summary: "Cancel active subscription (session cookie)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
       "/api/v1/admin/posts/{postId}/feature": {
         post: {
           tags: ["admin"],

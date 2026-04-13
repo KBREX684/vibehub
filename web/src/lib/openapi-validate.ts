@@ -27,6 +27,10 @@ export const REQUIRED_OPENAPI_PATHS = [
   "/api/v1/challenges",
   "/api/v1/creators/{slug}/growth",
   "/api/v1/me/api-keys",
+  "/api/v1/me/reputation",
+  "/api/v1/me/subscription",
+  "/api/v1/subscription-plans",
+  "/api/v1/reputation/leaderboard",
 ] as const;
 
 /**

@@ -4,16 +4,20 @@ import type {
   ChallengeStatus,
   Comment,
   CollaborationIntent,
+  ContributionCreditProfile,
   CreatorProfile,
   InAppNotificationKind,
   ModerationCase,
   Post,
   Project,
   ReportTicket,
+  SubscriptionPlanInfo,
+  SubscriptionTier,
   TeamJoinRequestStatus,
   TeamRole,
   TeamTaskStatus,
   User,
+  UserSubscriptionInfo,
 } from "@/lib/types";
 
 export interface MockTeam {
@@ -368,5 +372,73 @@ export const mockChallenges: Challenge[] = [
     createdByUserId: "u1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+  },
+];
+
+export const mockContributionCredits: ContributionCreditProfile[] = [
+  {
+    userId: "u1",
+    score: 420,
+    tasksCompleted: 12,
+    milestonesHit: 3,
+    joinRequestsMade: 1,
+    postsAuthored: 2,
+    commentsAuthored: 5,
+    projectsCreated: 3,
+    intentsApproved: 2,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    userId: "u2",
+    score: 180,
+    tasksCompleted: 5,
+    milestonesHit: 1,
+    joinRequestsMade: 2,
+    postsAuthored: 1,
+    commentsAuthored: 3,
+    projectsCreated: 1,
+    intentsApproved: 0,
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export const mockSubscriptionPlans: SubscriptionPlanInfo[] = [
+  {
+    id: "plan_free",
+    tier: "free" as SubscriptionTier,
+    name: "Free",
+    description: "社区基础功能，适合个人探索。",
+    priceMonthly: 0,
+    features: ["讨论广场", "项目画廊", "基础检索", "MCP v1 只读"],
+    apiQuota: 120,
+  },
+  {
+    id: "plan_pro",
+    tier: "pro" as SubscriptionTier,
+    name: "Pro",
+    description: "个人 Pro：高级检索、深度分析、优先曝光、协作增强。",
+    priceMonthly: 29,
+    features: ["所有 Free 功能", "精华帖优先曝光", "高级项目检索", "API 配额 1000/分钟", "创作者成长面板"],
+    apiQuota: 1000,
+  },
+  {
+    id: "plan_team_pro",
+    tier: "team_pro" as SubscriptionTier,
+    name: "Team Pro",
+    description: "团队 Pro：团队协作空间高级能力与管理能力。",
+    priceMonthly: 99,
+    features: ["所有 Pro 功能", "团队任务看板高级功能", "里程碑分析", "团队协作日志", "API 配额 5000/分钟", "优先客服"],
+    apiQuota: 5000,
+  },
+];
+
+export const mockUserSubscriptions: UserSubscriptionInfo[] = [
+  {
+    id: "sub_1",
+    userId: "u1",
+    plan: mockSubscriptionPlans[1],
+    status: "active",
+    currentPeriodStart: new Date(Date.UTC(2026, 3, 1)).toISOString(),
+    currentPeriodEnd: new Date(Date.UTC(2026, 4, 1)).toISOString(),
   },
 ];

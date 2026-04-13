@@ -361,3 +361,54 @@ export interface CollaborationIntentConversionMetrics {
   /** approved / (approved + rejected); 0 if no reviewed intents. */
   reviewedApprovalRate: number;
 }
+
+/** P3: Team-scoped activity log entry. */
+export interface TeamActivityLogEntry {
+  id: string;
+  actorId: string;
+  actorName?: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+/** P3: 信誉系统 — public contribution credit profile. */
+export interface ContributionCreditProfile {
+  userId: string;
+  score: number;
+  tasksCompleted: number;
+  milestonesHit: number;
+  joinRequestsMade: number;
+  postsAuthored: number;
+  commentsAuthored: number;
+  projectsCreated: number;
+  intentsApproved: number;
+  updatedAt: string;
+}
+
+export type SubscriptionTier = "free" | "pro" | "team_pro";
+export type SubscriptionStatus = "active" | "canceled" | "past_due";
+
+/** P3: 商业化 — subscription plan definition. */
+export interface SubscriptionPlanInfo {
+  id: string;
+  tier: SubscriptionTier;
+  name: string;
+  description: string;
+  priceMonthly: number;
+  features: string[];
+  apiQuota: number;
+}
+
+/** P3: 商业化 — user subscription state. */
+export interface UserSubscriptionInfo {
+  id: string;
+  userId: string;
+  plan: SubscriptionPlanInfo;
+  status: SubscriptionStatus;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  canceledAt?: string;
+}

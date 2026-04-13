@@ -87,6 +87,7 @@ model User {
   notifications             InAppNotification[]
   featuredPosts             Post[]               @relation("PostFeaturedBy")
   challengesCreated         Challenge[]          @relation("ChallengeCreator")
+  subscriptions             UserSubscription[]
 }
 
 model InAppNotification {
@@ -432,4 +433,69 @@ model Challenge {
 
   @@index([status])
   @@index([startDate, endDate])
+}
+
+// ─── P3: 信誉系统 (Reputation / Contribution Credits) ───
+
+/// Aggregated public collaboration credit for a user.
+model ContributionCredit {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  score              Int      @default(0)
+  tasksCompleted     Int      @default(0)
+  milestonesHit      Int      @default(0)
+  joinRequestsMade   Int      @default(0)
+  postsAuthored      Int      @default(0)
+  commentsAuthored   Int      @default(0)
+  projectsCreated    Int      @default(0)
+  intentsApproved    Int      @default(0)
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+
+  @@index([score])
+}
+
+// ─── P3: 商业化首发 (Subscription / Pro Membership) ────
+
+enum SubscriptionTier {
+  free
+  pro
+  team_pro
+}
+
+enum SubscriptionStatus {
+  active
+  canceled
+  past_due
+}
+
+model SubscriptionPlan {
+  id            String           @id @default(cuid())
+  tier          SubscriptionTier @unique
+  name          String
+  description   String
+  priceMonthly  Int              @default(0)
+  features      String[]
+  apiQuota      Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  subscriptions UserSubscription[]
+}
+
+model UserSubscription {
+  id             String             @id @default(cuid())
+  userId         String
+  planId         String
+  status         SubscriptionStatus @default(active)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  canceledAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           SubscriptionPlan   @relation(fields: [planId], references: [id])
+
+  @@unique([userId, planId])
+  @@index([userId])
+  @@index([status])
 }
