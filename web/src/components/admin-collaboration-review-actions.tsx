@@ -11,6 +11,7 @@ export function AdminCollaborationReviewActions({ intentId }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
   const [note, setNote] = useState("");
+  const [inviteToTeamOnApprove, setInviteToTeamOnApprove] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(action: "approve" | "reject") {
@@ -21,7 +22,11 @@ export function AdminCollaborationReviewActions({ intentId }: Props) {
       const response = await fetch(`/api/v1/admin/collaboration-intents/${intentId}/review`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action, note: note || undefined }),
+        body: JSON.stringify({
+          action,
+          note: note || undefined,
+          ...(action === "approve" ? { inviteApplicantToTeamOnApprove: inviteToTeamOnApprove } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -48,6 +53,15 @@ export function AdminCollaborationReviewActions({ intentId }: Props) {
         rows={2}
         className="input-base resize-none text-xs"
       />
+      <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={inviteToTeamOnApprove}
+          onChange={(e) => setInviteToTeamOnApprove(e.target.checked)}
+          className="rounded border-[var(--color-border)]"
+        />
+        On approve (join intents): add applicant to the project’s linked team when possible
+      </label>
       <div className="flex items-center gap-2">
         <button
           type="button"

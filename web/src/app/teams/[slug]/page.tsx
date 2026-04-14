@@ -217,6 +217,7 @@ export default async function TeamDetailPage({ params }: Props) {
             members={team.members}
             milestones={taskMilestones}
             currentUserId={session?.userId ?? null}
+            isOwner={isOwner}
           />
 
           <TeamMilestonesPanel teamSlug={team.slug} currentUserId={session?.userId ?? null} />

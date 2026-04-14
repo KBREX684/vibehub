@@ -2,6 +2,8 @@
 
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { UpgradeReason } from "@/lib/subscription";
+import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
 
 export function CreateTeamForm() {
   const router = useRouter();
@@ -10,11 +12,13 @@ export function CreateTeamForm() {
   const [mission, setMission] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | undefined>(undefined);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setStatus("loading");
     setMessage(null);
+    setUpgradeReason(undefined);
     try {
       const body: { name: string; slug?: string; mission?: string } = { name: name.trim() };
       const s = slug.trim();
@@ -31,10 +35,14 @@ export function CreateTeamForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = (await res.json()) as { data?: { slug?: string }; error?: { message?: string } };
+      const json = (await res.json()) as {
+        data?: { slug?: string };
+        error?: { message?: string; details?: { upgradeReason?: UpgradeReason } };
+      };
       if (!res.ok || !json.data?.slug) {
         setStatus("error");
         setMessage(json.error?.message ?? "Create failed");
+        setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
       router.push(`/teams/${encodeURIComponent(json.data.slug)}`);
@@ -75,6 +83,7 @@ export function CreateTeamForm() {
         </button>
       </div>
       {message ? <p className="error-text">{message}</p> : null}
+      {upgradeReason ? <UpgradePlanCallout upgradeReason={upgradeReason} className="mt-4" /> : null}
     </form>
   );
 }

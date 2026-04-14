@@ -3,6 +3,8 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProjectStatus } from "@/lib/types";
+import type { UpgradeReason } from "@/lib/subscription";
+import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "idea", label: "Idea" },
@@ -29,11 +31,13 @@ export function CreateProjectForm() {
   const [demoUrl, setDemoUrl] = useState("");
   const [formStatus, setFormStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | undefined>(undefined);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormStatus("loading");
     setMessage(null);
+    setUpgradeReason(undefined);
     const techStack = parseList(techStackInput);
     const tags = parseList(tagsInput);
     const body: Record<string, unknown> = {
@@ -54,10 +58,14 @@ export function CreateProjectForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = (await res.json()) as { data?: { slug?: string }; error?: { message?: string; code?: string } };
+      const json = (await res.json()) as {
+        data?: { slug?: string };
+        error?: { message?: string; code?: string; details?: { upgradeReason?: UpgradeReason } };
+      };
       if (!res.ok || !json.data?.slug) {
         setFormStatus("error");
         setMessage(json.error?.message ?? "Could not create project");
+        setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
       router.push(`/projects/${encodeURIComponent(json.data.slug)}`);
@@ -178,6 +186,7 @@ export function CreateProjectForm() {
       </div>
 
       {message ? <p className="text-sm text-[var(--color-error)] m-0">{message}</p> : null}
+      {upgradeReason ? <UpgradePlanCallout upgradeReason={upgradeReason} /> : null}
     </form>
   );
 }

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CollaborationIntentForm } from "@/components/collaboration-intent-form";
+import { ProjectCollaborationOwnerPanel } from "@/components/project-collaboration-owner-panel";
 import { ProjectTeamLinkForm } from "@/components/project-team-link-form";
 import { ShareProjectButton } from "@/components/share-project-button";
 import { getSessionUserFromCookie } from "@/lib/auth";
@@ -12,6 +13,7 @@ import {
   listPublicMilestonesForProject,
   listProjects,
   getContributionCredit,
+  listOwnedTeamSummariesForUser,
 } from "@/lib/repository";
 import {
   ExternalLink,
@@ -65,6 +67,13 @@ export default async function ProjectDetailPage({ params }: Props) {
   const creatorProfile = await getCreatorProfileById(project.creatorId);
   const canLinkTeam = Boolean(session && creatorProfile && session.userId === creatorProfile.userId);
   const canEditProject = Boolean(session && creatorProfile && session.userId === creatorProfile.userId);
+  const isProjectOwner = Boolean(session && creatorProfile && session.userId === creatorProfile.userId);
+  const pendingOwnerIntents =
+    isProjectOwner && session
+      ? await listProjectCollaborationIntents({ projectId: project.id, status: "pending", page: 1, limit: 20 })
+      : { items: [] };
+  const ownerTeams =
+    isProjectOwner && session ? await listOwnedTeamSummariesForUser(session.userId) : [];
   const [publicMilestones, relatedProjects, creatorCredit] = await Promise.all([
     listPublicMilestonesForProject(project.id),
     listProjects({ tag: project.tags[0], page: 1, limit: 4 }),
@@ -312,6 +321,18 @@ export default async function ProjectDetailPage({ params }: Props) {
             </p>
             <CollaborationIntentForm projectSlug={project.slug} />
           </section>
+
+          {isProjectOwner && pendingOwnerIntents.items.length > 0 ? (
+            <ProjectCollaborationOwnerPanel
+              projectSlug={project.slug}
+              intents={pendingOwnerIntents.items.map((i) => ({
+                id: i.id,
+                intentType: i.intentType,
+                message: i.message,
+              }))}
+              teams={ownerTeams}
+            />
+          ) : null}
 
           {/* Approved collaborators */}
           {approvedIntents.items.length > 0 && (

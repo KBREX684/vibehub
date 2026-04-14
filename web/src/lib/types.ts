@@ -219,7 +219,8 @@ export type InAppNotificationKind =
   | "project_bookmarked"
   | "user_followed"
   | "project_intent_received"
-  | "post_featured";
+  | "post_featured"
+  | "collaboration_intent_status_update";
 
 export interface InAppNotification {
   id: string;

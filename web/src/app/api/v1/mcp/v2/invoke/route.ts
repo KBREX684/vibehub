@@ -176,6 +176,14 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     await log(500, "MCP_V2_INVOKE_FAILED");
-    return apiError({ code: "MCP_V2_INVOKE_FAILED", message: `MCP v2 tool ${tool} failed`, details: error instanceof Error ? error.message : String(error) }, 500);
+    const err = error instanceof Error ? error : new Error(String(error));
+    const details =
+      process.env.NODE_ENV === "development"
+        ? { message: err.message, stack: err.stack }
+        : { message: err.message };
+    return apiError(
+      { code: "MCP_V2_INVOKE_FAILED", message: `MCP v2 tool ${tool} failed`, details },
+      500
+    );
   }
 }

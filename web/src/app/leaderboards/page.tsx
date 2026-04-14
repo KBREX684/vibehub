@@ -6,6 +6,7 @@ import {
   parseUtcWeekStartParam,
   startOfUtcWeekContaining,
   listContributionLeaderboard,
+  getUserDisplayNames,
 } from "@/lib/repository";
 import {
   Trophy,
@@ -77,6 +78,8 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
       }),
       listContributionLeaderboard(10),
     ]);
+
+  const contributionNames = await getUserDisplayNames(contributionLB.map((u) => u.userId));
 
   return (
     <main className="container pb-24 space-y-12 pt-8">
@@ -234,7 +237,9 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
                 {index + 1}
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">{user.userId}</div>
+                <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                  {contributionNames[user.userId] ?? user.userId}
+                </div>
                 <div className="text-xs font-mono font-bold text-[var(--color-primary-hover)]">
                   {user.score.toLocaleString()} credits
                 </div>

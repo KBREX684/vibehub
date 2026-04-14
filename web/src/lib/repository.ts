@@ -96,6 +96,7 @@ import type {
   EnterpriseVerificationApplication,
   EnterpriseVerificationStatus,
 } from "@/lib/types";
+import { checkTeamMemberLimit } from "@/lib/subscription";
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
 type DemoRole = Extract<Role, "admin" | "user">;
@@ -161,6 +162,8 @@ interface ReviewCollaborationIntentInput {
   action: "approve" | "reject";
   note?: string;
   adminUserId: string;
+  /** When admin approves a join intent and the project has a team, add applicant as member */
+  inviteApplicantToTeamOnApprove?: boolean;
 }
 
 export async function getPrisma() {
@@ -1187,6 +1190,51 @@ export async function listTeamTasks(params: { teamSlug: string; viewerUserId: st
   }));
 }
 
+export async function getTeamTaskByIdForSlug(params: {
+  teamSlug: string;
+  taskId: string;
+  viewerUserId: string;
+}): Promise<TeamTask | null> {
+  await assertTeamMemberBySlug(params.teamSlug, params.viewerUserId);
+
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug);
+    if (!team) return null;
+    const row = mockTeamTasks.find((t) => t.id === params.taskId && t.teamId === team.id);
+    return row ? mockTeamTaskToDto(row) : null;
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: params.teamSlug }, select: { id: true } });
+  if (!team) return null;
+  const r = await prisma.teamTask.findFirst({
+    where: { id: params.taskId, teamId: team.id },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+      milestone: { select: { id: true, title: true } },
+    },
+  });
+  if (!r) return null;
+  return {
+    id: r.id,
+    teamId: r.teamId,
+    title: r.title,
+    description: r.description ?? undefined,
+    status: r.status as TeamTaskStatus,
+    sortOrder: r.sortOrder,
+    milestoneId: r.milestoneId ?? undefined,
+    milestoneTitle: r.milestone?.title,
+    createdByUserId: r.createdByUserId,
+    createdByName: r.createdBy.name,
+    assigneeUserId: r.assignee?.id,
+    assigneeName: r.assignee?.name,
+    assigneeEmail: r.assignee?.email,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  };
+}
+
 export async function createTeamTask(params: {
   teamSlug: string;
   actorUserId: string;
@@ -1613,6 +1661,71 @@ export async function updateTeamTask(params: {
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   };
+}
+
+/** Bulk status update for Kanban (team owner only). */
+export async function batchUpdateTeamTasks(params: {
+  teamSlug: string;
+  actorUserId: string;
+  taskIds: string[];
+  status: TeamTaskStatus;
+}): Promise<TeamTask[]> {
+  const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
+  if (role !== "owner") {
+    throw new Error("FORBIDDEN_BATCH_TASK_UPDATE");
+  }
+  if (!["todo", "doing", "done"].includes(params.status)) {
+    throw new Error("INVALID_TASK_STATUS");
+  }
+  const ids = [...new Set(params.taskIds.filter(Boolean))];
+  if (ids.length === 0) {
+    return [];
+  }
+
+  if (useMockData) {
+    const now = new Date().toISOString();
+    const out: TeamTask[] = [];
+    for (const id of ids) {
+      const idx = mockTeamTasks.findIndex((t) => t.id === id && t.teamId === teamId);
+      if (idx < 0) continue;
+      mockTeamTasks[idx].status = params.status;
+      mockTeamTasks[idx].updatedAt = now;
+      out.push(mockTeamTaskToDto(mockTeamTasks[idx]));
+    }
+    return out;
+  }
+
+  const prisma = await getPrisma();
+  await prisma.teamTask.updateMany({
+    where: { teamId, id: { in: ids } },
+    data: { status: params.status },
+  });
+  const rows = await prisma.teamTask.findMany({
+    where: { teamId, id: { in: ids } },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+      milestone: { select: { id: true, title: true } },
+    },
+    orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+  });
+  return rows.map((updated) => ({
+    id: updated.id,
+    teamId: updated.teamId,
+    title: updated.title,
+    description: updated.description ?? undefined,
+    status: updated.status as TeamTaskStatus,
+    sortOrder: updated.sortOrder,
+    milestoneId: updated.milestoneId ?? undefined,
+    milestoneTitle: updated.milestone?.title,
+    createdByUserId: updated.createdByUserId,
+    createdByName: updated.createdBy.name,
+    assigneeUserId: updated.assignee?.id,
+    assigneeName: updated.assignee?.name,
+    assigneeEmail: updated.assignee?.email,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  }));
 }
 
 export async function deleteTeamTask(params: {
@@ -2311,6 +2424,45 @@ export async function countUserTeams(userId: string): Promise<number> {
   }
   const prisma = await getPrisma();
   return prisma.team.count({ where: { ownerUserId: userId } });
+}
+
+/** Teams this user owns (for collaboration intent invite dropdown). */
+export async function listOwnedTeamSummariesForUser(userId: string): Promise<Array<{ slug: string; name: string }>> {
+  if (useMockData) {
+    return mockTeams
+      .filter((t) => t.ownerUserId === userId)
+      .map((t) => ({ slug: t.slug, name: t.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.team.findMany({
+    where: { ownerUserId: userId },
+    select: { slug: true, name: true },
+    orderBy: { name: "asc" },
+  });
+  return rows;
+}
+
+export async function getUserDisplayNames(userIds: string[]): Promise<Record<string, string>> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  const out: Record<string, string> = {};
+  if (unique.length === 0) return out;
+  if (useMockData) {
+    for (const id of unique) {
+      const u = mockUsers.find((x) => x.id === id);
+      if (u) out[id] = u.name;
+    }
+    return out;
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.user.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, name: true },
+  });
+  for (const r of rows) {
+    out[r.id] = r.name;
+  }
+  return out;
 }
 
 export async function countUserProjects(userId: string): Promise<number> {
@@ -3467,6 +3619,43 @@ export async function listProjectCollaborationIntents(params: {
   };
 }
 
+async function notifyProjectOwnerOfNewCollaborationIntent(params: {
+  projectId: string;
+  intentId: string;
+  applicantId: string;
+}): Promise<void> {
+  if (useMockData) {
+    const applicantName = userNameById(params.applicantId);
+    const project = mockProjects.find((p) => p.id === params.projectId);
+    if (!project) return;
+    const creator = mockCreators.find((c) => c.id === project.creatorId);
+    if (!creator || creator.userId === params.applicantId) return;
+    void notifyUser({
+      userId: creator.userId,
+      kind: "project_intent_received",
+      title: "New collaboration intent",
+      body: `${applicantName} submitted a collaboration intent on “${project.title}”.`,
+      metadata: { projectSlug: project.slug, intentId: params.intentId },
+    });
+    return;
+  }
+  const prisma = await getPrisma();
+  const applicant = await prisma.user.findUnique({ where: { id: params.applicantId }, select: { name: true } });
+  const applicantName = applicant?.name ?? "Someone";
+  const project = await prisma.project.findUnique({
+    where: { id: params.projectId },
+    include: { creator: { select: { userId: true } } },
+  });
+  if (!project || project.creator.userId === params.applicantId) return;
+  void notifyUser({
+    userId: project.creator.userId,
+    kind: "project_intent_received",
+    title: "New collaboration intent",
+    body: `${applicantName} submitted a collaboration intent on “${project.title}”.`,
+    metadata: { projectSlug: project.slug, intentId: params.intentId },
+  });
+}
+
 /** T-4 alias: submit by applicant, checks creator profile + duplicate */
 export async function submitCollaborationIntent(input: {
   projectId: string;
@@ -3495,7 +3684,13 @@ export async function submitCollaborationIntent(input: {
     if (dup) throw new Error("DUPLICATE_INTENT");
   }
 
-  return createCollaborationIntent(input);
+  const intent = await createCollaborationIntent(input);
+  await notifyProjectOwnerOfNewCollaborationIntent({
+    projectId: input.projectId,
+    intentId: intent.id,
+    applicantId: input.applicantId,
+  });
+  return intent;
 }
 
 export async function createCollaborationIntent(input: {
@@ -3662,8 +3857,53 @@ export async function reviewCollaborationIntent(
       action: `collaboration_intent_${nextStatus}`,
       entityType: "collaboration_intent",
       entityId: input.intentId,
-      metadata: { note },
+      metadata: { note, inviteApplicantToTeamOnApprove: input.inviteApplicantToTeamOnApprove },
       createdAt: new Date().toISOString(),
+    });
+
+    const project = mockProjects.find((p) => p.id === intent.projectId);
+    const projectSlug = project?.slug ?? intent.projectId;
+    const projectTitle = project?.title ?? "the project";
+    let joinedTeamSlug: string | undefined;
+
+    if (nextStatus === "approved" && input.inviteApplicantToTeamOnApprove && intent.intentType === "join" && project?.teamId) {
+      const team = mockTeams.find((t) => t.id === project.teamId);
+      if (team) {
+        const memberCount = mockTeamMemberships.filter((m) => m.teamId === team.id).length;
+        const tier = await getUserTier(team.ownerUserId);
+        const gate = checkTeamMemberLimit(tier, memberCount);
+        const alreadyMember = mockTeamMemberships.some((m) => m.teamId === team.id && m.userId === intent.applicantId);
+        if (gate.allowed && !alreadyMember) {
+          mockTeamMemberships.push({
+            id: `tm_admin_${Date.now()}`,
+            teamId: team.id,
+            userId: intent.applicantId,
+            role: "member",
+            joinedAt: new Date().toISOString(),
+          });
+          intent.convertedToTeamMembership = true;
+          joinedTeamSlug = team.slug;
+        }
+      }
+    }
+
+    void notifyUser({
+      userId: intent.applicantId,
+      kind: "collaboration_intent_status_update",
+      title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
+      body:
+        nextStatus === "approved"
+          ? joinedTeamSlug
+            ? `Your join request for “${projectTitle}” was approved and you were added to team /teams/${joinedTeamSlug}.`
+            : `Your collaboration intent for “${projectTitle}” was approved.`
+          : `Your collaboration intent for “${projectTitle}” was not approved.`,
+      metadata: {
+        projectSlug,
+        status: nextStatus,
+        source: "admin",
+        teamSlug: joinedTeamSlug,
+        convertedToTeamMembership: Boolean(joinedTeamSlug),
+      },
     });
 
     return intent;
@@ -3673,9 +3913,36 @@ export async function reviewCollaborationIntent(
   const updatedIntent = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const intent = await tx.collaborationIntent.findUnique({
       where: { id: input.intentId },
+      include: {
+        project: {
+          select: {
+            slug: true,
+            title: true,
+            teamId: true,
+            team: { select: { id: true, slug: true, ownerUserId: true } },
+          },
+        },
+      },
     });
     if (!intent) {
       throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+    }
+
+    let joinedTeamSlug: string | undefined;
+    if (nextStatus === "approved" && input.inviteApplicantToTeamOnApprove && intent.intentType === "join" && intent.project.team) {
+      const team = intent.project.team;
+      const memberCount = await tx.teamMembership.count({ where: { teamId: team.id } });
+      const tier = await getUserTier(team.ownerUserId);
+      const gate = checkTeamMemberLimit(tier, memberCount);
+      const alreadyMember = await tx.teamMembership.findUnique({
+        where: { teamId_userId: { teamId: team.id, userId: intent.applicantId } },
+      });
+      if (gate.allowed && !alreadyMember) {
+        await tx.teamMembership.create({
+          data: { teamId: team.id, userId: intent.applicantId, role: "member" },
+        });
+        joinedTeamSlug = team.slug;
+      }
     }
 
     const updated = await tx.collaborationIntent.update({
@@ -3685,6 +3952,7 @@ export async function reviewCollaborationIntent(
         reviewNote: note ?? null,
         reviewedAt: new Date(),
         reviewedBy: input.adminUserId,
+        ...(joinedTeamSlug ? { convertedToTeamMembership: true } : {}),
       },
     });
 
@@ -3694,14 +3962,33 @@ export async function reviewCollaborationIntent(
         action: `collaboration_intent_${nextStatus}`,
         entityType: "collaboration_intent",
         entityId: input.intentId,
-        metadata: { note },
+        metadata: { note, inviteApplicantToTeamOnApprove: input.inviteApplicantToTeamOnApprove, joinedTeamSlug },
       },
     });
 
-    return updated;
+    return { updated, project: intent.project, joinedTeamSlug };
   });
 
-  return toCollaborationIntentDto(updatedIntent);
+  void notifyUser({
+    userId: updatedIntent.updated.applicantId,
+    kind: "collaboration_intent_status_update",
+    title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
+    body:
+      nextStatus === "approved"
+        ? updatedIntent.joinedTeamSlug
+          ? `Your join request for “${updatedIntent.project.title}” was approved and you were added to team /teams/${updatedIntent.joinedTeamSlug}.`
+          : `Your collaboration intent for “${updatedIntent.project.title}” was approved.`
+        : `Your collaboration intent for “${updatedIntent.project.title}” was not approved.`,
+    metadata: {
+      projectSlug: updatedIntent.project.slug,
+      status: nextStatus,
+      source: "admin",
+      teamSlug: updatedIntent.joinedTeamSlug,
+      convertedToTeamMembership: Boolean(updatedIntent.joinedTeamSlug),
+    },
+  });
+
+  return toCollaborationIntentDto(updatedIntent.updated);
 }
 
 export async function reviewPost(input: ReviewPostInput): Promise<Post> {
@@ -5782,11 +6069,15 @@ export async function reviewCollaborationIntentByOwner(params: {
     intent.reviewedAt = new Date().toISOString();
     intent.reviewedBy = params.ownerUserId;
 
+    let joinedTeamSlug: string | undefined;
     if (nextStatus === "approved" && params.inviteToTeamSlug) {
       const team = mockTeams.find((t) => t.slug === params.inviteToTeamSlug);
       if (team && team.ownerUserId === params.ownerUserId) {
+        const memberCount = mockTeamMemberships.filter((m) => m.teamId === team.id).length;
+        const tier = await getUserTier(team.ownerUserId);
+        const gate = checkTeamMemberLimit(tier, memberCount);
         const alreadyMember = mockTeamMemberships.some((m) => m.teamId === team.id && m.userId === intent.applicantId);
-        if (!alreadyMember) {
+        if (gate.allowed && !alreadyMember) {
           mockTeamMemberships.push({
             id: `tm_conv_${Date.now()}`,
             teamId: team.id,
@@ -5795,32 +6086,67 @@ export async function reviewCollaborationIntentByOwner(params: {
             joinedAt: new Date().toISOString(),
           });
           intent.convertedToTeamMembership = true;
+          joinedTeamSlug = team.slug;
         }
       }
     }
+
+    const projectSlug = project?.slug ?? intent.projectId;
+    const projectTitle = project?.title ?? "the project";
+    void notifyUser({
+      userId: intent.applicantId,
+      kind: "collaboration_intent_status_update",
+      title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
+      body:
+        nextStatus === "approved"
+          ? joinedTeamSlug
+            ? `Your join request for “${projectTitle}” was approved — you’re now on team /teams/${joinedTeamSlug}.`
+            : `Your collaboration intent for “${projectTitle}” was approved.`
+          : `Your collaboration intent for “${projectTitle}” was not approved.`,
+      metadata: {
+        projectSlug,
+        status: nextStatus,
+        source: "project_owner",
+        teamSlug: joinedTeamSlug,
+        convertedToTeamMembership: Boolean(joinedTeamSlug),
+      },
+    });
+
     return intent;
   }
 
   const prisma = await getPrisma();
   const intent = await prisma.collaborationIntent.findUnique({
     where: { id: params.intentId },
-    include: { project: { include: { creator: { select: { userId: true } } } } },
+    include: {
+      project: {
+        include: {
+          creator: { select: { userId: true } },
+          team: { select: { slug: true, id: true, ownerUserId: true } },
+        },
+      },
+    },
   });
   if (!intent) throw new Error("COLLABORATION_INTENT_NOT_FOUND");
   if (intent.project.creator.userId !== params.ownerUserId) throw new Error("FORBIDDEN_NOT_PROJECT_OWNER");
 
-  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const u = await tx.collaborationIntent.update({
       where: { id: params.intentId },
       data: { status: nextStatus, reviewNote: note ?? null, reviewedAt: new Date(), reviewedBy: params.ownerUserId },
     });
+    let joinedTeamSlug: string | undefined;
     if (nextStatus === "approved" && params.inviteToTeamSlug) {
       const team = await tx.team.findFirst({ where: { slug: params.inviteToTeamSlug, ownerUserId: params.ownerUserId } });
       if (team) {
+        const memberCount = await tx.teamMembership.count({ where: { teamId: team.id } });
+        const tier = await getUserTier(team.ownerUserId);
+        const gate = checkTeamMemberLimit(tier, memberCount);
         const alreadyMember = await tx.teamMembership.findUnique({ where: { teamId_userId: { teamId: team.id, userId: intent.applicantId } } });
-        if (!alreadyMember) {
+        if (gate.allowed && !alreadyMember) {
           await tx.teamMembership.create({ data: { teamId: team.id, userId: intent.applicantId, role: "member" } });
           await tx.collaborationIntent.update({ where: { id: params.intentId }, data: { convertedToTeamMembership: true } });
+          joinedTeamSlug = team.slug;
         }
       }
     }
@@ -5833,8 +6159,29 @@ export async function reviewCollaborationIntentByOwner(params: {
         metadata: { note, inviteToTeamSlug: params.inviteToTeamSlug },
       },
     });
-    return u;
+    return { updated: u, project: intent.project, joinedTeamSlug };
   });
+
+  void notifyUser({
+    userId: result.updated.applicantId,
+    kind: "collaboration_intent_status_update",
+    title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
+    body:
+      nextStatus === "approved"
+        ? result.joinedTeamSlug
+          ? `Your join request for “${result.project.title}” was approved — you’re now on team /teams/${result.joinedTeamSlug}.`
+          : `Your collaboration intent for “${result.project.title}” was approved.`
+        : `Your collaboration intent for “${result.project.title}” was not approved.`,
+    metadata: {
+      projectSlug: result.project.slug,
+      status: nextStatus,
+      source: "project_owner",
+      teamSlug: result.joinedTeamSlug,
+      convertedToTeamMembership: Boolean(result.joinedTeamSlug),
+    },
+  });
+
+  const updated = result.updated;
   return {
     id: updated.id,
     projectId: updated.projectId,

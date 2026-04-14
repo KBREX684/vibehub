@@ -30,6 +30,7 @@ export const REQUIRED_OPENAPI_PATHS = [
   "/api/v1/me/api-keys",
   "/api/v1/me/reputation",
   "/api/v1/me/subscription",
+  "/api/v1/teams/{slug}/tasks/batch",
   "/api/v1/subscription-plans",
   "/api/v1/reputation/leaderboard",
   "/api/v1/embed/projects/{slug}",

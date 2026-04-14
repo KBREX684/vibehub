@@ -911,6 +911,38 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/teams/{slug}/tasks/batch": {
+        patch: {
+          tags: ["teams"],
+          summary: "Batch update task status (team owner only; session or Bearer write:team:tasks)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["taskIds", "status"],
+                  properties: {
+                    taskIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 100 },
+                    status: { type: "string", enum: ["todo", "doing", "done"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/teams/{slug}/milestones": {
         get: {
           tags: ["teams"],

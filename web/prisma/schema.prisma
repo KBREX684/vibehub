@@ -66,6 +66,7 @@ enum InAppNotificationKind {
   user_followed
   project_intent_received
   post_featured
+  collaboration_intent_status_update
 }
 
 /// P2: Challenge campaign status

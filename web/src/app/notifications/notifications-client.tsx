@@ -18,6 +18,7 @@ const KIND_ICONS: Record<string, string> = {
   user_followed:           "👤",
   project_intent_received: "🤝",
   post_featured:           "⭐",
+  collaboration_intent_status_update: "🤝",
 };
 
 async function patchNotifications(ids?: string[], markAll?: boolean) {

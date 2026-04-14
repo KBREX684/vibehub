@@ -6,6 +6,8 @@ import { requireAdminSession } from "@/lib/admin-auth";
 const reviewSchema = z.object({
   action: z.enum(["approve", "reject"]),
   note: z.string().trim().max(500).optional(),
+  /** When approving a join intent, add the applicant to the project’s linked team if within plan member limits */
+  inviteApplicantToTeamOnApprove: z.boolean().optional(),
 });
 
 interface Params {
@@ -28,6 +30,7 @@ export async function POST(request: Request, { params }: Params) {
       action: parsed.action,
       note: parsed.note,
       adminUserId: auth.session.userId,
+      inviteApplicantToTeamOnApprove: parsed.inviteApplicantToTeamOnApprove,
     });
 
     return apiSuccess(reviewed);
