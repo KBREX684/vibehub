@@ -31,8 +31,8 @@ function statusMeta(status: EnterpriseVerificationStatus) {
     case "approved":
       return {
         icon: CheckCircle2,
-        title: "Enterprise access approved",
-        hint: "You can enter the enterprise workspace now.",
+        title: "Secondary enterprise access approved",
+        hint: "You can access the observer workspace and radar summary now.",
         tone: "text-[var(--color-success)]",
       };
     case "rejected":
@@ -46,14 +46,14 @@ function statusMeta(status: EnterpriseVerificationStatus) {
       return {
         icon: Clock3,
         title: "Verification in review",
-        hint: "Your request is pending admin review.",
+        hint: "Your observer workspace request is pending platform review.",
         tone: "text-[var(--color-warning)]",
       };
     default:
       return {
         icon: Clock3,
-        title: "Start enterprise verification",
-        hint: "Submit your company details for review.",
+        title: "Request observer workspace access",
+        hint: "Submit your organization details for a secondary access review.",
         tone: "text-[var(--color-text-secondary)]",
       };
   }
@@ -110,7 +110,7 @@ export function EnterpriseVerificationForm({
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {
         const message =
-          payload?.error?.message || payload?.error?.code || "Failed to submit enterprise verification";
+          payload?.error?.message || payload?.error?.code || "Failed to submit enterprise workspace request";
         throw new Error(message);
       }
       const next = payload.data as EnterpriseVerificationSummary;
@@ -123,8 +123,8 @@ export function EnterpriseVerificationForm({
       });
       setOkMessage(
         next.status === "approved"
-          ? "Approved. You can access enterprise workspace now."
-          : "Submitted successfully. Your verification is pending review."
+          ? "Approved. You can access the observer workspace now."
+          : "Submitted successfully. Your request is pending review."
       );
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Failed to submit");
@@ -199,7 +199,7 @@ export function EnterpriseVerificationForm({
             rows={3}
             value={form.useCase}
             onChange={(e) => setForm((p) => ({ ...p, useCase: e.target.value }))}
-            placeholder="How your organization will use VibeHub enterprise."
+            placeholder="How your organization will use VibeHub as an observer or discovery surface."
           />
         </div>
         <button
@@ -208,7 +208,7 @@ export function EnterpriseVerificationForm({
           disabled={submitting}
           data-testid="enterprise-verify-submit"
         >
-          {submitting ? "Submitting..." : "Submit verification request"}
+          {submitting ? "Submitting..." : "Submit access request"}
           <ArrowRight className="w-4 h-4" />
         </button>
       </form>

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { Role } from "@/lib/types";
+import type { EnterpriseVerificationStatus, Role, SubscriptionTier } from "@/lib/types";
 
 /**
  * Mirrors SessionUser from the server (userId, role, name) plus optional
@@ -11,6 +11,8 @@ export type AuthUser = {
   id: string;       // maps from SessionUser.userId
   name: string;
   role: Role;
+  enterpriseStatus?: EnterpriseVerificationStatus;
+  subscriptionTier?: SubscriptionTier;
   email?: string;
   avatarUrl?: string;
 };
@@ -52,6 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id:        session.userId,
           name:      session.name,
           role:      session.role,
+          enterpriseStatus: session.enterpriseStatus,
+          subscriptionTier: session.subscriptionTier,
           email:     session.email,
           avatarUrl: session.avatarUrl,
         });

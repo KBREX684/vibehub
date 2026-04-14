@@ -62,7 +62,7 @@ export function Footer() {
                 { href: "/settings/api-keys",    en: "API Keys",  zh: "API 密钥" },
                 { href: "/api/v1/openapi.json",  en: "OpenAPI",   zh: "OpenAPI 文档" },
                 { href: "/pricing",              en: "Pricing",   zh: "定价" },
-                { href: "/workspace/enterprise", en: "Enterprise", zh: "企业版" },
+                { href: "/workspace/enterprise", en: "Radar Workspace", zh: "雷达工作台" },
               ],
             },
             {

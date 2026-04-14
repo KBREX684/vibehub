@@ -1,16 +1,12 @@
 import type { EnterpriseVerificationStatus } from "@/lib/types";
 
 /**
- * Enterprise-only APIs (radar, due diligence, workspace summary, ecosystem reports)
- * require the viewer to have completed enterprise verification (approved).
- * Admins may access for operational support.
+ * Enterprise-facing radar/workspace access is a product capability, not an
+ * extension of platform governance. Platform admins use `/admin/*` for review
+ * and moderation; enterprise workspace access requires its own approved status.
  */
-export function hasApprovedEnterpriseAccess(params: {
-  role: "guest" | "user" | "admin";
-  enterpriseStatus?: EnterpriseVerificationStatus;
-}): boolean {
-  if (params.role === "admin") {
-    return true;
-  }
-  return params.enterpriseStatus === "approved";
+export function hasEnterpriseWorkspaceAccess(
+  enterpriseStatus?: EnterpriseVerificationStatus
+): boolean {
+  return enterpriseStatus === "approved";
 }

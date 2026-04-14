@@ -2,13 +2,14 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { upsertStripeCustomer } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { isMockDataEnabled } from "@/lib/runtime-mode";
 
 /** v4.0: Only Free + Pro — single Stripe price mapping. */
 const TIER_PRICE_IDS: Record<string, string | undefined> = {
   pro: process.env.STRIPE_PRICE_PRO,
 };
 
-const useMockData = process.env.USE_MOCK_DATA !== "false";
+const useMockData = isMockDataEnabled();
 
 async function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;

@@ -169,12 +169,22 @@ export function TopNav() {
                       </div>
                       <div className="py-1">
                         {[
-                          { href: "/workspace/enterprise", icon: Briefcase, en: "Workspace", zh: "工作台" },
+                          {
+                            href: "/workspace/enterprise",
+                            icon: Briefcase,
+                            en: "Radar Workspace",
+                            zh: "雷达工作台",
+                            requiresEnterprise: true,
+                          },
                           { href: "/settings/api-keys",    icon: Key,       en: "API Keys",  zh: "API 密钥" },
                           { href: "/notifications",        icon: Bell,      en: "Notifications", zh: "通知" },
                           { href: "/admin",                icon: Shield,    en: "Admin",     zh: "管理后台", adminOnly: true },
                         ]
-                          .filter(item => !item.adminOnly || user.role === "admin")
+                          .filter(
+                            (item) =>
+                              (!item.adminOnly || user.role === "admin") &&
+                              (!item.requiresEnterprise || user.enterpriseStatus === "approved")
+                          )
                           .map((item) => (
                             <Link
                               key={item.href}

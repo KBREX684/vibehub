@@ -1,32 +1,26 @@
-# VibeHub Web (P1 + P2)
+# VibeHub Web
 
-Next.js full-stack implementation for VibeHub.
+Next.js full-stack implementation for VibeHub's current product strategy:
+developer-first, small-team-first, Free + Pro, with enterprise capabilities
+kept as a secondary observer layer instead of the primary product narrative.
 
-**P3 is officially closed** (2026-04-13): team collaboration slices P3-1…P3-7 plus status-column task board are frozen on `main`. Deferred: in-app team notifications, finer task RBAC, billing/subscriptions — see `docs/03_项目日志.md`.
+## Current Product Scope
 
-**P4-4 (2026-04-13)**: **`GET /api/v1/openapi.json`** — OpenAPI **3.0.3** JSON for the curated `/api/v1` surface (envelope, auth, scopes, public mirrors, key routes). Source: `src/lib/openapi-spec.ts`.
+- Community publishing and discussion flows
+- Creator profiles and project discovery
+- Small-team collaboration: join requests, milestones, tasks, chat
+- Developer tooling: API keys, OpenAPI, MCP v2, public API mirrors
+- Pro subscription: quotas, billing checkout/portal, plan gating
+- Secondary radar workspace for approved enterprise observers
 
-**P4-5 (2026-04-13)**: **`npm run validate:openapi`** — Zod structural check + required path allowlist (`src/lib/openapi-validate.ts`); runs in **`npm run check`** and in GitHub Actions **before** `next build`.
+## Quality Gate
 
-**P3 deferrals + P4 slice (2026-04-14)**: **In-app notifications** (`InAppNotification`, `GET/PATCH /api/v1/me/notifications`, `/notifications`). **Team task RBAC**: members may update/reorder only tasks they **created** or are **assigned** to; **owner** may edit any; **delete** only **creator** or **owner**. Team task **writes** (POST/PATCH/DELETE/reorder) accept **Bearer** with scope **`write:team:tasks`**. **Enterprise workspace**: `GET /api/v1/me/enterprise/workspace` (scope **`read:enterprise:workspace`**) + `/workspace/enterprise`. **MCP v2**: `GET /api/v1/mcp/v2/manifest`, `POST /api/v1/mcp/v2/invoke` (per-tool scope on invoke). **Outbound push**: optional `NOTIFICATION_WEBHOOK_URL` (+ `NOTIFICATION_WEBHOOK_SECRET` HMAC) and optional **SMTP** (`SMTP_*`). **MCP audit**: `McpInvokeAudit` + **`GET /api/v1/admin/mcp-invoke-audits`**. **Redis rate limit**: set **`REDIS_URL`** so Bearer limits are shared across instances (falls back to in-process if Redis errors).
-
-**P4-1 / P4-2 / P4-3 (2026-04-13)**: User **API keys** with **scopes**; **`/settings/api-keys`** supports **scope checkboxes** on create. **`Authorization: Bearer`** is **rate-limited** per key hash + client IP (`API_KEY_RATE_LIMIT_PER_MINUTE`, default 120/min; 429 + `Retry-After`). **Anonymous reads** are restored for `GET /api/v1/projects`, `GET /api/v1/projects/:slug`, teams, creators, collection-topics (same as pre–P4-2). Stable no-auth mirrors live under **`/api/v1/public/...`** for crawlers. **`GET /api/v1/me/teams`** and team **tasks/milestones** list still require cookie or scoped Bearer; MCP GET tools require cookie or scoped Bearer.
-
-Current scope:
-- P1: discussions, project gallery, creator pages, MCP v1 read tools
-- P3-1: teams (list/create/detail, owner invite by email, member leave / owner remove)
-- P3-2: team join **requests** (apply → owner approve/reject); `POST .../join` creates a pending request
-- P3-3: optional **project ↔ team** link (`teamId`), discover filter `team=`, creator `PATCH` to bind
-- P3-4: **TeamTask** board per team (`todo` / `doing` / `done`), members-only API + UI on team page
-- P3-5: **TeamMilestone** timeline (target date, completed, sortOrder), members-only API + UI on team page
-- P3-6: **TeamTask.sortOrder** + list ordering; optional `sortOrder` on create/PATCH; `POST .../tasks/:taskId/reorder` for up/down
-- P3-7: optional **task → milestone** link (`TeamTask.milestoneId`), validated per team; cleared on milestone delete (FK SetNull + mock parity)
-- P3 sweep: **status-column kanban** on team task board; `reorder` applies **within the same status** only
-- P2-1: admin RBAC, moderation queue, user list, reports + audit APIs
-- P2-2: collaboration intent submit/review workflow
-- P2-3: topic collections, leaderboards, collaboration funnel metrics
-- P2-4: discover page (investor/ops radar), extended project filters + facets API
-- P2-5: weekly leaderboards (UTC Monday week) with optional materialized snapshots + admin materialize API
+- `npm run check` runs lint, unit tests, OpenAPI validation, type generation,
+  and production build
+- `docs/roadmap-current.md` is the primary execution roadmap
+- `docs/release-notes.md` tracks shipped milestones and change history
+- `docs/repository-cleanup-report.md` tracks retention / archive / delete
+  decisions for repository assets
 
 ## 1. Quick Start
 
@@ -189,15 +183,33 @@ Runs `lint + test + validate:openapi + build`.
 
 ## 7. PostgreSQL / Prisma
 
-If you want real database mode:
+Real database mode is the preferred verification path. Runtime selection uses
+the following order:
+
+1. `USE_MOCK_DATA=true` → force mock mode
+2. `DATABASE_URL` present → use Prisma/PostgreSQL
+3. no `DATABASE_URL` → safe fallback to mock mode so local builds and CI can still render pages
+
+Mock mode remains acceptable for demos and isolated UI work, but product
+acceptance should use the seeded database path below.
+
+If you want a local real-database run:
 
 ```bash
-# 1) set USE_MOCK_DATA=false and DATABASE_URL in .env.local
+# 1) set DATABASE_URL in .env.local
 # 2) set SESSION_SECRET in .env.local
+# 3) keep USE_MOCK_DATA unset (or set to false)
 npm run prisma:generate
 npm run prisma:migrate
 npm run prisma:seed
+npm run smoke:live-data
 npm run dev
+```
+
+If you explicitly want mock mode for a demo-only run:
+
+```bash
+USE_MOCK_DATA=true npm run dev
 ```
 
 Apply all pending migrations in `prisma/migrations/` (P2 adds collaboration intents, weekly snapshot tables, and prior admin schema).

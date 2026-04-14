@@ -28,19 +28,19 @@ export default async function HomePage() {
       <section className="page-hero pt-12 pb-10 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-primary-subtle)] border border-[rgba(59,130,246,0.2)] text-xs font-medium text-[var(--color-primary-hover)] mb-8 animate-fade-up">
           <Zap className="w-3.5 h-3.5" />
-          <span>VibeHub 2.0 — Vibe Coding Agentic Network</span>
+          <span>VibeHub — Developer community for shipping together</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold tracking-[-0.04em] leading-[1.05] mb-6 animate-fade-up animate-delay-100">
-          <span className="gradient-text">Where the future</span>
+          <span className="gradient-text">Build projects,</span>
           <br />
-          <span className="text-[var(--color-text-primary)]">of software is built.</span>
+          <span className="text-[var(--color-text-primary)]">find teammates, ship together.</span>
         </h1>
 
         <p className="text-base md:text-lg text-[var(--color-text-secondary)] max-w-xl mx-auto leading-relaxed mb-10 animate-fade-up animate-delay-200">
-          Connect with elite developers, discover AI-native projects, and
-          orchestrate open collaborations. The unified platform for modern
-          Vibe Coding builders.
+          Discover developer projects, join active collaborations, form small
+          teams, and move work forward in one place. VibeHub is built for
+          builders who want to ship with other builders.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12 animate-fade-up animate-delay-300">
@@ -71,7 +71,7 @@ export default async function HomePage() {
           { icon: LayoutGrid, label: "Active Projects", value: projects.length, color: "var(--color-primary)" },
           { icon: MessageSquare, label: "Discussions", value: "Live", color: "var(--color-accent-cyan)" },
           { icon: Users, label: "Active Teams", value: teams.length, color: "var(--color-accent-violet)" },
-          { icon: Cpu, label: "MCP API v2", value: "Live", color: "var(--color-success)" },
+          { icon: Cpu, label: "Developer API + MCP", value: "Live", color: "var(--color-success)" },
         ].map(({ icon: Icon, label, value, color }, i) => (
           <div
             key={label}
@@ -96,23 +96,23 @@ export default async function HomePage() {
           {
             icon: Code2,
             color: "var(--color-primary)",
-            title: "AI-Native Projects",
-            titleZh: "AI 原生项目",
-            desc: "Discover open-source tools, MCP servers, and vibe-coded agents built for the next generation of software.",
+            title: "Project Discovery",
+            titleZh: "项目发现",
+            desc: "Browse real developer projects, open-source tools, and active build logs that are looking for attention or help.",
           },
           {
             icon: Users,
             color: "var(--color-accent-violet)",
-            title: "Collaborative Teams",
+            title: "Small-Team Delivery",
             titleZh: "协作团队",
-            desc: "Find and join teams building real products. Coordinate tasks, set milestones, and ship together.",
+            desc: "Create a team, review join requests, manage tasks and milestones, and keep delivery moving with less friction.",
           },
           {
             icon: Activity,
             color: "var(--color-accent-cyan)",
-            title: "Live Community",
+            title: "Active Community",
             titleZh: "活跃社区",
-            desc: "Engage in high-quality technical discussions. Share ideas, get feedback, and grow your reputation.",
+            desc: "Share ideas, get feedback, and turn discussion into projects, collaboration intent, and actual work shipped.",
           },
         ].map(({ icon: Icon, color, title, desc }) => (
           <div key={title} className="card p-6 group hover:-translate-y-0.5 transition-all duration-200">
@@ -131,13 +131,13 @@ export default async function HomePage() {
       {/* ── Feed + featured + gallery (S2) ───────────────────────────────────── */}
       <HomeFeedSection session={session} projects={projects} teams={teams} />
 
-      {/* ── Flywheel: Community → Project → Team → Enterprise ────────────────── */}
+      {/* ── Flywheel: Community → Project → Team delivery ────────────────────── */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
             step: "01",
             title: "Discuss & Share",
-            desc: "Post ideas, get feedback, and build reputation in the community.",
+            desc: "Share ideas, publish updates, and collect the signal that helps projects improve.",
             href: "/discussions",
             ctaLabel: "Browse Discussions",
             color: "var(--color-accent-cyan)",
@@ -145,26 +145,26 @@ export default async function HomePage() {
           {
             step: "02",
             title: "Showcase Projects",
-            desc: "Publish your work and attract collaborators across the ecosystem.",
+            desc: "Turn ideas into project pages that other developers can discover, follow, and join.",
             href: "/discover",
             ctaLabel: "Explore Projects",
             color: "var(--color-primary-hover)",
           },
           {
             step: "03",
-            title: "Form Teams",
-            desc: "Coordinate with collaborators, track milestones, and ship faster.",
+            title: "Coordinate Delivery",
+            desc: "Approve join requests, align around milestones, and ship as a focused small team.",
             href: "/teams",
             ctaLabel: "Find Teams",
             color: "var(--color-accent-violet)",
           },
           {
             step: "04",
-            title: "Enterprise Intelligence",
-            desc: "Organizations discover top talent and projects via the radar layer.",
-            href: "/workspace/enterprise",
-            ctaLabel: "Enterprise Workspace",
-            color: "var(--color-enterprise)",
+            title: "Developer Tools",
+            desc: "Use API keys, OpenAPI, and MCP tools to integrate discovery and collaboration into your workflow.",
+            href: "/developers",
+            ctaLabel: "Open Developer Hub",
+            color: "var(--color-success)",
           },
         ].map(({ step, title, desc, href, ctaLabel, color }) => (
           <div key={step} className="card p-5 space-y-3 flex flex-col">
@@ -191,11 +191,11 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-subtle)] via-transparent to-[var(--color-accent-cyan-subtle)] pointer-events-none" />
         <div className="relative z-10">
           <h2 className="text-2xl md:text-3xl font-bold text-[var(--color-text-primary)] mb-3">
-            Ready to build the future?
+            Ready to ship with other builders?
           </h2>
           <p className="text-sm text-[var(--color-text-secondary)] mb-6 max-w-md mx-auto">
-            Join thousands of Vibe Coding developers already collaborating on
-            VibeHub.
+            Create your profile, publish a project, find collaborators, and
+            move from idea to delivery inside one developer-first workflow.
           </p>
           <a
             href="/api/v1/auth/github?redirect=/"

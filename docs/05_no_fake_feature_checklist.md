@@ -42,7 +42,7 @@ For each interactive element, confirm:
 | Entry | Target | Real Content | Status |
 |---|---|---|---|
 | `/admin` (TopNav user menu) | `/admin` | Admin console layout | ✅ Role-gated |
-| `/workspace/enterprise` | Enterprise workspace | Gated by `hasEnterpriseAccess` | ✅ Fixed |
+| `/workspace/enterprise` | Radar workspace | Gated by approved enterprise capability | ✅ Fixed |
 | `/notifications` | Notifications page | Real DB items | ✅ |
 | `/settings/api-keys` | API Keys panel | Real keys list | ✅ |
 | `/discussions/new` | New discussion form | Connects to POST endpoint | ✅ Fixed |
@@ -86,7 +86,7 @@ For each interactive element, confirm:
 |---|---|---|
 | `/admin/**` | Middleware cookie check + `getAdminSessionForPage()` | ✅ Double-gated |
 | `/admin/**` API | `requireAdminSession()` or `getAdminSessionForPage()` | ✅ |
-| `/workspace/enterprise` | `hasEnterpriseAccess(session.role)` | ✅ Fixed |
+| `/workspace/enterprise` | approved enterprise capability | ✅ Fixed |
 | `/notifications` | Server redirect to `/login` | ✅ |
 | `/discussions/new` | Server redirect to `/login` | ✅ |
 | `/teams/new` | Server redirect to `/login` | ✅ |
@@ -118,7 +118,7 @@ For each interactive element, confirm:
 | "Mark all read" no-op button | C5 | `PATCH /api/v1/me/notifications markAll:true` |
 | Reply button on comment — visual only | D1 | Full `CommentInput` + `POST` |
 | Edit/delete comment — no wiring | D1 | PATCH/DELETE + optimistic state |
-| Enterprise open to all users | C3 | `hasEnterpriseAccess()` gate |
+| Enterprise/admin boundary was coupled | C3 | enterprise capability gate no longer treats admin as workspace access |
 | Login button → raw API URL | C4 | `/login` page created |
 | "New Discussion" → `href auth/github` | D3 | `/discussions/new` form page |
 | Time-based comment auto cleanup | D2 | Default 0 (disabled); admin-only |

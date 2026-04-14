@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decodeSession, encodeSession } from "../src/lib/auth";
+import { createHmac } from "crypto";
 
 describe("session signing", () => {
   it("decodes a signed session token", () => {
@@ -33,6 +34,29 @@ describe("session signing", () => {
       enterpriseStatus: "approved",
       enterpriseOrganization: "Acme",
       enterpriseWebsite: "https://acme.example",
+    });
+  });
+
+  it("drops legacy subscription tiers that are no longer supported", () => {
+    const token = encodeSession({
+      userId: "u1",
+      role: "user",
+      name: "Alice",
+      subscriptionTier: "pro",
+    });
+    const [payload, signature] = token.split(".");
+    const decodedPayload = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
+    decodedPayload.subscriptionTier = "team_pro";
+    const legacyPayload = Buffer.from(JSON.stringify(decodedPayload), "utf-8").toString("base64url");
+    const legacySignature = createHmac("sha256", "dev-session-secret-change-me")
+      .update(legacyPayload)
+      .digest("base64url");
+
+    expect(signature).toBeTruthy();
+    expect(decodeSession(`${legacyPayload}.${legacySignature}`)).toEqual({
+      userId: "u1",
+      role: "user",
+      name: "Alice",
     });
   });
 
