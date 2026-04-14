@@ -1,28 +1,25 @@
 import Link from "next/link";
-import { ProjectCard } from "@/components/project-card";
-import { PostCard } from "@/components/post-card";
-import { listPosts, listProjects, listFeaturedProjects, listTeams } from "@/lib/repository";
+import { listProjects, listTeams } from "@/lib/repository";
 import { SearchBar } from "@/components/search-bar";
+import { HomeFeedSection } from "@/components/home-feed-section";
+import { getSessionUserFromCookie } from "@/lib/auth";
 import {
   Zap,
   LayoutGrid,
   MessageSquare,
   Users,
   ArrowRight,
-  Terminal,
   Code2,
   Cpu,
   Activity,
 } from "lucide-react";
 
 export default async function HomePage() {
-  const [{ items: projects }, { items: posts }, featured, { items: teams }] =
-    await Promise.all([
-      listProjects({ page: 1, limit: 6 }),
-      listPosts({ page: 1, limit: 6 }),
-      listFeaturedProjects(),
-      listTeams({ page: 1, limit: 3 }),
-    ]);
+  const session = await getSessionUserFromCookie();
+  const [{ items: projects }, { items: teams }] = await Promise.all([
+    listProjects({ page: 1, limit: 6 }),
+    listTeams({ page: 1, limit: 3 }),
+  ]);
 
   return (
     <main className="container pb-24 space-y-16">
@@ -72,9 +69,9 @@ export default async function HomePage() {
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { icon: LayoutGrid, label: "Active Projects", value: projects.length, color: "var(--color-primary)" },
-          { icon: MessageSquare, label: "Discussions",    value: posts.length,   color: "var(--color-accent-cyan)" },
-          { icon: Users,        label: "Active Teams",   value: teams.length,   color: "var(--color-accent-violet)" },
-          { icon: Cpu,          label: "MCP API v2",     value: "Live",         color: "var(--color-success)" },
+          { icon: MessageSquare, label: "Discussions", value: "Live", color: "var(--color-accent-cyan)" },
+          { icon: Users, label: "Active Teams", value: teams.length, color: "var(--color-accent-violet)" },
+          { icon: Cpu, label: "MCP API v2", value: "Live", color: "var(--color-success)" },
         ].map(({ icon: Icon, label, value, color }, i) => (
           <div
             key={label}
@@ -131,132 +128,8 @@ export default async function HomePage() {
         ))}
       </section>
 
-      {/* ── Main content grid ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-        {/* Left: Community Feed */}
-        <div className="lg:col-span-7 space-y-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[var(--color-accent-cyan)]" />
-              Community Feed
-            </h2>
-            <Link
-              href="/discussions"
-              className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-accent-cyan)] transition-colors"
-            >
-              View all
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {posts.length === 0 ? (
-              <div className="card p-10 text-center text-[var(--color-text-muted)] text-sm">
-                No discussions yet. Be the first to start one!
-              </div>
-            ) : (
-              posts.map((post) => (
-                <PostCard key={post.id} post={post} truncateBody={160} />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Right: Featured + Projects + Teams */}
-        <div className="lg:col-span-5 space-y-8">
-
-          {/* Featured Today */}
-          {featured.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-[var(--color-featured)]" />
-                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Featured Today</h2>
-              </div>
-              <div className="space-y-3">
-                {featured.map((project) => (
-                  <ProjectCard key={project.id} project={project} featured />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Project Gallery */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-[var(--color-primary-hover)]" />
-                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Project Gallery</h2>
-              </div>
-              <Link
-                href="/discover"
-                className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-accent-cyan)] transition-colors"
-              >
-                Explore
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {projects.length === 0 ? (
-                <div className="card p-8 text-center text-[var(--color-text-muted)] text-sm">
-                  No projects yet. Submit yours!
-                </div>
-              ) : (
-                projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Active Teams */}
-          {teams.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[var(--color-accent-violet)]" />
-                  <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Active Teams</h2>
-                </div>
-                <Link
-                  href="/teams"
-                  className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-accent-cyan)] transition-colors"
-                >
-                  View all
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {teams.map((team) => (
-                  <Link
-                    key={team.id}
-                    href={`/teams/${team.slug}`}
-                    className="card p-4 flex items-start gap-3 hover:-translate-y-0.5 transition-all duration-200 block"
-                  >
-                    <div className="w-9 h-9 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-sm font-bold text-[var(--color-accent-violet)] shrink-0">
-                      {team.name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                          {team.name}
-                        </span>
-                        <span className="tag tag-green shrink-0">
-                          {team.memberCount} members
-                        </span>
-                      </div>
-                      {team.mission && (
-                        <p className="text-xs text-[var(--color-text-muted)] line-clamp-1">
-                          {team.mission}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-        </div>
-      </div>
+      {/* ── Feed + featured + gallery (S2) ───────────────────────────────────── */}
+      <HomeFeedSection session={session} projects={projects} teams={teams} />
 
       {/* ── Flywheel: Community → Project → Team → Enterprise ────────────────── */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

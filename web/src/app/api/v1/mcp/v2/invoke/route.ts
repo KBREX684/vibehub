@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (
-    (tool === "workspace_summary" || tool === "get_talent_radar") &&
+    tool === "workspace_summary" &&
     !hasApprovedEnterpriseAccess({ role: session.role, enterpriseStatus: session.enterpriseStatus })
   ) {
     httpStatus = 403;
@@ -272,8 +272,8 @@ export async function POST(request: NextRequest) {
           return apiError({ code: "INVALID_INPUT", message: "title (min 3) and body (min 10) required" }, 400);
         }
         const post = await createPost({ title, body, tags, authorId: session.userId });
-        await log(200);
-        return apiSuccess({ tool, input, output: post });
+        await log(201);
+        return apiSuccess({ tool, input, output: post }, 201);
       }
 
       case "create_project": {
@@ -317,8 +317,8 @@ export async function POST(request: NextRequest) {
             demoUrl,
             creatorUserId: session.userId,
           });
-          await log(200);
-          return apiSuccess({ tool, input, output: project });
+          await log(201);
+          return apiSuccess({ tool, input, output: project }, 201);
         } catch (e) {
           if (isRepositoryError(e) && e.code === "CREATOR_PROFILE_REQUIRED") {
             await log(403, e.code);
@@ -449,6 +449,14 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     await log(500, "MCP_V2_INVOKE_FAILED");
-    return apiError({ code: "MCP_V2_INVOKE_FAILED", message: `MCP v2 tool ${tool} failed`, details: error instanceof Error ? error.message : String(error) }, 500);
+    const err = error instanceof Error ? error : new Error(String(error));
+    const details =
+      process.env.NODE_ENV === "development"
+        ? { message: err.message, stack: err.stack }
+        : { message: err.message };
+    return apiError(
+      { code: "MCP_V2_INVOKE_FAILED", message: `MCP v2 tool ${tool} failed`, details },
+      500
+    );
   }
 }

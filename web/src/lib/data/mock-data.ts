@@ -165,7 +165,7 @@ export const mockCreators: CreatorProfile[] = [
   },
 ];
 
-export const mockProjects: Project[] = [
+const SEED_MOCK_PROJECTS: Project[] = [
   {
     id: "p1",
     slug: "vibehub",
@@ -187,6 +187,8 @@ export const mockProjects: Project[] = [
     openSource: true,
     license: "MIT",
     updatedAt: new Date().toISOString(),
+    featuredRank: 1,
+    featuredAt: new Date().toISOString(),
   },
   {
     id: "p2",
@@ -222,6 +224,27 @@ export const mockProjects: Project[] = [
     updatedAt: new Date(Date.now() - 86_400_000).toISOString(),
   },
 ];
+
+function cloneSeedProjects(): Project[] {
+  return SEED_MOCK_PROJECTS.map((p) => {
+    const { team, techStack, tags, screenshots, ...rest } = p;
+    return {
+      ...rest,
+      team: team ? { ...team } : undefined,
+      techStack: [...techStack],
+      tags: [...tags],
+      screenshots: [...screenshots],
+    };
+  });
+}
+
+/** In Next.js dev, HMR re-evaluates modules and would reset mutable mock arrays; keep one store on globalThis. */
+const mockProjectStore = globalThis as typeof globalThis & { __vibehubMockProjects?: Project[] };
+
+export const mockProjects: Project[] =
+  process.env.NODE_ENV === "development"
+    ? (mockProjectStore.__vibehubMockProjects ??= cloneSeedProjects())
+    : cloneSeedProjects();
 
 export const mockPosts: Post[] = [
   {
@@ -456,7 +479,7 @@ export const mockCollaborationIntents: CollaborationIntent[] = [
 export const mockSubscriptions: Array<{
   id: string;
   userId: string;
-  tier: "free" | "pro" | "team_pro";
+  tier: "free" | "pro";
   status: "active" | "past_due" | "canceled" | "trialing";
   stripeSubscriptionId?: string;
   stripePriceId?: string;
@@ -474,15 +497,22 @@ export const mockSubscriptions: Array<{
   createdAt: string;
   updatedAt: string;
 }> = [
-  // Admin user u1 gets team_pro so team-limit E2E tests pass
-  { id: "sub_u1_team_pro", userId: "u1", tier: "team_pro", status: "active", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  // Admin user u1 gets pro so team-limit E2E tests pass
+  { id: "sub_u1_pro", userId: "u1", tier: "pro", status: "active", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
 // C-1: in-memory social interaction stores
 export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockPostBookmarks: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockProjectBookmarks: Array<{ id: string; userId: string; projectId: string; createdAt: string }> = [];
-export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [];
+export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [
+  {
+    id: "f_u2_u1",
+    followerId: "u2",
+    followingId: "u1",
+    createdAt: new Date().toISOString(),
+  },
+];
 
 /** P3-3: in-memory webhook endpoints (USE_MOCK_DATA=true) */
 export const mockWebhookEndpoints: Array<{
@@ -535,9 +565,8 @@ export const mockContributionCredits: ContributionCreditProfile[] = [
 
 // P3: Subscription plans (display/reference data)
 export const mockSubscriptionPlans: SubscriptionPlanInfo[] = [
-  { id: "plan_free", tier: "free" as SubscriptionTier, name: "Free", description: "社区基础功能。", priceMonthly: 0, features: ["讨论广场", "项目画廊", "基础检索", "MCP v1 只读"], apiQuota: 120 },
-  { id: "plan_pro", tier: "pro" as SubscriptionTier, name: "Pro", description: "个人 Pro：高级能力。", priceMonthly: 29, features: ["所有 Free 功能", "精华帖优先曝光", "高级检索", "API 1000/分钟"], apiQuota: 1000 },
-  { id: "plan_team_pro", tier: "team_pro" as SubscriptionTier, name: "Team Pro", description: "团队 Pro：高级协作。", priceMonthly: 99, features: ["所有 Pro 功能", "团队协作日志", "API 5000/分钟", "优先客服"], apiQuota: 5000 },
+  { id: "plan_free", tier: "free" as SubscriptionTier, name: "Free", description: "Full community access for developers.", priceMonthly: 0, features: ["Discussions", "Project gallery", "Basic search", "5 MCP tools", "60 API req/min"], apiQuota: 60 },
+  { id: "plan_pro", tier: "pro" as SubscriptionTier, name: "Pro", description: "More space, more exposure, developer tools.", priceMonthly: 9, features: ["Everything in Free", "Unlimited projects", "Featured project slots", "All 9 MCP tools", "600 API req/min", "Pro badge", "Priority collab matching"], apiQuota: 600 },
 ];
 
 // P3: User subscriptions (legacy P3 format; M-1 uses mockSubscriptions for Stripe-backed)

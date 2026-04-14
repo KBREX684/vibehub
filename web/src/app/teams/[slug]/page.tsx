@@ -14,6 +14,7 @@ import {
   GitBranch,
   Globe,
   ExternalLink,
+  Settings2,
 } from "lucide-react";
 
 interface Props {
@@ -29,6 +30,7 @@ export default async function TeamDetailPage({ params }: Props) {
 
   const viewerId = session?.userId ?? null;
   const isMember = viewerId != null && team.members.some((m) => m.userId === viewerId);
+  const isOwner = viewerId != null && team.ownerUserId === viewerId;
 
   const [taskMilestones, githubStats] = await Promise.all([
     isMember
@@ -122,6 +124,17 @@ export default async function TeamDetailPage({ params }: Props) {
               )}
             </div>
           )}
+          {isOwner && (
+            <div className="mt-5 pt-5 border-t border-[var(--color-border-subtle)]">
+              <Link
+                href={`/teams/${encodeURIComponent(team.slug)}/settings`}
+                className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+              >
+                <Settings2 className="w-3 h-3" />
+                Team settings
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -204,6 +217,7 @@ export default async function TeamDetailPage({ params }: Props) {
             members={team.members}
             milestones={taskMilestones}
             currentUserId={session?.userId ?? null}
+            isOwner={isOwner}
           />
 
           <TeamMilestonesPanel teamSlug={team.slug} currentUserId={session?.userId ?? null} />

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AdminWeeklyMaterializeForm } from "@/components/admin-weekly-materialize-form";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
-import { getAdminOverview } from "@/lib/repository";
+import { getAdminOverview, listFeaturedProjects, listProjects } from "@/lib/repository";
+import { AdminDailyFeaturedPanel } from "@/components/admin-daily-featured-panel";
 import {
   Users,
   AlertTriangle,
@@ -42,7 +43,11 @@ export default async function AdminPage() {
     );
   }
 
-  const overview = await getAdminOverview();
+  const [overview, featuredProjects, projectPickList] = await Promise.all([
+    getAdminOverview(),
+    listFeaturedProjects(),
+    listProjects({ page: 1, limit: 12 }),
+  ]);
 
   const STAT_CARDS = [
     {
@@ -177,6 +182,8 @@ export default async function AdminPage() {
           ))}
         </div>
       </section>
+
+      <AdminDailyFeaturedPanel candidates={projectPickList.items} featured={featuredProjects} />
 
       <AdminWeeklyMaterializeForm />
     </main>

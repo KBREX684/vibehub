@@ -20,8 +20,8 @@ describe("checkQuota (P2-4)", () => {
     expect(r.allowed).toBe(false);
     expect(r.limit).toBe(5);
   });
-  it("project limits for free", () => {
-    expect(checkQuota("free", "projects", 2).allowed).toBe(true);
-    expect(checkQuota("free", "projects", 3).allowed).toBe(false);
+  it("project limits for free (v4: 5 projects)", () => {
+    expect(checkQuota("free", "projects", 4).allowed).toBe(true);
+    expect(checkQuota("free", "projects", 5).allowed).toBe(false);
   });
 });

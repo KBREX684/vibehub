@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { ArrowRight, Check, CheckCheck } from "lucide-react";
 import type { InAppNotification } from "@/lib/types";
+import { groupNotificationsForDisplay } from "./notification-grouping";
 
 const KIND_ICONS: Record<string, string> = {
   team_join_request:       "👥",
@@ -17,6 +18,7 @@ const KIND_ICONS: Record<string, string> = {
   user_followed:           "👤",
   project_intent_received: "🤝",
   post_featured:           "⭐",
+  collaboration_intent_status_update: "🤝",
 };
 
 async function patchNotifications(ids?: string[], markAll?: boolean) {
@@ -41,19 +43,18 @@ export function NotificationsClient({
   const [isPending, startTransition] = useTransition();
 
   const unreadCount = items.filter((n) => !n.readAt).length;
+  const displayRows = groupNotificationsForDisplay(items);
 
-  function markOne(id: string) {
+  function markOne(ids: string[]) {
     const now = new Date().toISOString();
-    setItems((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, readAt: now } : n))
-    );
+    const idSet = new Set(ids);
+    setItems((prev) => prev.map((n) => (idSet.has(n.id) ? { ...n, readAt: now } : n)));
     startTransition(async () => {
       try {
-        await patchNotifications([id]);
+        await patchNotifications(ids);
       } catch {
-        // rollback optimistic
         setItems((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, readAt: undefined } : n))
+          prev.map((n) => (idSet.has(n.id) ? { ...n, readAt: undefined } : n))
         );
       }
     });
@@ -96,17 +97,22 @@ export function NotificationsClient({
 
       {/* Notification list */}
       <div className="space-y-2">
-        {items.map((n) => {
-          const isUnread = !n.readAt;
-          const icon     = KIND_ICONS[n.kind] ?? "🔔";
-          const date     = new Date(n.createdAt).toLocaleDateString("en-US", {
-            month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+        {displayRows.map((row) => {
+          const primaryId = row.ids[0];
+          const isUnread = !row.readAt;
+          const icon = KIND_ICONS[row.kind] ?? "🔔";
+          const date = new Date(row.createdAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
           });
-          const teamSlug = typeof n.metadata?.teamSlug === "string" ? n.metadata.teamSlug : null;
+          const teamSlug = typeof row.metadata?.teamSlug === "string" ? row.metadata.teamSlug : null;
+          const postSlug = typeof row.metadata?.postSlug === "string" ? row.metadata.postSlug : null;
 
           return (
             <div
-              key={n.id}
+              key={primaryId}
               className={`card p-4 flex items-start gap-3 transition-all ${
                 isUnread
                   ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]"
@@ -120,13 +126,13 @@ export function NotificationsClient({
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-0.5">
                   <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                    {n.title}
+                    {row.title}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
                     {isUnread && (
                       <button
-                        onClick={() => markOne(n.id)}
-                        data-testid={`notification-mark-read-${n.id}`}
+                        onClick={() => markOne(row.ids)}
+                        data-testid={`notification-mark-read-${primaryId}`}
                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-success)] transition-colors"
                         title="Mark as read"
                       >
@@ -137,13 +143,24 @@ export function NotificationsClient({
                   </div>
                 </div>
 
-                <p className="text-xs text-[var(--color-text-secondary)] mb-1">{n.body}</p>
+                <p className="text-xs text-[var(--color-text-secondary)] mb-1">{row.body}</p>
+
+                {postSlug && row.kind === "post_liked" && (
+                  <Link
+                    href={`/discussions/${encodeURIComponent(postSlug)}`}
+                    className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1"
+                    onClick={() => isUnread && markOne(row.ids)}
+                  >
+                    Open post
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                )}
 
                 {teamSlug && (
                   <Link
                     href={`/teams/${encodeURIComponent(teamSlug)}`}
                     className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1"
-                    onClick={() => isUnread && markOne(n.id)}
+                    onClick={() => isUnread && markOne(row.ids)}
                   >
                     Open team
                     <ArrowRight className="w-3 h-3" />

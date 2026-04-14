@@ -1,12 +1,14 @@
 /**
- * M-1: Subscription tier definitions, limits, and gate helpers.
+ * Subscription tier definitions, limits, and gate helpers.
  *
- * Core principle: Free users can fully experience the community (browse, post,
- * comment, like). Paid tiers unlock "more space" and "more exposure" —
- * they never lock basic features.
+ * v4.0 strategy: only Free + Pro ($9/month). Team Pro removed.
+ *
+ * Core principle: Free users fully experience the community (browse, post,
+ * comment, like, join teams). Pro unlocks "more space", "more exposure",
+ * and "developer tooling" — it never locks basic social features.
  */
 
-export type SubscriptionTier = "free" | "pro" | "team_pro";
+export type SubscriptionTier = "free" | "pro";
 export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
 
 // ─── Tier limits ─────────────────────────────────────────────────────────────
@@ -17,50 +19,51 @@ export interface TierLimits {
   maxProjects: number;
   maxScreenshots: number;
   apiRatePerMinute: number;
+  maxApiKeys: number;
   canFeatureProject: boolean;
   canPublishMilestone: boolean;
   mcpToolsUnlocked: boolean;
+  proBadge: boolean;
+  priorityCollabMatch: boolean;
+  activityLogExport: boolean;
 }
 
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   free: {
     maxTeams: 1,
     maxTeamMembers: 5,
-    maxProjects: 3,
-    maxScreenshots: 2,
-    apiRatePerMinute: 120,
+    maxProjects: 5,
+    maxScreenshots: 3,
+    apiRatePerMinute: 60,
+    maxApiKeys: 2,
     canFeatureProject: false,
     canPublishMilestone: false,
     mcpToolsUnlocked: false,
+    proBadge: false,
+    priorityCollabMatch: false,
+    activityLogExport: false,
   },
   pro: {
     maxTeams: 5,
     maxTeamMembers: 20,
     maxProjects: Infinity,
     maxScreenshots: 10,
-    apiRatePerMinute: 1000,
+    apiRatePerMinute: 600,
+    maxApiKeys: 10,
     canFeatureProject: true,
     canPublishMilestone: true,
     mcpToolsUnlocked: true,
-  },
-  team_pro: {
-    maxTeams: Infinity,
-    maxTeamMembers: Infinity,
-    maxProjects: Infinity,
-    maxScreenshots: Infinity,
-    apiRatePerMinute: 5000,
-    canFeatureProject: true,
-    canPublishMilestone: true,
-    mcpToolsUnlocked: true,
+    proBadge: true,
+    priorityCollabMatch: true,
+    activityLogExport: true,
   },
 };
 
 // ─── Pricing (display only) ───────────────────────────────────────────────────
 
 export const TIER_PRICING = {
-  free: { label: "Free", priceMonthly: 0, currency: "CNY" },
-  pro: { label: "Pro", priceMonthly: 29, currency: "CNY" },
-  team_pro: { label: "Team Pro", priceMonthly: 99, currency: "CNY" },
+  free: { label: "Free", priceMonthly: 0, currency: "USD" },
+  pro: { label: "Pro", priceMonthly: 9, currency: "USD" },
 } satisfies Record<SubscriptionTier, { label: string; priceMonthly: number; currency: string }>;
 
 // ─── Gate helpers ─────────────────────────────────────────────────────────────
@@ -82,7 +85,8 @@ export type UpgradeReason =
   | "screenshot_limit"
   | "feature_project"
   | "publish_milestone"
-  | "mcp_tools";
+  | "mcp_tools"
+  | "api_key_limit";
 
 export function checkTeamLimit(tier: SubscriptionTier, currentTeamCount: number): GateResult {
   const limit = TIER_LIMITS[tier].maxTeams;
@@ -108,6 +112,12 @@ export function checkTeamMemberLimit(tier: SubscriptionTier, currentMemberCount:
   return { allowed: false, upgradeReason: "team_member_limit" };
 }
 
+export function checkApiKeyLimit(tier: SubscriptionTier, currentKeyCount: number): GateResult {
+  const limit = TIER_LIMITS[tier].maxApiKeys;
+  if (currentKeyCount < limit) return { allowed: true };
+  return { allowed: false, upgradeReason: "api_key_limit" };
+}
+
 /** Returns the usage percentage (0–100) to trigger soft upgrade prompts at 80%+. */
 export function getApiRateUsagePercent(tier: SubscriptionTier, usedThisMinute: number): number {
   const max = TIER_LIMITS[tier].apiRatePerMinute;
@@ -118,31 +128,35 @@ export function getApiRateUsagePercent(tier: SubscriptionTier, usedThisMinute: n
 
 export const UPGRADE_MESSAGES: Record<UpgradeReason, { title: string; body: string }> = {
   team_limit: {
-    title: "升级解锁更多团队",
-    body: "Free 方案最多创建 1 个团队。升级到 Pro（¥29/月）可创建 5 个团队，Team Pro 无限制。",
+    title: "Upgrade to create more teams",
+    body: "Free plan allows 1 team. Upgrade to Pro ($9/mo) for up to 5 teams.",
   },
   team_member_limit: {
-    title: "团队已达成员上限",
-    body: "Free 方案每个团队最多 5 名成员。升级到 Pro 可扩展至 20 人，Team Pro 无上限。",
+    title: "Team member limit reached",
+    body: "Free plan allows 5 members per team. Upgrade to Pro ($9/mo) for up to 20.",
   },
   project_limit: {
-    title: "升级解锁无限项目",
-    body: "Free 方案最多创建 3 个项目。升级到 Pro（¥29/月）可创建无限项目。",
+    title: "Upgrade for unlimited projects",
+    body: "Free plan allows 5 projects. Upgrade to Pro ($9/mo) for unlimited projects.",
   },
   screenshot_limit: {
-    title: "升级解锁更多截图",
-    body: "Free 方案每个项目最多 2 张截图。升级到 Pro（¥29/月）可上传 10 张，Team Pro 无限制。",
+    title: "Upgrade for more screenshots",
+    body: "Free plan allows 3 screenshots per project. Upgrade to Pro ($9/mo) for 10.",
   },
   feature_project: {
-    title: "升级后可申请每日展示位",
-    body: "Pro 及以上方案可为项目申请每日精选展示位，获得最大曝光。",
+    title: "Upgrade to apply for daily featured",
+    body: "Pro members can apply for the daily featured project slot for maximum exposure.",
   },
   publish_milestone: {
-    title: "升级后可公开里程碑",
-    body: "Pro 及以上方案可将里程碑设为公开，在项目页展示进度，吸引投资者和协作者。",
+    title: "Upgrade to publish milestones",
+    body: "Pro members can make milestones public on the project page to attract collaborators.",
   },
   mcp_tools: {
-    title: "升级解锁全部 MCP 工具",
-    body: "Free 方案提供基础 5 个 MCP 工具。升级到 Pro 解锁全部 9 个工具，让 AI 助手更强大。",
+    title: "Upgrade to unlock all MCP tools",
+    body: "Free plan includes 5 basic MCP tools. Upgrade to Pro ($9/mo) for all 9 tools.",
+  },
+  api_key_limit: {
+    title: "Upgrade for more API keys",
+    body: "Free plan allows 2 API keys. Upgrade to Pro ($9/mo) for up to 10.",
   },
 };

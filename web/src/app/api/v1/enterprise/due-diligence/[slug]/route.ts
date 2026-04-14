@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
-import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
-import { hasApprovedEnterpriseAccess } from "@/lib/enterprise-access";
+import {
+  allowLightEnterpriseDataRead,
+  authenticateRequest,
+  rateLimitedResponse,
+  resolveReadAuth,
+} from "@/lib/auth";
 import { getProjectDueDiligence } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 
@@ -9,19 +13,17 @@ interface Params {
 }
 
 export async function GET(request: NextRequest, { params }: Params) {
-  const auth = await authenticateRequest(request, "read:enterprise:workspace");
+  const auth = await authenticateRequest(request);
   const gate = resolveReadAuth(auth, false);
   if (!gate.ok) {
     if (gate.status === 429) return rateLimitedResponse(gate.retryAfterSeconds ?? 60);
-    return apiError({ code: "UNAUTHORIZED", message: "Login or API key with read:enterprise:workspace required" }, 401);
+    return apiError({ code: "UNAUTHORIZED", message: "Login or API key required" }, 401);
   }
-
-  const user = gate.user!;
-  if (!hasApprovedEnterpriseAccess({ role: user.role, enterpriseStatus: user.enterpriseStatus })) {
+  if (!allowLightEnterpriseDataRead(gate.user!)) {
     return apiError(
       {
-        code: "ENTERPRISE_ACCESS_DENIED",
-        message: "Enterprise verification must be approved to access this resource",
+        code: "FORBIDDEN",
+        message: "API key must include read:public or read:enterprise:workspace for this endpoint",
       },
       403
     );

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireAdminSession } from "@/lib/admin-auth";
-import { featureProjectToday, clearExpiredFeaturedProjects } from "@/lib/repository";
+import { featureProjectToday, clearExpiredFeaturedProjects, clearProjectFeatured } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 
 interface Props { params: Promise<{ slug: string }> }
@@ -32,13 +32,11 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
   if (!admin.ok) return admin.response;
   const { slug } = await params;
   try {
-    const { prisma } = await import("@/lib/db");
-    const project = await prisma.project.update({
-      where: { slug },
-      data: { featuredRank: null, featuredAt: null },
-    });
+    const project = await clearProjectFeatured(slug);
     return apiSuccess({ project: { id: project.id, slug: project.slug } });
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg === "PROJECT_NOT_FOUND") return apiError({ code: "PROJECT_NOT_FOUND", message: "Project not found" }, 404);
     return apiError({ code: "UNFEATURE_FAILED", message: "Failed to unfeature project" }, 500);
   }
 }

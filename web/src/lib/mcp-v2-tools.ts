@@ -10,7 +10,7 @@ export const MCP_V2_TOOL_NAMES = [
   "get_post_detail",
   "list_challenges",
   "get_talent_radar",
-  /** P3-1: write tools (Bearer scope + optional idempotencyKey on invoke body) */
+  /** P3-1 / S4: write tools (Bearer scope + optional idempotencyKey on invoke body) */
   "create_post",
   "create_project",
   "submit_collaboration_intent",
@@ -41,7 +41,8 @@ export const MCP_V2_TOOL_SCOPES: Record<McpV2ToolName, ApiKeyScope> = {
   search_posts: "read:posts:list",
   get_post_detail: "read:posts:detail",
   list_challenges: "read:public",
-  get_talent_radar: "read:enterprise:workspace",
+  /** S4: default API keys include read:public — no enterprise verification for talent radar */
+  get_talent_radar: "read:public",
   create_post: "write:posts",
   create_project: "write:projects",
   submit_collaboration_intent: "write:intents",
@@ -146,7 +147,8 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
   },
   {
     name: "get_talent_radar",
-    description: "Enterprise talent radar: creators filtered by skill, collaboration preference, and recent activity.",
+    description:
+      "Talent radar: creators filtered by skill, collaboration preference, and recent activity. Requires read:public.",
     requiredScope: MCP_V2_TOOL_SCOPES.get_talent_radar,
     inputSchema: {
       type: "object",
@@ -160,7 +162,8 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
   },
   {
     name: "create_post",
-    description: "Create a discussion post (pending moderation). Requires write:posts.",
+    description:
+      "Create a discussion post as the key owner (pending moderation). Requires write:posts (or write:mcp:v2:posts alias).",
     requiredScope: MCP_V2_TOOL_SCOPES.create_post,
     inputSchema: {
       type: "object",
@@ -168,13 +171,14 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
       properties: {
         title: { type: "string", minLength: 3, maxLength: 120 },
         body: { type: "string", minLength: 10 },
-        tags: { type: "array", items: { type: "string" } },
+        tags: { type: "array", items: { type: "string", minLength: 1 }, default: [] },
       },
     },
   },
   {
     name: "create_project",
-    description: "Create a project for the authenticated user (creator profile required). Requires write:projects.",
+    description:
+      "Create a project for the authenticated user (creator profile required). Requires write:projects (or write:mcp:v2:projects alias). Subject to plan quotas.",
     requiredScope: MCP_V2_TOOL_SCOPES.create_project,
     inputSchema: {
       type: "object",
@@ -183,10 +187,10 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
         title: { type: "string", minLength: 3, maxLength: 120 },
         oneLiner: { type: "string", minLength: 5, maxLength: 200 },
         description: { type: "string", minLength: 20 },
-        techStack: { type: "array", items: { type: "string" } },
-        tags: { type: "array", items: { type: "string" } },
-        status: { type: "string", enum: ["idea", "building", "launched", "paused"] },
-        demoUrl: { type: "string" },
+        techStack: { type: "array", items: { type: "string", minLength: 1 }, default: [] },
+        tags: { type: "array", items: { type: "string", minLength: 1 }, default: [] },
+        status: { type: "string", enum: ["idea", "building", "launched", "paused"], default: "idea" },
+        demoUrl: { type: "string", description: "Optional absolute URL" },
       },
     },
   },

@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 
+const useMockData = process.env.USE_MOCK_DATA !== "false";
+
 /** M-2: Create a Stripe Customer Portal session for managing/canceling subscriptions. */
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -9,7 +11,15 @@ export async function POST(request: NextRequest) {
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) return apiError({ code: "STRIPE_NOT_CONFIGURED", message: "Stripe is not configured" }, 503);
+  if (!secretKey) {
+    if (useMockData) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+      return apiSuccess({
+        url: `${baseUrl}/settings/subscription?portal=mock`,
+      });
+    }
+    return apiError({ code: "STRIPE_NOT_CONFIGURED", message: "Stripe is not configured" }, 503);
+  }
 
   try {
     let body: { returnUrl?: unknown } = {};

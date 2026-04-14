@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { TeamMember, TeamMilestone, TeamTask, TeamTaskStatus } from "@/lib/types";
@@ -11,6 +12,8 @@ interface Props {
   members: TeamMember[];
   milestones: TeamMilestone[];
   currentUserId: string | null;
+  /** Team owner can batch-change task status */
+  isOwner?: boolean;
 }
 
 const STATUSES: { value: TeamTaskStatus; label: string; color: string; bg: string }[] = [
@@ -29,11 +32,12 @@ function sortTasksForColumn(rows: TeamTask[]): TeamTask[] {
   return [...rows].sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }: Props) {
+export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, isOwner }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TeamTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -175,6 +179,46 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
     }
   }
 
+  function toggleSelected(taskId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }
+
+  async function batchSetStatus(status: TeamTaskStatus) {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/batch`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskIds: ids, status }),
+      });
+      const json = (await res.json()) as { data?: { tasks?: TeamTask[] }; error?: { message?: string } };
+      if (!res.ok) {
+        setMsg(json.error?.message ?? "Batch update failed");
+        return;
+      }
+      setSelectedIds(new Set());
+      if (json.data?.tasks?.length) {
+        setTasks((prev) => {
+          const byId = new Map(json.data!.tasks!.map((t) => [t.id, t]));
+          return prev.map((t) => byId.get(t.id) ?? t);
+        });
+      } else {
+        await load();
+      }
+      router.refresh();
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   async function removeTask(taskId: string) {
     if (!confirm("Are you sure you want to delete this task?")) return;
     setMsg(null);
@@ -302,13 +346,37 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
             
             return (
               <section key={status} className="flex flex-col gap-4 p-4 rounded-[24px] bg-black/5 border border-black/5 min-h-[400px]">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="text-[1.05rem] font-semibold tracking-tight text-[var(--color-text-primary)] m-0 flex items-center gap-2">
-                    {title}
-                    <span className="px-2 py-0.5 rounded-[980px] bg-black/10 text-[0.75rem] font-bold text-[var(--color-text-secondary)]">
-                      {col.length}
-                    </span>
-                  </h3>
+                <div className="flex flex-col gap-2 px-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-[1.05rem] font-semibold tracking-tight text-[var(--color-text-primary)] m-0 flex items-center gap-2">
+                      {title}
+                      <span className="px-2 py-0.5 rounded-[980px] bg-black/10 text-[0.75rem] font-bold text-[var(--color-text-secondary)]">
+                        {col.length}
+                      </span>
+                    </h3>
+                  </div>
+                  {isOwner && col.some((t) => selectedIds.has(t.id)) ? (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem]">
+                      <span className="text-[var(--color-text-muted)] mr-1">Selected:</span>
+                      {STATUSES.filter((s) => s.value !== status).map((s) => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          className="px-2 py-1 rounded-lg bg-black/10 hover:bg-black/15 font-medium"
+                          onClick={() => void batchSetStatus(s.value)}
+                        >
+                          Move to {s.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="px-2 py-1 rounded-lg text-[var(--color-error)] hover:bg-[var(--color-error-subtle)] font-medium"
+                        onClick={() => setSelectedIds(new Set())}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-col gap-3 flex-1">
@@ -324,9 +392,23 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId }:
                         className="group relative p-5 rounded-[20px] bg-white border border-black/5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] hover:border-[#81e6d9]/40 transition-all duration-300"
                       >
                         <div className="flex items-start justify-between gap-3 mb-2">
-                          <strong className="text-[0.95rem] font-semibold text-[var(--color-text-primary)] leading-snug">
-                            {t.title}
-                          </strong>
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                            {isOwner ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(t.id)}
+                                onChange={() => toggleSelected(t.id)}
+                                className="mt-1 rounded border-[var(--color-border)] shrink-0"
+                                aria-label={`Select task ${t.title}`}
+                              />
+                            ) : null}
+                            <Link
+                              href={`/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(t.id)}`}
+                              className="text-[0.95rem] font-semibold text-[var(--color-text-primary)] leading-snug hover:text-[var(--color-primary-hover)] transition-colors"
+                            >
+                              {t.title}
+                            </Link>
+                          </div>
                           <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
                               onClick={() => void reorderTask(t.id, "up")} 

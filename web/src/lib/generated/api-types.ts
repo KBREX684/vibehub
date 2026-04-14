@@ -2026,7 +2026,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update team external links */
+        /** Update team external links (owner only; session cookie) */
         patch: {
             parameters: {
                 query?: never;
@@ -2036,7 +2036,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        discordUrl?: string | null;
+                        telegramUrl?: string | null;
+                        slackUrl?: string | null;
+                        githubOrgUrl?: string | null;
+                        githubRepoUrl?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Success */
                 200: {
@@ -2044,7 +2054,15 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Bad request */
@@ -2053,7 +2071,19 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Unauthorized */
@@ -2062,7 +2092,61 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -2071,7 +2155,19 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
             };
@@ -4327,7 +4423,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Project radar — trending projects ranked by weighted score (session or Bearer read:enterprise:workspace) */
+        /** Project radar — trending projects (session cookie, or Bearer key with read:public or read:enterprise:workspace) */
         get: {
             parameters: {
                 query?: {
@@ -4358,6 +4454,27 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4438,7 +4555,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Talent radar — top creators ranked by contribution score (session or Bearer read:enterprise:workspace) */
+        /** Talent radar — top creators (session cookie, or Bearer key with read:public or read:enterprise:workspace) */
         get: {
             parameters: {
                 query?: {
@@ -4469,6 +4586,27 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4549,7 +4687,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Project due diligence summary — deep project info with team, intent, comment stats (session or Bearer read:enterprise:workspace) */
+        /** Project due diligence — team, intents, comment stats (session or Bearer read:public / read:enterprise:workspace) */
         get: {
             parameters: {
                 query?: never;
@@ -4580,6 +4718,27 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4681,7 +4840,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ecosystem report — platform-wide metrics aggregation (session or Bearer read:enterprise:workspace) */
+        /** Ecosystem report — aggregate metrics (session or Bearer read:public / read:enterprise:workspace) */
         get: {
             parameters: {
                 query?: {
@@ -4712,6 +4871,27 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5278,7 +5458,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        planTier: "free" | "pro" | "team_pro";
+                        planTier: "free" | "pro";
                     };
                 };
             };
@@ -5761,6 +5941,7 @@ export interface paths {
                 query?: {
                     query?: string;
                     tag?: string;
+                    authorId?: string;
                     sort?: "recent" | "hot" | "featured";
                     page?: number;
                     limit?: number;
@@ -8713,6 +8894,188 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teams/{slug}/tasks/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Batch update task status (team owner only; session or Bearer write:team:tasks) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        taskIds: string[];
+                        /** @enum {string} */
+                        status: "todo" | "doing" | "done";
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Too many requests (Bearer API key rate limit) */
+                429: {
+                    headers: {
+                        /** @description Seconds until reset */
+                        "Retry-After"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/teams/{slug}/milestones": {
         parameters: {
             query?: never;
@@ -10561,7 +10924,7 @@ export interface paths {
          *     - search_posts -> read:posts:list
          *     - get_post_detail -> read:posts:detail
          *     - list_challenges -> read:public
-         *     - get_talent_radar -> read:enterprise:workspace
+         *     - get_talent_radar -> read:public
          *     - create_post -> write:posts
          *     - create_project -> write:projects
          *     - submit_collaboration_intent -> write:intents
@@ -10591,6 +10954,23 @@ export interface paths {
             responses: {
                 /** @description Success */
                 200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Success */
+                201: {
                     headers: {
                         [name: string]: unknown;
                     };

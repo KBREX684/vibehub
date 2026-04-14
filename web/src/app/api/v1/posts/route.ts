@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     const sessionUser = await getSessionUserFromCookie();
     const query = url.searchParams.get("query") ?? undefined;
     const tag = url.searchParams.get("tag") ?? undefined;
+    const authorId = url.searchParams.get("authorId")?.trim() || undefined;
     const rawSort = url.searchParams.get("sort");
     let sort: PostSortOrder | undefined;
     if (rawSort) {
@@ -38,6 +39,7 @@ export async function GET(request: Request) {
     const result = await listPosts({
       query,
       tag,
+      authorId,
       sort,
       page,
       limit,

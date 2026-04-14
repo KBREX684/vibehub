@@ -1,6 +1,7 @@
 import { unifiedSearch } from "@/lib/repository";
 import Link from "next/link";
 import { Search, Hash, Box, User, Briefcase, MessageSquare } from "lucide-react";
+import { SearchHighlight } from "@/components/search-highlight";
 
 interface Props {
   searchParams: Promise<{ q?: string; type?: string }>;
@@ -19,7 +20,8 @@ export default async function SearchPage({ searchParams }: Props) {
   type SearchType = typeof validTypes[number];
   const resolvedType = validTypes.includes(type as SearchType) ? (type as SearchType) : undefined;
 
-  const results = q.trim().length >= 2 ? await unifiedSearch(q.trim(), resolvedType) : [];
+  const qTrim = q.trim();
+  const results = qTrim.length >= 2 ? await unifiedSearch(qTrim, resolvedType) : [];
 
   return (
     <>
@@ -35,23 +37,28 @@ export default async function SearchPage({ searchParams }: Props) {
               <h1 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] text-[var(--color-text-primary)] m-0">
                 Search Results
               </h1>
-              {q ? (
+              {qTrim.length >= 2 ? (
                 <p className="text-[1.05rem] text-[var(--color-text-secondary)] mt-1">
-                  Found {results.length} results for <strong className="text-[var(--color-text-primary)] font-semibold">&ldquo;{q}&rdquo;</strong>
+                  Found {results.length} results for{" "}
+                  <strong className="text-[var(--color-text-primary)] font-semibold">&ldquo;{qTrim}&rdquo;</strong>
+                </p>
+              ) : qTrim.length > 0 ? (
+                <p className="text-[1.05rem] text-[var(--color-text-secondary)] mt-1">
+                  Type at least <strong>2 characters</strong> to search. Matching text is highlighted in results.
                 </p>
               ) : (
                 <p className="text-[1.05rem] text-[var(--color-text-secondary)] mt-1">
-                  Enter a keyword in the global search bar to begin.
+                  Enter a keyword in the global search bar, or open a tab below after you search.
                 </p>
               )}
             </div>
           </div>
 
           {/* Glass Pill Filter */}
-          {q && (
+          {qTrim.length >= 2 && (
             <div className="inline-flex p-1.5 rounded-[980px] bg-black/5 border border-black/5 backdrop-blur-md self-start md:self-auto">
               <Link 
-                href={`/search?q=${encodeURIComponent(q)}`} 
+                href={`/search?q=${encodeURIComponent(qTrim)}`} 
                 className={`flex items-center gap-2 px-5 py-2.5 text-[0.95rem] font-medium rounded-[980px] transition-all duration-300 ${!resolvedType ? 'bg-white text-[var(--color-text-primary)] shadow-[0_2px_8px_rgba(0,0,0,0.08)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-white/50'}`}
               >
                 <Box className="w-4 h-4" /> All
@@ -59,7 +66,7 @@ export default async function SearchPage({ searchParams }: Props) {
               {validTypes.map((t) => (
                 <Link 
                   key={t}
-                  href={`/search?q=${encodeURIComponent(q)}&type=${t}`} 
+                  href={`/search?q=${encodeURIComponent(qTrim)}&type=${t}`} 
                   className={`flex items-center gap-2 px-5 py-2.5 text-[0.95rem] font-medium rounded-[980px] transition-all duration-300 ${resolvedType === t ? 'bg-white text-[var(--color-text-primary)] shadow-[0_2px_8px_rgba(0,0,0,0.08)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-white/50'}`}
                 >
                   {TYPE_ICONS[t]} {TYPE_LABELS[t]}
@@ -69,12 +76,48 @@ export default async function SearchPage({ searchParams }: Props) {
           )}
         </section>
 
-        {/* Results List */}
-        {results.length === 0 && q.trim().length >= 2 ? (
+        {qTrim.length > 0 && qTrim.length < 2 ? (
+          <div className="text-center py-20 rounded-[32px] bg-[rgba(255,255,255,0.5)] border border-white/60 shadow-sm max-w-4xl mx-auto">
+            <Search className="w-12 h-12 text-[var(--color-text-tertiary)] mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Keep typing</h3>
+            <p className="text-sm text-[var(--color-text-secondary)] max-w-md mx-auto mb-6">
+              Short queries are noisy. Add one more character, or jump to Discover and Discussions from the nav.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href="/discover" className="btn btn-primary text-xs px-4 py-2">
+                Discover projects
+              </Link>
+              <Link href="/discussions" className="btn btn-secondary text-xs px-4 py-2">
+                Browse discussions
+              </Link>
+            </div>
+          </div>
+        ) : qTrim.length === 0 ? (
+          <div className="text-center py-20 rounded-[32px] bg-[rgba(255,255,255,0.5)] border border-white/60 shadow-sm max-w-4xl mx-auto">
+            <Search className="w-12 h-12 text-[var(--color-text-tertiary)] mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Search the platform</h3>
+            <p className="text-sm text-[var(--color-text-secondary)] max-w-md mx-auto mb-6">
+              Use the search icon in the header (⌘K on desktop). Results are grouped by discussions, projects, and
+              creators with keyword highlighting.
+            </p>
+            <Link href="/discover" className="btn btn-primary text-xs px-4 py-2 inline-flex">
+              Explore projects
+            </Link>
+          </div>
+        ) : results.length === 0 ? (
           <div className="text-center py-24 rounded-[32px] bg-[rgba(255,255,255,0.5)] border border-white/60 shadow-sm">
             <Search className="w-12 h-12 text-[var(--color-text-tertiary)] mx-auto mb-4 opacity-50" />
             <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No results found</h3>
-            <p className="text-[1.05rem] font-medium text-[var(--color-text-secondary)]">We couldn&apos;t find anything matching &ldquo;{q}&rdquo;.</p>
+            <p className="text-[1.05rem] font-medium text-[var(--color-text-secondary)]">
+              We couldn&apos;t find anything matching &ldquo;{qTrim}&rdquo;.
+            </p>
+            <p className="text-sm text-[var(--color-text-muted)] mt-4">
+              Try another keyword, clear the type filter, or browse{" "}
+              <Link href="/discover" className="text-[var(--color-primary-hover)] hover:underline">
+                Discover
+              </Link>
+              .
+            </p>
           </div>
         ) : (
           <div className="grid gap-4 max-w-4xl mx-auto">
@@ -91,12 +134,12 @@ export default async function SearchPage({ searchParams }: Props) {
                     href={`/${item.type === "post" ? "discussions" : item.type === "creator" ? "creators" : "projects"}/${item.slug}`} 
                     className="text-[1.1rem] font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-accent-apple)] transition-colors outline-none"
                   >
-                    {item.title}
+                    <SearchHighlight text={item.title} query={qTrim} />
                   </Link>
                 </div>
                 
                 <p className="text-[0.95rem] text-[var(--color-text-secondary)] leading-[1.6] mb-4">
-                  {item.excerpt}
+                  <SearchHighlight text={item.excerpt} query={qTrim} />
                 </p>
                 
                 {item.tags && item.tags.length > 0 && (

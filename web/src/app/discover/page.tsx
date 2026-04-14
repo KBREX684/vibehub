@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ProjectCard } from "@/components/project-card";
 import { parsePagination } from "@/lib/pagination";
-import { getProjectFilterFacets, listProjects, listTeams } from "@/lib/repository";
+import { getProjectFilterFacets, listFeaturedProjects, listProjects, listTeams } from "@/lib/repository";
 import type { ProjectStatus } from "@/lib/types";
-import { Search, Compass, X, SlidersHorizontal } from "lucide-react";
+import { Search, Compass, X, SlidersHorizontal, Sparkles } from "lucide-react";
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "idea",     label: "Idea" },
@@ -56,10 +56,11 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
       ? (statusRaw as ProjectStatus)
       : undefined;
 
-  const [{ items, pagination }, facets, teamsPage] = await Promise.all([
+  const [{ items, pagination }, facets, teamsPage, featuredToday] = await Promise.all([
     listProjects({ query, tag, tech, status, team, page, limit }),
     getProjectFilterFacets(),
     listTeams({ page: 1, limit: 100 }),
+    listFeaturedProjects(),
   ]);
 
   const baseFilters: Record<string, string | undefined> = {
@@ -91,13 +92,33 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </p>
           </div>
         </div>
-        {hasFilters && (
-          <Link href="/discover" className="btn btn-ghost text-sm flex items-center gap-1.5 text-[var(--color-error)]">
-            <X className="w-4 h-4" />
-            Clear filters
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/projects/new" className="btn btn-primary text-sm px-5 py-2 inline-flex">
+            New project
           </Link>
-        )}
+          {hasFilters && (
+            <Link href="/discover" className="btn btn-ghost text-sm flex items-center gap-1.5 text-[var(--color-error)]">
+              <X className="w-4 h-4" />
+              Clear filters
+            </Link>
+          )}
+        </div>
       </section>
+
+      {featuredToday.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[var(--color-featured)]" />
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">Featured today</h2>
+            <span className="text-xs text-[var(--color-text-muted)]">Editorial picks — same rail as the home page</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {featuredToday.map((p) => (
+              <ProjectCard key={p.id} project={p} featured />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Filter bar */}
       <form

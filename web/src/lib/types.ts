@@ -8,7 +8,7 @@ export type ProjectStatus = "idea" | "building" | "launched" | "paused";
 export type ReviewStatus = "pending" | "approved" | "rejected";
 export type CollaborationIntentType = "join" | "recruit";
 export type ChallengeStatus = "draft" | "active" | "closed";
-export type SubscriptionTier = "free" | "pro" | "team_pro";
+export type SubscriptionTier = "free" | "pro";
 export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
 
 // ─── User ─────────────────────────────────────────────────────────────────────
@@ -72,6 +72,9 @@ export interface Project {
   openSource: boolean;
   license?: string;
   updatedAt: string;
+  /** Admin daily featured slot (C-5) */
+  featuredAt?: string;
+  featuredRank?: number;
 }
 
 // ─── Post / Comment ───────────────────────────────────────────────────────────
@@ -216,7 +219,8 @@ export type InAppNotificationKind =
   | "project_bookmarked"
   | "user_followed"
   | "project_intent_received"
-  | "post_featured";
+  | "post_featured"
+  | "collaboration_intent_status_update";
 
 export interface InAppNotification {
   id: string;
