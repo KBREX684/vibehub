@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { hasConfiguredDatabaseUrl } from "@/lib/env-db";
 
 export interface ChatAuthClaims {
   teamSlug: string;
@@ -20,7 +21,9 @@ const CHAT_TOKEN_TTL_SECONDS = parseInt(process.env.CHAT_TOKEN_TTL_SECONDS ?? "1
 function getChatTokenSecret(): string | null {
   const fromEnv = process.env.CHAT_WS_TOKEN_SECRET?.trim();
   if (fromEnv) return fromEnv;
-  if (process.env.NODE_ENV !== "production") return "dev-chat-token-secret-change-me";
+  if (process.env.NODE_ENV !== "production" && !hasConfiguredDatabaseUrl()) {
+    return "dev-chat-token-secret-change-me";
+  }
   return null;
 }
 
@@ -46,7 +49,7 @@ export function encodeChatToken(input: {
   const payloadBase64 = Buffer.from(JSON.stringify(payload), "utf-8").toString("base64url");
   const signature = signPayload(payloadBase64);
   if (!signature) {
-    throw new Error("CHAT_WS_TOKEN_SECRET is required in production");
+    throw new Error("CHAT_WS_TOKEN_SECRET is required (set in production or whenever DATABASE_URL is configured)");
   }
   return `${payloadBase64}.${signature}`;
 }
