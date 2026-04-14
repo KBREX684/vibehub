@@ -40,17 +40,18 @@ export function AdminCollaborationReviewActions({ intentId }: Props) {
   }
 
   return (
-    <div className="admin-actions">
+    <div className="space-y-3">
       <textarea
         placeholder="Review note (optional)"
         value={note}
         onChange={(event) => setNote(event.target.value)}
         rows={2}
+        className="input-base resize-none text-xs"
       />
-      <div className="button-row">
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          className="button success"
+          className="btn btn-primary text-xs px-3 py-1.5"
           disabled={loading !== null}
           onClick={() => submit("approve")}
         >
@@ -58,14 +59,14 @@ export function AdminCollaborationReviewActions({ intentId }: Props) {
         </button>
         <button
           type="button"
-          className="button danger"
+          className="btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[rgba(239,68,68,0.35)] hover:bg-[var(--color-error-subtle)]"
           disabled={loading !== null}
           onClick={() => submit("reject")}
         >
           {loading === "reject" ? "Rejecting..." : "Reject"}
         </button>
       </div>
-      {error ? <p className="error-text">{error}</p> : null}
+      {error ? <p className="text-xs text-[var(--color-error)]">{error}</p> : null}
     </div>
   );
 }

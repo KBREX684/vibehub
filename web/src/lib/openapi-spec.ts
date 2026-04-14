@@ -1016,7 +1016,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "500": responses["500"],
           },
         },
-        patch: {
+        post: {
           tags: ["admin"],
           summary: "Review enterprise verification application (approve/reject)",
           security: [{ SessionCookie: [] }],

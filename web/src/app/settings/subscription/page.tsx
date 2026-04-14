@@ -3,6 +3,7 @@ import { getUserSubscription } from "@/lib/repository";
 import { getLimits, TIER_PRICING } from "@/lib/subscription";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CreditCard, Sparkles, Shield, ArrowRight } from "lucide-react";
 
 interface Props {
   searchParams: Promise<{ success?: string }>;
@@ -20,73 +21,103 @@ export default async function SubscriptionPage({ searchParams }: Props) {
   const pricing = TIER_PRICING[subscription.tier];
 
   const isActive = subscription.status === "active" || subscription.status === "trialing";
+  const statusLabel =
+    subscription.status === "active"
+      ? "Active"
+      : subscription.status === "trialing"
+        ? "Trialing"
+        : subscription.status === "past_due"
+          ? "Past due"
+          : "Canceled";
 
   return (
-    <>
-      <main className="container">
-        <section className="section" style={{ maxWidth: 600, margin: "0 auto" }}>
-          <h1>订阅管理</h1>
+    <main className="container max-w-3xl pb-24 pt-8 space-y-6">
+      <section className="flex items-center gap-4 pb-5 border-b border-[var(--color-border)]">
+        <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-primary-subtle)] flex items-center justify-center text-[var(--color-primary-hover)]">
+          <CreditCard className="w-5 h-5" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Subscription</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">Manage plan, billing status, and usage limits</p>
+        </div>
+      </section>
 
-          {success === "1" ? (
-            <div className="card" style={{ background: "#f0fdf4", borderColor: "#86efac", marginBottom: 16 }}>
-              <strong style={{ color: "#15803d" }}>🎉 订阅成功！</strong>
-              <p className="muted" style={{ margin: "4px 0 0" }}>您的账户已升级，所有新功能现在可以使用。</p>
-            </div>
-          ) : null}
+      {success === "1" ? (
+        <div className="card p-4 border-[rgba(34,197,94,0.35)] bg-[var(--color-success-subtle)]">
+          <p className="text-sm font-semibold text-[var(--color-success)]">Plan upgraded successfully</p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+            Your account now has access to the new subscription capabilities.
+          </p>
+        </div>
+      ) : null}
 
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="meta-row">
-              <h2 style={{ margin: 0 }}>当前方案：{pricing.label}</h2>
-              <span className={`status ${isActive ? "status-approved" : "status-rejected"}`}>
-                {subscription.status === "active" ? "活跃" :
-                 subscription.status === "trialing" ? "试用中" :
-                 subscription.status === "past_due" ? "付款逾期" : "已取消"}
-              </span>
-            </div>
-
-            {subscription.currentPeriodEnd ? (
-              <p className="muted small">
-                {subscription.cancelAtPeriodEnd ? "取消生效时间：" : "下次续费："}
-                {new Date(subscription.currentPeriodEnd).toLocaleDateString("zh-CN")}
-              </p>
-            ) : null}
-
-            <div className="funnel-grid" style={{ marginTop: 16 }}>
-              <div className="funnel-stat">
-                <strong>{limits.maxTeams === Infinity ? "∞" : limits.maxTeams}</strong>
-                <span>团队上限</span>
-              </div>
-              <div className="funnel-stat">
-                <strong>{limits.maxProjects === Infinity ? "∞" : limits.maxProjects}</strong>
-                <span>项目上限</span>
-              </div>
-              <div className="funnel-stat">
-                <strong>{limits.maxScreenshots === Infinity ? "∞" : limits.maxScreenshots}</strong>
-                <span>截图上限</span>
-              </div>
-              <div className="funnel-stat">
-                <strong>{limits.apiRatePerMinute.toLocaleString()}</strong>
-                <span>API 次/分钟</span>
-              </div>
-            </div>
+      <section className="card p-6 space-y-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Current plan</p>
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{pricing.label}</h2>
+            <p className="text-sm text-[var(--color-text-secondary)]">{pricing.priceMonthly}/month</p>
           </div>
+          <span className={`tag ${isActive ? "tag-green" : "tag-red"}`}>{statusLabel}</span>
+        </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {subscription.tier === "free" ? (
-              <Link href="/pricing" className="button" style={{ background: "var(--brand)", color: "#fff", border: "none" }}>
-                升级方案
-              </Link>
-            ) : (
-              <form action="/api/v1/billing/portal" method="POST">
-                <button type="submit" className="button ghost">
-                  管理订阅 / 取消
-                </button>
-              </form>
-            )}
-            <Link href="/pricing" className="button ghost">查看方案对比</Link>
+        {subscription.currentPeriodEnd ? (
+          <p className="text-xs text-[var(--color-text-muted)]">
+            {subscription.cancelAtPeriodEnd ? "Cancellation effective:" : "Next billing date:"}{" "}
+            {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US")}
+          </p>
+        ) : null}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxTeams === Infinity ? "∞" : limits.maxTeams}</p>
+            <p className="text-xs text-[var(--color-text-muted)]">Team limit</p>
           </div>
-        </section>
-      </main>
-    </>
+          <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxProjects === Infinity ? "∞" : limits.maxProjects}</p>
+            <p className="text-xs text-[var(--color-text-muted)]">Project limit</p>
+          </div>
+          <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxScreenshots === Infinity ? "∞" : limits.maxScreenshots}</p>
+            <p className="text-xs text-[var(--color-text-muted)]">Screenshot limit</p>
+          </div>
+          <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.apiRatePerMinute.toLocaleString()}</p>
+            <p className="text-xs text-[var(--color-text-muted)]">API req/min</p>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+          <p className="text-xs text-[var(--color-text-secondary)] flex items-center gap-2">
+            <Shield className="w-3.5 h-3.5 text-[var(--color-accent-cyan)]" />
+            Enterprise verification status is managed separately in the enterprise workflow.
+          </p>
+        </div>
+      </section>
+
+      <section className="card p-5">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 mb-3">
+          <Sparkles className="w-4 h-4 text-[var(--color-primary-hover)]" />
+          Plan actions
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {subscription.tier === "free" ? (
+            <Link href="/pricing" className="btn btn-primary text-sm px-4 py-2 inline-flex items-center gap-1.5">
+              Upgrade plan
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          ) : (
+            <form action="/api/v1/billing/portal" method="POST">
+              <button type="submit" className="btn btn-secondary text-sm px-4 py-2">
+                Manage billing / cancel
+              </button>
+            </form>
+          )}
+          <Link href="/pricing" className="btn btn-ghost text-sm px-4 py-2">
+            Compare plans
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }

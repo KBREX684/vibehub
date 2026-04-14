@@ -441,7 +441,10 @@ export const mockSubscriptions: Array<{
   enterpriseReviewNote?: string;
   createdAt: string;
   updatedAt: string;
-}> = [];
+}> = [
+  // Admin user u1 gets team_pro so team-limit E2E tests pass
+  { id: "sub_u1_team_pro", userId: "u1", tier: "team_pro", status: "active", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+];
 
 // C-1: in-memory social interaction stores
 export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
