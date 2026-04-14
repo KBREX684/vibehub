@@ -6,6 +6,7 @@ import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
+import { hasConfiguredDatabaseUrl } from "@/lib/env-db";
 import type { EnterpriseVerificationStatus, Role, SessionUser, SubscriptionTier } from "@/lib/types";
 
 const SESSION_COOKIE_KEY = "vibehub_session";
@@ -31,7 +32,8 @@ function getSessionSecret(): string | null {
     return fromEnv;
   }
 
-  if (process.env.NODE_ENV !== "production") {
+  // Never use a fixed dev secret when a real database is configured — mis-set NODE_ENV would be critical.
+  if (process.env.NODE_ENV !== "production" && !hasConfiguredDatabaseUrl()) {
     return "dev-session-secret-change-me";
   }
 
@@ -58,7 +60,7 @@ export function encodeSession(session: SessionUser): string {
   const signature = signPayload(payloadBase64);
 
   if (!signature) {
-    throw new Error("SESSION_SECRET is required in production");
+    throw new Error("SESSION_SECRET is required (set in production or whenever DATABASE_URL is configured)");
   }
 
   return `${payloadBase64}.${signature}`;

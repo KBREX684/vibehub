@@ -44,3 +44,13 @@ export function assertUrlCountAtMost(text: string, maxUrls: number, fieldLabel =
 export function escapeHtmlAngleBrackets(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+/** Escape for HTML text nodes and double-quoted attribute values (oEmbed snippets, etc.). */
+export function escapeHtmlForEmbed(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 
 interface Props {
@@ -13,11 +14,10 @@ export default async function LoginPage({ searchParams }: Props) {
   // Already logged in — redirect away
   const session = await getSessionUserFromCookie();
   if (session) {
-    const dest = sp.redirect || "/";
-    redirect(dest);
+    redirect(sanitizeSameOriginRedirectPath(sp.redirect));
   }
 
-  const redirectTo  = sp.redirect  ?? "/";
+  const redirectTo = sanitizeSameOriginRedirectPath(sp.redirect);
   const required    = sp.required;
   const errorCode   = sp.error;
 
