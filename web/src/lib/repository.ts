@@ -160,7 +160,13 @@ interface ReviewCollaborationIntentInput {
   intentId: string;
   action: "approve" | "reject";
   note?: string;
+  /** Actor id stored as reviewer (admin or project owner). */
   adminUserId: string;
+  /**
+   * When set, the intent must belong to a project whose creator is this user.
+   * Used when a project owner reviews via the admin queue (same payload as legacy admin-only flow).
+   */
+  projectOwnerUserId?: string;
 }
 
 export async function getPrisma() {
@@ -3519,6 +3525,13 @@ export async function reviewCollaborationIntent(
     if (!intent) {
       throw new Error("COLLABORATION_INTENT_NOT_FOUND");
     }
+    if (input.projectOwnerUserId) {
+      const project = mockProjects.find((p) => p.id === intent.projectId);
+      const creator = project ? mockCreators.find((c) => c.id === project.creatorId) : null;
+      if (!creator || creator.userId !== input.projectOwnerUserId) {
+        throw new Error("FORBIDDEN_NOT_PROJECT_OWNER");
+      }
+    }
 
     intent.status = nextStatus;
     intent.reviewNote = note;
@@ -3542,9 +3555,15 @@ export async function reviewCollaborationIntent(
   const updatedIntent = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const intent = await tx.collaborationIntent.findUnique({
       where: { id: input.intentId },
+      include: { project: { include: { creator: { select: { userId: true } } } } },
     });
     if (!intent) {
       throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+    }
+    if (input.projectOwnerUserId) {
+      if (intent.project.creator.userId !== input.projectOwnerUserId) {
+        throw new Error("FORBIDDEN_NOT_PROJECT_OWNER");
+      }
     }
 
     const updated = await tx.collaborationIntent.update({
@@ -6507,6 +6526,9 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
       githubId: updated.githubId ?? undefined,
       githubUsername: updated.githubUsername ?? undefined,
       avatarUrl: updated.avatarUrl ?? undefined,
+      enterpriseStatus: (updated.enterpriseStatus as EnterpriseVerificationStatus) ?? "none",
+      enterpriseOrganization: updated.enterpriseOrganization ?? undefined,
+      enterpriseWebsite: updated.enterpriseWebsite ?? undefined,
     };
   }
 
@@ -6528,6 +6550,9 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
     githubId: created.githubId ?? undefined,
     githubUsername: created.githubUsername ?? undefined,
     avatarUrl: created.avatarUrl ?? undefined,
+    enterpriseStatus: (created.enterpriseStatus as EnterpriseVerificationStatus) ?? "none",
+    enterpriseOrganization: created.enterpriseOrganization ?? undefined,
+    enterpriseWebsite: created.enterpriseWebsite ?? undefined,
   };
 }
 
@@ -6546,6 +6571,9 @@ export function getDemoUser(role: DemoRole = "user") {
     userId: user.id,
     role: user.role,
     name: user.name,
+    enterpriseStatus: user.enterpriseStatus ?? "none",
+    enterpriseOrganization: user.enterpriseOrganization,
+    enterpriseWebsite: user.enterpriseWebsite,
   };
 }
 export async function updateComment(params: {

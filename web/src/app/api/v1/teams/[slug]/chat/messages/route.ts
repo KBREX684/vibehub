@@ -42,8 +42,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     return apiError({ code: "SERVER_MISCONFIGURED", message: "WS server token is required in production" }, 500);
   }
 
-  // Auth: session user or API-key holder with read:team:detail
-  const auth = await authenticateRequest(req, "read:team:detail");
+  const isWsServerRequest = Boolean(serverToken && req.headers.get("x-ws-server-token") === serverToken);
+
+  // Auth: session user or API-key holder with read:team:detail (WS server uses internal token only)
+  const auth = isWsServerRequest ? { kind: "ok" as const, user: { userId: "", role: "guest" as const, name: "" } } : await authenticateRequest(req, "read:team:detail");
   const gate = resolveReadAuth(auth, true);
   if (!gate.ok) {
     return apiError({ code: "UNAUTHORIZED", message: "Authentication required" }, 401);

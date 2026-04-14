@@ -113,6 +113,9 @@ export async function GET(request: Request) {
       userId: user.id,
       role: user.role,
       name: user.name,
+      enterpriseStatus: user.enterpriseStatus ?? "none",
+      enterpriseOrganization: user.enterpriseOrganization,
+      enterpriseWebsite: user.enterpriseWebsite,
     });
 
     const response = NextResponse.redirect(new URL(redirectPath, baseUrl));

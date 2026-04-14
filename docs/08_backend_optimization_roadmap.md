@@ -22,7 +22,8 @@
 
 ## 二、P0 优先级：必须立即修复的安全与权限问题
 
-> P0 = 生产上线前必须关闭的漏洞，不修不能公测。
+> P0 = 生产上线前必须关闭的漏洞，不修不能公测。  
+> **2026-04-14 更新：** P0-1～P0-4 已在当前主线实现（企业路由 `enterpriseStatus === approved` 校验、OAuth 会话写入 enterprise 字段、`decodeSession` 回传、`demo-login` 支持 `DISABLE_DEMO_LOGIN`、团队聊天 GET 在带有效 `WS_SERVER_TOKEN` 时跳过 Bearer scope、管理端协作审核允许项目 owner 且 repository 校验所有权）。
 
 ### P0-1：Enterprise 权限边界模糊——`enterpriseStatus` 未在服务端路由层强制校验
 

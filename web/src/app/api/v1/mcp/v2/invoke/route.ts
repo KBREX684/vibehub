@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
+import { hasApprovedEnterpriseAccess } from "@/lib/enterprise-access";
 import { clientIp } from "@/lib/api-key-rate-limit";
 import { apiError, apiSuccess } from "@/lib/response";
 import {
@@ -80,6 +81,22 @@ export async function POST(request: NextRequest) {
   const session = gate.user!;
   userId = session.userId;
   const apiKeyId = session.apiKeyId;
+
+  if (
+    (tool === "workspace_summary" || tool === "get_talent_radar") &&
+    !hasApprovedEnterpriseAccess({ role: session.role, enterpriseStatus: session.enterpriseStatus })
+  ) {
+    httpStatus = 403;
+    errorCode = "ENTERPRISE_ACCESS_DENIED";
+    await logMcpInvoke({ tool, userId, apiKeyId, httpStatus, clientIp: ip, userAgent: ua, errorCode, durationMs: Date.now() - started });
+    return apiError(
+      {
+        code: "ENTERPRISE_ACCESS_DENIED",
+        message: "Enterprise verification must be approved for this tool",
+      },
+      403
+    );
+  }
 
   async function log(status: number, err?: string) {
     httpStatus = status;

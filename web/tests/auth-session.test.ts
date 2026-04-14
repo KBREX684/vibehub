@@ -17,6 +17,25 @@ describe("session signing", () => {
     });
   });
 
+  it("round-trips optional enterprise fields", () => {
+    const token = encodeSession({
+      userId: "u1",
+      role: "user",
+      name: "Alice",
+      enterpriseStatus: "approved",
+      enterpriseOrganization: "Acme",
+      enterpriseWebsite: "https://acme.example",
+    });
+    expect(decodeSession(token)).toEqual({
+      userId: "u1",
+      role: "user",
+      name: "Alice",
+      enterpriseStatus: "approved",
+      enterpriseOrganization: "Acme",
+      enterpriseWebsite: "https://acme.example",
+    });
+  });
+
   it("rejects tampered token payload", () => {
     const token = encodeSession({
       userId: "u1",
