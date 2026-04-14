@@ -36,7 +36,7 @@ interface Props {
   teamSlug: string;
   /** Logged-in user. Pass null to show login prompt. */
   currentUser: { id: string; name: string } | null;
-  /** Optional UI pre-check; server remains source of truth. */
+  /** UI pre-check only; server auth token + membership is authoritative. */
   isMember: boolean;
 }
 
