@@ -6,7 +6,7 @@ import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
-import type { EnterpriseVerificationStatus, Role, SessionUser } from "@/lib/types";
+import type { EnterpriseVerificationStatus, Role, SessionUser, SubscriptionTier } from "@/lib/types";
 
 const SESSION_COOKIE_KEY = "vibehub_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -19,6 +19,10 @@ interface SessionPayload extends SessionUser {
 
 function isEnterpriseVerificationStatus(v: unknown): v is EnterpriseVerificationStatus {
   return v === "none" || v === "pending" || v === "approved" || v === "rejected";
+}
+
+function isSubscriptionTier(v: unknown): v is SubscriptionTier {
+  return v === "free" || v === "pro" || v === "team_pro";
 }
 
 function getSessionSecret(): string | null {
@@ -101,7 +105,7 @@ export function decodeSession(raw?: string): SessionUser | null {
       role: parsed.role,
       name: parsed.name,
     };
-    if (parsed.subscriptionTier) {
+    if (isSubscriptionTier(parsed.subscriptionTier)) {
       user.subscriptionTier = parsed.subscriptionTier;
     }
     if (isEnterpriseVerificationStatus(parsed.enterpriseStatus)) {

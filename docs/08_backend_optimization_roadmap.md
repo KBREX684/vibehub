@@ -119,7 +119,8 @@ export async function GET(request: Request) {
 
 ## 三、P1 优先级：核心功能缺口和契约修复
 
-> P1 = 公测阶段应完成，影响产品核心体验或外部可信度。
+> P1 = 公测阶段应完成，影响产品核心体验或外部可信度。  
+> **2026-04-15 更新：** P1-1～P1-7 已在当前主线落地：`openapi-spec-p1-stubs.ts` + `scripts/openapi-path-coverage.ts`（非 admin 路由覆盖率门禁 ≥80%，当前 100%）；OAuth 会话写入 `subscriptionTier`；Bearer 会话携带 `subscriptionTier`；`ApiKey.expiresAt` + `POST /me/api-keys` 可选 `expiresInDays`；里程碑 owner/创建者分级；`GET /posts?mine=1` 与 `getPostBySlug(viewer)` 作者可见待审帖；贡献分增量（任务完成、里程碑完成、评论、项目创建、协作意向批准、入队申请等）+ 帖子审核通过加分；帖子/项目创建与删除审计日志。
 
 ### P1-1：OpenAPI 严重覆盖不足——53 条已记录，实际路由约 103 条
 

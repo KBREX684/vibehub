@@ -249,6 +249,7 @@ export interface AuditLog {
   action: string;
   entityType:
     | "post"
+    | "project"
     | "moderation_case"
     | "report_ticket"
     | "collaboration_intent"
@@ -275,6 +276,8 @@ export interface ApiKeySummary {
   createdAt: string;
   lastUsedAt?: string;
   revokedAt?: string;
+  /** ISO — key invalid after this instant if set */
+  expiresAt?: string;
 }
 
 /** Returned only once from create. */

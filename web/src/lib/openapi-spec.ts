@@ -1,5 +1,6 @@
 import { API_KEY_SCOPES } from "@/lib/api-key-scopes";
 import { MCP_V2_TOOL_NAMES, MCP_V2_TOOL_SCOPES } from "@/lib/mcp-v2-tools";
+import { P1_API_PATH_STUBS } from "@/lib/openapi-spec-p1-stubs";
 
 const metaSchema = {
   type: "object",
@@ -36,7 +37,7 @@ const errorEnvelope = {
   required: ["error", "meta"],
 } as const;
 
-const responses = {
+export const responses = {
   "200": { description: "Success", content: { "application/json": { schema: successEnvelope } } },
   "400": { description: "Bad request", content: { "application/json": { schema: errorEnvelope } } },
   "401": { description: "Unauthorized", content: { "application/json": { schema: errorEnvelope } } },
@@ -122,6 +123,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       },
     },
     paths: {
+      ...P1_API_PATH_STUBS,
       "/api/v1/health": {
         get: {
           tags: ["health"],

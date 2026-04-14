@@ -1,3 +1,4 @@
+import { incrementContributionCreditField, contributionWeights } from "@/lib/contribution-credit-increment";
 import { dispatchNotificationPush } from "@/lib/push-dispatcher";
 import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
@@ -732,6 +733,31 @@ function nextTeamTaskSortOrderMock(teamId: string): number {
   return Math.max(...rows.map((r) => r.sortOrder)) + 1;
 }
 
+async function assertTeamOwnerBySlug(teamSlug: string, userId: string): Promise<{ teamId: string }> {
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === teamSlug);
+    if (!team) {
+      throw new Error("TEAM_NOT_FOUND");
+    }
+    if (team.ownerUserId !== userId) {
+      throw new Error("FORBIDDEN_NOT_TEAM_OWNER");
+    }
+    return { teamId: team.id };
+  }
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({
+    where: { slug: teamSlug },
+    select: { id: true, ownerUserId: true },
+  });
+  if (!team) {
+    throw new Error("TEAM_NOT_FOUND");
+  }
+  if (team.ownerUserId !== userId) {
+    throw new Error("FORBIDDEN_NOT_TEAM_OWNER");
+  }
+  return { teamId: team.id };
+}
+
 async function assertTeamMemberBySlug(teamSlug: string, userId: string): Promise<{ teamId: string }> {
   if (useMockData) {
     const team = mockTeams.find((t) => t.slug === teamSlug);
@@ -1457,6 +1483,7 @@ export async function updateTeamTask(params: {
       throw new Error("TEAM_TASK_NOT_FOUND");
     }
     const cur = mockTeamTasks[idx];
+    const prevStatus = cur.status;
     if (params.title !== undefined) {
       const t = params.title.trim();
       if (!t) {
@@ -1505,6 +1532,15 @@ export async function updateTeamTask(params: {
       cur.milestoneId = params.milestoneId === null ? undefined : params.milestoneId;
     }
     cur.updatedAt = new Date().toISOString();
+    if (params.status === "done" && prevStatus !== "done") {
+      const creditedUserId = cur.assigneeUserId ?? cur.createdByUserId;
+      void incrementContributionCreditField({
+        userId: creditedUserId,
+        useMockData: true,
+        deltaScore: contributionWeights.taskDone,
+        field: "tasksCompleted",
+      });
+    }
     return mockTeamTaskToDto(cur);
   }
 
@@ -1515,6 +1551,7 @@ export async function updateTeamTask(params: {
   if (!existing) {
     throw new Error("TEAM_TASK_NOT_FOUND");
   }
+  const prevTaskStatus = existing.status;
 
   if (params.assigneeUserId !== undefined && params.assigneeUserId !== null) {
     const mem = await prisma.teamMembership.findUnique({
@@ -1592,6 +1629,15 @@ export async function updateTeamTask(params: {
       title: "你被分配到团队任务",
       body: `在团队 /${team?.slug ?? params.teamSlug} 的任务「${updated.title}」已分配给你。`,
       metadata: { teamSlug: team?.slug ?? params.teamSlug, taskId: updated.id },
+    });
+  }
+  if (data.status === "done" && prevTaskStatus !== "done") {
+    const creditedUserId = updated.assignee?.id ?? updated.createdByUserId;
+    void incrementContributionCreditField({
+      userId: creditedUserId,
+      useMockData: false,
+      deltaScore: contributionWeights.taskDone,
+      field: "tasksCompleted",
     });
   }
   return {
@@ -1763,7 +1809,7 @@ export async function createTeamMilestone(params: {
   targetDate: string;
   sortOrder?: number;
 }): Promise<TeamMilestone> {
-  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const { teamId } = await assertTeamOwnerBySlug(params.teamSlug, params.actorUserId);
   const title = params.title.trim();
   if (!title) {
     throw new Error("INVALID_MILESTONE_TITLE");
@@ -1873,7 +1919,7 @@ export async function updateTeamMilestone(params: {
   visibility?: "team_only" | "public";
   progress?: number;
 }): Promise<TeamMilestone> {
-  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
 
   if (useMockData) {
     const idx = mockTeamMilestones.findIndex((m) => m.id === params.milestoneId && m.teamId === teamId);
@@ -1881,6 +1927,22 @@ export async function updateTeamMilestone(params: {
       throw new Error("TEAM_MILESTONE_NOT_FOUND");
     }
     const cur = mockTeamMilestones[idx];
+    const wasCompletedMock = cur.completed;
+    const team = mockTeams.find((t) => t.id === teamId);
+    const isOwner = team?.ownerUserId === params.actorUserId || role === "owner";
+    const isCreator = cur.createdByUserId === params.actorUserId;
+    const wantsStructural =
+      params.title !== undefined ||
+      params.description !== undefined ||
+      params.targetDate !== undefined ||
+      params.sortOrder !== undefined ||
+      params.visibility !== undefined ||
+      params.completed !== undefined;
+    if (!isOwner && !isCreator) {
+      if (wantsStructural || params.progress === undefined) {
+        throw new Error("FORBIDDEN_MILESTONE_MEMBER_EDIT");
+      }
+    }
     if (params.title !== undefined) {
       const t = params.title.trim();
       if (!t) {
@@ -1912,15 +1974,39 @@ export async function updateTeamMilestone(params: {
       cur.progress = Math.max(0, Math.min(100, Math.floor(params.progress)));
     }
     cur.updatedAt = new Date().toISOString();
+    if (params.completed === true && !wasCompletedMock) {
+      void incrementContributionCreditField({
+        userId: cur.createdByUserId,
+        useMockData: true,
+        deltaScore: contributionWeights.milestoneCompleted,
+        field: "milestonesHit",
+      });
+    }
     return mockTeamMilestoneToDto(cur);
   }
 
   const prisma = await getPrisma();
   const existing = await prisma.teamMilestone.findFirst({
     where: { id: params.milestoneId, teamId },
+    include: { team: { select: { ownerUserId: true } } },
   });
   if (!existing) {
     throw new Error("TEAM_MILESTONE_NOT_FOUND");
+  }
+  const wasCompletedPrisma = existing.completed;
+  const isOwner = existing.team.ownerUserId === params.actorUserId || role === "owner";
+  const isCreator = existing.createdByUserId === params.actorUserId;
+  const wantsStructural =
+    params.title !== undefined ||
+    params.description !== undefined ||
+    params.targetDate !== undefined ||
+    params.sortOrder !== undefined ||
+    params.visibility !== undefined ||
+    params.completed !== undefined;
+  if (!isOwner && !isCreator) {
+    if (wantsStructural || params.progress === undefined) {
+      throw new Error("FORBIDDEN_MILESTONE_MEMBER_EDIT");
+    }
   }
 
   const data: {
@@ -1967,6 +2053,14 @@ export async function updateTeamMilestone(params: {
     data,
     include: { createdBy: { select: { id: true, name: true } } },
   });
+  if (data.completed === true && !wasCompletedPrisma) {
+    void incrementContributionCreditField({
+      userId: updated.createdByUserId,
+      useMockData: false,
+      deltaScore: contributionWeights.milestoneCompleted,
+      field: "milestonesHit",
+    });
+  }
   return {
     id: updated.id,
     teamId: updated.teamId,
@@ -1989,7 +2083,7 @@ export async function deleteTeamMilestone(params: {
   milestoneId: string;
   actorUserId: string;
 }): Promise<void> {
-  const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
+  const { teamId } = await assertTeamOwnerBySlug(params.teamSlug, params.actorUserId);
 
   if (useMockData) {
     const idx = mockTeamMilestones.findIndex((m) => m.id === params.milestoneId && m.teamId === teamId);
@@ -2496,6 +2590,8 @@ export async function listPosts(params: {
   sort?: string;
   /** P2: only return featured posts */
   featuredOnly?: boolean;
+  /** P1: when set, include this author's non-approved posts (for "my submissions") */
+  includeAuthorId?: string;
   page: number;
   limit: number;
 }): Promise<Paginated<Post>> {
@@ -2509,9 +2605,11 @@ export async function listPosts(params: {
         post.body.toLowerCase().includes(q) ||
         post.tags.some((tag) => tag.toLowerCase().includes(q));
       const tagMatch = !t || post.tags.some((tag) => tag.toLowerCase() === t);
-      const approvedOnly = post.reviewStatus === "approved";
+      const visibilityOk =
+        post.reviewStatus === "approved" ||
+        (params.includeAuthorId ? post.authorId === params.includeAuthorId : false);
       const featuredMatch = !params.featuredOnly || Boolean(post.featuredAt);
-      return queryMatch && tagMatch && approvedOnly && featuredMatch;
+      return queryMatch && tagMatch && visibilityOk && featuredMatch;
     });
     if (params.sort === "featured") {
       filtered = [...filtered].sort((a, b) => {
@@ -2524,9 +2622,18 @@ export async function listPosts(params: {
     return paginateArray(filtered, params.page, params.limit);
   }
 
+  const reviewFilter = params.includeAuthorId
+    ? {
+        OR: [
+          { reviewStatus: "approved" as const },
+          { authorId: params.includeAuthorId, reviewStatus: { not: "approved" as const } },
+        ],
+      }
+    : { reviewStatus: "approved" as const };
+
   const where = {
     AND: [
-      { reviewStatus: "approved" as const },
+      reviewFilter,
       params.query
         ? {
             OR: [
@@ -2629,10 +2736,19 @@ export async function listPostsForModeration(params: {
   };
 }
 
-export async function getPostBySlug(slug: string): Promise<Post | null> {
+export async function getPostBySlug(
+  slug: string,
+  options?: { viewerUserId?: string }
+): Promise<Post | null> {
   if (useMockData) {
-    const post = mockPosts.find((p) => p.slug === slug && p.reviewStatus === "approved");
-    return post ?? null;
+    const post = mockPosts.find((p) => p.slug === slug);
+    if (!post) return null;
+    if (post.reviewStatus !== "approved") {
+      if (!options?.viewerUserId || post.authorId !== options.viewerUserId) {
+        return null;
+      }
+    }
+    return post;
   }
   const prisma = await getPrisma();
   const p = await prisma.post.findUnique({
@@ -2642,7 +2758,12 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
       _count: { select: { likes: true, bookmarks: true } },
     },
   });
-  if (!p || p.reviewStatus !== "approved") return null;
+  if (!p) return null;
+  if (p.reviewStatus !== "approved") {
+    if (!options?.viewerUserId || p.authorId !== options.viewerUserId) {
+      return null;
+    }
+  }
   return toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks });
 }
 
@@ -2691,6 +2812,15 @@ export async function createPost(input: {
       reason: "new_post_submission",
       createdAt: new Date().toISOString(),
     });
+    mockAuditLogs.unshift({
+      id: `log_post_${Date.now()}`,
+      actorId: input.authorId,
+      action: "post_created",
+      entityType: "post",
+      entityId: post.id,
+      metadata: { slug: post.slug, title: post.title },
+      createdAt: new Date().toISOString(),
+    });
     return post;
   }
 
@@ -2714,6 +2844,16 @@ export async function createPost(input: {
         postId: post.id,
         status: "pending",
         reason: "new_post_submission",
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: input.authorId,
+        action: "post_created",
+        entityType: "post",
+        entityId: post.id,
+        metadata: { slug: post.slug, title: post.title },
       },
     });
 
@@ -2742,6 +2882,15 @@ export async function updatePost(params: {
     if (params.title !== undefined) post.title = params.title;
     if (params.body  !== undefined) post.body  = params.body;
     if (params.tags  !== undefined) post.tags  = params.tags;
+    mockAuditLogs.unshift({
+      id: `log_post_up_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "post_updated",
+      entityType: "post",
+      entityId: post.id,
+      metadata: { slug: post.slug },
+      createdAt: new Date().toISOString(),
+    });
     return { ...post };
   }
   const prisma = await getPrisma();
@@ -2755,6 +2904,15 @@ export async function updatePost(params: {
   if (params.body  !== undefined) data.body  = params.body;
   if (params.tags  !== undefined) data.tags  = params.tags;
   const updated = await prisma.post.update({ where: { id: post.id }, data });
+  await prisma.auditLog.create({
+    data: {
+      actorId: params.actorUserId,
+      action: "post_updated",
+      entityType: "post",
+      entityId: post.id,
+      metadata: { slug: post.slug },
+    },
+  });
   return toPostDto(updated);
 }
 
@@ -2769,7 +2927,17 @@ export async function deletePost(params: {
     if (mockPosts[idx].authorId !== params.actorUserId && params.actorRole !== "admin") {
       throw new Error("FORBIDDEN_NOT_AUTHOR");
     }
+    const deletedId = mockPosts[idx].id;
     mockPosts.splice(idx, 1);
+    mockAuditLogs.unshift({
+      id: `log_post_del_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "post_deleted",
+      entityType: "post",
+      entityId: deletedId,
+      metadata: { slug: params.slug },
+      createdAt: new Date().toISOString(),
+    });
     return;
   }
   const prisma = await getPrisma();
@@ -2778,7 +2946,18 @@ export async function deletePost(params: {
   if (post.authorId !== params.actorUserId && params.actorRole !== "admin") {
     throw new Error("FORBIDDEN_NOT_AUTHOR");
   }
-  await prisma.post.delete({ where: { id: post.id } });
+  await prisma.$transaction([
+    prisma.post.delete({ where: { id: post.id } }),
+    prisma.auditLog.create({
+      data: {
+        actorId: params.actorUserId,
+        action: "post_deleted",
+        entityType: "post",
+        entityId: post.id,
+        metadata: { slug: params.slug },
+      },
+    }),
+  ]);
 }
 
 export async function getPostIdBySlug(slug: string): Promise<string | null> {
@@ -2813,6 +2992,12 @@ export async function createComment(input: { postId: string; body: string; autho
       createdAt: new Date().toISOString(),
     };
     mockComments.unshift(comment);
+    void incrementContributionCreditField({
+      userId: input.authorId,
+      useMockData: true,
+      deltaScore: contributionWeights.comment,
+      field: "commentsAuthored",
+    });
     return comment;
   }
 
@@ -2837,6 +3022,12 @@ export async function createComment(input: { postId: string; body: string; autho
       parentCommentId: input.parentCommentId ?? null,
     },
     include: { author: { select: { name: true } } },
+  });
+  void incrementContributionCreditField({
+    userId: input.authorId,
+    useMockData: false,
+    deltaScore: contributionWeights.comment,
+    field: "commentsAuthored",
   });
   return toCommentDto({ ...comment, authorName: comment.author.name });
 }
@@ -3525,6 +3716,7 @@ export async function reviewCollaborationIntent(
     if (!intent) {
       throw new Error("COLLABORATION_INTENT_NOT_FOUND");
     }
+    const wasApprovedMock = intent.status === "approved";
     if (input.projectOwnerUserId) {
       const project = mockProjects.find((p) => p.id === intent.projectId);
       const creator = project ? mockCreators.find((c) => c.id === project.creatorId) : null;
@@ -3548,10 +3740,28 @@ export async function reviewCollaborationIntent(
       createdAt: new Date().toISOString(),
     });
 
+    if (nextStatus === "approved" && !wasApprovedMock) {
+      void incrementContributionCreditField({
+        userId: intent.applicantId,
+        useMockData: true,
+        deltaScore: contributionWeights.intentApproved,
+        field: "intentsApproved",
+      });
+    }
+
     return intent;
   }
 
   const prisma = await getPrisma();
+  const beforeIntent = await prisma.collaborationIntent.findUnique({
+    where: { id: input.intentId },
+    select: { applicantId: true, status: true },
+  });
+  if (!beforeIntent) {
+    throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+  }
+  const shouldCreditIntentApprove = beforeIntent.status !== "approved" && nextStatus === "approved";
+
   const updatedIntent = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const intent = await tx.collaborationIntent.findUnique({
       where: { id: input.intentId },
@@ -3588,6 +3798,15 @@ export async function reviewCollaborationIntent(
 
     return updated;
   });
+
+  if (shouldCreditIntentApprove) {
+    void incrementContributionCreditField({
+      userId: beforeIntent.applicantId,
+      useMockData: false,
+      deltaScore: contributionWeights.intentApproved,
+      field: "intentsApproved",
+    });
+  }
 
   return toCollaborationIntentDto(updatedIntent);
 }
@@ -3647,10 +3866,28 @@ export async function reviewPost(input: ReviewPostInput): Promise<Post> {
       createdAt: new Date().toISOString(),
     });
 
+    if (nextStatus === "approved") {
+      void incrementContributionCreditField({
+        userId: post.authorId,
+        useMockData: true,
+        deltaScore: contributionWeights.postApproved,
+        field: "postsAuthored",
+      });
+    }
+
     return post;
   }
 
   const prisma = await getPrisma();
+  const before = await prisma.post.findUnique({
+    where: { id: input.postId },
+    select: { authorId: true, reviewStatus: true },
+  });
+  if (!before) {
+    throw new Error("POST_NOT_FOUND");
+  }
+  const shouldCreditApprove = before.reviewStatus !== "approved" && nextStatus === "approved";
+
   const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const post = await tx.post.findUnique({
       where: { id: input.postId },
@@ -3729,6 +3966,15 @@ export async function reviewPost(input: ReviewPostInput): Promise<Post> {
 
     return updatedPost;
   });
+
+  if (shouldCreditApprove) {
+    void incrementContributionCreditField({
+      userId: before.authorId,
+      useMockData: false,
+      deltaScore: contributionWeights.postApproved,
+      field: "postsAuthored",
+    });
+  }
 
   return toPostDto(updated);
 }
@@ -5660,6 +5906,7 @@ export async function reviewCollaborationIntentByOwner(params: {
   if (useMockData) {
     const intent = mockCollaborationIntents.find((i) => i.id === params.intentId);
     if (!intent) throw new Error("COLLABORATION_INTENT_NOT_FOUND");
+    const wasApprovedOwner = intent.status === "approved";
     // Verify ownership via project
     const project = mockProjects.find((p) => p.id === intent.projectId);
     const creator = project ? mockCreators.find((c) => c.id === project.creatorId) : null;
@@ -5686,6 +5933,14 @@ export async function reviewCollaborationIntentByOwner(params: {
         }
       }
     }
+    if (nextStatus === "approved" && !wasApprovedOwner) {
+      void incrementContributionCreditField({
+        userId: intent.applicantId,
+        useMockData: true,
+        deltaScore: contributionWeights.intentApproved,
+        field: "intentsApproved",
+      });
+    }
     return intent;
   }
 
@@ -5696,6 +5951,7 @@ export async function reviewCollaborationIntentByOwner(params: {
   });
   if (!intent) throw new Error("COLLABORATION_INTENT_NOT_FOUND");
   if (intent.project.creator.userId !== params.ownerUserId) throw new Error("FORBIDDEN_NOT_PROJECT_OWNER");
+  const wasApprovedOwnerDb = intent.status === "approved";
 
   const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const u = await tx.collaborationIntent.update({
@@ -5723,6 +5979,14 @@ export async function reviewCollaborationIntentByOwner(params: {
     });
     return u;
   });
+  if (nextStatus === "approved" && !wasApprovedOwnerDb) {
+    void incrementContributionCreditField({
+      userId: intent.applicantId,
+      useMockData: false,
+      deltaScore: contributionWeights.intentApproved,
+      field: "intentsApproved",
+    });
+  }
   return {
     id: updated.id,
     projectId: updated.projectId,
@@ -5797,6 +6061,12 @@ export async function requestTeamJoin(params: {
         body: `${userNameById(params.userId)} 申请加入团队「${team.name}」（/${team.slug}）。`,
         metadata: { teamSlug: team.slug, requestId: prev.id },
       });
+      void incrementContributionCreditField({
+        userId: params.userId,
+        useMockData: true,
+        deltaScore: contributionWeights.joinRequest,
+        field: "joinRequestsMade",
+      });
       return toTeamJoinRequestRowMock(mockTeamJoinRequests[rejectedIdx]);
     }
     const row = {
@@ -5823,6 +6093,12 @@ export async function requestTeamJoin(params: {
       title: "新的入队申请",
       body: `${userNameById(params.userId)} 申请加入团队「${team.name}」（/${team.slug}）。`,
       metadata: { teamSlug: team.slug, requestId: row.id },
+    });
+    void incrementContributionCreditField({
+      userId: params.userId,
+      useMockData: true,
+      deltaScore: contributionWeights.joinRequest,
+      field: "joinRequestsMade",
     });
     return toTeamJoinRequestRowMock(row);
   }
@@ -5906,6 +6182,12 @@ export async function requestTeamJoin(params: {
       title: "新的入队申请",
       body: `${user.name} 申请加入团队「${meta?.name ?? ""}」（/${meta?.slug ?? params.teamSlug}）。`,
       metadata: { teamSlug: meta?.slug ?? params.teamSlug, requestId: created.id },
+    });
+    void incrementContributionCreditField({
+      userId: params.userId,
+      useMockData: false,
+      deltaScore: contributionWeights.joinRequest,
+      field: "joinRequestsMade",
     });
     return {
       id: created.id,
@@ -6262,6 +6544,7 @@ function toApiKeySummary(row: {
   createdAt: Date | string;
   lastUsedAt?: Date | string | null;
   revokedAt?: Date | string | null;
+  expiresAt?: Date | string | null;
 }): ApiKeySummary {
   const scopes =
     row.scopes !== undefined && row.scopes !== null
@@ -6282,6 +6565,11 @@ function toApiKeySummary(row: {
       ? typeof row.revokedAt === "string"
         ? row.revokedAt
         : row.revokedAt.toISOString()
+      : undefined,
+    expiresAt: row.expiresAt
+      ? typeof row.expiresAt === "string"
+        ? row.expiresAt
+        : row.expiresAt.toISOString()
       : undefined,
   };
 }
@@ -6306,10 +6594,20 @@ export async function createApiKeyForUser(params: {
   userId: string;
   label: string;
   scopes?: string[];
+  /** Optional TTL in days from creation */
+  expiresInDays?: number;
 }): Promise<ApiKeyCreated> {
   const label = params.label.trim().slice(0, 80);
   if (!label) {
     throw new Error("INVALID_API_KEY_LABEL");
+  }
+  let expiresAt: Date | undefined;
+  if (params.expiresInDays !== undefined) {
+    const n = Math.floor(params.expiresInDays);
+    if (!Number.isFinite(n) || n < 1 || n > 3650) {
+      throw new Error("INVALID_API_KEY_EXPIRES_IN_DAYS");
+    }
+    expiresAt = new Date(Date.now() + n * 24 * 60 * 60 * 1000);
   }
   let scopes: string[];
   try {
@@ -6345,6 +6643,7 @@ export async function createApiKeyForUser(params: {
       prefix,
       scopes: [...scopes],
       createdAt: now,
+      expiresAt: expiresAt?.toISOString(),
     });
     mockAuditLogs.unshift({
       id: `log_apk_${Date.now()}`,
@@ -6367,6 +6666,7 @@ export async function createApiKeyForUser(params: {
         keyHash,
         prefix,
         scopes,
+        expiresAt: expiresAt ?? null,
       },
     });
     await tx.auditLog.create({
@@ -6419,6 +6719,9 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
     if (!row) {
       return null;
     }
+    if (row.expiresAt && new Date(row.expiresAt) < new Date()) {
+      return null;
+    }
     row.lastUsedAt = new Date().toISOString();
     const u = mockUsers.find((x) => x.id === row.userId);
     if (!u) {
@@ -6440,9 +6743,12 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
   const prisma = await getPrisma();
   const row = await prisma.apiKey.findFirst({
     where: { keyHash, revokedAt: null },
-    select: { id: true, userId: true, scopes: true },
+    select: { id: true, userId: true, scopes: true, expiresAt: true },
   });
   if (!row) {
+    return null;
+  }
+  if (row.expiresAt && row.expiresAt < new Date()) {
     return null;
   }
   await prisma.apiKey.update({
@@ -6465,10 +6771,12 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
   }
   const scopeList = parseScopesFromJson(row.scopes);
   const effectiveScopes = scopeList.length ? scopeList : [...DEFAULT_API_KEY_SCOPES];
+  const subscriptionTier = await getUserTier(u.id);
   return {
     userId: u.id,
     role: u.role as Role,
     name: u.name,
+    subscriptionTier,
     apiKeyScopes: effectiveScopes,
     apiKeyId: row.id,
     enterpriseStatus: (u.enterpriseStatus as EnterpriseVerificationStatus) ?? "none",
@@ -6729,6 +7037,21 @@ export async function createProject(input: {
       updatedAt: new Date().toISOString(),
     };
     mockProjects.unshift(project);
+    mockAuditLogs.unshift({
+      id: `log_proj_${Date.now()}`,
+      actorId: input.creatorUserId,
+      action: "project_created",
+      entityType: "project",
+      entityId: project.id,
+      metadata: { slug: project.slug, title: project.title },
+      createdAt: new Date().toISOString(),
+    });
+    void incrementContributionCreditField({
+      userId: input.creatorUserId,
+      useMockData: true,
+      deltaScore: contributionWeights.projectCreated,
+      field: "projectsCreated",
+    });
     return project;
   }
 
@@ -6737,19 +7060,37 @@ export async function createProject(input: {
   if (!creator) {
     throw new Error("CREATOR_PROFILE_REQUIRED");
   }
-  const project = await prisma.project.create({
-    data: {
-      slug: `${slug}-${Date.now()}`,
-      creatorId: creator.id,
-      title: input.title,
-      oneLiner: input.oneLiner,
-      description: input.description,
-      techStack: input.techStack,
-      tags: input.tags,
-      status: input.status,
-      demoUrl: input.demoUrl ?? null,
-    },
-    include: { team: { select: { slug: true, name: true } } },
+  const project = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const p = await tx.project.create({
+      data: {
+        slug: `${slug}-${Date.now()}`,
+        creatorId: creator.id,
+        title: input.title,
+        oneLiner: input.oneLiner,
+        description: input.description,
+        techStack: input.techStack,
+        tags: input.tags,
+        status: input.status,
+        demoUrl: input.demoUrl ?? null,
+      },
+      include: { team: { select: { slug: true, name: true } } },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: input.creatorUserId,
+        action: "project_created",
+        entityType: "project",
+        entityId: p.id,
+        metadata: { slug: p.slug, title: p.title },
+      },
+    });
+    return p;
+  });
+  void incrementContributionCreditField({
+    userId: input.creatorUserId,
+    useMockData: false,
+    deltaScore: contributionWeights.projectCreated,
+    field: "projectsCreated",
   });
   return toProjectDto({ ...project, team: project.team });
 }
@@ -6829,7 +7170,17 @@ export async function deleteProject(params: {
     if ((!creator || creator.userId !== params.actorUserId) && params.actorRole !== "admin") {
       throw new Error("FORBIDDEN_NOT_CREATOR");
     }
+    const pid = mockProjects[idx].id;
     mockProjects.splice(idx, 1);
+    mockAuditLogs.unshift({
+      id: `log_proj_del_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "project_deleted",
+      entityType: "project",
+      entityId: pid,
+      metadata: { slug: params.projectSlug },
+      createdAt: new Date().toISOString(),
+    });
     return;
   }
 
@@ -6844,7 +7195,18 @@ export async function deleteProject(params: {
   if (project.creator.userId !== params.actorUserId && params.actorRole !== "admin") {
     throw new Error("FORBIDDEN_NOT_CREATOR");
   }
-  await prisma.project.delete({ where: { slug: params.projectSlug } });
+  await prisma.$transaction([
+    prisma.project.delete({ where: { slug: params.projectSlug } }),
+    prisma.auditLog.create({
+      data: {
+        actorId: params.actorUserId,
+        action: "project_deleted",
+        entityType: "project",
+        entityId: project.id,
+        metadata: { slug: params.projectSlug },
+      },
+    }),
+  ]);
 }
 
 // ─── P2: 精华机制 ───────────────────────────────────────

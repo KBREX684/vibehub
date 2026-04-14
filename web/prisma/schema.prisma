@@ -199,6 +199,8 @@ model ApiKey {
   scopes     Json
   lastUsedAt DateTime?
   revokedAt  DateTime?
+  /// When set, Bearer auth rejects the key after this instant (P1).
+  expiresAt  DateTime?
   createdAt  DateTime  @default(now())
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 

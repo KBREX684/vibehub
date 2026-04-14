@@ -33,13 +33,41 @@ describe("team milestones (P3-5, mock)", () => {
     const u = await updateTeamMilestone({
       teamSlug: "vibehub-core",
       milestoneId: m.id,
-      actorUserId: "u2",
+      actorUserId: "u1",
       completed: true,
     });
     expect(u.completed).toBe(true);
     await deleteTeamMilestone({ teamSlug: "vibehub-core", milestoneId: m.id, actorUserId: "u1" });
     const after = await listTeamMilestones({ teamSlug: "vibehub-core", viewerUserId: "u1" });
     expect(after.some((x) => x.id === m.id)).toBe(false);
+  });
+
+  it("rejects milestone create for non-owner member", async () => {
+    await expect(
+      createTeamMilestone({
+        teamSlug: "vibehub-core",
+        actorUserId: "u2",
+        title: "Member should not create",
+        targetDate: new Date(Date.UTC(2026, 10, 1)).toISOString(),
+      })
+    ).rejects.toThrow("FORBIDDEN_NOT_TEAM_OWNER");
+  });
+
+  it("allows member to update progress only", async () => {
+    const m = await createTeamMilestone({
+      teamSlug: "vibehub-core",
+      actorUserId: "u1",
+      title: "Progress test milestone",
+      targetDate: new Date(Date.UTC(2026, 11, 1)).toISOString(),
+    });
+    const updated = await updateTeamMilestone({
+      teamSlug: "vibehub-core",
+      milestoneId: m.id,
+      actorUserId: "u2",
+      progress: 42,
+    });
+    expect(updated.progress).toBe(42);
+    await deleteTeamMilestone({ teamSlug: "vibehub-core", milestoneId: m.id, actorUserId: "u1" });
   });
 
   it("clears task milestoneId when milestone is deleted", async () => {
