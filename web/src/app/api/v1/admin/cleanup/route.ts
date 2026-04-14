@@ -2,8 +2,8 @@
  * POST /api/v1/admin/cleanup
  *
  * Admin-only endpoint to trigger data retention cleanup:
- *   - Comments older than COMMENT_RETAIN_DAYS (default 7)
- *   - Team chat messages older than CHAT_RETAIN_DAYS (default 7)
+ *   - Comments older than COMMENT_RETAIN_DAYS (default 0 = disabled/long-term)
+ *   - Team chat messages older than CHAT_RETAIN_DAYS (default 30 days)
  *
  * Can be called from a cron job, CI pipeline, or the admin dashboard.
  * Also auto-triggered (non-blocking) on comment list and chat list requests.
