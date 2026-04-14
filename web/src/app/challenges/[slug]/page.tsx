@@ -115,7 +115,7 @@ export default async function ChallengeDetailPage({ params }: Props) {
             {challenge.status === 'active' && (
               <div className="mt-12 pt-8 border-t border-stone-100 text-center">
                 <Link 
-                  href="/projects" 
+                  href="/projects/new" 
                   className="inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all hover:shadow-lg hover:-translate-y-0.5"
                 >
                   提交项目参与挑战

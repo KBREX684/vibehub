@@ -187,6 +187,8 @@ const SEED_MOCK_PROJECTS: Project[] = [
     openSource: true,
     license: "MIT",
     updatedAt: new Date().toISOString(),
+    featuredRank: 1,
+    featuredAt: new Date().toISOString(),
   },
   {
     id: "p2",
@@ -207,13 +209,16 @@ const SEED_MOCK_PROJECTS: Project[] = [
 ];
 
 function cloneSeedProjects(): Project[] {
-  return SEED_MOCK_PROJECTS.map((p) => ({
-    ...p,
-    team: p.team ? { ...p.team } : undefined,
-    techStack: [...p.techStack],
-    tags: [...p.tags],
-    screenshots: [...p.screenshots],
-  }));
+  return SEED_MOCK_PROJECTS.map((p) => {
+    const { team, techStack, tags, screenshots, ...rest } = p;
+    return {
+      ...rest,
+      team: team ? { ...team } : undefined,
+      techStack: [...techStack],
+      tags: [...tags],
+      screenshots: [...screenshots],
+    };
+  });
 }
 
 /** In Next.js dev, HMR re-evaluates modules and would reset mutable mock arrays; keep one store on globalThis. */
@@ -468,7 +473,14 @@ export const mockSubscriptions: Array<{
 export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockPostBookmarks: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockProjectBookmarks: Array<{ id: string; userId: string; projectId: string; createdAt: string }> = [];
-export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [];
+export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [
+  {
+    id: "f_u2_u1",
+    followerId: "u2",
+    followingId: "u1",
+    createdAt: new Date().toISOString(),
+  },
+];
 
 // P2: Challenges
 export const mockChallenges: Challenge[] = [

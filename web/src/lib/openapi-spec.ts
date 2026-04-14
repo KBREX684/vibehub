@@ -464,6 +464,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           parameters: [
             { name: "query", in: "query", schema: { type: "string" } },
             { name: "tag", in: "query", schema: { type: "string" } },
+            { name: "authorId", in: "query", schema: { type: "string", description: "Filter by post author user id" } },
             { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot", "featured"] } },
             { name: "page", in: "query", schema: { type: "integer", default: 1 } },
             { name: "limit", in: "query", schema: { type: "integer", default: 10 } },

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getCreatorBySlug, listProjects, getCreatorGrowthStats } from "@/lib/repository";
 import { ProjectCard } from "@/components/project-card";
+import { CreatorGrowthMixChart } from "@/components/creator-growth-sparkline";
+import { CreatorPostsSection } from "./creator-posts-section";
+import { CreatorTeamsSection } from "./creator-teams-section";
 import { User, Briefcase, Code2, Users, MessageSquare, Star, FolderGit2, Activity, ShieldCheck } from "lucide-react";
 
 interface Props {
@@ -135,6 +138,9 @@ export default async function CreatorDetailPage({ params }: Props) {
                     <span className="text-[0.8rem] font-medium text-white/60">Comments received</span>
                   </div>
                 </div>
+                <div className="mt-6 pt-6 border-t border-white/10 text-white">
+                  <CreatorGrowthMixChart stats={stats} />
+                </div>
               </div>
             </aside>
           )}
@@ -165,6 +171,9 @@ export default async function CreatorDetailPage({ params }: Props) {
             </div>
           )}
         </section>
+
+        <CreatorPostsSection authorUserId={creator.userId} />
+        <CreatorTeamsSection userId={creator.userId} />
       </main>
     </>
   );

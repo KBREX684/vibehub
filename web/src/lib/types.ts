@@ -72,6 +72,9 @@ export interface Project {
   openSource: boolean;
   license?: string;
   updatedAt: string;
+  /** Admin daily featured slot (C-5) */
+  featuredAt?: string;
+  featuredRank?: number;
 }
 
 // ─── Post / Comment ───────────────────────────────────────────────────────────

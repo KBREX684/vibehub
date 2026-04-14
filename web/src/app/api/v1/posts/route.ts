@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const { page, limit } = parsePagination(url.searchParams);
     const query = url.searchParams.get("query") ?? undefined;
     const tag = url.searchParams.get("tag") ?? undefined;
+    const authorId = url.searchParams.get("authorId")?.trim() || undefined;
     const rawSort = url.searchParams.get("sort");
     let sort: PostSortOrder | undefined;
     if (rawSort) {
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
       sort = rawSort as PostSortOrder;
     }
 
-    const result = await listPosts({ query, tag, sort, page, limit });
+    const result = await listPosts({ query, tag, authorId, sort, page, limit });
     return apiSuccess(result);
   } catch (error) {
     return apiError(

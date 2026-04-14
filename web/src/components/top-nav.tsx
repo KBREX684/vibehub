@@ -24,6 +24,7 @@ const NAV_LINKS = [
   { href: "/",             en: "Overview",     zh: "概览" },
   { href: "/discover",     en: "Discover",     zh: "发现" },
   { href: "/discussions",  en: "Discussions",  zh: "讨论" },
+  { href: "/challenges",   en: "Challenges",   zh: "挑战赛" },
   { href: "/teams",        en: "Teams",        zh: "团队" },
   { href: "/leaderboards", en: "Leaderboards", zh: "排行榜" },
 ];
