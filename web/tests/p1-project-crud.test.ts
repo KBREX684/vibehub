@@ -6,6 +6,7 @@ import {
   getProjectBySlug,
   listProjects,
 } from "../src/lib/repository";
+import { isRepositoryError } from "../src/lib/repository-errors";
 
 describe("createProject", () => {
   it("creates a project for a user with a creator profile", async () => {
@@ -25,8 +26,8 @@ describe("createProject", () => {
   });
 
   it("throws CREATOR_PROFILE_REQUIRED for user without creator profile", async () => {
-    await expect(
-      createProject({
+    try {
+      await createProject({
         title: "No Profile",
         oneLiner: "Will fail",
         description: "This should fail because u3 has no creator profile.",
@@ -34,8 +35,15 @@ describe("createProject", () => {
         tags: [],
         status: "idea",
         creatorUserId: "u3",
-      })
-    ).rejects.toThrow("CREATOR_PROFILE_REQUIRED");
+      });
+      expect.fail("expected rejection");
+    } catch (e) {
+      expect(isRepositoryError(e)).toBe(true);
+      if (isRepositoryError(e)) {
+        expect(e.code).toBe("CREATOR_PROFILE_REQUIRED");
+        expect(e.httpStatus).toBe(403);
+      }
+    }
   });
 });
 

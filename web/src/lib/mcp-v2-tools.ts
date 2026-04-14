@@ -10,12 +10,27 @@ export const MCP_V2_TOOL_NAMES = [
   "get_post_detail",
   "list_challenges",
   "get_talent_radar",
-  /** S4: opt-in write tools — Bearer must include write:mcp:v2:posts / write:mcp:v2:projects */
+  /** P3-1 / S4: write tools (Bearer scope + optional idempotencyKey on invoke body) */
   "create_post",
   "create_project",
+  "submit_collaboration_intent",
+  "request_team_join",
+  "create_team_task",
 ] as const;
 
 export type McpV2ToolName = (typeof MCP_V2_TOOL_NAMES)[number];
+
+export const MCP_V2_WRITE_TOOLS: McpV2ToolName[] = [
+  "create_post",
+  "create_project",
+  "submit_collaboration_intent",
+  "request_team_join",
+  "create_team_task",
+];
+
+export function isMcpWriteTool(tool: McpV2ToolName): boolean {
+  return MCP_V2_WRITE_TOOLS.includes(tool);
+}
 
 export const MCP_V2_TOOL_SCOPES: Record<McpV2ToolName, ApiKeyScope> = {
   search_projects: "read:projects:list",
@@ -26,9 +41,13 @@ export const MCP_V2_TOOL_SCOPES: Record<McpV2ToolName, ApiKeyScope> = {
   search_posts: "read:posts:list",
   get_post_detail: "read:posts:detail",
   list_challenges: "read:public",
+  /** S4: default API keys include read:public — no enterprise verification for talent radar */
   get_talent_radar: "read:public",
-  create_post: "write:mcp:v2:posts",
-  create_project: "write:mcp:v2:projects",
+  create_post: "write:posts",
+  create_project: "write:projects",
+  submit_collaboration_intent: "write:intents",
+  request_team_join: "write:teams",
+  create_team_task: "write:team:tasks",
 };
 
 export const MCP_V2_TOOL_DEFINITIONS: Array<{
@@ -128,7 +147,8 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
   },
   {
     name: "get_talent_radar",
-    description: "Talent radar: creators filtered by skill, collaboration preference, and recent activity (read:public).",
+    description:
+      "Talent radar: creators filtered by skill, collaboration preference, and recent activity. Requires read:public.",
     requiredScope: MCP_V2_TOOL_SCOPES.get_talent_radar,
     inputSchema: {
       type: "object",
@@ -143,7 +163,7 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
   {
     name: "create_post",
     description:
-      "Create a discussion post as the API key owner (pending moderation). Requires scope write:mcp:v2:posts. Prefer human review before enabling this scope.",
+      "Create a discussion post as the key owner (pending moderation). Requires write:posts (or write:mcp:v2:posts alias).",
     requiredScope: MCP_V2_TOOL_SCOPES.create_post,
     inputSchema: {
       type: "object",
@@ -158,7 +178,7 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
   {
     name: "create_project",
     description:
-      "Create a project as the API key owner (requires creator profile). Requires scope write:mcp:v2:projects. Subject to plan project limits.",
+      "Create a project for the authenticated user (creator profile required). Requires write:projects (or write:mcp:v2:projects alias). Subject to plan quotas.",
     requiredScope: MCP_V2_TOOL_SCOPES.create_project,
     inputSchema: {
       type: "object",
@@ -171,6 +191,51 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
         tags: { type: "array", items: { type: "string", minLength: 1 }, default: [] },
         status: { type: "string", enum: ["idea", "building", "launched", "paused"], default: "idea" },
         demoUrl: { type: "string", description: "Optional absolute URL" },
+      },
+    },
+  },
+  {
+    name: "submit_collaboration_intent",
+    description: "Submit a collaboration intent on a project (by project slug). Requires write:intents.",
+    requiredScope: MCP_V2_TOOL_SCOPES.submit_collaboration_intent,
+    inputSchema: {
+      type: "object",
+      required: ["projectSlug", "intentType", "message"],
+      properties: {
+        projectSlug: { type: "string" },
+        intentType: { type: "string", enum: ["join", "recruit"] },
+        message: { type: "string", minLength: 1 },
+        contact: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "request_team_join",
+    description: "Request to join a team by slug. Requires write:teams.",
+    requiredScope: MCP_V2_TOOL_SCOPES.request_team_join,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug"],
+      properties: {
+        teamSlug: { type: "string" },
+        message: { type: "string", maxLength: 500 },
+      },
+    },
+  },
+  {
+    name: "create_team_task",
+    description: "Create a task in a team you belong to. Requires write:team:tasks.",
+    requiredScope: MCP_V2_TOOL_SCOPES.create_team_task,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug", "title"],
+      properties: {
+        teamSlug: { type: "string" },
+        title: { type: "string", minLength: 1, maxLength: 200 },
+        description: { type: "string", maxLength: 2000 },
+        status: { type: "string", enum: ["todo", "doing", "done"] },
+        assigneeUserId: { type: "string" },
+        milestoneId: { type: "string" },
       },
     },
   },

@@ -1,5 +1,7 @@
 import { API_KEY_SCOPES } from "@/lib/api-key-scopes";
+import { WEBHOOK_EVENT_NAMES } from "@/lib/webhook-events";
 import { MCP_V2_TOOL_NAMES, MCP_V2_TOOL_SCOPES } from "@/lib/mcp-v2-tools";
+import { P1_API_PATH_STUBS } from "@/lib/openapi-spec-p1-stubs";
 
 const metaSchema = {
   type: "object",
@@ -36,12 +38,14 @@ const errorEnvelope = {
   required: ["error", "meta"],
 } as const;
 
-const responses = {
+export const responses = {
   "200": { description: "Success", content: { "application/json": { schema: successEnvelope } } },
   "400": { description: "Bad request", content: { "application/json": { schema: errorEnvelope } } },
   "401": { description: "Unauthorized", content: { "application/json": { schema: errorEnvelope } } },
   "403": { description: "Forbidden", content: { "application/json": { schema: errorEnvelope } } },
+  "402": { description: "Payment required / quota exceeded", content: { "application/json": { schema: errorEnvelope } } },
   "404": { description: "Not found", content: { "application/json": { schema: errorEnvelope } } },
+  "409": { description: "Conflict (e.g. idempotency key reuse)", content: { "application/json": { schema: errorEnvelope } } },
   "429": {
     description: "Too many requests (Bearer API key rate limit)",
     headers: {
@@ -122,6 +126,24 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       },
     },
     paths: {
+      ...P1_API_PATH_STUBS,
+      "/api/v1/search": {
+        get: {
+          tags: ["meta"],
+          summary: "Unified full-text search (posts, projects, creators)",
+          parameters: [
+            { name: "q", in: "query", required: true, schema: { type: "string", minLength: 2 } },
+            { name: "type", in: "query", schema: { type: "string", enum: ["post", "project", "creator"] } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 50 } },
+          ],
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/health": {
         get: {
           tags: ["health"],
@@ -496,6 +518,13 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot", "featured"] } },
             { name: "page", in: "query", schema: { type: "integer", default: 1 } },
             { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+            {
+              name: "cursor",
+              in: "query",
+              schema: { type: "string" },
+              description:
+                "Opaque keyset cursor (P4-3). Only with default/recent sort, no `query`, not featured-only. Response `pagination.nextCursor` when more pages exist.",
+            },
           ],
           responses: { "200": responses["200"], "400": responses["400"], "500": responses["500"] },
         },
@@ -519,7 +548,14 @@ export function buildOpenApiDocument(): Record<string, unknown> {
               },
             },
           },
-          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+          responses: {
+            "201": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "409": responses["409"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/posts/{slug}": {
@@ -637,6 +673,13 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             { name: "status", in: "query", schema: { type: "string" } },
             { name: "page", in: "query", schema: { type: "integer" } },
             { name: "limit", in: "query", schema: { type: "integer" } },
+            {
+              name: "cursor",
+              in: "query",
+              schema: { type: "string" },
+              description:
+                "Opaque keyset cursor (P4-3). Only when `query` is unset (stable `updatedAt` + `id` sort). Response `pagination.nextCursor` when more pages exist.",
+            },
           ],
           responses: {
             "200": responses["200"],
@@ -674,7 +717,9 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "201": responses["200"],
             "400": responses["400"],
             "401": responses["401"],
+            "402": responses["402"],
             "403": responses["403"],
+            "409": responses["409"],
             "500": responses["500"],
           },
         },
@@ -1179,6 +1224,69 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
         },
       },
+      "/api/v1/me/webhooks": {
+        get: {
+          tags: ["me"],
+          summary: "List outbound webhook endpoints (session)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["me"],
+          summary: "Create webhook endpoint (returns signing secret once)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["url"],
+                  properties: {
+                    url: { type: "string", format: "uri", description: "Must be https://" },
+                    events: {
+                      type: "array",
+                      items: { type: "string", enum: [...WEBHOOK_EVENT_NAMES] },
+                      description: "Optional filter; omit or empty = all supported events",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/webhooks/{webhookId}": {
+        patch: {
+          tags: ["me"],
+          summary: "Update webhook URL, events, or active flag",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "webhookId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    url: { type: "string" },
+                    events: { type: "array", items: { type: "string", enum: [...WEBHOOK_EVENT_NAMES] } },
+                    active: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["me"],
+          summary: "Delete webhook endpoint",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "webhookId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
       "/api/v1/mcp/v2/manifest": {
         get: {
           tags: ["mcp-v2"],
@@ -1204,6 +1312,12 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                       enum: [...MCP_V2_TOOL_NAMES],
                     },
                     input: { type: "object", additionalProperties: true },
+                    idempotencyKey: {
+                      type: "string",
+                      minLength: 8,
+                      maxLength: 128,
+                      description: "Optional dedupe for write tools (create_post, create_project, …): same user+tool+key → 409.",
+                    },
                   },
                 },
               },
@@ -1218,8 +1332,10 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "201": responses["200"],
             "400": responses["400"],
             "401": responses["401"],
+            "402": responses["402"],
             "403": responses["403"],
             "404": responses["404"],
+            "409": responses["409"],
             "429": responses["429"],
             "500": responses["500"],
           },

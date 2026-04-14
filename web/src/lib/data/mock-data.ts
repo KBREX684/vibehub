@@ -206,6 +206,23 @@ const SEED_MOCK_PROJECTS: Project[] = [
     openSource: false,
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "p3",
+    slug: "signal-board",
+    creatorId: "c1",
+    title: "Signal Board",
+    oneLiner: "Lightweight status pages for small teams",
+    description:
+      "A minimal status and incident board for indie teams who want transparency without enterprise tooling.",
+    techStack: ["Next.js", "PostgreSQL"],
+    tags: ["status", "teams", "ops"],
+    status: "idea",
+    screenshots: [],
+    openSource: true,
+    license: "MIT",
+    /** Slightly older than p1/p2 so keyset order stays stable in tests */
+    updatedAt: new Date(Date.now() - 86_400_000).toISOString(),
+  },
 ];
 
 function cloneSeedProjects(): Project[] {
@@ -272,6 +289,21 @@ export const mockPosts: Post[] = [
     likeCount: 0,
     bookmarkCount: 0,
     createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post4",
+    slug: "shipping-with-confidence-in-small-teams",
+    authorId: "u2",
+    authorName: "Bob",
+    title: "Shipping with confidence in small teams",
+    body: "Practical checklist we use before every release: scope, rollback plan, and one happy-path smoke test.",
+    tags: ["shipping", "teams", "quality"],
+    reviewStatus: "approved",
+    reviewedBy: "u1",
+    reviewedAt: new Date().toISOString(),
+    likeCount: 0,
+    bookmarkCount: 0,
+    createdAt: new Date(Date.now() - 3_600_000).toISOString(),
   },
 ];
 
@@ -481,6 +513,18 @@ export const mockUserFollows: Array<{ id: string; followerId: string; followingI
     createdAt: new Date().toISOString(),
   },
 ];
+
+/** P3-3: in-memory webhook endpoints (USE_MOCK_DATA=true) */
+export const mockWebhookEndpoints: Array<{
+  id: string;
+  userId: string;
+  url: string;
+  secret: string;
+  events: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
 
 // P2: Challenges
 export const mockChallenges: Challenge[] = [

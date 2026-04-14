@@ -6,7 +6,7 @@ import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
-import type { Role, SessionUser } from "@/lib/types";
+import type { EnterpriseVerificationStatus, Role, SessionUser, SubscriptionTier } from "@/lib/types";
 
 const SESSION_COOKIE_KEY = "vibehub_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -15,6 +15,14 @@ const VALID_ROLES: Role[] = ["guest", "user", "admin"];
 interface SessionPayload extends SessionUser {
   iat: number;
   exp: number;
+}
+
+function isEnterpriseVerificationStatus(v: unknown): v is EnterpriseVerificationStatus {
+  return v === "none" || v === "pending" || v === "approved" || v === "rejected";
+}
+
+function isSubscriptionTier(v: unknown): v is SubscriptionTier {
+  return v === "free" || v === "pro" || v === "team_pro";
 }
 
 function getSessionSecret(): string | null {
@@ -92,11 +100,30 @@ export function decodeSession(raw?: string): SessionUser | null {
       return null;
     }
 
-    return {
+    const user: SessionUser = {
       userId: parsed.userId,
       role: parsed.role,
       name: parsed.name,
     };
+    if (isSubscriptionTier(parsed.subscriptionTier)) {
+      user.subscriptionTier = parsed.subscriptionTier;
+    }
+    if (isEnterpriseVerificationStatus(parsed.enterpriseStatus)) {
+      user.enterpriseStatus = parsed.enterpriseStatus;
+    }
+    if (typeof parsed.enterpriseOrganization === "string" && parsed.enterpriseOrganization) {
+      user.enterpriseOrganization = parsed.enterpriseOrganization;
+    }
+    if (typeof parsed.enterpriseWebsite === "string" && parsed.enterpriseWebsite) {
+      user.enterpriseWebsite = parsed.enterpriseWebsite;
+    }
+    if (Array.isArray(parsed.apiKeyScopes)) {
+      user.apiKeyScopes = parsed.apiKeyScopes.filter((s): s is string => typeof s === "string");
+    }
+    if (typeof parsed.apiKeyId === "string" && parsed.apiKeyId) {
+      user.apiKeyId = parsed.apiKeyId;
+    }
+    return user;
   } catch {
     return null;
   }

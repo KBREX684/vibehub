@@ -67,4 +67,41 @@ describe("collaboration intent flow", () => {
       })
     ).rejects.toThrow("PROJECT_NOT_FOUND");
   });
+
+  it("allows project owner to review via admin queue path when projectOwnerUserId matches", async () => {
+    const created = await createCollaborationIntent({
+      projectId: "p1",
+      applicantId: "u3",
+      intentType: "join",
+      message: "Owner-queue review test.",
+    });
+
+    const reviewed = await reviewCollaborationIntent({
+      intentId: created.id,
+      action: "approve",
+      adminUserId: "u1",
+      projectOwnerUserId: "u1",
+    });
+
+    expect(reviewed.status).toBe("approved");
+    expect(reviewed.reviewedBy).toBe("u1");
+  });
+
+  it("rejects admin queue review when projectOwnerUserId is not the project creator", async () => {
+    const created = await createCollaborationIntent({
+      projectId: "p2",
+      applicantId: "u1",
+      intentType: "join",
+      message: "Wrong owner test.",
+    });
+
+    await expect(
+      reviewCollaborationIntent({
+        intentId: created.id,
+        action: "reject",
+        adminUserId: "u1",
+        projectOwnerUserId: "u1",
+      })
+    ).rejects.toThrow("FORBIDDEN_NOT_PROJECT_OWNER");
+  });
 });

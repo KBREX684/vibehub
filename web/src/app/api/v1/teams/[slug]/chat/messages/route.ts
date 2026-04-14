@@ -36,14 +36,16 @@ const postSchema = z.object({
 
 export async function GET(req: NextRequest, { params }: Params) {
   const { slug } = await params;
-  const serverToken = process.env.WS_SERVER_TOKEN ?? "";
-  const hasServerHeaders = Boolean(req.headers.get("x-ws-server-userId") || req.headers.get("x-ws-server-token"));
+  const serverToken = process.env.INTERNAL_SERVICE_SECRET ?? "";
+  const hasServerHeaders = Boolean(req.headers.get("x-ws-auth-token") || req.headers.get("x-internal-secret"));
   if (process.env.NODE_ENV === "production" && hasServerHeaders && !serverToken) {
-    return apiError({ code: "SERVER_MISCONFIGURED", message: "WS server token is required in production" }, 500);
+    return apiError({ code: "SERVER_MISCONFIGURED", message: "INTERNAL_SERVICE_SECRET is required in production" }, 500);
   }
 
-  // Auth: session user or API-key holder with read:team:detail
-  const auth = await authenticateRequest(req, "read:team:detail");
+  const isWsServerRequest = Boolean(serverToken && req.headers.get("x-internal-secret") === serverToken);
+
+  // Auth: session user or API-key holder with read:team:detail (WS server uses internal token only)
+  const auth = isWsServerRequest ? { kind: "ok" as const, user: { userId: "", role: "guest" as const, name: "" } } : await authenticateRequest(req, "read:team:detail");
   const gate = resolveReadAuth(auth, true);
   if (!gate.ok) {
     return apiError({ code: "UNAUTHORIZED", message: "Authentication required" }, 401);
@@ -56,8 +58,8 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     // Verify viewer membership (chat is members-only)
-    const isWsServer  = serverToken && req.headers.get("x-ws-server-token") === serverToken;
-    const viewerId    = isWsServer ? req.headers.get("x-ws-server-userId") : gate.user?.userId;
+    const isWsServer  = serverToken && req.headers.get("x-internal-secret") === serverToken;
+    const viewerId = isWsServer ? await resolveWsActorUserId(req) : gate.user?.userId;
     if (!viewerId) {
       return apiError({ code: "UNAUTHORIZED", message: "Authentication required" }, 401);
     }
@@ -98,21 +100,46 @@ async function resolveActorUserId(req: NextRequest): Promise<string | null> {
   if (session) return session.userId;
 
   // Internal WS-server trust header (only when server token matches)
-  const serverToken = process.env.WS_SERVER_TOKEN ?? "";
+  const serverToken = process.env.INTERNAL_SERVICE_SECRET ?? "";
   if (serverToken) {
-    const reqToken  = req.headers.get("x-ws-server-token");
-    const reqUserId = req.headers.get("x-ws-server-userId");
-    if (reqToken === serverToken && reqUserId) return reqUserId;
+    const reqToken = req.headers.get("x-internal-secret");
+    if (reqToken === serverToken) {
+      return resolveWsActorUserId(req);
+    }
   }
   return null;
 }
 
+async function resolveWsActorUserId(req: NextRequest): Promise<string | null> {
+  const token = req.headers.get("x-ws-auth-token")?.trim();
+  if (!token) return null;
+  const redisUrl = process.env.REDIS_URL?.trim();
+  if (!redisUrl) return null;
+  try {
+    const { default: Redis } = await import("ioredis");
+    const redis = new Redis(redisUrl, { maxRetriesPerRequest: 2, enableReadyCheck: true });
+    try {
+      const key = `ws-auth:${token}`;
+      const userId = await redis.get(key);
+      if (userId) {
+        await redis.del(key);
+        return userId;
+      }
+      return null;
+    } finally {
+      redis.disconnect();
+    }
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest, { params }: Params) {
   const { slug } = await params;
-  const serverToken = process.env.WS_SERVER_TOKEN ?? "";
-  const hasServerHeaders = Boolean(req.headers.get("x-ws-server-userId") || req.headers.get("x-ws-server-token"));
+  const serverToken = process.env.INTERNAL_SERVICE_SECRET ?? "";
+  const hasServerHeaders = Boolean(req.headers.get("x-ws-auth-token") || req.headers.get("x-internal-secret"));
   if (process.env.NODE_ENV === "production" && hasServerHeaders && !serverToken) {
-    return apiError({ code: "SERVER_MISCONFIGURED", message: "WS server token is required in production" }, 500);
+    return apiError({ code: "SERVER_MISCONFIGURED", message: "INTERNAL_SERVICE_SECRET is required in production" }, 500);
   }
 
   const actorId = await resolveActorUserId(req);

@@ -7,6 +7,7 @@ export interface MockApiKey {
   scopes: string[];
   lastUsedAt?: string;
   revokedAt?: string;
+  expiresAt?: string;
   createdAt: string;
 }
 

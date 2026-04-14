@@ -38,7 +38,7 @@ describe("S4 light enterprise data (read:public key or session)", () => {
 });
 
 describe("S4 MCP v2 write tools", () => {
-  it("create_post requires write:mcp:v2:posts on API key", async () => {
+  it("create_post requires write:posts (or write:mcp:v2:posts alias) on API key", async () => {
     const readOnly = await createApiKeyForUser({
       userId: getDemoUser("user").userId,
       label: "s4-readonly-mcp",
@@ -60,11 +60,11 @@ describe("S4 MCP v2 write tools", () => {
     expect(res.status).toBe(401);
   });
 
-  it("create_post succeeds with write:mcp:v2:posts", async () => {
+  it("create_post succeeds with write:posts", async () => {
     const key = await createApiKeyForUser({
       userId: getDemoUser("user").userId,
       label: "s4-mcp-write-post",
-      scopes: ["read:public", "write:mcp:v2:posts"],
+      scopes: ["read:public", "write:posts"],
     });
     const suffix = Date.now();
     const res = await mcpInvoke(

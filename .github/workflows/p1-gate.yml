@@ -59,6 +59,11 @@ jobs:
       - name: Validate OpenAPI document
         run: npm run validate:openapi
 
+      - name: Verify generated API types match OpenAPI spec
+        run: |
+          npm run generate:types
+          git diff --exit-code
+
       - name: Build
         env:
           USE_MOCK_DATA: "true"

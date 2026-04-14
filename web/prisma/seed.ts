@@ -23,6 +23,17 @@ async function main() {
     },
   });
 
+  await prisma.enterpriseProfile.upsert({
+    where: { userId: alice.id },
+    update: {},
+    create: { userId: alice.id, status: "none" },
+  });
+  await prisma.enterpriseProfile.upsert({
+    where: { userId: bob.id },
+    update: {},
+    create: { userId: bob.id, status: "none" },
+  });
+
   await prisma.creatorProfile.upsert({
     where: { userId: bob.id },
     update: {},

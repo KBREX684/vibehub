@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { upsertUserSubscription, upsertStripeCustomer } from "@/lib/repository";
 import type { SubscriptionTier } from "@/lib/types";
 
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "subscription.updated":
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subId = typeof obj.id === "string" ? obj.id : undefined;
@@ -88,6 +90,9 @@ export async function POST(request: NextRequest) {
             currentPeriodEnd,
             cancelAtPeriodEnd,
           });
+          if (safeStatus === "past_due") {
+            void dispatchWebhookEvent(userId, "subscription.past_due", { stripeSubscriptionId: subId, tier });
+          }
         } else if (customerId && subId) {
           // Lookup user by Stripe customer ID
           const { prisma } = await import("@/lib/db");
@@ -102,6 +107,9 @@ export async function POST(request: NextRequest) {
               currentPeriodEnd,
               cancelAtPeriodEnd,
             });
+            if (safeStatus === "past_due") {
+              void dispatchWebhookEvent(user.id, "subscription.past_due", { stripeSubscriptionId: subId, tier });
+            }
           }
         }
         break;
@@ -148,6 +156,10 @@ export async function POST(request: NextRequest) {
               tier: sub.tier as SubscriptionTier,
               status: "past_due",
               stripeSubscriptionId: subscriptionId,
+            });
+            void dispatchWebhookEvent(user.id, "subscription.past_due", {
+              stripeSubscriptionId: subscriptionId,
+              tier: sub.tier,
             });
           }
         }

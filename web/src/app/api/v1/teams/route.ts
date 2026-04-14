@@ -9,7 +9,7 @@ import {
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { createTeam, listTeams, getUserTier, countUserTeams } from "@/lib/repository";
-import { checkTeamLimit } from "@/lib/subscription";
+import { checkQuota } from "@/lib/quota";
 
 const createTeamSchema = z.object({
   name: z.string().min(2).max(80),
@@ -59,15 +59,20 @@ export async function POST(request: Request) {
       getUserTier(session.userId),
       countUserTeams(session.userId),
     ]);
-    const gate = checkTeamLimit(tier, teamCount);
+    const gate = checkQuota(tier, "teams", teamCount);
     if (!gate.allowed) {
       return apiError(
         {
-          code: "TEAM_LIMIT_REACHED",
+          code: "QUOTA_EXCEEDED",
           message: "You have reached the maximum number of teams for your plan.",
-          details: { upgradeReason: gate.upgradeReason, currentTier: tier },
+          details: {
+            resource: "teams",
+            tier: gate.tier,
+            limit: gate.limit,
+            upgradeUrl: "/settings/subscription",
+          },
         },
-        403
+        402
       );
     }
 

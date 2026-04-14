@@ -9,6 +9,7 @@ import {
 } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { isRepositoryError } from "@/lib/repository-errors";
 import type { ReviewStatus } from "@/lib/types";
 
 interface Props { params: Promise<{ slug: string }> }
@@ -78,8 +79,10 @@ export async function POST(request: NextRequest, { params }: Props) {
     });
     return apiSuccess({ intent }, 201);
   } catch (err) {
+    if (isRepositoryError(err) && err.code === "CREATOR_PROFILE_REQUIRED") {
+      return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: err.message }, 403);
+    }
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "CREATOR_PROFILE_REQUIRED") return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: "Create a creator profile first" }, 403);
     if (msg === "DUPLICATE_INTENT") return apiError({ code: "DUPLICATE_INTENT", message: "You already submitted an intent for this project" }, 409);
     return apiError({ code: "SUBMIT_FAILED", message: msg }, 500);
   }

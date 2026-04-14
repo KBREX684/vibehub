@@ -20,7 +20,12 @@ export const API_KEY_SCOPES = [
   "read:posts:list",
   "read:posts:detail",
   "write:team:tasks",
-  /** S4: MCP v2 write tools — opt-in; never in DEFAULT_API_KEY_SCOPES */
+  /** P2-2: MCP / HTTP write surfaces (opt-in; never in DEFAULT_API_KEY_SCOPES) */
+  "write:posts",
+  "write:projects",
+  "write:intents",
+  "write:teams",
+  /** S4 aliases (same gates as write:posts / write:projects in MCP v2 invoke) */
   "write:mcp:v2:posts",
   "write:mcp:v2:projects",
 ] as const;
@@ -70,5 +75,9 @@ export function allowApiKeyScope(session: SessionUser, required: ApiKeyScope): b
   if (!session.apiKeyScopes?.length) {
     return true;
   }
-  return session.apiKeyScopes.includes(required);
+  const scopes = session.apiKeyScopes;
+  if (scopes.includes(required)) return true;
+  if (required === "write:posts" && scopes.includes("write:mcp:v2:posts")) return true;
+  if (required === "write:projects" && scopes.includes("write:mcp:v2:projects")) return true;
+  return false;
 }
