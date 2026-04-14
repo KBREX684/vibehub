@@ -53,3 +53,9 @@ npm run prisma:migrate
 npm run prisma:seed
 npm run smoke:live-data
 ```
+
+CI note:
+- `.github/workflows/p1-gate.yml` now runs the same real-data sequence
+  (`migrate deploy -> generate -> seed -> smoke:live-data`) before the build.
+- Mock mode remains an explicit fallback for demo or no-DB environments, but
+  is no longer the sole acceptance truth.

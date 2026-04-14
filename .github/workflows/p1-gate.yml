@@ -50,11 +50,20 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      - name: Prisma seed
+        run: npm run prisma:seed
+
       - name: Lint
         run: npm run lint
 
       - name: Test
         run: npm run test
+
+      - name: Live-data smoke (real DB path)
+        env:
+          USE_MOCK_DATA: "false"
+          SESSION_SECRET: "ci-session-secret"
+        run: npm run smoke:live-data
 
       - name: Validate OpenAPI document
         run: npm run validate:openapi

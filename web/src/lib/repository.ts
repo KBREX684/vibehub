@@ -7,13 +7,11 @@ import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
-import { decodeCursor, encodeCursor, type CursorPayload } from "@/lib/pagination-cursor";
 import { mapPrismaToRepositoryError, RepositoryError } from "@/lib/repository-errors";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
 import {
   enterpriseProfileSelect,
-  enterpriseRowForProfileDto,
   sessionEnterpriseFromProfile,
 } from "@/lib/enterprise-profile-db";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
@@ -41,16 +39,13 @@ import {
   mockPostBookmarks,
   mockProjectBookmarks,
   mockUserFollows,
-  mockSubscriptions,
   mockChallenges,
   mockContributionCredits,
   mockSubscriptionPlans,
   mockUserSubscriptions,
   mockTeamChatMessages,
-  mockEnterpriseProfiles,
   mockEnterpriseVerificationApplications,
   mockWebhookEndpoints,
-  MockEnterpriseProfile,
 } from "@/lib/data/mock-data";
 import type {
   ApiKeyCreated,
@@ -83,7 +78,6 @@ import type {
   TeamJoinRequestStatus,
   TeamMember,
   TeamMilestone,
-  TeamProjectCard,
   TeamRole,
   TeamSummary,
   TeamTask,
@@ -114,10 +108,38 @@ import type {
   EnterpriseVerificationStatus,
 } from "@/lib/types";
 import { checkTeamMemberLimit } from "@/lib/subscription";
+import {
+  getEnterpriseProfileByUserId as getEnterpriseProfileByUserIdFromDomain,
+  listEnterpriseProfiles as listEnterpriseProfilesFromDomain,
+  reviewEnterpriseVerification as reviewEnterpriseVerificationFromDomain,
+  submitEnterpriseVerification as submitEnterpriseVerificationFromDomain,
+} from "@/lib/repositories/enterprise.repository";
+import {
+  getUserSubscription as getUserSubscriptionFromDomain,
+  getUserTier as getUserTierFromDomain,
+  upsertUserSubscription as upsertUserSubscriptionFromDomain,
+} from "@/lib/repositories/billing.repository";
+import {
+  createProject as createProjectFromDomain,
+  deleteProject as deleteProjectFromDomain,
+  getProjectBySlug as getProjectBySlugFromDomain,
+  listProjects as listProjectsFromDomain,
+  updateProject as updateProjectFromDomain,
+  updateProjectTeamLink as updateProjectTeamLinkFromDomain,
+} from "@/lib/repositories/project.repository";
+import {
+  createTeam as createTeamFromDomain,
+  getTeamBySlug as getTeamBySlugFromDomain,
+  listTeams as listTeamsFromDomain,
+} from "@/lib/repositories/team.repository";
+import {
+  createPost as createPostFromDomain,
+  getPostBySlug as getPostBySlugFromDomain,
+  listPosts as listPostsFromDomain,
+} from "@/lib/repositories/community.repository";
 
 const useMockData = isMockDataEnabled();
 type DemoRole = Extract<Role, "admin" | "user">;
-const TEAM_SLUG_MAX_LENGTH = 48;
 
 const mockWeeklySnapshots = new Map<string, WeeklyLeaderboardMaterializedSnapshot>();
 
@@ -467,13 +489,6 @@ function toAuditLogDto(item: {
   };
 }
 
-function projectCursorWhere(cursor: CursorPayload): Prisma.ProjectWhereInput {
-  const t = new Date(cursor.t);
-  return {
-    OR: [{ updatedAt: { lt: t } }, { AND: [{ updatedAt: t }, { id: { lt: cursor.id } }] }],
-  };
-}
-
 export async function listProjects(params: {
   query?: string;
   tag?: string;
@@ -489,239 +504,7 @@ export async function listProjects(params: {
   /** P4-3: keyset pagination when no full-text query (stable `updatedAt` + `id` sort) */
   cursor?: string | null;
 }): Promise<Paginated<Project>> {
-  const techFilter = params.tech?.trim();
-  const statusFilter = params.status;
-  const teamSlug = params.team?.trim();
-  const cursorRaw = params.cursor?.trim();
-  const cursorDecoded = cursorRaw ? decodeCursor(cursorRaw) : null;
-  if (cursorRaw && !cursorDecoded) {
-    throw new RepositoryError("INVALID_INPUT", "Invalid cursor", 400);
-  }
-  const canUseCursor = Boolean(cursorDecoded) && !params.query?.trim();
-  const keysetEligible = !params.query?.trim();
-  if (cursorRaw && !canUseCursor) {
-    throw new RepositoryError("INVALID_INPUT", "cursor is not supported when query is set", 400);
-  }
-
-  if (useMockData) {
-    const teamIdFilter = teamSlug ? mockTeams.find((x) => x.slug === teamSlug)?.id : undefined;
-    if (teamSlug && !teamIdFilter) {
-      return {
-        items: [],
-        pagination: {
-          page: params.page,
-          limit: params.limit,
-          total: 0,
-          totalPages: 1,
-        },
-      };
-    }
-
-    const filtered = mockProjects.filter((project) => {
-      const q = params.query?.toLowerCase().trim();
-      const t = params.tag?.toLowerCase().trim();
-
-      const queryMatch =
-        !q ||
-        project.title.toLowerCase().includes(q) ||
-        project.description.toLowerCase().includes(q) ||
-        project.tags.some((tag) => tag.toLowerCase().includes(q));
-
-      const tagMatch = !t || project.tags.some((tag) => tag.toLowerCase() === t);
-
-      const techMatch =
-        !techFilter ||
-        project.techStack.some((item) => item.toLowerCase() === techFilter.toLowerCase());
-
-      const statusMatch = !statusFilter || project.status === statusFilter;
-
-      const teamMatch = !teamIdFilter || project.teamId === teamIdFilter;
-      const creatorMatch = !params.creatorId || project.creatorId === params.creatorId;
-
-      return queryMatch && tagMatch && techMatch && statusMatch && teamMatch && creatorMatch;
-    });
-
-    if (canUseCursor && cursorDecoded) {
-      const sorted = [...filtered].sort((a, b) => {
-        const ua = new Date(a.updatedAt).getTime();
-        const ub = new Date(b.updatedAt).getTime();
-        if (ub !== ua) return ub - ua;
-        return b.id.localeCompare(a.id);
-      });
-      const ct = new Date(cursorDecoded.t).getTime();
-      const after = sorted.filter((p) => {
-        const ut = new Date(p.updatedAt).getTime();
-        return ut < ct || (ut === ct && p.id < cursorDecoded.id);
-      });
-      const slice = after.slice(0, params.limit);
-      const last = slice[slice.length - 1];
-      const hasMore = after.length > params.limit;
-      const nextCursor = hasMore && last ? encodeCursor({ t: last.updatedAt, id: last.id }) : undefined;
-      return {
-        items: slice,
-        pagination: {
-          page: params.page,
-          limit: params.limit,
-          total: sorted.length,
-          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
-          ...(nextCursor ? { nextCursor } : {}),
-        },
-      };
-    }
-
-    if (keysetEligible) {
-      const sorted = [...filtered].sort((a, b) => {
-        const ua = new Date(a.updatedAt).getTime();
-        const ub = new Date(b.updatedAt).getTime();
-        if (ub !== ua) return ub - ua;
-        return b.id.localeCompare(a.id);
-      });
-      const off = (params.page - 1) * params.limit;
-      const window = sorted.slice(off, off + params.limit + 1);
-      const hasMore = window.length > params.limit;
-      const slice = hasMore ? window.slice(0, params.limit) : window;
-      const last = slice[slice.length - 1];
-      const nextCursor = hasMore && last ? encodeCursor({ t: last.updatedAt, id: last.id }) : undefined;
-      return {
-        items: slice,
-        pagination: {
-          page: params.page,
-          limit: params.limit,
-          total: sorted.length,
-          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
-          ...(nextCursor ? { nextCursor } : {}),
-        },
-      };
-    }
-
-    return paginateArray(filtered, params.page, params.limit);
-  }
-
-  const prisma = await getPrisma();
-  const q = params.query?.trim();
-  const offset = (params.page - 1) * params.limit;
-  const take = params.limit;
-
-  if (q) {
-    const whereSql = projectFtsWhereClause(q, {
-      tag: params.tag?.trim(),
-      tech: techFilter,
-      status: statusFilter,
-      teamSlug,
-      creatorId: params.creatorId,
-    });
-    const [countRow] = await prisma.$queryRaw<[{ count: bigint }]>(
-      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "Project" p WHERE ${whereSql}`
-    );
-    const total = Number(countRow?.count ?? 0n);
-    const rows = await prisma.$queryRaw<
-      Array<{
-        id: string;
-        slug: string;
-        creatorId: string;
-        teamId: string | null;
-        title: string;
-        oneLiner: string;
-        description: string;
-        techStack: string[];
-        tags: string[];
-        status: Project["status"];
-        demoUrl: string | null;
-        repoUrl: string | null;
-        websiteUrl: string | null;
-        screenshots: string[];
-        logoUrl: string | null;
-        openSource: boolean;
-        license: string | null;
-        updatedAt: Date;
-        team_slug: string | null;
-        team_name: string | null;
-      }>
-    >(Prisma.sql`
-      SELECT p.id, p.slug, p."creatorId", p."teamId", p.title, p."oneLiner", p.description,
-        p."techStack", p.tags, p.status, p."demoUrl", p."repoUrl", p."websiteUrl", p.screenshots,
-        p."logoUrl", p."openSource", p.license, p."updatedAt",
-        te.slug AS team_slug, te.name AS team_name
-      FROM "Project" p
-      LEFT JOIN "Team" te ON te.id = p."teamId"
-      WHERE ${whereSql}
-      ORDER BY ts_rank_cd(p."searchVector", plainto_tsquery('english', ${q})) DESC, p."updatedAt" DESC
-      OFFSET ${offset} LIMIT ${take}
-    `);
-    return {
-      items: rows.map((r) =>
-        toProjectDto({
-          id: r.id,
-          slug: r.slug,
-          creatorId: r.creatorId,
-          teamId: r.teamId,
-          title: r.title,
-          oneLiner: r.oneLiner,
-          description: r.description,
-          techStack: r.techStack,
-          tags: r.tags,
-          status: r.status,
-          demoUrl: r.demoUrl,
-          repoUrl: r.repoUrl,
-          websiteUrl: r.websiteUrl,
-          screenshots: r.screenshots,
-          logoUrl: r.logoUrl,
-          openSource: r.openSource,
-          license: r.license,
-          updatedAt: r.updatedAt,
-          team: r.team_slug && r.team_name ? { slug: r.team_slug, name: r.team_name } : null,
-        })
-      ),
-      pagination: {
-        page: params.page,
-        limit: params.limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / params.limit)),
-      },
-    };
-  }
-
-  const andParts: Prisma.ProjectWhereInput[] = [];
-  if (params.tag) andParts.push({ tags: { has: params.tag } });
-  if (techFilter) andParts.push({ techStack: { has: techFilter } });
-  if (statusFilter) andParts.push({ status: statusFilter });
-  if (teamSlug) andParts.push({ team: { slug: teamSlug } });
-  if (params.creatorId) andParts.push({ creatorId: params.creatorId });
-  if (canUseCursor && cursorDecoded) andParts.push(projectCursorWhere(cursorDecoded));
-  const where: Prisma.ProjectWhereInput = andParts.length ? { AND: andParts } : {};
-
-  const skip = canUseCursor && cursorDecoded ? 0 : offset;
-  const takePlusOne = (canUseCursor && cursorDecoded) || (!q && keysetEligible) ? take + 1 : take;
-
-  const [items, total] = await Promise.all([
-    prisma.project.findMany({
-      where,
-      orderBy: { updatedAt: "desc" },
-      skip,
-      take: takePlusOne,
-      include: { team: { select: { slug: true, name: true } } },
-    }),
-    prisma.project.count({ where }),
-  ]);
-
-  const hasMorePage = ((!q && keysetEligible) || (canUseCursor && cursorDecoded)) && items.length > take;
-  const pageItems = hasMorePage ? items.slice(0, take) : items;
-  const last = pageItems[pageItems.length - 1];
-  const nextCursor =
-    !q && keysetEligible && last && hasMorePage
-      ? encodeCursor({ t: last.updatedAt.toISOString(), id: last.id })
-      : undefined;
-
-  return {
-    items: pageItems.map((p) => toProjectDto({ ...p, teamId: p.teamId, team: p.team })),
-    pagination: {
-      page: params.page,
-      limit: params.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / params.limit)),
-      ...(nextCursor ? { nextCursor } : {}),
-    },
-  };
+  return listProjectsFromDomain(params);
 }
 
 export async function getProjectFilterFacets(): Promise<{ tags: string[]; techStack: string[] }> {
@@ -755,16 +538,7 @@ export async function getProjectFilterFacets(): Promise<{ tags: string[]; techSt
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
-  if (useMockData) {
-    return mockProjects.find((project) => project.slug === slug) ?? null;
-  }
-
-  const prisma = await getPrisma();
-  const project = await prisma.project.findUnique({
-    where: { slug },
-    include: { team: { select: { slug: true, name: true } } },
-  });
-  return project ? toProjectDto({ ...project, team: project.team }) : null;
+  return getProjectBySlugFromDomain(slug);
 }
 
 export async function updateProjectTeamLink(params: {
@@ -772,81 +546,34 @@ export async function updateProjectTeamLink(params: {
   actorUserId: string;
   teamSlug: string | null;
 }): Promise<Project> {
-  if (useMockData) {
-    const project = mockProjects.find((p) => p.slug === params.projectSlug);
-    if (!project) {
-      throw new Error("PROJECT_NOT_FOUND");
-    }
-    const creator = mockCreators.find((c) => c.id === project.creatorId);
-    if (!creator || creator.userId !== params.actorUserId) {
-      throw new Error("FORBIDDEN_NOT_CREATOR");
-    }
-    if (params.teamSlug === null || params.teamSlug === "") {
-      project.teamId = undefined;
-      project.team = undefined;
-      return { ...project };
-    }
-    const slugTrim = params.teamSlug.trim();
-    const team = mockTeams.find((t) => t.slug === slugTrim);
-    if (!team) {
-      throw new Error("TEAM_NOT_FOUND");
-    }
-    const isMember = mockTeamMemberships.some((m) => m.teamId === team.id && m.userId === params.actorUserId);
-    if (!isMember) {
-      throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
-    }
-    project.teamId = team.id;
-    project.team = { slug: team.slug, name: team.name };
-    return { ...project };
-  }
-
-  const prisma = await getPrisma();
-  const project = await prisma.project.findUnique({
-    where: { slug: params.projectSlug },
-    include: { creator: { select: { userId: true } } },
-  });
-  if (!project) {
-    throw new Error("PROJECT_NOT_FOUND");
-  }
-  if (project.creator.userId !== params.actorUserId) {
-    throw new Error("FORBIDDEN_NOT_CREATOR");
-  }
-
-  if (params.teamSlug === null || params.teamSlug === "") {
-    const updated = await prisma.project.update({
-      where: { id: project.id },
-      data: { teamId: null },
-      include: { team: { select: { slug: true, name: true } } },
-    });
-    return toProjectDto({ ...updated, team: updated.team });
-  }
-
-  const slugTrim = params.teamSlug.trim();
-  const team = await prisma.team.findUnique({
-    where: { slug: slugTrim },
-    select: { id: true },
-  });
-  if (!team) {
-    throw new Error("TEAM_NOT_FOUND");
-  }
-
-  const membership = await prisma.teamMembership.findUnique({
-    where: { teamId_userId: { teamId: team.id, userId: params.actorUserId } },
-  });
-  if (!membership) {
-    throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
-  }
-
-  const updated = await prisma.project.update({
-    where: { id: project.id },
-    data: { teamId: team.id },
-    include: { team: { select: { slug: true, name: true } } },
-  });
-  return toProjectDto({ ...updated, team: updated.team });
+  return updateProjectTeamLinkFromDomain(params);
 }
 
 function userNameById(userId: string): string {
   return mockUsers.find((u) => u.id === userId)?.name ?? "Unknown";
+}
+
+function toTeamJoinRequestRowMock(r: {
+  id: string;
+  teamId: string;
+  applicantId: string;
+  message: string;
+  status: TeamJoinRequestStatus;
+  reviewedAt?: string;
+  createdAt: string;
+}): TeamJoinRequestRow {
+  const u = mockUsers.find((x) => x.id === r.applicantId);
+  return {
+    id: r.id,
+    teamId: r.teamId,
+    applicantId: r.applicantId,
+    applicantName: u?.name ?? "Unknown",
+    applicantEmail: u?.email ?? "",
+    message: r.message,
+    status: r.status,
+    reviewedAt: r.reviewedAt,
+    createdAt: r.createdAt,
+  };
 }
 
 function mockTeamTaskToDto(row: {
@@ -2579,87 +2306,8 @@ export async function getCreatorProfileById(creatorId: string): Promise<CreatorP
 
 // ─── M-1: Subscription ────────────────────────────────────────────────────────
 
-function toSubscriptionDto(row: {
-  id: string;
-  userId: string;
-  tier: string;
-  status: string;
-  stripeSubscriptionId: string | null;
-  stripePriceId: string | null;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
-  enterpriseStatus?: string | null;
-  enterpriseRequestedAt?: Date | null;
-  enterpriseReviewedAt?: Date | null;
-  enterpriseReviewedBy?: string | null;
-  enterpriseOrgName?: string | null;
-  enterpriseOrgWebsite?: string | null;
-  enterpriseWorkEmail?: string | null;
-  enterpriseUseCase?: string | null;
-  enterpriseReviewNote?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): UserSubscription {
-  return {
-    id: row.id,
-    userId: row.userId,
-    tier: (row.tier as UserSubscription["tier"]) ?? "free",
-    status: (row.status as UserSubscription["status"]) ?? "active",
-    stripeSubscriptionId: row.stripeSubscriptionId ?? undefined,
-    stripePriceId: row.stripePriceId ?? undefined,
-    currentPeriodEnd: row.currentPeriodEnd?.toISOString(),
-    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
-    enterpriseStatus: (row.enterpriseStatus as UserSubscription["enterpriseStatus"] | undefined) ?? "none",
-    enterpriseRequestedAt: row.enterpriseRequestedAt?.toISOString(),
-    enterpriseReviewedAt: row.enterpriseReviewedAt?.toISOString(),
-    enterpriseReviewedBy: row.enterpriseReviewedBy ?? undefined,
-    enterpriseOrgName: row.enterpriseOrgName ?? undefined,
-    enterpriseOrgWebsite: row.enterpriseOrgWebsite ?? undefined,
-    enterpriseWorkEmail: row.enterpriseWorkEmail ?? undefined,
-    enterpriseUseCase: row.enterpriseUseCase ?? undefined,
-    enterpriseReviewNote: row.enterpriseReviewNote ?? undefined,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
-
 export async function getUserSubscription(userId: string): Promise<UserSubscription> {
-  if (useMockData) {
-    const existing = mockSubscriptions.find((s) => s.userId === userId);
-    if (existing) {
-      return {
-        ...existing,
-        tier: existing.tier as UserSubscription["tier"],
-        status: existing.status as UserSubscription["status"],
-        enterpriseStatus: (existing.enterpriseStatus as UserSubscription["enterpriseStatus"] | undefined) ?? "none",
-      };
-    }
-    return {
-      id: `sub_free_${userId}`,
-      userId,
-      tier: "free",
-      status: "active",
-      cancelAtPeriodEnd: false,
-      enterpriseStatus: "none",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-  }
-  const prisma = await getPrisma();
-  const row = await prisma.userSubscription.findUnique({ where: { userId } });
-  if (!row) {
-    return {
-      id: `sub_free_${userId}`,
-      userId,
-      tier: "free",
-      status: "active",
-      cancelAtPeriodEnd: false,
-      enterpriseStatus: "none",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-  }
-  return toSubscriptionDto(row);
+  return getUserSubscriptionFromDomain(userId);
 }
 
 export async function upsertUserSubscription(params: {
@@ -2680,69 +2328,11 @@ export async function upsertUserSubscription(params: {
   currentPeriodEnd?: Date;
   cancelAtPeriodEnd?: boolean;
 }): Promise<UserSubscription> {
-  if (useMockData) {
-    const idx = mockSubscriptions.findIndex((s) => s.userId === params.userId);
-    const now = new Date().toISOString();
-    const row = {
-      id: idx >= 0 ? mockSubscriptions[idx].id : `sub_${Date.now()}`,
-      userId: params.userId,
-      tier: params.tier,
-      status: params.status,
-      stripeSubscriptionId: params.stripeSubscriptionId,
-      stripePriceId: params.stripePriceId,
-      currentPeriodEnd: params.currentPeriodEnd?.toISOString(),
-      cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
-      enterpriseStatus: params.enterpriseStatus ?? (idx >= 0 ? (mockSubscriptions[idx].enterpriseStatus ?? "none") : "none"),
-      enterpriseRequestedAt: params.enterpriseRequestedAt?.toISOString(),
-      enterpriseReviewedAt: params.enterpriseReviewedAt?.toISOString(),
-      enterpriseReviewedBy: params.enterpriseReviewedBy ?? undefined,
-      enterpriseOrgName: params.enterpriseOrgName ?? undefined,
-      enterpriseOrgWebsite: params.enterpriseOrgWebsite ?? undefined,
-      enterpriseWorkEmail: params.enterpriseWorkEmail ?? undefined,
-      enterpriseUseCase: params.enterpriseUseCase ?? undefined,
-      enterpriseReviewNote: params.enterpriseReviewNote ?? undefined,
-      createdAt: idx >= 0 ? mockSubscriptions[idx].createdAt : now,
-      updatedAt: now,
-    };
-    if (idx >= 0) mockSubscriptions[idx] = row;
-    else mockSubscriptions.push(row);
-    return {
-      ...row,
-      tier: row.tier as UserSubscription["tier"],
-      status: row.status as UserSubscription["status"],
-      enterpriseStatus: (row.enterpriseStatus as UserSubscription["enterpriseStatus"] | undefined) ?? "none",
-    };
-  }
-  const prisma = await getPrisma();
-  const data = {
-    tier: params.tier as "free" | "pro",
-    status: params.status as "active" | "past_due" | "canceled" | "trialing",
-    stripeSubscriptionId: params.stripeSubscriptionId ?? null,
-    stripePriceId: params.stripePriceId ?? null,
-    currentPeriodEnd: params.currentPeriodEnd ?? null,
-    cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
-    enterpriseStatus: (params.enterpriseStatus ?? "none") as "none" | "pending" | "approved" | "rejected",
-    enterpriseRequestedAt: params.enterpriseRequestedAt ?? null,
-    enterpriseReviewedAt: params.enterpriseReviewedAt ?? null,
-    enterpriseReviewedBy: params.enterpriseReviewedBy ?? null,
-    enterpriseOrgName: params.enterpriseOrgName ?? null,
-    enterpriseOrgWebsite: params.enterpriseOrgWebsite ?? null,
-    enterpriseWorkEmail: params.enterpriseWorkEmail ?? null,
-    enterpriseUseCase: params.enterpriseUseCase ?? null,
-    enterpriseReviewNote: params.enterpriseReviewNote ?? null,
-  };
-  const row = await prisma.userSubscription.upsert({
-    where: { userId: params.userId },
-    update: { ...data, updatedAt: new Date() },
-    create: { userId: params.userId, ...data },
-  });
-  return toSubscriptionDto(row);
+  return upsertUserSubscriptionFromDomain(params);
 }
 
 export async function getUserTier(userId: string): Promise<UserSubscription["tier"]> {
-  const sub = await getUserSubscription(userId);
-  if (sub.status === "active" || sub.status === "trialing") return sub.tier;
-  return "free";
+  return getUserTierFromDomain(userId);
 }
 
 export async function countUserTeams(userId: string): Promise<number> {
@@ -2972,13 +2562,6 @@ export async function listUsers(params: {
   };
 }
 
-function postCursorWhere(cursor: CursorPayload): Prisma.PostWhereInput {
-  const t = new Date(cursor.t);
-  return {
-    OR: [{ createdAt: { lt: t } }, { AND: [{ createdAt: t }, { id: { lt: cursor.id } }] }],
-  };
-}
-
 export async function listPosts(params: {
   query?: string;
   tag?: string;
@@ -2995,252 +2578,7 @@ export async function listPosts(params: {
   /** P4-3: keyset pagination (only with stable sort: no query, sort recent/default, not featured-only) */
   cursor?: string | null;
 }): Promise<Paginated<Post>> {
-  const cursorRaw = params.cursor?.trim();
-  const cursorDecoded = cursorRaw ? decodeCursor(cursorRaw) : null;
-  if (cursorRaw && !cursorDecoded) {
-    throw new RepositoryError("INVALID_INPUT", "Invalid cursor", 400);
-  }
-  const canUseCursor =
-    Boolean(cursorDecoded) &&
-    !params.query?.trim() &&
-    !params.featuredOnly &&
-    (params.sort === undefined || params.sort === "recent");
-  const keysetEligible =
-    !params.query?.trim() &&
-    !params.featuredOnly &&
-    (params.sort === undefined || params.sort === "recent");
-
-  if (cursorRaw && !canUseCursor) {
-    throw new RepositoryError("INVALID_INPUT", "cursor is not supported with this query/sort combination", 400);
-  }
-
-  if (useMockData) {
-    let filtered = mockPosts.filter((post) => {
-      const q = params.query?.toLowerCase().trim();
-      const t = params.tag?.toLowerCase().trim();
-      const queryMatch =
-        !q ||
-        post.title.toLowerCase().includes(q) ||
-        post.body.toLowerCase().includes(q) ||
-        post.tags.some((tag) => tag.toLowerCase().includes(q));
-      const tagMatch = !t || post.tags.some((tag) => tag.toLowerCase() === t);
-      const visibilityOk =
-        post.reviewStatus === "approved" ||
-        (params.includeAuthorId ? post.authorId === params.includeAuthorId : false);
-      const featuredMatch = !params.featuredOnly || Boolean(post.featuredAt);
-      const authorMatch = !params.authorId || post.authorId === params.authorId;
-      return queryMatch && tagMatch && visibilityOk && featuredMatch && authorMatch;
-    });
-    if (params.sort === "featured") {
-      filtered = [...filtered].sort((a, b) => {
-        if (a.featuredAt && !b.featuredAt) return -1;
-        if (!a.featuredAt && b.featuredAt) return 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-    } else if (params.sort === "hot") {
-      filtered = [...filtered].sort((a, b) => {
-        const ca = mockComments.filter((c) => c.postId === a.id).length;
-        const cb = mockComments.filter((c) => c.postId === b.id).length;
-        if (cb !== ca) return cb - ca;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-    } else {
-      filtered = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
-    if (canUseCursor && cursorDecoded) {
-      const sorted = [...filtered].sort((a, b) => {
-        const ca = new Date(a.createdAt).getTime();
-        const cb = new Date(b.createdAt).getTime();
-        if (cb !== ca) return cb - ca;
-        return b.id.localeCompare(a.id);
-      });
-      const ct = new Date(cursorDecoded.t).getTime();
-      const after = sorted.filter((p) => {
-        const pt = new Date(p.createdAt).getTime();
-        return pt < ct || (pt === ct && p.id < cursorDecoded.id);
-      });
-      const slice = after.slice(0, params.limit);
-      const last = slice[slice.length - 1];
-      const hasMore = after.length > params.limit;
-      const nextCursor = hasMore && last ? encodeCursor({ t: last.createdAt, id: last.id }) : undefined;
-      return {
-        items: slice,
-        pagination: {
-          page: params.page,
-          limit: params.limit,
-          total: sorted.length,
-          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
-          nextCursor,
-        },
-      };
-    }
-
-    if (keysetEligible) {
-      const sorted = [...filtered].sort((a, b) => {
-        const ca = new Date(a.createdAt).getTime();
-        const cb = new Date(b.createdAt).getTime();
-        if (cb !== ca) return cb - ca;
-        return b.id.localeCompare(a.id);
-      });
-      const off = (params.page - 1) * params.limit;
-      const window = sorted.slice(off, off + params.limit + 1);
-      const hasMore = window.length > params.limit;
-      const slice = hasMore ? window.slice(0, params.limit) : window;
-      const last = slice[slice.length - 1];
-      const nextCursor = hasMore && last ? encodeCursor({ t: last.createdAt, id: last.id }) : undefined;
-      return {
-        items: slice,
-        pagination: {
-          page: params.page,
-          limit: params.limit,
-          total: sorted.length,
-          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
-          ...(nextCursor ? { nextCursor } : {}),
-        },
-      };
-    }
-
-    return paginateArray(filtered, params.page, params.limit);
-  }
-
-  const prisma = await getPrisma();
-  const offset = (params.page - 1) * params.limit;
-  const take = params.limit;
-  const q = params.query?.trim();
-
-  if (q) {
-    const baseWhere = postFtsWhereClause(q, {
-      tag: params.tag?.trim(),
-      includeAuthorId: params.includeAuthorId,
-      authorId: params.authorId,
-    });
-    const whereSql = params.featuredOnly
-      ? Prisma.join([baseWhere, Prisma.sql`p."featuredAt" IS NOT NULL`], " AND ")
-      : baseWhere;
-
-    const [countRow] = await prisma.$queryRaw<[{ count: bigint }]>(
-      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "Post" p WHERE ${whereSql}`
-    );
-    const total = Number(countRow?.count ?? 0n);
-
-    const idRows = await prisma.$queryRaw<Array<{ id: string }>>(
-      Prisma.sql`
-        SELECT p.id
-        FROM "Post" p
-        WHERE ${whereSql}
-        ORDER BY ts_rank_cd(p."searchVector", plainto_tsquery('english', ${q})) DESC, p."createdAt" DESC
-        OFFSET ${offset} LIMIT ${take}
-      `
-    );
-    const ids = idRows.map((r) => r.id);
-    if (ids.length === 0) {
-      return {
-        items: [],
-        pagination: { page: params.page, limit: params.limit, total: 0, totalPages: 1 },
-      };
-    }
-    const posts = await prisma.post.findMany({
-      where: { id: { in: ids } },
-      include: {
-        author: { select: { name: true } },
-        _count: { select: { likes: true, bookmarks: true } },
-      },
-    });
-    const byId = new Map(posts.map((p) => [p.id, p]));
-    let ordered = ids.map((id) => byId.get(id)).filter(Boolean) as typeof posts;
-    if (params.sort === "hot") {
-      ordered = [...ordered].sort((a, b) => b._count.likes - a._count.likes);
-    }
-    return {
-      items: ordered.map((p) =>
-        toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })
-      ),
-      pagination: {
-        page: params.page,
-        limit: params.limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / params.limit)),
-      },
-    };
-  }
-
-  const reviewFilter = params.includeAuthorId
-    ? {
-        OR: [
-          { reviewStatus: "approved" as const },
-          { authorId: params.includeAuthorId, reviewStatus: { not: "approved" as const } },
-        ],
-      }
-    : { reviewStatus: "approved" as const };
-
-  const where = {
-    AND: [
-      reviewFilter,
-      params.authorId ? { authorId: params.authorId } : {},
-      params.tag
-        ? {
-            tags: {
-              has: params.tag,
-            },
-          }
-        : {},
-      params.featuredOnly ? { featuredAt: { not: null } } : {},
-      ...(canUseCursor && cursorDecoded ? [postCursorWhere(cursorDecoded)] : []),
-    ],
-  };
-
-  const orderBy: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[] =
-    params.sort === "featured"
-      ? [{ featuredAt: "desc" }, { createdAt: "desc" }]
-      : params.sort === "hot"
-        ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
-        : { createdAt: "desc" };
-
-  const skip = canUseCursor && cursorDecoded ? 0 : offset;
-  const takePlusOne =
-    (canUseCursor && cursorDecoded) || (!q && keysetEligible) ? take + 1 : take;
-
-  const [items, total] = await Promise.all([
-    prisma.post.findMany({
-      where,
-      orderBy,
-      skip,
-      take: takePlusOne,
-      include: {
-        author: { select: { name: true } },
-        _count: { select: { likes: true, bookmarks: true } },
-      },
-    }),
-    prisma.post.count({ where }),
-  ]);
-
-  let orderedItems = items;
-  if (q && params.sort === "hot") {
-    orderedItems = [...items].sort((a, b) => b._count.likes - a._count.likes);
-  }
-
-  const hasMorePage =
-    ((!q && keysetEligible) || (canUseCursor && cursorDecoded)) && orderedItems.length > take;
-  const pageItems = hasMorePage ? orderedItems.slice(0, take) : orderedItems;
-  const last = pageItems[pageItems.length - 1];
-  const nextCursor =
-    !q && keysetEligible && last && hasMorePage
-      ? encodeCursor({ t: last.createdAt.toISOString(), id: last.id })
-      : undefined;
-
-  return {
-    items: pageItems.map((p) =>
-      toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })
-    ),
-    pagination: {
-      page: params.page,
-      limit: params.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / params.limit)),
-      ...(nextCursor ? { nextCursor } : {}),
-    },
-  };
+  return listPostsFromDomain(params);
 }
 
 export async function listPostsForModeration(params: {
@@ -3346,31 +2684,7 @@ export async function getPostBySlug(
   slug: string,
   options?: { viewerUserId?: string }
 ): Promise<Post | null> {
-  if (useMockData) {
-    const post = mockPosts.find((p) => p.slug === slug);
-    if (!post) return null;
-    if (post.reviewStatus !== "approved") {
-      if (!options?.viewerUserId || post.authorId !== options.viewerUserId) {
-        return null;
-      }
-    }
-    return post;
-  }
-  const prisma = await getPrisma();
-  const p = await prisma.post.findUnique({
-    where: { slug },
-    include: {
-      author: { select: { name: true } },
-      _count: { select: { likes: true, bookmarks: true } },
-    },
-  });
-  if (!p) return null;
-  if (p.reviewStatus !== "approved") {
-    if (!options?.viewerUserId || p.authorId !== options.viewerUserId) {
-      return null;
-    }
-  }
-  return toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks });
+  return getPostBySlugFromDomain(slug, options);
 }
 
 /** Deterministic 100-char excerpt — no AI dep, available immediately. */
@@ -3388,99 +2702,7 @@ export async function createPost(input: {
   tags: string[];
   authorId: string;
 }) {
-  assertContentSafeText(input.title, "title");
-  assertContentSafeText(input.body, "body");
-  const slug = input.title
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-
-  if (useMockData) {
-    const author = mockUsers.find((u) => u.id === input.authorId);
-    const post: Post = {
-      id: `post_${Date.now()}`,
-      slug: `${slug}-${Date.now()}`,
-      authorId: input.authorId,
-      authorName: author?.name,
-      title: input.title,
-      body: input.body,
-      tags: input.tags,
-      reviewStatus: "pending",
-      likeCount: 0,
-      bookmarkCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-    mockPosts.unshift(post);
-    mockModerationCases.unshift({
-      id: `mc_${Date.now()}`,
-      targetType: "post",
-      targetId: post.id,
-      status: "pending",
-      reason: "new_post_submission",
-      createdAt: new Date().toISOString(),
-    });
-    mockAuditLogs.unshift({
-      id: `log_post_${Date.now()}`,
-      actorId: input.authorId,
-      action: "post_created",
-      entityType: "post",
-      entityId: post.id,
-      metadata: { slug: post.slug, title: post.title },
-      createdAt: new Date().toISOString(),
-    });
-    void dispatchWebhookEvent(input.authorId, "post.created", { postId: post.id, slug: post.slug, title: post.title });
-    return post;
-  }
-
-  const prisma = await getPrisma();
-  try {
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const post = await tx.post.create({
-        data: {
-          slug: `${slug}-${Date.now()}`,
-          title: input.title,
-          body: input.body,
-          tags: input.tags,
-          authorId: input.authorId,
-          reviewStatus: "pending",
-        },
-      });
-
-      await tx.moderationCase.create({
-        data: {
-          targetType: "post",
-          targetId: post.id,
-          postId: post.id,
-          status: "pending",
-          reason: "new_post_submission",
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorId: input.authorId,
-          action: "post_created",
-          entityType: "post",
-          entityId: post.id,
-          metadata: { slug: post.slug, title: post.title },
-        },
-      });
-
-      return post;
-    });
-
-    void dispatchWebhookEvent(result.authorId, "post.created", {
-      postId: result.id,
-      slug: result.slug,
-      title: result.title,
-    });
-    return toPostDto(result);
-  } catch (e) {
-    const mapped = mapPrismaToRepositoryError(e);
-    if (mapped) throw mapped;
-    throw e;
-  }
+  return createPostFromDomain(input);
 }
 
 // ─── Post update / delete ─────────────────────────────────────────────────────
@@ -4993,61 +4215,6 @@ export async function listAuditLogs(params: {
 
 // ─── Enterprise Verification ─────────────────────────────────────────────────
 
-function toEnterpriseProfileDto(row: {
-  userId: string;
-  status: string;
-  organizationName: string;
-  organizationWebsite: string;
-  workEmail: string;
-  useCase?: string | null;
-  reviewedBy?: string | null;
-  reviewNote?: string | null;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-}): EnterpriseProfile {
-  return {
-    userId: row.userId,
-    status: (row.status as EnterpriseVerificationStatus) ?? "none",
-    organizationName: row.organizationName,
-    organizationWebsite: row.organizationWebsite,
-    workEmail: row.workEmail,
-    useCase: row.useCase ?? undefined,
-    reviewedBy: row.reviewedBy ?? undefined,
-    reviewNote: row.reviewNote ?? undefined,
-    createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
-    updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : row.updatedAt.toISOString(),
-  };
-}
-
-function toEnterpriseProfileFromUser(row: {
-  id: string;
-  email: string;
-  enterpriseProfile?: {
-    status: "none" | "pending" | "approved" | "rejected";
-    organization: string | null;
-    website: string | null;
-    useCase: string | null;
-    reviewedBy: string | null;
-    reviewNote: string | null;
-    appliedAt: Date | null;
-    reviewedAt: Date | null;
-  } | null;
-}): EnterpriseProfile {
-  const ep = row.enterpriseProfile;
-  const mapped = enterpriseRowForProfileDto(row.id, row.email, ep ?? undefined);
-  return {
-    userId: mapped.id,
-    status: mapped.enterpriseStatus,
-    organizationName: mapped.enterpriseOrganization ?? "",
-    organizationWebsite: mapped.enterpriseWebsite ?? "",
-    workEmail: mapped.email,
-    useCase: mapped.enterpriseUseCase ?? undefined,
-    reviewedBy: mapped.enterpriseReviewedBy ?? undefined,
-    reviewNote: mapped.enterpriseReviewNote ?? undefined,
-    createdAt: mapped.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
-    updatedAt: mapped.enterpriseReviewedAt?.toISOString() ?? mapped.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
-  };
-}
 
 function toEnterpriseVerificationApplicationDto(row: {
   id: string;
@@ -5082,20 +4249,7 @@ function toEnterpriseVerificationApplicationDto(row: {
 }
 
 export async function getEnterpriseProfileByUserId(userId: string): Promise<EnterpriseProfile | null> {
-  if (useMockData) {
-    const row = mockEnterpriseProfiles.find((p) => p.userId === userId);
-    return row ? toEnterpriseProfileDto(row) : null;
-  }
-  const prisma = await getPrisma();
-  const row = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      enterpriseProfile: { select: enterpriseProfileSelect },
-    },
-  });
-  return row ? toEnterpriseProfileFromUser(row) : null;
+  return getEnterpriseProfileByUserIdFromDomain(userId);
 }
 
 export async function submitEnterpriseVerification(params: {
@@ -5105,101 +4259,7 @@ export async function submitEnterpriseVerification(params: {
   workEmail: string;
   useCase?: string;
 }): Promise<EnterpriseProfile> {
-  const organizationName = params.organizationName.trim();
-  const organizationWebsite = params.organizationWebsite.trim();
-  const workEmail = params.workEmail.trim().toLowerCase();
-  const useCase = params.useCase?.trim() || undefined;
-
-  if (!organizationName || organizationName.length < 2) throw new Error("INVALID_ORGANIZATION_NAME");
-  if (!/^https?:\/\//i.test(organizationWebsite)) throw new Error("INVALID_ORGANIZATION_WEBSITE");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail)) throw new Error("INVALID_WORK_EMAIL");
-
-  if (useMockData) {
-    const now = new Date().toISOString();
-    const idx = mockEnterpriseProfiles.findIndex((p) => p.userId === params.userId);
-    const existing = idx >= 0 ? mockEnterpriseProfiles[idx] : null;
-    if (existing && existing.status === "approved") throw new Error("ENTERPRISE_ALREADY_APPROVED");
-    const nextStatus: EnterpriseVerificationStatus = existing?.status === "rejected" ? "pending" : "pending";
-    const row: MockEnterpriseProfile = {
-      id: existing?.id ?? `ep_${Date.now()}`,
-      userId: params.userId,
-      status: nextStatus,
-      organizationName,
-      organizationWebsite,
-      workEmail,
-      useCase,
-      reviewedBy: undefined,
-      reviewNote: undefined,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    };
-    if (idx >= 0) mockEnterpriseProfiles[idx] = row;
-    else mockEnterpriseProfiles.push(row);
-
-    mockAuditLogs.unshift({
-      id: `log_ep_${Date.now()}`,
-      actorId: params.userId,
-      action: "enterprise_verification_submitted",
-      entityType: "enterprise_profile",
-      entityId: params.userId,
-      metadata: { organizationName, organizationWebsite, workEmail },
-      createdAt: now,
-    });
-    return toEnterpriseProfileDto(row);
-  }
-
-  const prisma = await getPrisma();
-  const existing = await prisma.user.findUnique({
-    where: { id: params.userId },
-    select: { id: true, role: true, email: true, enterpriseProfile: { select: { status: true } } },
-  });
-  if (!existing) throw new Error("USER_NOT_FOUND");
-  if (existing.enterpriseProfile?.status === "approved") throw new Error("ENTERPRISE_ALREADY_APPROVED");
-
-  const row = await prisma.user.update({
-    where: { id: params.userId },
-    data: {
-      enterpriseProfile: {
-        upsert: {
-          create: {
-            status: "pending",
-            organization: organizationName,
-            website: organizationWebsite,
-            useCase: useCase ?? null,
-            appliedAt: new Date(),
-            reviewedAt: null,
-            reviewedBy: null,
-            reviewNote: null,
-          },
-          update: {
-            status: "pending",
-            organization: organizationName,
-            website: organizationWebsite,
-            useCase: useCase ?? null,
-            appliedAt: new Date(),
-            reviewedAt: null,
-            reviewedBy: null,
-            reviewNote: null,
-          },
-        },
-      },
-    },
-    select: {
-      id: true,
-      email: true,
-      enterpriseProfile: { select: enterpriseProfileSelect },
-    },
-  });
-  await prisma.auditLog.create({
-    data: {
-      actorId: params.userId,
-      action: "enterprise_verification_submitted",
-      entityType: "enterprise_profile",
-      entityId: params.userId,
-      metadata: { organizationName, organizationWebsite, workEmail },
-    },
-  });
-  return toEnterpriseProfileFromUser(row);
+  return submitEnterpriseVerificationFromDomain(params);
 }
 
 export async function listEnterpriseProfiles(params: {
@@ -5207,56 +4267,7 @@ export async function listEnterpriseProfiles(params: {
   page: number;
   limit: number;
 }): Promise<Paginated<EnterpriseProfile>> {
-  if (useMockData) {
-    const filtered = mockEnterpriseProfiles.filter((p) => {
-      if (!params.status || params.status === "all") return true;
-      return p.status === params.status;
-    });
-    return paginateArray(filtered.map(toEnterpriseProfileDto), params.page, params.limit);
-  }
-  const prisma = await getPrisma();
-  const where =
-    !params.status || params.status === "all"
-      ? { status: { not: "none" as const } }
-      : { status: params.status as "none" | "pending" | "approved" | "rejected" };
-  const [items, total] = await Promise.all([
-    prisma.enterpriseProfile.findMany({
-      where,
-      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
-      select: {
-        userId: true,
-        ...enterpriseProfileSelect,
-        user: { select: { email: true } },
-      },
-    }),
-    prisma.enterpriseProfile.count({ where }),
-  ]);
-  return {
-    items: items.map((row) =>
-      toEnterpriseProfileFromUser({
-        id: row.userId,
-        email: row.user.email,
-        enterpriseProfile: {
-          status: row.status,
-          organization: row.organization,
-          website: row.website,
-          useCase: row.useCase,
-          reviewedBy: row.reviewedBy,
-          reviewNote: row.reviewNote,
-          appliedAt: row.appliedAt,
-          reviewedAt: row.reviewedAt,
-        },
-      })
-    ),
-    pagination: {
-      page: params.page,
-      limit: params.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / params.limit)),
-    },
-  };
+  return listEnterpriseProfilesFromDomain(params);
 }
 
 export async function reviewEnterpriseVerification(params: {
@@ -5265,120 +4276,7 @@ export async function reviewEnterpriseVerification(params: {
   action: "approve" | "reject";
   reviewNote?: string;
 }): Promise<EnterpriseProfile> {
-  const reviewNote = params.reviewNote?.trim() || undefined;
-  const nextStatus: EnterpriseVerificationStatus = params.action === "approve" ? "approved" : "rejected";
-
-  if (useMockData) {
-    const idx = mockEnterpriseProfiles.findIndex((p) => p.userId === params.userId);
-    if (idx < 0) throw new Error("ENTERPRISE_PROFILE_NOT_FOUND");
-    const row = mockEnterpriseProfiles[idx];
-    if (row.status !== "pending") throw new Error("ENTERPRISE_PROFILE_NOT_PENDING");
-    const now = new Date().toISOString();
-    row.status = nextStatus;
-    row.reviewedBy = params.adminUserId;
-    row.reviewNote = reviewNote;
-    row.updatedAt = now;
-
-    const current = mockSubscriptions.find((s) => s.userId === params.userId);
-    if (nextStatus === "approved") {
-      const activeNow = new Date().toISOString();
-      if (current) {
-        current.tier = "pro";
-        current.status = "active";
-        current.cancelAtPeriodEnd = false;
-        current.updatedAt = activeNow;
-      } else {
-        mockSubscriptions.push({
-          id: `sub_ent_${Date.now()}`,
-          userId: params.userId,
-          tier: "pro",
-          status: "active",
-          cancelAtPeriodEnd: false,
-          createdAt: activeNow,
-          updatedAt: activeNow,
-        });
-      }
-    }
-
-    mockAuditLogs.unshift({
-      id: `log_ep_review_${Date.now()}`,
-      actorId: params.adminUserId,
-      action: `enterprise_verification_${nextStatus}`,
-      entityType: "enterprise_profile",
-      entityId: params.userId,
-      metadata: { reviewNote },
-      createdAt: now,
-    });
-    return toEnterpriseProfileDto(row);
-  }
-
-  const prisma = await getPrisma();
-  const profile = await prisma.enterpriseProfile.findUnique({
-    where: { userId: params.userId },
-    select: { userId: true, status: true },
-  });
-  if (!profile) throw new Error("ENTERPRISE_PROFILE_NOT_FOUND");
-  if (profile.status !== "pending") throw new Error("ENTERPRISE_PROFILE_NOT_PENDING");
-
-  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const row = await tx.enterpriseProfile.update({
-      where: { userId: params.userId },
-      data: {
-        status: nextStatus as "approved" | "rejected",
-        reviewedAt: new Date(),
-        reviewedBy: params.adminUserId,
-        reviewNote: reviewNote ?? null,
-      },
-      select: {
-        userId: true,
-        ...enterpriseProfileSelect,
-        user: { select: { email: true } },
-      },
-    });
-
-    if (nextStatus === "approved") {
-      await tx.userSubscription.upsert({
-        where: { userId: params.userId },
-        update: {
-          tier: "pro",
-          status: "active",
-          cancelAtPeriodEnd: false,
-          updatedAt: new Date(),
-        },
-        create: {
-          userId: params.userId,
-          tier: "pro",
-          status: "active",
-          cancelAtPeriodEnd: false,
-        },
-      });
-    }
-
-    await tx.auditLog.create({
-      data: {
-        actorId: params.adminUserId,
-        action: `enterprise_verification_${nextStatus}`,
-        entityType: "enterprise_profile",
-        entityId: params.userId,
-        metadata: { reviewNote },
-      },
-    });
-    return row;
-  });
-  return toEnterpriseProfileFromUser({
-    id: updated.userId,
-    email: updated.user.email,
-    enterpriseProfile: {
-      status: updated.status,
-      organization: updated.organization,
-      website: updated.website,
-      useCase: updated.useCase,
-      reviewedBy: updated.reviewedBy,
-      reviewNote: updated.reviewNote,
-      appliedAt: updated.appliedAt,
-      reviewedAt: updated.reviewedAt,
-    },
-  });
+  return reviewEnterpriseVerificationFromDomain(params);
 }
 
 export function listCollectionTopics(): CollectionTopic[] {
@@ -5897,6 +4795,12 @@ export async function getAdminOverview() {
   };
 }
 
+/**
+ * @deprecated Legacy enterprise-application DTO flow retained for compatibility
+ * with historical data exports. Do not use in runtime paths.
+ * Use `submitEnterpriseVerification` / `getEnterpriseProfileByUserId` /
+ * `listEnterpriseProfiles` / `reviewEnterpriseVerification` instead.
+ */
 export async function createEnterpriseVerificationApplication(params: {
   userId: string;
   organizationName: string;
@@ -6054,6 +4958,11 @@ export async function getLatestEnterpriseVerificationApplication(
   });
 }
 
+/**
+ * @deprecated Legacy enterprise-application DTO flow retained for compatibility
+ * with historical data exports. Do not use in runtime paths.
+ * Use `listEnterpriseProfiles` for active runtime behavior.
+ */
 export async function listEnterpriseVerificationApplications(params: {
   status?: EnterpriseVerificationStatus | "all";
   page: number;
@@ -6110,6 +5019,11 @@ export async function listEnterpriseVerificationApplications(params: {
   };
 }
 
+/**
+ * @deprecated Legacy enterprise-application DTO flow retained for compatibility.
+ * Runtime approval path must use `reviewEnterpriseVerification`, where enterprise
+ * approval updates enterprise status only and MUST NOT mutate platform roles.
+ */
 export async function reviewEnterpriseVerificationApplication(params: {
   applicationId: string;
   reviewerUserId: string;
@@ -6133,30 +5047,7 @@ export async function reviewEnterpriseVerificationApplication(params: {
       reviewedAt: now,
       updatedAt: now,
     };
-    if (nextStatus === "approved") {
-      const userIdx = mockUsers.findIndex((u) => u.id === current.userId);
-      if (userIdx >= 0) mockUsers[userIdx] = { ...mockUsers[userIdx], role: "admin" };
-      const subIdx = mockSubscriptions.findIndex((s) => s.userId === current.userId);
-      const subNow = new Date().toISOString();
-      if (subIdx >= 0) {
-        mockSubscriptions[subIdx] = {
-          ...mockSubscriptions[subIdx],
-          tier: "pro",
-          status: "active",
-          updatedAt: subNow,
-        };
-      } else {
-        mockSubscriptions.push({
-          id: `sub_enterprise_${Date.now()}`,
-          userId: current.userId,
-          tier: "pro",
-          status: "active",
-          cancelAtPeriodEnd: false,
-          createdAt: subNow,
-          updatedAt: subNow,
-        });
-      }
-    }
+    // Legacy path intentionally does not mutate user role or subscription.
     mockAuditLogs.unshift({
       id: `log_eva_review_${Date.now()}`,
       actorId: params.reviewerUserId,
@@ -6194,27 +5085,7 @@ export async function reviewEnterpriseVerificationApplication(params: {
         user: { select: { email: true } },
       },
     });
-    if (nextStatus === "approved") {
-      await tx.user.update({
-        where: { id: existing.id },
-        data: { role: "admin" },
-      });
-      await tx.userSubscription.upsert({
-        where: { userId: existing.id },
-        update: {
-          tier: "pro",
-          status: "active",
-          cancelAtPeriodEnd: false,
-          updatedAt: new Date(),
-        },
-        create: {
-          userId: existing.id,
-          tier: "pro",
-          status: "active",
-          cancelAtPeriodEnd: false,
-        },
-      });
-    }
+    // Legacy path intentionally does not mutate user role or subscription.
     await tx.auditLog.create({
       data: {
         actorId: params.reviewerUserId,
@@ -6242,285 +5113,12 @@ export async function reviewEnterpriseVerificationApplication(params: {
   });
 }
 
-function slugifyTeamSlug(raw: string): string {
-  const s = raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, TEAM_SLUG_MAX_LENGTH);
-  return s || "team";
-}
-
-function buildTeamSlugCandidate(baseSlug: string, duplicateIndex: number): string {
-  if (duplicateIndex <= 0) {
-    return baseSlug.slice(0, TEAM_SLUG_MAX_LENGTH) || "team";
-  }
-
-  const suffix = `-${duplicateIndex}`;
-  const baseLimit = TEAM_SLUG_MAX_LENGTH - suffix.length;
-  if (baseLimit <= 0) {
-    return `${duplicateIndex}`.slice(-TEAM_SLUG_MAX_LENGTH);
-  }
-
-  const normalizedBase = baseSlug.slice(0, baseLimit).replace(/-+$/g, "") || "team";
-  return `${normalizedBase}${suffix}`;
-}
-
-function mockTeamMemberRows(teamId: string): TeamMember[] {
-  return mockTeamMemberships
-    .filter((m) => m.teamId === teamId)
-    .map((m) => {
-      const user = mockUsers.find((u) => u.id === m.userId);
-      return {
-        userId: m.userId,
-        name: user?.name ?? "Unknown",
-        email: user?.email ?? "",
-        role: m.role,
-        joinedAt: m.joinedAt,
-      };
-    })
-    .sort((a, b) => {
-      if (a.role === "owner") {
-        return -1;
-      }
-      if (b.role === "owner") {
-        return 1;
-      }
-      return a.joinedAt.localeCompare(b.joinedAt);
-    });
-}
-
-function toTeamSummary(
-  team: {
-    id: string;
-    slug: string;
-    name: string;
-    mission: string | null;
-    ownerUserId: string;
-    discordUrl?: string | null;
-    telegramUrl?: string | null;
-    slackUrl?: string | null;
-    githubOrgUrl?: string | null;
-    githubRepoUrl?: string | null;
-    createdAt: Date;
-  },
-  memberCount: number,
-  projectCount: number
-): TeamSummary {
-  return {
-    id: team.id,
-    slug: team.slug,
-    name: team.name,
-    mission: team.mission ?? undefined,
-    ownerUserId: team.ownerUserId,
-    memberCount,
-    projectCount,
-    discordUrl: team.discordUrl ?? undefined,
-    telegramUrl: team.telegramUrl ?? undefined,
-    slackUrl: team.slackUrl ?? undefined,
-    githubOrgUrl: team.githubOrgUrl ?? undefined,
-    githubRepoUrl: team.githubRepoUrl ?? undefined,
-    createdAt: team.createdAt.toISOString(),
-  };
-}
-
 export async function listTeams(params: { page: number; limit: number }): Promise<Paginated<TeamSummary>> {
-  if (useMockData) {
-    const sorted = [...mockTeams].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const pageResult = paginateArray(sorted, params.page, params.limit);
-    return {
-      items: pageResult.items.map((t) => ({
-        id: t.id,
-        slug: t.slug,
-        name: t.name,
-        mission: t.mission,
-        ownerUserId: t.ownerUserId,
-        memberCount: mockTeamMemberships.filter((m) => m.teamId === t.id).length,
-        projectCount: mockProjects.filter((p) => p.teamId === t.id).length,
-        discordUrl: t.discordUrl,
-        telegramUrl: t.telegramUrl,
-        slackUrl: t.slackUrl,
-        githubOrgUrl: t.githubOrgUrl,
-        githubRepoUrl: t.githubRepoUrl,
-        createdAt: t.createdAt,
-      })),
-      pagination: pageResult.pagination,
-    };
-  }
-
-  const prisma = await getPrisma();
-  const skip = (params.page - 1) * params.limit;
-  const [rows, total] = await Promise.all([
-    prisma.team.findMany({
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: params.limit,
-      include: { _count: { select: { memberships: true, projects: true } } },
-    }),
-    prisma.team.count(),
-  ]);
-
-  return {
-    items: rows.map((t) => toTeamSummary(t, t._count.memberships, t._count.projects)),
-    pagination: {
-      page: params.page,
-      limit: params.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / params.limit)),
-    },
-  };
-}
-
-function toTeamJoinRequestRowMock(r: {
-  id: string;
-  teamId: string;
-  applicantId: string;
-  message: string;
-  status: TeamJoinRequestStatus;
-  reviewedAt?: string;
-  createdAt: string;
-}): TeamJoinRequestRow {
-  const u = mockUsers.find((x) => x.id === r.applicantId);
-  return {
-    id: r.id,
-    teamId: r.teamId,
-    applicantId: r.applicantId,
-    applicantName: u?.name ?? "Unknown",
-    applicantEmail: u?.email ?? "",
-    message: r.message,
-    status: r.status,
-    reviewedAt: r.reviewedAt,
-    createdAt: r.createdAt,
-  };
+  return listTeamsFromDomain(params);
 }
 
 export async function getTeamBySlug(slug: string, viewerUserId?: string | null): Promise<TeamDetail | null> {
-  if (useMockData) {
-    const team = mockTeams.find((t) => t.slug === slug);
-    if (!team) {
-      return null;
-    }
-    const members = mockTeamMemberRows(team.id);
-    const teamProjects: TeamProjectCard[] = mockProjects
-      .filter((p) => p.teamId === team.id)
-      .map((p) => ({ slug: p.slug, title: p.title, oneLiner: p.oneLiner }));
-    const detail: TeamDetail = {
-      id: team.id,
-      slug: team.slug,
-      name: team.name,
-      mission: team.mission,
-      ownerUserId: team.ownerUserId,
-      memberCount: members.length,
-      projectCount: teamProjects.length,
-      discordUrl: team.discordUrl,
-      telegramUrl: team.telegramUrl,
-      slackUrl: team.slackUrl,
-      githubOrgUrl: team.githubOrgUrl,
-      githubRepoUrl: team.githubRepoUrl,
-      createdAt: team.createdAt,
-      members,
-      teamProjects,
-    };
-    if (viewerUserId) {
-      const isMember = members.some((m) => m.userId === viewerUserId);
-      if (!isMember) {
-        const pend = mockTeamJoinRequests.find(
-          (r) => r.teamId === team.id && r.applicantId === viewerUserId && r.status === "pending"
-        );
-        if (pend) {
-          detail.viewerPendingJoinRequest = true;
-        }
-      }
-      if (team.ownerUserId === viewerUserId) {
-        detail.pendingJoinRequests = mockTeamJoinRequests
-          .filter((r) => r.teamId === team.id && r.status === "pending")
-          .map(toTeamJoinRequestRowMock);
-      }
-    }
-    return detail;
-  }
-
-  const prisma = await getPrisma();
-  const team = await prisma.team.findUnique({
-    where: { slug },
-    include: {
-      _count: { select: { memberships: true, projects: true } },
-      memberships: {
-        include: { user: { select: { id: true, name: true, email: true } } },
-        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-      },
-      projects: {
-        select: { slug: true, title: true, oneLiner: true },
-        orderBy: { updatedAt: "desc" },
-        take: 50,
-      },
-    },
-  });
-
-  if (!team) {
-    return null;
-  }
-
-  const members = team.memberships
-    .map((m) => ({
-      userId: m.user.id,
-      name: m.user.name,
-      email: m.user.email,
-      role: (m.role === "owner" ? "owner" : "member") as "owner" | "member",
-      joinedAt: m.joinedAt.toISOString(),
-    }))
-    .sort((a, b) => {
-      if (a.role === "owner") {
-        return -1;
-      }
-      if (b.role === "owner") {
-        return 1;
-      }
-      return a.joinedAt.localeCompare(b.joinedAt);
-    });
-
-  const detail: TeamDetail = {
-    ...toTeamSummary(team, team._count.memberships, team._count.projects),
-    members,
-    teamProjects: team.projects.map((p) => ({
-      slug: p.slug,
-      title: p.title,
-      oneLiner: p.oneLiner,
-    })),
-  };
-
-  if (viewerUserId) {
-    const isMember = members.some((m) => m.userId === viewerUserId);
-    if (!isMember) {
-      const pend = await prisma.teamJoinRequest.findFirst({
-        where: { teamId: team.id, applicantId: viewerUserId, status: "pending" },
-      });
-      if (pend) {
-        detail.viewerPendingJoinRequest = true;
-      }
-    }
-    if (team.ownerUserId === viewerUserId) {
-      const rows = await prisma.teamJoinRequest.findMany({
-        where: { teamId: team.id, status: "pending" },
-        include: { applicant: { select: { id: true, name: true, email: true } } },
-        orderBy: { createdAt: "asc" },
-      });
-      detail.pendingJoinRequests = rows.map((r) => ({
-        id: r.id,
-        teamId: r.teamId,
-        applicantId: r.applicant.id,
-        applicantName: r.applicant.name,
-        applicantEmail: r.applicant.email,
-        message: r.message,
-        status: r.status as TeamJoinRequestStatus,
-        reviewedAt: r.reviewedAt?.toISOString(),
-        createdAt: r.createdAt.toISOString(),
-      }));
-    }
-  }
-
-  return detail;
+  return getTeamBySlugFromDomain(slug, viewerUserId);
 }
 
 export async function createTeam(input: {
@@ -6529,103 +5127,7 @@ export async function createTeam(input: {
   slug?: string;
   mission?: string;
 }): Promise<TeamDetail> {
-  const name = input.name.trim();
-  if (!name) {
-    throw new Error("INVALID_TEAM_NAME");
-  }
-  const baseSlug = slugifyTeamSlug(input.slug?.trim() || name);
-
-  if (useMockData) {
-    const ownerExists = mockUsers.some((u) => u.id === input.ownerUserId);
-    if (!ownerExists) {
-      throw new Error("USER_NOT_FOUND");
-    }
-    let n = 0;
-    let slug = buildTeamSlugCandidate(baseSlug, n);
-    while (mockTeams.some((t) => t.slug === slug)) {
-      n += 1;
-      slug = buildTeamSlugCandidate(baseSlug, n);
-    }
-    const id = `team_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    const createdAt = new Date().toISOString();
-    const team = {
-      id,
-      slug,
-      name,
-      mission: input.mission?.trim() || undefined,
-      ownerUserId: input.ownerUserId,
-      createdAt,
-    };
-    mockTeams.unshift(team);
-    mockTeamMemberships.unshift({
-      id: `tm_${id}_${input.ownerUserId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      teamId: id,
-      userId: input.ownerUserId,
-      role: "owner",
-      joinedAt: createdAt,
-    });
-    mockAuditLogs.unshift({
-      id: `log_team_${Date.now()}`,
-      actorId: input.ownerUserId,
-      action: "team_created",
-      entityType: "team",
-      entityId: id,
-      metadata: { slug, name },
-      createdAt,
-    });
-    const detail = await getTeamBySlug(slug);
-    if (!detail) {
-      throw new Error("TEAM_CREATE_FAILED");
-    }
-    return detail;
-  }
-
-  const prisma = await getPrisma();
-  const owner = await prisma.user.findUnique({ where: { id: input.ownerUserId }, select: { id: true } });
-  if (!owner) {
-    throw new Error("USER_NOT_FOUND");
-  }
-
-  let n = 0;
-  let slug = buildTeamSlugCandidate(baseSlug, n);
-  for (let i = 0; i < 20; i += 1) {
-    const exists = await prisma.team.findUnique({ where: { slug }, select: { id: true } });
-    if (!exists) {
-      break;
-    }
-    n += 1;
-    slug = buildTeamSlugCandidate(baseSlug, n);
-  }
-
-  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const team = await tx.team.create({
-      data: {
-        slug,
-        name,
-        mission: input.mission?.trim() || null,
-        ownerUserId: input.ownerUserId,
-        memberships: {
-          create: { userId: input.ownerUserId, role: "owner" },
-        },
-      },
-    });
-    await tx.auditLog.create({
-      data: {
-        actorId: input.ownerUserId,
-        action: "team_created",
-        entityType: "team",
-        entityId: team.id,
-        metadata: { slug: team.slug, name: team.name },
-      },
-    });
-    return team;
-  });
-
-  const detail = await getTeamBySlug(created.slug);
-  if (!detail) {
-    throw new Error("TEAM_CREATE_FAILED");
-  }
-  return detail;
+  return createTeamFromDomain(input);
 }
 
 // ─── T-1 + T-3: Update team links ────────────────────────────────────────────
@@ -8212,113 +6714,7 @@ export async function createProject(input: {
   demoUrl?: string;
   creatorUserId: string;
 }): Promise<Project> {
-  const slug = input.title
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-
-  if (useMockData) {
-    const creator = mockCreators.find((c) => c.userId === input.creatorUserId);
-    if (!creator) {
-      throw new RepositoryError(
-        "CREATOR_PROFILE_REQUIRED",
-        "A creator profile is required to submit projects",
-        403
-      );
-    }
-    const project: Project = {
-      id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      slug: `${slug}-${Date.now()}`,
-      creatorId: creator.id,
-      title: input.title,
-      oneLiner: input.oneLiner,
-      description: input.description,
-      techStack: input.techStack,
-      tags: input.tags,
-      status: input.status,
-      demoUrl: input.demoUrl,
-      screenshots: [],
-      openSource: false,
-      updatedAt: new Date().toISOString(),
-    };
-    mockProjects.unshift(project);
-    mockAuditLogs.unshift({
-      id: `log_proj_${Date.now()}`,
-      actorId: input.creatorUserId,
-      action: "project_created",
-      entityType: "project",
-      entityId: project.id,
-      metadata: { slug: project.slug, title: project.title },
-      createdAt: new Date().toISOString(),
-    });
-    void incrementContributionCreditField({
-      userId: input.creatorUserId,
-      useMockData: true,
-      deltaScore: contributionWeights.projectCreated,
-      field: "projectsCreated",
-    });
-    void dispatchWebhookEvent(input.creatorUserId, "project.created", {
-      projectId: project.id,
-      slug: project.slug,
-      title: project.title,
-    });
-    return project;
-  }
-
-  const prisma = await getPrisma();
-  const creator = await prisma.creatorProfile.findUnique({ where: { userId: input.creatorUserId } });
-  if (!creator) {
-    throw new RepositoryError(
-      "CREATOR_PROFILE_REQUIRED",
-      "A creator profile is required to submit projects",
-      403
-    );
-  }
-  try {
-    const project = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const p = await tx.project.create({
-        data: {
-          slug: `${slug}-${Date.now()}`,
-          creatorId: creator.id,
-          title: input.title,
-          oneLiner: input.oneLiner,
-          description: input.description,
-          techStack: input.techStack,
-          tags: input.tags,
-          status: input.status,
-          demoUrl: input.demoUrl ?? null,
-        },
-        include: { team: { select: { slug: true, name: true } } },
-      });
-      await tx.auditLog.create({
-        data: {
-          actorId: input.creatorUserId,
-          action: "project_created",
-          entityType: "project",
-          entityId: p.id,
-          metadata: { slug: p.slug, title: p.title },
-        },
-      });
-      return p;
-    });
-    void incrementContributionCreditField({
-      userId: input.creatorUserId,
-      useMockData: false,
-      deltaScore: contributionWeights.projectCreated,
-      field: "projectsCreated",
-    });
-    void dispatchWebhookEvent(input.creatorUserId, "project.created", {
-      projectId: project.id,
-      slug: project.slug,
-      title: project.title,
-    });
-    return toProjectDto({ ...project, team: project.team });
-  } catch (e) {
-    const mapped = mapPrismaToRepositoryError(e);
-    if (mapped) throw mapped;
-    throw e;
-  }
+  return createProjectFromDomain(input);
 }
 
 export async function updateProject(params: {
@@ -8332,53 +6728,7 @@ export async function updateProject(params: {
   status?: Project["status"];
   demoUrl?: string | null;
 }): Promise<Project> {
-  if (useMockData) {
-    const project = mockProjects.find((p) => p.slug === params.projectSlug);
-    if (!project) {
-      throw new Error("PROJECT_NOT_FOUND");
-    }
-    const creator = mockCreators.find((c) => c.id === project.creatorId);
-    if (!creator || creator.userId !== params.actorUserId) {
-      throw new Error("FORBIDDEN_NOT_CREATOR");
-    }
-    if (params.title !== undefined) project.title = params.title;
-    if (params.oneLiner !== undefined) project.oneLiner = params.oneLiner;
-    if (params.description !== undefined) project.description = params.description;
-    if (params.techStack !== undefined) project.techStack = params.techStack;
-    if (params.tags !== undefined) project.tags = params.tags;
-    if (params.status !== undefined) project.status = params.status;
-    if (params.demoUrl !== undefined) project.demoUrl = params.demoUrl ?? undefined;
-    project.updatedAt = new Date().toISOString();
-    return { ...project };
-  }
-
-  const prisma = await getPrisma();
-  const project = await prisma.project.findUnique({
-    where: { slug: params.projectSlug },
-    include: { creator: { select: { userId: true } } },
-  });
-  if (!project) {
-    throw new Error("PROJECT_NOT_FOUND");
-  }
-  if (project.creator.userId !== params.actorUserId) {
-    throw new Error("FORBIDDEN_NOT_CREATOR");
-  }
-
-  const data: Record<string, unknown> = {};
-  if (params.title !== undefined) data.title = params.title;
-  if (params.oneLiner !== undefined) data.oneLiner = params.oneLiner;
-  if (params.description !== undefined) data.description = params.description;
-  if (params.techStack !== undefined) data.techStack = params.techStack;
-  if (params.tags !== undefined) data.tags = params.tags;
-  if (params.status !== undefined) data.status = params.status;
-  if (params.demoUrl !== undefined) data.demoUrl = params.demoUrl;
-
-  const updated = await prisma.project.update({
-    where: { slug: params.projectSlug },
-    data,
-    include: { team: { select: { slug: true, name: true } } },
-  });
-  return toProjectDto({ ...updated, team: updated.team });
+  return updateProjectFromDomain(params);
 }
 
 export async function deleteProject(params: {
@@ -8386,53 +6736,7 @@ export async function deleteProject(params: {
   actorUserId: string;
   actorRole: Role;
 }): Promise<void> {
-  if (useMockData) {
-    const idx = mockProjects.findIndex((p) => p.slug === params.projectSlug);
-    if (idx === -1) {
-      throw new Error("PROJECT_NOT_FOUND");
-    }
-    const project = mockProjects[idx];
-    const creator = mockCreators.find((c) => c.id === project.creatorId);
-    if ((!creator || creator.userId !== params.actorUserId) && params.actorRole !== "admin") {
-      throw new Error("FORBIDDEN_NOT_CREATOR");
-    }
-    const pid = mockProjects[idx].id;
-    mockProjects.splice(idx, 1);
-    mockAuditLogs.unshift({
-      id: `log_proj_del_${Date.now()}`,
-      actorId: params.actorUserId,
-      action: "project_deleted",
-      entityType: "project",
-      entityId: pid,
-      metadata: { slug: params.projectSlug },
-      createdAt: new Date().toISOString(),
-    });
-    return;
-  }
-
-  const prisma = await getPrisma();
-  const project = await prisma.project.findUnique({
-    where: { slug: params.projectSlug },
-    include: { creator: { select: { userId: true } } },
-  });
-  if (!project) {
-    throw new Error("PROJECT_NOT_FOUND");
-  }
-  if (project.creator.userId !== params.actorUserId && params.actorRole !== "admin") {
-    throw new Error("FORBIDDEN_NOT_CREATOR");
-  }
-  await prisma.$transaction([
-    prisma.project.delete({ where: { slug: params.projectSlug } }),
-    prisma.auditLog.create({
-      data: {
-        actorId: params.actorUserId,
-        action: "project_deleted",
-        entityType: "project",
-        entityId: project.id,
-        metadata: { slug: params.projectSlug },
-      },
-    }),
-  ]);
+  return deleteProjectFromDomain(params);
 }
 
 // ─── P2: 精华机制 ───────────────────────────────────────

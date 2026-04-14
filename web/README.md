@@ -17,6 +17,8 @@ kept as a secondary observer layer instead of the primary product narrative.
 
 - `npm run check` runs lint, unit tests, OpenAPI validation, type generation,
   and production build
+- CI (`.github/workflows/p1-gate.yml`) now also runs `prisma db seed` +
+  `npm run smoke:live-data` as a required live-data gate
 - `docs/roadmap-current.md` is the primary execution roadmap
 - `docs/release-notes.md` tracks shipped milestones and change history
 - `docs/repository-cleanup-report.md` tracks retention / archive / delete
