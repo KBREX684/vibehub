@@ -96,7 +96,7 @@ export default async function DiscussionDetailPage({ params }: Props) {
           </h2>
           <span className="tag">{pagination.total}</span>
         </div>
-        <CommentThread comments={comments} />
+        <CommentThread comments={comments} postSlug={post.slug} />
       </section>
     </main>
   );

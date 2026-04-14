@@ -1,71 +1,54 @@
-import Link from "next/link";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listPostsForModeration } from "@/lib/repository";
 import { AdminReviewActions } from "@/components/admin-review-actions";
+import { FileText } from "lucide-react";
 
 export default async function AdminModerationPage() {
   const session = await getAdminSessionForPage();
-  if (!session) {
-    return (
-      <>
-        <main className="container section">
-          <article className="card">
-            <h1>Admin Access Required</h1>
-            <a href="/api/v1/auth/demo-login?role=admin&redirect=/admin/moderation" className="button ghost">
-              Demo login as admin
-            </a>
-          </article>
-        </main>
-      </>
-    );
-  }
+  if (!session) return null;
 
-  const { items } = await listPostsForModeration({
-    status: "all",
-    page: 1,
-    limit: 50,
-  });
+  const { items } = await listPostsForModeration({ status: "all", page: 1, limit: 50 });
+  const pending  = items.filter((p) => p.reviewStatus === "pending");
+  const reviewed = items.filter((p) => p.reviewStatus !== "pending");
 
   return (
-    <>
-      <main className="container section">
-        <h1>Moderation Queue</h1>
-        <p className="muted">
-          Review status transitions: <code>{"pending -> approved/rejected"}</code>
-        </p>
-        <p>
-          <Link href="/admin" className="inline-link">
-            Back to dashboard
-          </Link>
-        </p>
+    <main className="p-8 space-y-6">
+      <div className="flex items-center gap-3 border-b border-[var(--color-border)] pb-5">
+        <FileText className="w-5 h-5 text-[var(--color-warning)]" />
+        <div>
+          <h1 className="text-lg font-bold text-[var(--color-text-primary)]">Moderation Queue</h1>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            {pending.length} pending · {reviewed.length} reviewed
+          </p>
+        </div>
+      </div>
 
-        <div className="admin-list">
-          {items.map((post) => (
-            <article key={post.id} className="card">
-              <div className="meta-row">
-                <h3>{post.title}</h3>
-                <span className={`status status-${post.reviewStatus}`}>{post.reviewStatus}</span>
+      {pending.length === 0 ? (
+        <div className="card p-10 text-center">
+          <p className="text-sm text-[var(--color-text-secondary)]">Queue is empty.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {pending.map((post) => (
+            <div key={post.id} className="card p-5 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{post.title}</h3>
+                <span className="tag tag-yellow shrink-0 capitalize">{post.reviewStatus}</span>
               </div>
-              <p>{post.body}</p>
+              <p className="text-xs text-[var(--color-text-secondary)] line-clamp-3">{post.body}</p>
               <div className="tag-row">
-                {post.tags.map((tag) => (
-                  <span key={`${post.id}-${tag}`} className="tag">
-                    #{tag}
+                {post.tags.map((t) => (
+                  <span key={t} className="tag">
+                    #{t}
                   </span>
                 ))}
               </div>
-              <p className="muted">Author: {post.authorId}</p>
-              {post.reviewStatus === "pending" ? (
-                <AdminReviewActions postId={post.id} />
-              ) : (
-                <p className="muted">
-                  Reviewed by {post.reviewedBy ?? "unknown"} at {post.reviewedAt ?? "N/A"}
-                </p>
-              )}
-            </article>
+              <p className="text-xs text-[var(--color-text-muted)]">Author: {post.authorId}</p>
+              <AdminReviewActions postId={post.id} />
+            </div>
           ))}
         </div>
-      </main>
-    </>
+      )}
+    </main>
   );
 }

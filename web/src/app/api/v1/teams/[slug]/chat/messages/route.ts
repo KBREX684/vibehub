@@ -51,8 +51,11 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     // Verify the viewer is a member (chat is members-only)
-    const viewerId = gate.user?.userId;
-    if (viewerId) {
+    // WS server internal GET (for DB history) is exempted via token
+    const serverToken = process.env.WS_SERVER_TOKEN ?? "";
+    const isWsServer  = serverToken && req.headers.get("x-ws-server-token") === serverToken;
+    const viewerId    = gate.user?.userId ?? req.headers.get("x-ws-server-userId");
+    if (!isWsServer && viewerId) {
       const isMember = team.members.some((m) => m.userId === viewerId);
       if (!isMember) {
         return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
@@ -85,22 +88,43 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 // ─── POST ────────────────────────────────────────────────────────────────────
 
+/** Resolve acting userId: either from session cookie or WS-server internal header */
+async function resolveActorUserId(req: NextRequest): Promise<string | null> {
+  const session = await getSessionUserFromCookie();
+  if (session) return session.userId;
+
+  // Internal WS-server trust header (only when token matches)
+  const serverToken = process.env.WS_SERVER_TOKEN ?? "";
+  if (serverToken) {
+    const reqToken  = req.headers.get("x-ws-server-token");
+    const reqUserId = req.headers.get("x-ws-server-userId");
+    if (reqToken === serverToken && reqUserId) return reqUserId;
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest, { params }: Params) {
   const { slug } = await params;
 
-  const session = await getSessionUserFromCookie();
-  if (!session) {
+  const actorId = await resolveActorUserId(req);
+  if (!actorId) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
   }
 
+  // Synthesise a minimal session for downstream checks
+  const session = await getSessionUserFromCookie();
+  const userId  = actorId;
+
   try {
-    const team = await getTeamBySlug(slug, session.userId);
+    const team = await getTeamBySlug(slug, userId);
     if (!team) {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }
 
-    const isMember = team.members.some((m) => m.userId === session.userId);
-    if (!isMember) {
+    // Member check — skip for WS server internal calls (userId may not be in session)
+    const isMember = team.members.some((m) => m.userId === userId);
+    const isWsServer = !session && !!req.headers.get("x-ws-server-token");
+    if (!isMember && !isWsServer) {
       return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
     }
 
@@ -109,7 +133,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const msg = await createTeamChatMessage({
       teamSlug: slug,
-      authorId: session.userId,
+      authorId: userId,
       body,
     });
 

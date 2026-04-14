@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// ─── Admin route guard ────────────────────────────────────────────────────────
+// The admin layout does a server-side session check, but we also block at
+// the edge so un-authenticated requests never reach the RSC renderer.
+// We cannot decode the JWT here (crypto not available in Edge), so we simply
+// redirect to /login if the session cookie is absent.
+function isAdminPath(pathname: string): boolean {
+  return pathname.startsWith("/admin");
+}
+
+function hasSessionCookie(request: NextRequest): boolean {
+  return Boolean(request.cookies.get("vibehub_session")?.value);
+}
+
 const WRITE_WINDOW_MS = 60_000;
 const MAX_WRITES_PER_MINUTE = 30;
 
@@ -34,6 +47,15 @@ function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfter
 
 export function middleware(request: NextRequest) {
   const { method, nextUrl } = request;
+
+  // Admin page protection — redirect unauthenticated to /login
+  if (isAdminPath(nextUrl.pathname) && !hasSessionCookie(request)) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("required", "admin");
+    loginUrl.searchParams.set("redirect", nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   const isApi = nextUrl.pathname.startsWith("/api/");
   const isWriteMethod = method === "POST" || method === "PATCH" || method === "PUT" || method === "DELETE";
 
@@ -58,5 +80,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/api/:path*", "/admin/:path*", "/admin"],
 };

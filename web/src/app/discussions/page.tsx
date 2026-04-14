@@ -68,13 +68,13 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             ))}
           </div>
 
-          <a
-            href="/api/v1/auth/github?redirect=/discussions"
+          <Link
+            href="/discussions/new"
             className="btn btn-primary text-sm px-4 py-1.5 flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             New Discussion
-          </a>
+          </Link>
         </div>
       </section>
 
