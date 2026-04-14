@@ -6,6 +6,8 @@ import { createApiKeyForUser, listApiKeysForUser } from "@/lib/repository";
 const createSchema = z.object({
   label: z.string().min(1).max(80),
   scopes: z.array(z.string().min(1)).optional(),
+  /** Optional key lifetime in days (1–3650) */
+  expiresInDays: z.number().int().min(1).max(3650).optional(),
 });
 
 export async function GET() {
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
       userId: session.userId,
       label: parsed.label,
       scopes: parsed.scopes,
+      expiresInDays: parsed.expiresInDays,
     });
     return apiSuccess({ key: created }, 201);
   } catch (error) {
@@ -63,6 +66,9 @@ export async function POST(request: Request) {
         { code: "API_KEY_SCOPE_READ_PUBLIC_REQUIRED", message: "scopes must include read:public" },
         400
       );
+    }
+    if (msg === "INVALID_API_KEY_EXPIRES_IN_DAYS") {
+      return apiError({ code: "INVALID_API_KEY_EXPIRES_IN_DAYS", message: "expiresInDays must be 1–3650" }, 400);
     }
     return apiError(
       {

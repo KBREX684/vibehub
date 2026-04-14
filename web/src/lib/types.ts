@@ -249,6 +249,7 @@ export interface AuditLog {
   action: string;
   entityType:
     | "post"
+    | "project"
     | "moderation_case"
     | "report_ticket"
     | "collaboration_intent"
@@ -275,6 +276,8 @@ export interface ApiKeySummary {
   createdAt: string;
   lastUsedAt?: string;
   revokedAt?: string;
+  /** ISO — key invalid after this instant if set */
+  expiresAt?: string;
 }
 
 /** Returned only once from create. */
@@ -669,6 +672,20 @@ export interface SearchResult {
   title: string;
   excerpt: string;
   tags?: string[];
+}
+
+/** P3-3: user webhook endpoint (secret never returned after create). */
+export interface WebhookEndpointSummary {
+  id: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebhookEndpointCreated extends WebhookEndpointSummary {
+  secret: string;
 }
 
 // ─── Team Chat ────────────────────────────────────────────────────────────────

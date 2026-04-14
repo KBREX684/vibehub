@@ -24,7 +24,8 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const viewerId = gate.user?.userId;
+  const post = await getPostBySlug(slug, { viewerUserId: viewerId });
   if (!post) return apiError({ code: "POST_NOT_FOUND", message: `Post "${slug}" not found` }, 404);
 
   const url = new URL(request.url);

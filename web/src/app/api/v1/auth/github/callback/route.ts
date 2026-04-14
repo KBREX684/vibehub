@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { AuthConstants, encodeSession } from "@/lib/auth";
-import { findOrCreateGitHubUser } from "@/lib/repository";
+import { findOrCreateGitHubUser, getUserTier } from "@/lib/repository";
 
 interface GitHubTokenResponse {
   access_token: string;
@@ -109,10 +109,16 @@ export async function GET(request: Request) {
       avatarUrl: ghUser.avatar_url,
     });
 
+    const subscriptionTier = await getUserTier(user.id);
+
     const session = encodeSession({
       userId: user.id,
       role: user.role,
       name: user.name,
+      enterpriseStatus: user.enterpriseStatus ?? "none",
+      enterpriseOrganization: user.enterpriseOrganization,
+      enterpriseWebsite: user.enterpriseWebsite,
+      subscriptionTier,
     });
 
     const response = NextResponse.redirect(new URL(redirectPath, baseUrl));

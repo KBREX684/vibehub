@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createPost, listPosts } from "@/lib/repository";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import type { PostSortOrder } from "@/lib/types";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
@@ -17,6 +18,9 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
+    const cursor = url.searchParams.get("cursor")?.trim() || undefined;
+    const mine = url.searchParams.get("mine") === "1" || url.searchParams.get("mine") === "true";
+    const sessionUser = await getSessionUserFromCookie();
     const query = url.searchParams.get("query") ?? undefined;
     const tag = url.searchParams.get("tag") ?? undefined;
     const rawSort = url.searchParams.get("sort");
@@ -31,9 +35,19 @@ export async function GET(request: Request) {
       sort = rawSort as PostSortOrder;
     }
 
-    const result = await listPosts({ query, tag, sort, page, limit });
+    const result = await listPosts({
+      query,
+      tag,
+      sort,
+      page,
+      limit,
+      cursor,
+      includeAuthorId: mine && sessionUser ? sessionUser.userId : undefined,
+    });
     return apiSuccess(result);
   } catch (error) {
+    const mapped = apiErrorFromRepositoryCatch(error);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "POSTS_LIST_FAILED",
@@ -67,6 +81,8 @@ export async function POST(request: Request) {
 
     return apiSuccess(post, 201);
   } catch (error) {
+    const mapped = apiErrorFromRepositoryCatch(error);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "POST_CREATE_FAILED",

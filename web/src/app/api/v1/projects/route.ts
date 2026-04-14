@@ -1,7 +1,9 @@
 import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
-import { listProjects, createProject } from "@/lib/repository";
+import { listProjects, createProject, getUserTier, countUserProjects } from "@/lib/repository";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { checkQuota } from "@/lib/quota";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import type { ProjectStatus } from "@/lib/types";
@@ -41,6 +43,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
+    const cursor = url.searchParams.get("cursor")?.trim() || undefined;
     const query = url.searchParams.get("query")?.trim() || undefined;
     const tag = url.searchParams.get("tag")?.trim() || undefined;
     const tech = url.searchParams.get("tech")?.trim() || undefined;
@@ -58,9 +61,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await listProjects({ query, tag, tech, status, team, creatorId, page, limit });
+    const result = await listProjects({ query, tag, tech, status, team, creatorId, page, limit, cursor });
     return apiSuccess(result);
   } catch (error) {
+    const mapped = apiErrorFromRepositoryCatch(error);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "PROJECTS_LIST_FAILED",
@@ -81,6 +86,28 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const parsed = createProjectSchema.parse(json);
+
+    const [tier, projectCount] = await Promise.all([
+      getUserTier(session.userId),
+      countUserProjects(session.userId),
+    ]);
+    const quota = checkQuota(tier, "projects", projectCount);
+    if (!quota.allowed) {
+      return apiError(
+        {
+          code: "QUOTA_EXCEEDED",
+          message: "You have reached the maximum number of projects for your plan.",
+          details: {
+            resource: "projects",
+            tier: quota.tier,
+            limit: quota.limit,
+            upgradeUrl: "/settings/subscription",
+          },
+        },
+        402
+      );
+    }
+
     const project = await createProject({
       ...parsed,
       creatorUserId: session.userId,
@@ -93,13 +120,9 @@ export async function POST(request: Request) {
         400
       );
     }
+    const mapped = apiErrorFromRepositoryCatch(error);
+    if (mapped) return mapped;
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "CREATOR_PROFILE_REQUIRED") {
-      return apiError(
-        { code: "CREATOR_PROFILE_REQUIRED", message: "A creator profile is required to submit projects" },
-        403
-      );
-    }
     return apiError(
       { code: "PROJECT_CREATE_FAILED", message: "Failed to create project", details: msg },
       500
