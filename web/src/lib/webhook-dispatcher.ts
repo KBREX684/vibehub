@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import type { WebhookEventName } from "@/lib/webhook-events";
+import { isMockDataEnabled } from "@/lib/runtime-mode";
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 400;
@@ -31,7 +32,7 @@ export async function dispatchWebhookEvent(
     void postWithRetries(legacy, legacySecret, body, idem).catch(() => {});
   }
 
-  if (process.env.USE_MOCK_DATA !== "false") {
+  if (isMockDataEnabled()) {
     return;
   }
 

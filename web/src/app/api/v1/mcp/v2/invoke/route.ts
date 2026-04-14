@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
-import { hasApprovedEnterpriseAccess } from "@/lib/enterprise-access";
+import { hasEnterpriseWorkspaceAccess } from "@/lib/enterprise-access";
 import { clientIp } from "@/lib/api-key-rate-limit";
 import { assertContentSafeText } from "@/lib/content-safety";
 import { checkMcpUserToolRateLimit } from "@/lib/mcp-user-write-rate-limit";
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
   if (
     tool === "workspace_summary" &&
-    !hasApprovedEnterpriseAccess({ role: session.role, enterpriseStatus: session.enterpriseStatus })
+    !hasEnterpriseWorkspaceAccess(session.enterpriseStatus)
   ) {
     httpStatus = 403;
     errorCode = "ENTERPRISE_ACCESS_DENIED";
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     return apiError(
       {
         code: "ENTERPRISE_ACCESS_DENIED",
-        message: "Enterprise verification must be approved for this tool",
+        message: "Enterprise workspace access must be approved for this tool",
       },
       403
     );

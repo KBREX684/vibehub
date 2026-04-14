@@ -11,9 +11,9 @@
  *   # or add to Claude Desktop / Cursor config — see examples/mcp-config.json
  *
  * Environment:
- *   USE_MOCK_DATA=true   Use in-memory mock data (default)
- *   DATABASE_URL=...     Use real PostgreSQL
- *   SESSION_SECRET=...   Required when USE_MOCK_DATA=false
+ *   DATABASE_URL=...     Use real PostgreSQL (default path)
+ *   USE_MOCK_DATA=true   Opt into in-memory mock data for demos only
+ *   SESSION_SECRET=...   Required when using signed web sessions
  */
 
 import * as readline from "readline";

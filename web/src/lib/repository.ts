@@ -16,6 +16,7 @@ import {
   enterpriseRowForProfileDto,
   sessionEnterpriseFromProfile,
 } from "@/lib/enterprise-profile-db";
+import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { creatorFtsWhereClause, postFtsWhereClause, projectFtsWhereClause } from "@/lib/fts-sql";
 import {
   mockApiKeys,
@@ -114,7 +115,7 @@ import type {
 } from "@/lib/types";
 import { checkTeamMemberLimit } from "@/lib/subscription";
 
-const useMockData = process.env.USE_MOCK_DATA !== "false";
+const useMockData = isMockDataEnabled();
 type DemoRole = Extract<Role, "admin" | "user">;
 const TEAM_SLUG_MAX_LENGTH = 48;
 
@@ -2720,7 +2721,7 @@ export async function upsertUserSubscription(params: {
     stripePriceId: params.stripePriceId ?? null,
     currentPeriodEnd: params.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
-    enterpriseStatus: (params.enterpriseStatus ?? "none") as "none" | "pending" | "verified" | "rejected",
+    enterpriseStatus: (params.enterpriseStatus ?? "none") as "none" | "pending" | "approved" | "rejected",
     enterpriseRequestedAt: params.enterpriseRequestedAt ?? null,
     enterpriseReviewedAt: params.enterpriseReviewedAt ?? null,
     enterpriseReviewedBy: params.enterpriseReviewedBy ?? null,

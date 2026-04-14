@@ -144,16 +144,17 @@ test.describe("Core acceptance flows", () => {
     await expect(page.getByText(/admin dashboard/i)).toHaveCount(0);
   });
 
-  test("enterprise gating for user and access for admin", async ({ page }) => {
+  test("enterprise workspace stays gated for both regular users and admins without approval", async ({ page }) => {
     await setSession(page, "user");
     await page.goto("/workspace/enterprise");
     await expect(page).toHaveURL(/\/workspace\/enterprise/);
-    await expect(page.getByText("Enterprise Intelligence Workspace")).toBeVisible();
-    await expect(page.getByText(/Apply for Enterprise Access/i)).toBeVisible();
+    await expect(page.getByText("Radar workspace access")).toBeVisible();
+    await expect(page.getByText(/Request access/i)).toBeVisible();
 
     await setSession(page, "admin");
     await page.goto("/workspace/enterprise");
-    await expect(page.getByRole("heading", { name: "Enterprise Workspace" })).toBeVisible();
+    await expect(page.getByText("Radar workspace access")).toBeVisible();
+    await expect(page.getByText(/Admins use the governance console/i)).toBeVisible();
   });
 
   test("discussion comment CRUD: add reply edit delete", async ({ page }) => {

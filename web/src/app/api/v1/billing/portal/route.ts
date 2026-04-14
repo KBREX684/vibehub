@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { isMockDataEnabled } from "@/lib/runtime-mode";
 
-const useMockData = process.env.USE_MOCK_DATA !== "false";
+const useMockData = isMockDataEnabled();
 
 /** M-2: Create a Stripe Customer Portal session for managing/canceling subscriptions. */
 export async function POST(request: NextRequest) {

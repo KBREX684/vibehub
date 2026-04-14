@@ -9,10 +9,6 @@ export default async function EnterpriseVerifyPage() {
   const session = await getSessionUserFromCookie();
   if (!session) redirect("/login?redirect=/enterprise/verify&intent=enterprise");
 
-  if (session.role === "admin") {
-    redirect("/workspace/enterprise");
-  }
-
   const profile = await getEnterpriseProfileByUserId(session.userId);
   const status = profile?.status ?? "none";
 
@@ -27,17 +23,17 @@ export default async function EnterpriseVerifyPage() {
           <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-enterprise-subtle)] flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-6 h-6 text-[var(--color-enterprise)]" />
           </div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Apply for Enterprise Access</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Apply for observer workspace access</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-2">
-            Submit your organization profile to unlock enterprise intelligence workspace access.
+            Submit your organization profile to unlock the optional observer workspace for market scans and funnel summaries.
           </p>
         </div>
 
         <div className="space-y-3">
           {[
-            { step: 1, icon: Shield, title: "Submit application", desc: "Fill in your organization details" },
-            { step: 2, icon: Clock, title: "Manual review", desc: "Platform admins verify your request" },
-            { step: 3, icon: CheckCircle, title: "Access granted", desc: "Enterprise workspace unlocked" },
+            { step: 1, icon: Shield, title: "Submit application", desc: "Share the organization details behind your observer account" },
+            { step: 2, icon: Clock, title: "Manual review", desc: "Platform admins verify the request without changing platform admin rights" },
+            { step: 3, icon: CheckCircle, title: "Access granted", desc: "Observer workspace is unlocked for this account" },
           ].map(({ step, icon: Icon, title, desc }) => (
             <div
               key={step}
@@ -67,8 +63,8 @@ export default async function EnterpriseVerifyPage() {
       </div>
 
       <div className="text-center">
-        <Link href="/pricing" className="text-xs text-[var(--color-primary-hover)] hover:underline">
-          View enterprise pricing <ArrowRight className="w-3 h-3 inline-block align-[-1px]" />
+        <Link href="/developers" className="text-xs text-[var(--color-primary-hover)] hover:underline">
+          View developer tools <ArrowRight className="w-3 h-3 inline-block align-[-1px]" />
         </Link>
       </div>
     </main>

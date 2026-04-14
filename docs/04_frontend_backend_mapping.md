@@ -94,11 +94,11 @@
 
 ---
 
-## F. Enterprise Workspace
+## F. Enterprise Radar Workspace
 
 | Page/Feature | API Route | Repo Function | Schema | Status | Test | Fake-Risk | OpenAPI |
 |---|---|---|---|---|---|---|---|
-| `/workspace/enterprise` | `GET /api/v1/me/enterprise/workspace` + `GET /api/v1/me/enterprise/verification` | `getEnterpriseWorkspaceSummary` + `getEnterpriseProfileByUserId` | `EnterpriseProfile` | ✅ **Status-gated P0** | ✅ E2E (gate) | No | ✅ |
+| `/workspace/enterprise` | `GET /api/v1/me/enterprise/workspace` + `GET /api/v1/me/enterprise/verification` | `getEnterpriseWorkspaceSummary` + `getEnterpriseProfileByUserId` | `EnterpriseProfile` | ✅ **Secondary workspace; approved-status gated** | ✅ E2E (gate) | No | ✅ |
 | Project radar | `GET /api/v1/enterprise/project-radar` | `getProjectRadar` | ProjectRadarEntry | ✅ | ✅ | No | ✅ |
 | Talent radar | `GET /api/v1/enterprise/talent-radar` | `getTalentRadarLegacy` | TalentRadarEntry | ✅ | ✅ | No | ✅ |
 | `/enterprise/verify` | `GET/POST /api/v1/me/enterprise/verification` | `getEnterpriseProfileByUserId` + `submitEnterpriseVerification` | `EnterpriseProfile` | ✅ **Closed-loop P0** | ❌ | No | ✅ |
@@ -130,4 +130,4 @@
 | `list_challenges` | `POST /api/v1/mcp/v2/invoke` | ✅ | No | ✅ |
 | `get_talent_radar` | `POST /api/v1/mcp/v2/invoke` | ✅ | No | ✅ |
 
-**MCP is read-only by design.** Write tools are a P2 roadmap item, not yet implemented.
+**MCP v2 now includes a small audited write surface.** Read tools remain the default integration path; write tools are limited to guarded actions such as `create_post`, `create_project`, `submit_collaboration_intent`, `request_team_join`, and `create_team_task`.

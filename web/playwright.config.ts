@@ -21,5 +21,9 @@ export default defineConfig({
     url: `${baseURL}/api/v1/health`,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
+    env: {
+      ...process.env,
+      USE_MOCK_DATA: process.env.USE_MOCK_DATA ?? "true",
+    },
   },
 });

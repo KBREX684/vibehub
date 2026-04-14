@@ -28,7 +28,8 @@ export default function DevelopersPage() {
           Use the same public surfaces as any logged-in user: OpenAPI, read-only MCP tools, embeddable cards,
           and lightweight radar APIs with a normal API key that includes{" "}
           <code className="text-xs bg-[var(--color-bg-elevated)] px-1.5 py-0.5 rounded">read:public</code>.
-          No enterprise verification is required for these paths.
+          No enterprise verification is required for these paths; the enterprise workspace is a secondary,
+          opt-in observer surface rather than the default integration entry point.
         </p>
       </header>
 

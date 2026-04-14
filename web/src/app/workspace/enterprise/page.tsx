@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { hasEnterpriseWorkspaceAccess } from "@/lib/enterprise-access";
 import {
   getEnterpriseWorkspaceSummary,
   getLatestEnterpriseVerificationApplication,
@@ -22,10 +23,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-function hasEnterpriseAccess(session: { role: string; enterpriseStatus?: string }): boolean {
-  return session.role === "admin" || session.enterpriseStatus === "approved";
-}
-
 export default async function EnterpriseWorkspacePage() {
   const session = await getSessionUserFromCookie();
 
@@ -35,18 +32,18 @@ export default async function EnterpriseWorkspacePage() {
   }
 
   // Logged in but no enterprise access → show gating / upsell page
-  if (!hasEnterpriseAccess(session)) {
+  if (!hasEnterpriseWorkspaceAccess(session.enterpriseStatus)) {
     const latestApplication = await getLatestEnterpriseVerificationApplication(session.userId);
     const gateMessage =
       latestApplication?.status === "pending"
-        ? "Your enterprise verification is in review. Core enterprise data zones remain locked until approval."
+        ? "Your access request is in review. This secondary radar workspace stays locked until approval."
         : latestApplication?.status === "rejected"
-          ? "Your previous verification request was rejected. You can submit an updated application."
-          : "Enterprise access requires verified status or admin privileges.";
+          ? "Your previous request was rejected. Update the organization details and resubmit if this workspace is still needed."
+          : "Radar workspace access is optional and requires approved enterprise status.";
     const gateCtaHref =
       latestApplication?.status === "pending" ? "/enterprise/verify" : "/enterprise/verify";
     const gateCtaLabel =
-      latestApplication?.status === "pending" ? "View Verification Status" : "Apply for Enterprise Access";
+      latestApplication?.status === "pending" ? "View request status" : "Request access";
 
     return (
       <main className="container max-w-2xl pb-24 pt-12 space-y-8">
@@ -58,20 +55,21 @@ export default async function EnterpriseWorkspacePage() {
               <Shield className="w-7 h-7 text-[var(--color-enterprise)]" />
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-pill)] bg-[var(--color-enterprise-subtle)] border border-[rgba(16,185,129,0.2)] text-xs font-semibold text-[var(--color-enterprise)] mb-4">
-              VibeHub Enterprise
+              Secondary workspace
             </div>
             <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-3">
-              Enterprise Intelligence Workspace
+              Radar workspace access
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)] max-w-lg mx-auto mb-4">
-              Aggregate team management, collaboration funnels, project radars, and talent discovery — for organizations building at scale.
+              A secondary observer layer for project radar, talent discovery, and collaboration summaries.
+              VibeHub&apos;s main loop still lives in community, projects, teams, and developer tools.
             </p>
             <p className="text-xs text-[var(--color-warning)] max-w-lg mx-auto mb-8">
               {gateMessage}
             </p>
 
             <p className="text-xs text-[var(--color-text-secondary)] max-w-lg mx-auto mb-6">
-              For read-only radar, talent lists, and ecosystem metrics you only need a normal account and an API key with{" "}
+              For public radar APIs, talent lists, and ecosystem metrics you only need a normal account and an API key with{" "}
               <code className="text-[0.65rem] bg-[var(--color-bg-elevated)] px-1 rounded">read:public</code> — see the{" "}
               <Link href="/developers" className="text-[var(--color-primary-hover)] hover:underline">
                 Developers hub
@@ -81,10 +79,10 @@ export default async function EnterpriseWorkspacePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 text-left">
               {[
-                { icon: TrendingUp, title: "Project Radar", desc: "Track trending projects and collaboration velocity" },
-                { icon: Users, title: "Talent Radar", desc: "Discover active contributors across the ecosystem" },
-                { icon: Activity, title: "Collaboration Funnel", desc: "Visualize intent → approval → membership conversion" },
-                { icon: FolderGit2, title: "Team Analytics", desc: "Cross-team task, milestone, and join-request metrics" },
+                { icon: TrendingUp, title: "Project radar", desc: "Track trending projects and collaboration velocity" },
+                { icon: Users, title: "Talent radar", desc: "Discover active contributors across the ecosystem" },
+                { icon: Activity, title: "Intent funnel", desc: "Visualize intent → approval → membership conversion" },
+                { icon: FolderGit2, title: "Team summary", desc: "Review team-level tasks, milestones, and join queues" },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex items-start gap-3 p-4 bg-[var(--color-bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--color-border)]">
                   <Icon className="w-4 h-4 text-[var(--color-enterprise)] mt-0.5 shrink-0" />
@@ -102,10 +100,10 @@ export default async function EnterpriseWorkspacePage() {
                 {gateCtaLabel}
               </Link>
               <Link
-                href="/pricing"
+                href="/developers"
                 className="btn btn-ghost text-sm px-5 py-2.5"
               >
-                View Pricing
+                Developer hub
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -120,11 +118,15 @@ export default async function EnterpriseWorkspacePage() {
               Your account: <span className="capitalize">{session.role}</span>
             </p>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Enterprise access requires approved enterprise verification or admin privileges.
+              Approved enterprise status is required for this secondary workspace.
+              {session.role === "admin" ? " Admins use the governance console for review and moderation." : ""}
             </p>
           </div>
-          <Link href="/pricing" className="btn btn-secondary text-xs px-3 py-1.5 shrink-0 ml-auto">
-            Upgrade
+          <Link
+            href={session.role === "admin" ? "/admin/enterprise/verifications" : "/enterprise/verify"}
+            className="btn btn-secondary text-xs px-3 py-1.5 shrink-0 ml-auto"
+          >
+            {session.role === "admin" ? "Open admin review" : "Request access"}
           </Link>
         </div>
       </main>
@@ -152,7 +154,7 @@ export default async function EnterpriseWorkspacePage() {
           <div>
             <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Enterprise Workspace</h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              Welcome, {session.name}
+              Secondary observer workspace for {session.name}
             </p>
           </div>
         </div>
@@ -165,6 +167,9 @@ export default async function EnterpriseWorkspacePage() {
             <Zap className="w-3.5 h-3.5" />
             MCP
           </a>
+          <Link href="/developers" className="btn btn-ghost text-sm px-3 py-1.5">
+            Developers
+          </Link>
         </div>
       </section>
 
@@ -288,7 +293,7 @@ export default async function EnterpriseWorkspacePage() {
       {/* Access badge */}
       <div className="flex items-center gap-2">
         <CheckCircle className="w-3.5 h-3.5 text-[var(--color-enterprise)]" />
-        <span className="text-xs text-[var(--color-text-muted)]">Enterprise access active</span>
+        <span className="text-xs text-[var(--color-text-muted)]">Approved secondary workspace access active</span>
       </div>
     </main>
   );

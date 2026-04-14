@@ -22,7 +22,7 @@ function isEnterpriseVerificationStatus(v: unknown): v is EnterpriseVerification
 }
 
 function isSubscriptionTier(v: unknown): v is SubscriptionTier {
-  return v === "free" || v === "pro" || v === "team_pro";
+  return v === "free" || v === "pro";
 }
 
 function getSessionSecret(): string | null {
