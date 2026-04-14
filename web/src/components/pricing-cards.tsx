@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { TIER_LIMITS, TIER_PRICING } from "@/lib/subscription";
 import type { SubscriptionTier } from "@/lib/subscription";
-import { CheckCircle2, Sparkles, X } from "lucide-react";
 
 const TIERS: SubscriptionTier[] = ["free", "pro"];
 
@@ -52,55 +50,47 @@ export function PricingCards() {
   return (
     <div className="max-w-4xl mx-auto mb-16">
       {/* Tier cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-        {TIERS.map((tier, index) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] mb-12">
+        {TIERS.map((tier) => {
           const pricing = TIER_PRICING[tier];
           const isPro = tier === "pro";
 
           return (
-            <motion.div
+            <div
               key={tier}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30, delay: index * 0.1 }}
-              className={`relative flex flex-col h-full rounded-[32px] p-8 md:p-10 transition-all duration-300 ${
+              className={`flex flex-col p-8 md:p-10 transition-colors ${
                 isPro
-                  ? "bg-[rgba(255,255,255,0.95)] shadow-[0_24px_64px_-12px_rgba(0,0,0,0.08)] border border-[#81e6d9]/40 z-10"
-                  : "bg-[rgba(255,255,255,0.75)] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60"
-              } backdrop-blur-[24px] saturate-[150%]`}
-              whileHover={{ y: -4, scale: 1.01 }}
+                  ? "bg-[var(--color-primary)] text-[var(--color-text-inverse)]"
+                  : "bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)]"
+              }`}
             >
-              {isPro && (
-                <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#81e6d9] rounded-full blur-[64px] opacity-30 pointer-events-none" />
-              )}
-
-              <div className="relative z-10 flex-grow flex flex-col">
+              <div className="flex-grow flex flex-col">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">
+                  <h2 className="text-2xl font-semibold tracking-tight m-0">
                     {pricing.label}
                   </h2>
                   {isPro && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-[980px] bg-[#81e6d9]/20 text-[#0d9488] text-[11px] font-bold uppercase tracking-wider">
-                      <Sparkles className="w-3 h-3" /> Recommended
+                    <span className="inline-flex items-center px-2 py-1 border border-[var(--color-text-inverse)] text-[10px] font-mono font-bold uppercase tracking-wider">
+                      Recommended
                     </span>
                   )}
                 </div>
 
                 <div className="mb-6">
                   {pricing.priceMonthly === 0 ? (
-                    <div className="text-5xl font-semibold tracking-[-0.03em] text-[var(--color-text-primary)]">
+                    <div className="text-5xl font-mono font-bold tracking-tight">
                       Free
                     </div>
                   ) : (
-                    <div className="flex items-baseline text-[var(--color-text-primary)]">
-                      <span className="text-2xl font-medium mr-1">$</span>
-                      <span className="text-5xl font-semibold tracking-[-0.03em]">{pricing.priceMonthly}</span>
-                      <span className="text-[var(--color-text-secondary)] ml-2">/ month</span>
+                    <div className="flex items-baseline">
+                      <span className="text-2xl font-mono font-medium mr-1">$</span>
+                      <span className="text-5xl font-mono font-bold tracking-tight">{pricing.priceMonthly}</span>
+                      <span className="text-sm font-mono ml-2 opacity-70">/ mo</span>
                     </div>
                   )}
                 </div>
 
-                <p className="text-sm text-[var(--color-text-secondary)] mb-8">
+                <p className={`text-sm mb-8 ${isPro ? "opacity-80" : "text-[var(--color-text-secondary)]"}`}>
                   {isPro
                     ? "More space, more exposure, and full developer tooling for serious builders."
                     : "Full community access. Everything you need to start building and sharing."}
@@ -109,58 +99,62 @@ export function PricingCards() {
                 {tier === "free" ? (
                   <Link
                     href="/api/v1/auth/github?redirect=/"
-                    className="w-full py-4 rounded-[16px] bg-black/5 text-[var(--color-text-primary)] font-medium text-center hover:bg-black/10 transition-colors mt-auto"
+                    className="w-full py-3 border border-[var(--color-border-strong)] text-center font-mono text-sm uppercase tracking-wider hover:bg-[var(--color-bg-surface-hover)] transition-colors mt-auto"
                   >
                     Get Started Free
                   </Link>
                 ) : (
-                  <motion.button
-                    className="w-full py-4 rounded-[16px] font-medium text-center transition-colors shadow-sm bg-[var(--color-accent-apple)] text-white hover:bg-[#0062cc] shadow-[0_8px_24px_rgba(0,122,255,0.25)] mt-auto"
+                  <button
+                    className="w-full py-3 bg-[var(--color-text-inverse)] text-[var(--color-primary)] border border-[var(--color-text-inverse)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity mt-auto"
                     onClick={() => void startCheckout(tier)}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   >
                     Upgrade to Pro
-                  </motion.button>
+                  </button>
                 )}
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>
 
       {/* Feature comparison table */}
-      <div className="rounded-[24px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] border border-white/60 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
-        <div className="px-8 py-6 border-b border-black/5">
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">Feature Comparison</h3>
+      <div className="border border-[var(--color-border)] bg-[var(--color-bg-canvas)] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[var(--color-border)]">
+          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">Feature Comparison</h3>
         </div>
-        <div className="divide-y divide-black/5">
-          {/* Header */}
-          <div className="grid grid-cols-[1fr_120px_120px] px-8 py-3 text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-            <span>Feature</span>
-            <span className="text-center">Free</span>
-            <span className="text-center">Pro</span>
-          </div>
+        
+        {/* Desktop Table Header */}
+        <div className="hidden md:grid grid-cols-[1fr_120px_120px] px-6 py-3 border-b border-[var(--color-border)] text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-surface)]">
+          <span>Feature</span>
+          <span className="text-center">Free</span>
+          <span className="text-center">Pro</span>
+        </div>
+
+        <div className="divide-y divide-[var(--color-border)]">
           {FEATURE_ROWS.map((row) => (
-            <div key={row.label} className="grid grid-cols-[1fr_120px_120px] px-8 py-3 text-sm">
-              <span className="text-[var(--color-text-secondary)]">{row.label}</span>
-              <span className="text-center">
-                {row.free === true ? (
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-text-tertiary)] mx-auto" />
-                ) : row.free === false ? (
-                  <X className="w-4 h-4 text-[var(--color-text-muted)]/40 mx-auto" />
-                ) : (
-                  <span className="text-[var(--color-text-secondary)] font-medium">{row.free}</span>
-                )}
+            <div key={row.label} className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px] px-6 py-3 text-sm">
+              <span className="text-[var(--color-text-secondary)] mb-2 md:mb-0">{row.label}</span>
+              
+              {/* Mobile Labels */}
+              <div className="flex md:hidden justify-between text-xs font-mono mb-1">
+                <span className="text-[var(--color-text-muted)]">Free</span>
+                <span className="text-[var(--color-text-primary)]">
+                  {row.free === true ? "+" : row.free === false ? "-" : row.free}
+                </span>
+              </div>
+              <div className="flex md:hidden justify-between text-xs font-mono">
+                <span className="text-[var(--color-text-muted)]">Pro</span>
+                <span className="text-[var(--color-text-primary)] font-bold">
+                  {row.pro === true ? "+" : row.pro === false ? "-" : row.pro}
+                </span>
+              </div>
+
+              {/* Desktop Values */}
+              <span className="hidden md:block text-center font-mono text-[var(--color-text-secondary)]">
+                {row.free === true ? "+" : row.free === false ? "-" : row.free}
               </span>
-              <span className="text-center">
-                {row.pro === true ? (
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-accent-apple)] mx-auto" />
-                ) : row.pro === false ? (
-                  <X className="w-4 h-4 text-[var(--color-text-muted)]/40 mx-auto" />
-                ) : (
-                  <span className="text-[var(--color-text-primary)] font-semibold">{row.pro}</span>
-                )}
+              <span className="hidden md:block text-center font-mono text-[var(--color-text-primary)] font-bold">
+                {row.pro === true ? "+" : row.pro === false ? "-" : row.pro}
               </span>
             </div>
           ))}
