@@ -435,7 +435,8 @@ export async function checkQuota(
 
 ## 五、P3 优先级：平台能力扩张
 
-> P3 = 有产品价值，但不阻塞当前版本公测，按产品节奏排期。
+> P3 = 有产品价值，但不阻塞当前版本公测，按产品节奏排期。  
+> **2026-04-14 更新：** P3-1～P3-5 已在分支落地：`mcp-v2` 增加 `create_post` / `create_project` / `submit_collaboration_intent` / `request_team_join` / `create_team_task`（scope + 配额 + 幂等 mock）；`GET /api/v1/search` 支持 `type`+`page`+`limit`+`total`；`WebhookEndpoint` + `POST/PATCH/DELETE /api/v1/me/webhooks` + `dispatchWebhookEvent`（含 `NOTIFICATION_WEBHOOK_URL` 与重试）；`EnterpriseMemberInvite` 预留表；Stripe `subscription.updated` 与 `subscription.past_due` 用户 webhook。
 
 ### P3-1：MCP Write Tools 实施（前提：P2-2 全部完成）
 
@@ -520,8 +521,8 @@ model WebhookEndpoint {
 **当前状态：** `UserSubscription` 模型有 `stripeSubscriptionId` 字段，但没有 Stripe Webhook 处理器（`subscription.updated`、`invoice.payment_failed`、`customer.subscription.deleted`）。
 
 **需要实现：**
-- `POST /api/v1/webhooks/stripe`（内部端点，Stripe 签名校验）
-- 处理 `subscription.updated` → 更新 `UserSubscription.status`
+- `POST /api/v1/billing/webhook`（Stripe 签名校验；与部分文档中的 `webhooks/stripe` 路径等价）
+- 处理 `subscription.updated` → 更新 `UserSubscription.status`（与 `customer.subscription.updated` 同逻辑）
 - 处理 `invoice.payment_failed` → 设为 `past_due` + 发通知
 - 处理 `customer.subscription.deleted` → 降级为 free tier
 

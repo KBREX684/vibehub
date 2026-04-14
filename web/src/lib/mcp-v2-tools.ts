@@ -10,9 +10,27 @@ export const MCP_V2_TOOL_NAMES = [
   "get_post_detail",
   "list_challenges",
   "get_talent_radar",
+  /** P3-1: write tools (Bearer scope + optional idempotencyKey on invoke body) */
+  "create_post",
+  "create_project",
+  "submit_collaboration_intent",
+  "request_team_join",
+  "create_team_task",
 ] as const;
 
 export type McpV2ToolName = (typeof MCP_V2_TOOL_NAMES)[number];
+
+export const MCP_V2_WRITE_TOOLS: McpV2ToolName[] = [
+  "create_post",
+  "create_project",
+  "submit_collaboration_intent",
+  "request_team_join",
+  "create_team_task",
+];
+
+export function isMcpWriteTool(tool: McpV2ToolName): boolean {
+  return MCP_V2_WRITE_TOOLS.includes(tool);
+}
 
 export const MCP_V2_TOOL_SCOPES: Record<McpV2ToolName, ApiKeyScope> = {
   search_projects: "read:projects:list",
@@ -24,6 +42,11 @@ export const MCP_V2_TOOL_SCOPES: Record<McpV2ToolName, ApiKeyScope> = {
   get_post_detail: "read:posts:detail",
   list_challenges: "read:public",
   get_talent_radar: "read:enterprise:workspace",
+  create_post: "write:posts",
+  create_project: "write:projects",
+  submit_collaboration_intent: "write:intents",
+  request_team_join: "write:teams",
+  create_team_task: "write:team:tasks",
 };
 
 export const MCP_V2_TOOL_DEFINITIONS: Array<{
@@ -132,6 +155,83 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
         collaborationPreference: { type: "string", enum: ["open", "invite_only", "closed"] },
         page: { type: "number", default: 1 },
         limit: { type: "number", default: 20 },
+      },
+    },
+  },
+  {
+    name: "create_post",
+    description: "Create a discussion post (pending moderation). Requires write:posts.",
+    requiredScope: MCP_V2_TOOL_SCOPES.create_post,
+    inputSchema: {
+      type: "object",
+      required: ["title", "body"],
+      properties: {
+        title: { type: "string", minLength: 3, maxLength: 120 },
+        body: { type: "string", minLength: 10 },
+        tags: { type: "array", items: { type: "string" } },
+      },
+    },
+  },
+  {
+    name: "create_project",
+    description: "Create a project for the authenticated user (creator profile required). Requires write:projects.",
+    requiredScope: MCP_V2_TOOL_SCOPES.create_project,
+    inputSchema: {
+      type: "object",
+      required: ["title", "oneLiner", "description"],
+      properties: {
+        title: { type: "string", minLength: 3, maxLength: 120 },
+        oneLiner: { type: "string", minLength: 5, maxLength: 200 },
+        description: { type: "string", minLength: 20 },
+        techStack: { type: "array", items: { type: "string" } },
+        tags: { type: "array", items: { type: "string" } },
+        status: { type: "string", enum: ["idea", "building", "launched", "paused"] },
+        demoUrl: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "submit_collaboration_intent",
+    description: "Submit a collaboration intent on a project (by project slug). Requires write:intents.",
+    requiredScope: MCP_V2_TOOL_SCOPES.submit_collaboration_intent,
+    inputSchema: {
+      type: "object",
+      required: ["projectSlug", "intentType", "message"],
+      properties: {
+        projectSlug: { type: "string" },
+        intentType: { type: "string", enum: ["join", "recruit"] },
+        message: { type: "string", minLength: 1 },
+        contact: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "request_team_join",
+    description: "Request to join a team by slug. Requires write:teams.",
+    requiredScope: MCP_V2_TOOL_SCOPES.request_team_join,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug"],
+      properties: {
+        teamSlug: { type: "string" },
+        message: { type: "string", maxLength: 500 },
+      },
+    },
+  },
+  {
+    name: "create_team_task",
+    description: "Create a task in a team you belong to. Requires write:team:tasks.",
+    requiredScope: MCP_V2_TOOL_SCOPES.create_team_task,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug", "title"],
+      properties: {
+        teamSlug: { type: "string" },
+        title: { type: "string", minLength: 1, maxLength: 200 },
+        description: { type: "string", maxLength: 2000 },
+        status: { type: "string", enum: ["todo", "doing", "done"] },
+        assigneeUserId: { type: "string" },
+        milestoneId: { type: "string" },
       },
     },
   },

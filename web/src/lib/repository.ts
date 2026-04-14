@@ -1,8 +1,11 @@
 import { assertContentSafeText, assertUrlCountAtMost, escapeHtmlAngleBrackets } from "@/lib/content-safety";
 import { incrementContributionCreditField, contributionWeights } from "@/lib/contribution-credit-increment";
 import { dispatchNotificationPush } from "@/lib/push-dispatcher";
+import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
+import { WEBHOOK_EVENT_NAMES, isWebhookEventName } from "@/lib/webhook-events";
 import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
+import { randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
@@ -43,6 +46,7 @@ import {
   mockTeamChatMessages,
   mockEnterpriseProfiles,
   mockEnterpriseVerificationApplications,
+  mockWebhookEndpoints,
   MockEnterpriseProfile,
 } from "@/lib/data/mock-data";
 import type {
@@ -68,6 +72,8 @@ import type {
   ReviewStatus,
   Role,
   SearchResult,
+  WebhookEndpointSummary,
+  WebhookEndpointCreated,
   SessionUser,
   TeamDetail,
   TeamJoinRequestRow,
@@ -1014,6 +1020,12 @@ async function notifyUser(params: {
         metadata: params.metadata,
       });
     }
+    void dispatchWebhookEvent(params.userId, "in_app_notification", {
+      kind: params.kind,
+      title: params.title,
+      body: params.body,
+      metadata: params.metadata ?? null,
+    });
     return;
   }
   await createInAppNotificationDb(params);
@@ -1029,6 +1041,12 @@ async function notifyUser(params: {
       metadata: params.metadata,
     });
   }
+  void dispatchWebhookEvent(params.userId, "in_app_notification", {
+    kind: params.kind,
+    title: params.title,
+    body: params.body,
+    metadata: params.metadata ?? null,
+  });
 }
 
 /** Best-effort MCP v2 invoke audit (no-op in mock mode). */
@@ -1065,12 +1083,17 @@ export async function logMcpInvoke(params: {
 }
 
 /** P2-2: returns false if this idempotency key was already used for the user+tool. */
+const mcpIdempotencyMockKeys = new Set<string>();
+
 export async function tryRegisterMcpInvokeIdempotency(params: {
   userId: string;
   tool: string;
   key: string;
 }): Promise<boolean> {
   if (useMockData) {
+    const k = `${params.userId}::${params.tool}::${params.key}`;
+    if (mcpIdempotencyMockKeys.has(k)) return false;
+    mcpIdempotencyMockKeys.add(k);
     return true;
   }
   try {
@@ -3052,6 +3075,7 @@ export async function createPost(input: {
       metadata: { slug: post.slug, title: post.title },
       createdAt: new Date().toISOString(),
     });
+    void dispatchWebhookEvent(input.authorId, "post.created", { postId: post.id, slug: post.slug, title: post.title });
     return post;
   }
 
@@ -3091,6 +3115,11 @@ export async function createPost(input: {
     return post;
   });
 
+  void dispatchWebhookEvent(result.authorId, "post.created", {
+    postId: result.id,
+    slug: result.slug,
+    title: result.title,
+  });
   return toPostDto(result);
 }
 
@@ -3712,20 +3741,115 @@ export async function unifiedSearch(query: string, type?: "post" | "project" | "
   }
 
   if (!type || type === "creator") {
-    const creators = await prisma.creatorProfile.findMany({
-      where: {
-        OR: [
-          { slug: { contains: q, mode: "insensitive" } },
-          { bio: { contains: q, mode: "insensitive" } },
-          { headline: { contains: q, mode: "insensitive" } },
-        ],
-      },
-      take: 10,
-    });
-    creators.forEach((c) => results.push({ type: "creator", id: c.id, slug: c.slug, title: c.slug, excerpt: c.bio.slice(0, 120) }));
+    const whereSql = creatorFtsWhereClause(q);
+    const creators = await prisma.$queryRaw<Array<{ id: string; slug: string; headline: string; bio: string }>>`
+      SELECT id, slug, headline, bio
+      FROM "CreatorProfile"
+      WHERE ${whereSql}
+      ORDER BY ts_rank_cd("searchVector", plainto_tsquery('english', ${q})) DESC
+      LIMIT 10
+    `;
+    creators.forEach((c) =>
+      results.push({ type: "creator", id: c.id, slug: c.slug, title: c.slug, excerpt: (c.headline || c.bio).slice(0, 120) })
+    );
   }
 
   return results;
+}
+
+/** P3-2: unified search with total + pagination (type recommended when page > 1). */
+export async function unifiedSearchPaged(params: {
+  query: string;
+  type?: "post" | "project" | "creator";
+  page: number;
+  limit: number;
+}): Promise<{ results: SearchResult[]; total: number; page: number; limit: number }> {
+  const q = params.query.trim();
+  const page = Math.max(1, params.page);
+  const limit = Math.min(Math.max(params.limit, 1), 50);
+  const offset = (page - 1) * limit;
+  if (!q) return { results: [], total: 0, page, limit };
+
+  if (useMockData) {
+    const all = await unifiedSearch(q, params.type);
+    return { results: all.slice(offset, offset + limit), total: all.length, page, limit };
+  }
+
+  const prisma = await getPrisma();
+
+  if (!params.type) {
+    const all = await unifiedSearch(q, undefined);
+    return { results: all.slice(offset, offset + limit), total: all.length, page, limit };
+  }
+
+  if (params.type === "post") {
+    const whereSql = postFtsWhereClause(q, {});
+    const [cRow] = await prisma.$queryRaw<[{ c: bigint }]>(Prisma.sql`SELECT COUNT(*)::bigint AS c FROM "Post" p WHERE ${whereSql}`);
+    const total = Number(cRow?.c ?? 0n);
+    const rows = await prisma.$queryRaw<Array<{ id: string; slug: string; title: string; body: string; tags: string[] }>>`
+      SELECT id, slug, title, body, tags FROM "Post" p
+      WHERE ${whereSql}
+      ORDER BY ts_rank_cd(p."searchVector", plainto_tsquery('english', ${q})) DESC
+      OFFSET ${offset} LIMIT ${limit}
+    `;
+    return {
+      results: rows.map((p) => ({ type: "post" as const, id: p.id, slug: p.slug, title: p.title, excerpt: p.body.slice(0, 120), tags: p.tags })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  if (params.type === "project") {
+    const whereSql = projectFtsWhereClause(q, {});
+    const [cRow] = await prisma.$queryRaw<[{ c: bigint }]>(
+      Prisma.sql`SELECT COUNT(*)::bigint AS c FROM "Project" p WHERE ${whereSql}`
+    );
+    const total = Number(cRow?.c ?? 0n);
+    const rows = await prisma.$queryRaw<Array<{ id: string; slug: string; title: string; oneLiner: string; tags: string[] }>>`
+      SELECT id, slug, title, "oneLiner", tags FROM "Project" p
+      WHERE ${whereSql}
+      ORDER BY ts_rank_cd(p."searchVector", plainto_tsquery('english', ${q})) DESC
+      OFFSET ${offset} LIMIT ${limit}
+    `;
+    return {
+      results: rows.map((p) => ({
+        type: "project" as const,
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.oneLiner,
+        tags: p.tags,
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  const whereSql = creatorFtsWhereClause(q);
+  const [cRow] = await prisma.$queryRaw<[{ c: bigint }]>(
+    Prisma.sql`SELECT COUNT(*)::bigint AS c FROM "CreatorProfile" cp WHERE ${whereSql}`
+  );
+  const total = Number(cRow?.c ?? 0n);
+  const rows = await prisma.$queryRaw<Array<{ id: string; slug: string; headline: string; bio: string }>>`
+    SELECT id, slug, headline, bio FROM "CreatorProfile" cp
+    WHERE ${whereSql}
+    ORDER BY ts_rank_cd(cp."searchVector", plainto_tsquery('english', ${q})) DESC
+    OFFSET ${offset} LIMIT ${limit}
+  `;
+  return {
+    results: rows.map((c) => ({
+      type: "creator" as const,
+      id: c.id,
+      slug: c.slug,
+      title: c.slug,
+      excerpt: (c.headline || c.bio).slice(0, 120),
+    })),
+    total,
+    page,
+    limit,
+  };
 }
 
 export async function listProjectCollaborationIntents(params: {
@@ -6313,13 +6437,18 @@ export async function requestTeamJoin(params: {
         body: `${userNameById(params.userId)} 申请加入团队「${team.name}」（/${team.slug}）。`,
         metadata: { teamSlug: team.slug, requestId: prev.id },
       });
-      void incrementContributionCreditField({
-        userId: params.userId,
-        useMockData: true,
-        deltaScore: contributionWeights.joinRequest,
-        field: "joinRequestsMade",
-      });
-      return toTeamJoinRequestRowMock(mockTeamJoinRequests[rejectedIdx]);
+    void incrementContributionCreditField({
+      userId: params.userId,
+      useMockData: true,
+      deltaScore: contributionWeights.joinRequest,
+      field: "joinRequestsMade",
+    });
+    void dispatchWebhookEvent(params.userId, "team.join_requested", {
+      teamSlug: team.slug,
+      teamName: team.name,
+      requestId: prev.id,
+    });
+    return toTeamJoinRequestRowMock(mockTeamJoinRequests[rejectedIdx]);
     }
     const row = {
       id: `tjr_${team.id}_${params.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -6351,6 +6480,11 @@ export async function requestTeamJoin(params: {
       useMockData: true,
       deltaScore: contributionWeights.joinRequest,
       field: "joinRequestsMade",
+    });
+    void dispatchWebhookEvent(params.userId, "team.join_requested", {
+      teamSlug: team.slug,
+      teamName: team.name,
+      requestId: row.id,
     });
     return toTeamJoinRequestRowMock(row);
   }
@@ -6441,6 +6575,11 @@ export async function requestTeamJoin(params: {
       deltaScore: contributionWeights.joinRequest,
       field: "joinRequestsMade",
     });
+    void dispatchWebhookEvent(params.userId, "team.join_requested", {
+      teamSlug: meta?.slug ?? params.teamSlug,
+      teamName: meta?.name ?? "",
+      requestId: created.id,
+    });
     return {
       id: created.id,
       teamId: created.teamId,
@@ -6521,6 +6660,11 @@ export async function reviewTeamJoinRequest(params: {
       title: "已加入团队",
       body: `你已通过审批，加入团队「${team.name}」（/${team.slug}）。`,
       metadata: { teamSlug: team.slug, requestId: req.id },
+    });
+    void dispatchWebhookEvent(req.applicantId, "team.join_approved", {
+      teamSlug: team.slug,
+      teamName: team.name,
+      requestId: req.id,
     });
     return toTeamJoinRequestRowMock(mockTeamJoinRequests[idx]);
   }
@@ -6615,6 +6759,11 @@ export async function reviewTeamJoinRequest(params: {
     title: "已加入团队",
     body: `你已通过审批，加入团队「${team.name}」（/${team.slug}）。`,
     metadata: { teamSlug: team.slug, requestId: updated.id },
+  });
+  void dispatchWebhookEvent(updated.applicantId, "team.join_approved", {
+    teamSlug: team.slug,
+    teamName: team.name,
+    requestId: updated.id,
   });
 
   return {
@@ -6934,6 +7083,158 @@ export async function createApiKeyForUser(params: {
   });
 
   return { ...toApiKeySummary(created), secret: fullToken };
+}
+
+export async function listUserWebhooks(userId: string): Promise<WebhookEndpointSummary[]> {
+  if (useMockData) {
+    return mockWebhookEndpoints
+      .filter((w) => w.userId === userId)
+      .map((w) => ({
+        id: w.id,
+        url: w.url,
+        events: [...w.events],
+        active: w.active,
+        createdAt: w.createdAt,
+        updatedAt: w.updatedAt,
+      }));
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.webhookEndpoint.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
+  return rows.map((w) => ({
+    id: w.id,
+    url: w.url,
+    events: [...w.events],
+    active: w.active,
+    createdAt: w.createdAt.toISOString(),
+    updatedAt: w.updatedAt.toISOString(),
+  }));
+}
+
+export async function createUserWebhook(params: {
+  userId: string;
+  url: string;
+  events: string[];
+}): Promise<WebhookEndpointCreated> {
+  const url = params.url.trim();
+  if (!/^https:\/\//i.test(url)) throw new Error("INVALID_WEBHOOK_URL");
+  const rawEvents = params.events.map((e) => e.trim()).filter(Boolean);
+  for (const e of rawEvents) {
+    if (!isWebhookEventName(e)) throw new Error("INVALID_WEBHOOK_EVENT");
+  }
+  const events = rawEvents.length > 0 ? rawEvents : [...WEBHOOK_EVENT_NAMES];
+  const secret = randomBytes(32).toString("hex");
+  const now = new Date().toISOString();
+  if (useMockData) {
+    if (!mockUsers.some((u) => u.id === params.userId)) throw new Error("USER_NOT_FOUND");
+    const id = `wh_${params.userId}_${Date.now()}_${randomBytes(4).toString("hex")}`;
+    mockWebhookEndpoints.unshift({
+      id,
+      userId: params.userId,
+      url,
+      secret,
+      events,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const w = mockWebhookEndpoints[0]!;
+    return {
+      id: w.id,
+      url: w.url,
+      events: [...w.events],
+      active: w.active,
+      createdAt: w.createdAt,
+      updatedAt: w.updatedAt,
+      secret,
+    };
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.webhookEndpoint.create({
+    data: { userId: params.userId, url, secret, events, active: true },
+  });
+  return {
+    id: row.id,
+    url: row.url,
+    events: [...row.events],
+    active: row.active,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    secret,
+  };
+}
+
+export async function updateUserWebhook(params: {
+  userId: string;
+  webhookId: string;
+  url?: string;
+  events?: string[];
+  active?: boolean;
+}): Promise<WebhookEndpointSummary> {
+  if (params.url !== undefined && !/^https:\/\//i.test(params.url.trim())) {
+    throw new Error("INVALID_WEBHOOK_URL");
+  }
+  if (params.events) {
+    for (const e of params.events) {
+      if (!isWebhookEventName(e.trim())) throw new Error("INVALID_WEBHOOK_EVENT");
+    }
+  }
+  const eventsUpdate =
+    params.events === undefined ? undefined : params.events.length > 0 ? params.events.map((e) => e.trim()).filter(Boolean) : [...WEBHOOK_EVENT_NAMES];
+  if (useMockData) {
+    const idx = mockWebhookEndpoints.findIndex((w) => w.id === params.webhookId && w.userId === params.userId);
+    if (idx < 0) throw new Error("WEBHOOK_NOT_FOUND");
+    const w = mockWebhookEndpoints[idx]!;
+    if (params.url !== undefined) w.url = params.url.trim();
+    if (params.events !== undefined) {
+      w.events = eventsUpdate!.length ? eventsUpdate! : [...WEBHOOK_EVENT_NAMES];
+    }
+    if (params.active !== undefined) w.active = params.active;
+    w.updatedAt = new Date().toISOString();
+    return {
+      id: w.id,
+      url: w.url,
+      events: [...w.events],
+      active: w.active,
+      createdAt: w.createdAt,
+      updatedAt: w.updatedAt,
+    };
+  }
+  const prisma = await getPrisma();
+  const existing = await prisma.webhookEndpoint.findFirst({
+    where: { id: params.webhookId, userId: params.userId },
+  });
+  if (!existing) throw new Error("WEBHOOK_NOT_FOUND");
+  const data: Prisma.WebhookEndpointUpdateInput = {};
+  if (params.url !== undefined) data.url = params.url.trim();
+  if (params.events !== undefined) data.events = eventsUpdate!;
+  if (params.active !== undefined) data.active = params.active;
+  const row = await prisma.webhookEndpoint.update({
+    where: { id: existing.id },
+    data,
+  });
+  return {
+    id: row.id,
+    url: row.url,
+    events: [...row.events],
+    active: row.active,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export async function deleteUserWebhook(params: { userId: string; webhookId: string }): Promise<void> {
+  if (useMockData) {
+    const idx = mockWebhookEndpoints.findIndex((w) => w.id === params.webhookId && w.userId === params.userId);
+    if (idx < 0) throw new Error("WEBHOOK_NOT_FOUND");
+    mockWebhookEndpoints.splice(idx, 1);
+    return;
+  }
+  const prisma = await getPrisma();
+  const existing = await prisma.webhookEndpoint.findFirst({
+    where: { id: params.webhookId, userId: params.userId },
+  });
+  if (!existing) throw new Error("WEBHOOK_NOT_FOUND");
+  await prisma.webhookEndpoint.delete({ where: { id: existing.id } });
 }
 
 export async function revokeApiKeyForUser(params: { userId: string; keyId: string }): Promise<void> {
@@ -7327,6 +7628,11 @@ export async function createProject(input: {
       deltaScore: contributionWeights.projectCreated,
       field: "projectsCreated",
     });
+    void dispatchWebhookEvent(input.creatorUserId, "project.created", {
+      projectId: project.id,
+      slug: project.slug,
+      title: project.title,
+    });
     return project;
   }
 
@@ -7366,6 +7672,11 @@ export async function createProject(input: {
     useMockData: false,
     deltaScore: contributionWeights.projectCreated,
     field: "projectsCreated",
+  });
+  void dispatchWebhookEvent(input.creatorUserId, "project.created", {
+    projectId: project.id,
+    slug: project.slug,
+    title: project.title,
   });
   return toProjectDto({ ...project, team: project.team });
 }

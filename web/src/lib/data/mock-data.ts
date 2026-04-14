@@ -452,6 +452,18 @@ export const mockPostBookmarks: Array<{ id: string; userId: string; postId: stri
 export const mockProjectBookmarks: Array<{ id: string; userId: string; projectId: string; createdAt: string }> = [];
 export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [];
 
+/** P3-3: in-memory webhook endpoints (USE_MOCK_DATA=true) */
+export const mockWebhookEndpoints: Array<{
+  id: string;
+  userId: string;
+  url: string;
+  secret: string;
+  events: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
+
 // P2: Challenges
 export const mockChallenges: Challenge[] = [
   {

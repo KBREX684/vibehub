@@ -674,6 +674,20 @@ export interface SearchResult {
   tags?: string[];
 }
 
+/** P3-3: user webhook endpoint (secret never returned after create). */
+export interface WebhookEndpointSummary {
+  id: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebhookEndpointCreated extends WebhookEndpointSummary {
+  secret: string;
+}
+
 // ─── Team Chat ────────────────────────────────────────────────────────────────
 
 /** Persisted team chat message (REST history, not live WS). */
