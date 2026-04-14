@@ -127,14 +127,31 @@ For each interactive element, confirm:
 
 ---
 
-## 8. Known Remaining P1 Items (Not Fake — Not Yet Built)
+## 8. Known Remaining Items (Post v2 Polish)
 
 | Feature | Status | Risk |
 |---|---|---|
 | `/projects/new` frontend form | P1 | Low — API exists |
-| `/projects/[slug]/edit` | P1 | Low — PATCH API needs adding |
-| `DELETE /api/v1/projects/[slug]` | P1 | Low — repo needs adding |
+| `/projects/[slug]/edit` | P1 | Low — PATCH API exists |
 | `/teams/[slug]/settings` | P1 | Low — `updateTeamLinks` exists |
-| Enterprise verification workflow depth (advanced reviewer UX) | P1 | Medium — base submit/review/status is live; richer reviewer tooling pending |
-| Multi-team chat workspace page | P1 | Medium |
-| Playwright E2E full suite | P1 | High priority |
+| Enterprise admin reviewer page (UI for review queue) | P2 | Low — REST endpoint live |
+| Multi-team chat workspace page | P2 | Medium |
+| MCP write tools (post/project/task create) | P3 | Must await risk controls |
+
+## 9. V2 Polish Pass — Completed
+
+| Item | Delivered |
+|---|---|
+| WebSocket auth token (server-signed) | ✅ |
+| Chat 30-day retention uniformity | ✅ |
+| OpenAPI/MCP alignment | ✅ |
+| Enterprise verification full closed-loop | ✅ |
+| Subscription page unified styling | ✅ |
+| Admin collaboration queue unified styling | ✅ |
+| Playwright 17-test E2E suite | ✅ |
+| Project detail page: creator card, related projects, roadmap, MCP callout | ✅ |
+| Discussion detail: sidebar, related posts, social actions, tags | ✅ |
+| Home page: flywheel CTA section | ✅ |
+| Contribution credit panel (API-connected, live score) | ✅ |
+| Settings hub: credit panel + quick links | ✅ |
+| Admin enterprise verification review endpoint | ✅ |

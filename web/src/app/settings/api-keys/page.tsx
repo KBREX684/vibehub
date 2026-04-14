@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ApiKeysPanel } from "@/components/api-keys-panel";
+import { ContributionCreditPanel } from "@/components/contribution-credit-panel";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { Key, ArrowLeft, ArrowRight } from "lucide-react";
 
@@ -59,7 +60,36 @@ export default async function ApiKeysSettingsPage() {
         </div>
       </div>
 
-      <ApiKeysPanel currentUserId={session.userId} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ApiKeysPanel currentUserId={session.userId} />
+        </div>
+        <div className="lg:col-span-1 space-y-5">
+          <ContributionCreditPanel userId={session.userId} />
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Quick Links</h3>
+            <div className="space-y-2">
+              {[
+                { href: "/api/v1/openapi.json", label: "OpenAPI Spec", external: true },
+                { href: "/api/v1/mcp/v2/manifest", label: "MCP v2 Manifest", external: true },
+                { href: "/workspace/enterprise", label: "Enterprise Workspace" },
+                { href: "/leaderboards", label: "Contribution Leaderboard" },
+              ].map(({ href, label, external }) => (
+                <a
+                  key={href}
+                  href={href}
+                  target={external ? "_blank" : undefined}
+                  rel={external ? "noreferrer" : undefined}
+                  className="flex items-center justify-between p-2.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors group"
+                >
+                  <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">{label}</span>
+                  <ArrowRight className="w-3 h-3 text-[var(--color-text-muted)]" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
