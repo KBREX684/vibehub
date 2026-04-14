@@ -59,9 +59,9 @@ describe("Team Chat Repository (mock mode)", () => {
     expect(msgs.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("listTeamChatMessages: excludes messages older than 7 days", async () => {
+  it("listTeamChatMessages: excludes messages older than 30 days (updated default)", async () => {
     const old = new Date();
-    old.setUTCDate(old.getUTCDate() - 8);
+    old.setUTCDate(old.getUTCDate() - 31); // > 30 days
     mockTeamChatMessages.push({
       id: "tcm_old",
       teamId: "team1",
@@ -73,9 +73,9 @@ describe("Team Chat Repository (mock mode)", () => {
     expect(msgs.find((m) => m.id === "tcm_old")).toBeUndefined();
   });
 
-  it("pruneOldTeamChatMessages: removes messages older than 7 days", async () => {
+  it("pruneOldTeamChatMessages: removes messages older than 30 days (updated default)", async () => {
     const old = new Date();
-    old.setUTCDate(old.getUTCDate() - 8);
+    old.setUTCDate(old.getUTCDate() - 31); // > 30 days old
     mockTeamChatMessages.push({
       id: "tcm_prune",
       teamId: "team1",
@@ -91,12 +91,13 @@ describe("Team Chat Repository (mock mode)", () => {
     expect(mockTeamChatMessages.find((m) => m.id === "tcm_prune")).toBeUndefined();
   });
 
-  it("chatRetentionCutoff: is approximately 7 days ago", () => {
+  it("chatRetentionCutoff: is approximately 30 days ago (updated default)", () => {
     const cutoff = chatRetentionCutoff();
     const nowMs = Date.now();
     const diff = nowMs - cutoff.getTime();
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    expect(diff).toBeGreaterThanOrEqual(sevenDaysMs - 1000);
-    expect(diff).toBeLessThanOrEqual(sevenDaysMs + 1000);
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    // Allow ±5 s tolerance
+    expect(diff).toBeGreaterThanOrEqual(thirtyDaysMs - 5000);
+    expect(diff).toBeLessThanOrEqual(thirtyDaysMs + 5000);
   });
 });

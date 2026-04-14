@@ -2662,6 +2662,64 @@ export async function createPost(input: {
   return toPostDto(result);
 }
 
+// ─── Post update / delete ─────────────────────────────────────────────────────
+
+export async function updatePost(params: {
+  slug: string;
+  actorUserId: string;
+  actorRole: Role;
+  title?: string;
+  body?: string;
+  tags?: string[];
+}): Promise<Post> {
+  if (useMockData) {
+    const post = mockPosts.find((p) => p.slug === params.slug);
+    if (!post) throw new Error("POST_NOT_FOUND");
+    if (post.authorId !== params.actorUserId && params.actorRole !== "admin") {
+      throw new Error("FORBIDDEN_NOT_AUTHOR");
+    }
+    if (params.title !== undefined) post.title = params.title;
+    if (params.body  !== undefined) post.body  = params.body;
+    if (params.tags  !== undefined) post.tags  = params.tags;
+    return { ...post };
+  }
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({ where: { slug: params.slug } });
+  if (!post) throw new Error("POST_NOT_FOUND");
+  if (post.authorId !== params.actorUserId && params.actorRole !== "admin") {
+    throw new Error("FORBIDDEN_NOT_AUTHOR");
+  }
+  const data: Prisma.PostUpdateInput = {};
+  if (params.title !== undefined) data.title = params.title;
+  if (params.body  !== undefined) data.body  = params.body;
+  if (params.tags  !== undefined) data.tags  = params.tags;
+  const updated = await prisma.post.update({ where: { id: post.id }, data });
+  return toPostDto(updated);
+}
+
+export async function deletePost(params: {
+  slug: string;
+  actorUserId: string;
+  actorRole: Role;
+}): Promise<void> {
+  if (useMockData) {
+    const idx = mockPosts.findIndex((p) => p.slug === params.slug);
+    if (idx === -1) throw new Error("POST_NOT_FOUND");
+    if (mockPosts[idx].authorId !== params.actorUserId && params.actorRole !== "admin") {
+      throw new Error("FORBIDDEN_NOT_AUTHOR");
+    }
+    mockPosts.splice(idx, 1);
+    return;
+  }
+  const prisma = await getPrisma();
+  const post = await prisma.post.findUnique({ where: { slug: params.slug } });
+  if (!post) throw new Error("POST_NOT_FOUND");
+  if (post.authorId !== params.actorUserId && params.actorRole !== "admin") {
+    throw new Error("FORBIDDEN_NOT_AUTHOR");
+  }
+  await prisma.post.delete({ where: { id: post.id } });
+}
+
 export async function getPostIdBySlug(slug: string): Promise<string | null> {
   if (useMockData) {
     return mockPosts.find((p) => p.slug === slug)?.id ?? null;
@@ -4650,7 +4708,7 @@ export async function updateTeamLinks(params: {
 
 // ─── Team Chat ────────────────────────────────────────────────────────────────
 
-const CHAT_RETAIN_DAYS = parseInt(process.env.CHAT_RETAIN_DAYS ?? "7", 10);
+const CHAT_RETAIN_DAYS = parseInt(process.env.CHAT_RETAIN_DAYS ?? "30", 10);
 
 /** Returns the cutoff date for chat retention (now - CHAT_RETAIN_DAYS). */
 export function chatRetentionCutoff(): Date {
@@ -5751,12 +5809,19 @@ export async function deleteComment(params: {
   await prisma.comment.delete({ where: { id: params.commentId } });
 }
 
-// ─── Comment retention cleanup (7 days) ──────────────────────────────────────
+// ─── Comment retention cleanup (long-term by default) ────────────────────────
+// Default: 0 = disabled (comments kept forever).
+// Set COMMENT_RETAIN_DAYS to a positive number to enable timed cleanup.
+// Cleanup is manual-only via POST /api/v1/admin/cleanup — not auto-triggered.
 
-const COMMENT_RETAIN_DAYS = parseInt(process.env.COMMENT_RETAIN_DAYS ?? "7", 10);
+const COMMENT_RETAIN_DAYS = parseInt(process.env.COMMENT_RETAIN_DAYS ?? "0", 10);
 
-/** Returns the cutoff date for comment retention (now - COMMENT_RETAIN_DAYS). */
+/** Returns the cutoff date for comment retention. Returns epoch-0 if disabled. */
 export function commentRetentionCutoff(): Date {
+  if (!COMMENT_RETAIN_DAYS || COMMENT_RETAIN_DAYS <= 0) {
+    // Disabled — return epoch so no comments are deleted
+    return new Date(0);
+  }
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - COMMENT_RETAIN_DAYS);
   return d;
@@ -5764,10 +5829,13 @@ export function commentRetentionCutoff(): Date {
 
 /**
  * Delete comments (and their replies) older than COMMENT_RETAIN_DAYS days.
- * Returns the count of deleted root comments.
+ * Returns 0 if retention is disabled (default).
  */
 export async function pruneOldComments(): Promise<number> {
   const cutoff = commentRetentionCutoff();
+
+  // If retention is disabled (epoch-0), skip deletion entirely
+  if (cutoff.getTime() === 0) return 0;
 
   if (useMockData) {
     const before = mockComments.length;

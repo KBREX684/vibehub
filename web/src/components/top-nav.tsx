@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Bell,
@@ -31,9 +31,29 @@ const NAV_LINKS = [
 export function TopNav() {
   const pathname = usePathname();
   const { language, setLanguage } = useLanguage();
-  const { user, loading, login, logout } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, loading, logout } = useAuth();
+  const [mobileOpen, setMobileOpen]   = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount]   = useState(0);
+
+  // Fetch unread notification count when logged in
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return; }
+    let active = true;
+    async function fetchUnread() {
+      try {
+        const res = await fetch("/api/v1/me/notifications?unread=1&limit=50");
+        if (!res.ok) return;
+        const json = await res.json();
+        const items = json?.data?.notifications ?? [];
+        if (active) setUnreadCount(items.length);
+      } catch { /* ignore */ }
+    }
+    fetchUnread();
+    // Poll every 60 s
+    const timer = setInterval(fetchUnread, 60_000);
+    return () => { active = false; clearInterval(timer); };
+  }, [user]);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -107,7 +127,11 @@ export function TopNav() {
               className="relative p-2 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-all"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[var(--color-primary)] text-white text-[9px] font-bold flex items-center justify-center">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
           )}
 
@@ -177,12 +201,12 @@ export function TopNav() {
                 )}
               </div>
             ) : (
-              <button
-                onClick={login}
+              <Link
+                href="/login"
                 className="btn btn-primary text-sm px-4 py-1.5"
               >
                 {t(language, "Sign in", "登录")}
-              </button>
+              </Link>
             )
           )}
 
@@ -235,12 +259,13 @@ export function TopNav() {
                 </button>
               </div>
               {!loading && !user && (
-                <button
-                  onClick={() => { login(); setMobileOpen(false); }}
-                  className="btn btn-primary w-full mt-1"
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="btn btn-primary w-full mt-1 text-center"
                 >
-                  {t(language, "Sign in with GitHub", "GitHub 登录")}
-                </button>
+                  {t(language, "Sign in", "登录")}
+                </Link>
               )}
             </nav>
           </motion.div>
