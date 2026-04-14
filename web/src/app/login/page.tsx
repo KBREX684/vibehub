@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { isDevDemoAuth } from "@/lib/dev-demo";
 import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 
@@ -83,7 +84,7 @@ export default async function LoginPage({ searchParams }: Props) {
           </a>
 
           {/* Demo logins */}
-          {process.env.NODE_ENV !== "production" && (
+          {isDevDemoAuth() && (
             <div className="border-t border-[var(--color-border)] pt-4 space-y-2">
               <p className="text-xs text-center text-[var(--color-text-muted)] mb-2">Development demo</p>
               <a

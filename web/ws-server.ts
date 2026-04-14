@@ -23,6 +23,9 @@
  *
  * Capacity: Each team room is capped at CHAT_CAPACITY_DEFAULT (50) concurrent
  * connections. The cap is overridable per-team via CHAT_CAPACITY_<TEAM_SLUG_UPPER>.
+ *
+ * Production: set INTERNAL_SERVICE_SECRET, REDIS_URL (for WS→HTTP auth tokens), and
+ * CHAT_WS_TOKEN_SECRET in Next.js so chat persistence and membership checks succeed.
  */
 
 import { WebSocketServer, WebSocket } from "ws";

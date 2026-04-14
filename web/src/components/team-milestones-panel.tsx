@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isDevDemoAuth } from "@/lib/dev-demo";
 import { motion, AnimatePresence } from "framer-motion";
 import type { TeamMilestone } from "@/lib/types";
 import { Target, Calendar, CheckCircle2, Circle, Plus, Trash2, Globe, Lock } from "lucide-react";
@@ -136,9 +138,21 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
         <p className="text-[0.95rem] text-[var(--color-text-secondary)] mb-6">
           Log in to view and manage team milestones.
         </p>
-        <a href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`} className="inline-flex items-center justify-center px-6 py-3 rounded-[980px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,122,255,0.3)]">
-          Demo Login
-        </a>
+        {isDevDemoAuth() ? (
+          <a
+            href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}
+            className="inline-flex items-center justify-center px-6 py-3 rounded-[980px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,122,255,0.3)]"
+          >
+            Demo Login
+          </a>
+        ) : (
+          <Link
+            href={`/login?redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}
+            className="inline-flex items-center justify-center px-6 py-3 rounded-[980px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,122,255,0.3)]"
+          >
+            Sign in
+          </Link>
+        )}
       </div>
     );
   }
