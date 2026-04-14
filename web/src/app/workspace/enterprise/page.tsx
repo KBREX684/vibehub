@@ -70,6 +70,15 @@ export default async function EnterpriseWorkspacePage() {
               {gateMessage}
             </p>
 
+            <p className="text-xs text-[var(--color-text-secondary)] max-w-lg mx-auto mb-6">
+              For read-only radar, talent lists, and ecosystem metrics you only need a normal account and an API key with{" "}
+              <code className="text-[0.65rem] bg-[var(--color-bg-elevated)] px-1 rounded">read:public</code> — see the{" "}
+              <Link href="/developers" className="text-[var(--color-primary-hover)] hover:underline">
+                Developers hub
+              </Link>
+              .
+            </p>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 text-left">
               {[
                 { icon: TrendingUp, title: "Project Radar", desc: "Track trending projects and collaboration velocity" },

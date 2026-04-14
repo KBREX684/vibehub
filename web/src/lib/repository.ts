@@ -8090,7 +8090,7 @@ export async function getProjectDueDiligence(slug: string): Promise<ProjectDueDi
   const project = await prisma.project.findUnique({
     where: { slug },
     include: {
-      creator: { select: { slug: true, headline: true } },
+      creator: { select: { userId: true, slug: true, headline: true } },
       team: {
         select: {
           slug: true,
@@ -8104,7 +8104,7 @@ export async function getProjectDueDiligence(slug: string): Promise<ProjectDueDi
   if (!project) return null;
 
   const commentCount = await prisma.comment.count({
-    where: { post: { authorId: project.creator.slug } },
+    where: { post: { authorId: project.creator.userId } },
   });
 
   return {

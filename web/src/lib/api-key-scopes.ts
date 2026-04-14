@@ -20,6 +20,9 @@ export const API_KEY_SCOPES = [
   "read:posts:list",
   "read:posts:detail",
   "write:team:tasks",
+  /** S4: MCP v2 write tools — opt-in; never in DEFAULT_API_KEY_SCOPES */
+  "write:mcp:v2:posts",
+  "write:mcp:v2:projects",
 ] as const;
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];

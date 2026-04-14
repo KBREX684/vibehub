@@ -70,6 +70,7 @@ export default async function ApiKeysSettingsPage() {
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Quick Links</h3>
             <div className="space-y-2">
               {[
+                { href: "/developers", label: "Developers hub" },
                 { href: "/api/v1/openapi.json", label: "OpenAPI Spec", external: true },
                 { href: "/api/v1/mcp/v2/manifest", label: "MCP v2 Manifest", external: true },
                 { href: "/workspace/enterprise", label: "Enterprise Workspace" },

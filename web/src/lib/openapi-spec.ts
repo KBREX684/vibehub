@@ -330,37 +330,65 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/enterprise/project-radar": {
         get: {
           tags: ["enterprise"],
-          summary: "Project radar — trending projects ranked by weighted score (session or Bearer read:enterprise:workspace)",
+          summary:
+            "Project radar — trending projects (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
-          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/enterprise/talent-radar": {
         get: {
           tags: ["enterprise"],
-          summary: "Talent radar — top creators ranked by contribution score (session or Bearer read:enterprise:workspace)",
+          summary:
+            "Talent radar — top creators (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
-          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/enterprise/due-diligence/{slug}": {
         get: {
           tags: ["enterprise"],
-          summary: "Project due diligence summary — deep project info with team, intent, comment stats (session or Bearer read:enterprise:workspace)",
+          summary:
+            "Project due diligence — team, intents, comment stats (session or Bearer read:public / read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
-          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/reports/ecosystem": {
         get: {
           tags: ["reports"],
-          summary: "Ecosystem report — platform-wide metrics aggregation (session or Bearer read:enterprise:workspace)",
+          summary: "Ecosystem report — aggregate metrics (session or Bearer read:public / read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "period", in: "query", schema: { type: "string", default: "current" } }],
-          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/teams/{slug}/activity-log": {
@@ -1187,8 +1215,10 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           ].join("\n"),
           responses: {
             "200": responses["200"],
+            "201": responses["200"],
             "400": responses["400"],
             "401": responses["401"],
+            "403": responses["403"],
             "404": responses["404"],
             "429": responses["429"],
             "500": responses["500"],

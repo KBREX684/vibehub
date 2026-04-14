@@ -143,6 +143,20 @@ export function resolveReadAuth(
   return { ok: false, status: 401 };
 }
 
+/**
+ * S4: “旁观者”数据面 — 浏览器会话或 API Key（read:public 或 read:enterprise:workspace）可访问
+ * 项目雷达、人才雷达、尽调摘要、生态报告等轻量企业数据。
+ */
+export function allowLightEnterpriseDataRead(user: SessionUser): boolean {
+  if (!user.apiKeyScopes?.length) {
+    return true;
+  }
+  return (
+    user.apiKeyScopes.includes("read:public") ||
+    user.apiKeyScopes.includes("read:enterprise:workspace")
+  );
+}
+
 /** When `authenticateRequest` returned rate_limited, build the 429 response (with Retry-After). */
 export function rateLimitedResponse(retryAfterSeconds: number) {
   return apiError(

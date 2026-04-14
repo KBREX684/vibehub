@@ -27,6 +27,7 @@ const NAV_LINKS = [
   { href: "/challenges",   en: "Challenges",   zh: "挑战赛" },
   { href: "/teams",        en: "Teams",        zh: "团队" },
   { href: "/leaderboards", en: "Leaderboards", zh: "排行榜" },
+  { href: "/developers",   en: "Developers",   zh: "开发者" },
 ];
 
 export function TopNav() {
