@@ -89,6 +89,16 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       { name: "mcp-v2", description: "MCP v2 HTTP: manifest + scoped POST invoke" },
       { name: "auth", description: "Demo session" },
       { name: "health", description: "Liveness" },
+      { name: "posts", description: "Discussion posts" },
+      { name: "comments", description: "Post comments and replies" },
+      { name: "challenges", description: "Challenges and campaigns" },
+      { name: "creators", description: "Creator profiles and growth" },
+      { name: "embed", description: "Embeddable cards and oEmbed" },
+      { name: "enterprise", description: "Enterprise workspace and intelligence APIs" },
+      { name: "reports", description: "Ecosystem reports" },
+      { name: "subscription", description: "Subscription plans and billing-adjacent endpoints" },
+      { name: "reputation", description: "Contribution credit and leaderboards" },
+      { name: "admin", description: "Admin-only endpoints" },
     ],
     components: {
       securitySchemes: {
@@ -826,6 +836,18 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "500": responses["500"],
           },
         },
+        delete: {
+          tags: ["teams"],
+          summary: "Prune team chat messages older than 30 days (admin only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "500": responses["500"],
+          },
+        },
       },
       "/api/v1/teams/{slug}/tasks": {
         get: {
@@ -935,6 +957,96 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/me/enterprise/verification": {
+        get: {
+          tags: ["me"],
+          summary: "Get current user's enterprise verification status",
+          security: [{ SessionCookie: [] }],
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "500": responses["500"],
+          },
+        },
+        post: {
+          tags: ["me"],
+          summary: "Submit enterprise verification application",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["organizationName", "organizationWebsite", "workEmail"],
+                  properties: {
+                    organizationName: { type: "string", maxLength: 120 },
+                    organizationWebsite: { type: "string", format: "uri", maxLength: 200 },
+                    workEmail: { type: "string", format: "email", maxLength: 200 },
+                    useCase: { type: "string", maxLength: 2000 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "201": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "409": { description: "Application already pending or enterprise already approved" },
+            "500": responses["500"],
+          },
+        },
+      },
+      "/api/v1/admin/enterprise/verifications": {
+        get: {
+          tags: ["admin"],
+          summary: "List enterprise verification applications (admin only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "status", in: "query", schema: { type: "string", enum: ["pending", "approved", "rejected", "all"] } },
+            { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          ],
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "500": responses["500"],
+          },
+        },
+        post: {
+          tags: ["admin"],
+          summary: "Review enterprise verification application (approve/reject)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["applicationId", "action"],
+                  properties: {
+                    applicationId: { type: "string" },
+                    action: { type: "string", enum: ["approve", "reject"] },
+                    note: { type: "string", maxLength: 1000 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "409": { description: "Application is not pending" },
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/me/api-keys": {
         get: {
           tags: ["me"],
@@ -1006,7 +1118,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           description: [
             "Tool scope mapping:",
             ...MCP_V2_TOOL_NAMES.map((name) => `- ${name} -> ${MCP_V2_TOOL_SCOPES[name]}`),
-          ].join("\\n"),
+          ].join("\n"),
           responses: {
             "200": responses["200"],
             "400": responses["400"],

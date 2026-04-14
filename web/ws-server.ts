@@ -15,7 +15,7 @@
  *
  * Persistence:
  *  Every message is persisted to DB via the Next.js REST endpoint
- *  POST /api/v1/teams/:slug/chat/messages  (fire-and-forget, non-blocking).
+ *  POST /api/v1/teams/:slug/chat/messages before fan-out.
  *  On connection, history is fetched from the REST endpoint (DB-backed) instead of
  *  relying only on in-memory history, ensuring messages survive restarts.
  *
@@ -40,6 +40,7 @@ const HISTORY_LIMIT     = 50;
 const NEXT_BASE_URL     = process.env.NEXT_BASE_URL ?? "http://localhost:3000";
 // Optional server-to-server token (set both here and on the Next.js side via WS_SERVER_TOKEN)
 const WS_SERVER_TOKEN   = process.env.WS_SERVER_TOKEN ?? "";
+const IS_PRODUCTION     = process.env.NODE_ENV === "production";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -112,22 +113,106 @@ function addToHistory(teamSlug: string, msg: ChatMessage) {
  * authenticated userId from verified chat token claims, and the Next.js
  * endpoint still enforces team membership server-side.
  */
-function persistMessage(teamSlug: string, userId: string, body: string): void {
+async function persistMessage(teamSlug: string, userId: string, userName: string, body: string): Promise<ChatMessage | null> {
+  if (!WS_SERVER_TOKEN) {
+    if (IS_PRODUCTION) return null;
+    return null;
+  }
+
   const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     // Internal header — the REST endpoint accepts this when WS_SERVER_TOKEN matches
     "x-ws-server-userId": userId,
   };
-  if (WS_SERVER_TOKEN) headers["x-ws-server-token"] = WS_SERVER_TOKEN;
+  headers["x-ws-server-token"] = WS_SERVER_TOKEN;
 
-  fetch(url, {
-    method:  "POST",
-    headers,
-    body:    JSON.stringify({ body }),
-  }).catch((err) => {
-    console.error("[ws-server] persist failed:", err.message);
+  try {
+    const res = await fetch(url, {
+      method:  "POST",
+      headers,
+      body:    JSON.stringify({ body }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null);
+    const created = json?.data;
+    if (!created?.id || !created?.createdAt) return null;
+    return {
+      id: created.id as string,
+      teamSlug,
+      userId,
+      userName,
+      body: created.body as string,
+      createdAt: created.createdAt as string,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function sendPersistenceError(ws: WebSocket) {
+  sendJson(ws, {
+    type: "error",
+    code: "CHAT_PERSIST_FAILED",
+    message: "Message could not be saved. Please retry.",
   });
+}
+
+async function postMessageAndBroadcast(client: AuthedClient, body: string) {
+  const persisted = await persistMessage(client.teamSlug, client.userId, client.userName, body);
+  if (!persisted) {
+    sendPersistenceError(client.ws);
+    return;
+  }
+
+  addToHistory(client.teamSlug, persisted);
+
+  // Echo to sender + broadcast to room after persistence.
+  sendJson(client.ws, { type: "message", ...persisted });
+  broadcastMessage(client.teamSlug, persisted, client.ws);
+}
+
+function postHistoryFallback(ws: WebSocket, teamSlug: string) {
+  const hist = history.get(teamSlug) ?? [];
+  sendJson(ws, { type: "history", messages: hist });
+}
+
+function fetchDbHistoryOrFallback(teamSlug: string, userId: string, ws: WebSocket) {
+  fetchDbHistory(teamSlug, userId).then((dbHist) => {
+    if (dbHist.length > 0) {
+      // Replace in-memory history with authoritative DB snapshot
+      history.set(teamSlug, dbHist.slice(-HISTORY_LIMIT));
+      sendJson(ws, { type: "history", messages: dbHist });
+      return;
+    }
+    postHistoryFallback(ws, teamSlug);
+  });
+}
+
+function requireWsServerTokenOrWarn() {
+  if (!WS_SERVER_TOKEN) {
+    const msg =
+      "[ws-server] WS_SERVER_TOKEN is not configured; websocket persistence and membership verification will fail.";
+    if (IS_PRODUCTION) {
+      throw new Error(msg);
+    }
+    console.warn(msg);
+  }
+}
+
+requireWsServerTokenOrWarn();
+
+async function fetchWithWsAuth(url: string, userId: string): Promise<Response | null> {
+  if (!WS_SERVER_TOKEN) return null;
+  const headers: Record<string, string> = {
+    "x-ws-server-userId": userId,
+    "x-ws-server-token": WS_SERVER_TOKEN,
+  };
+  try {
+    return await fetch(url, { headers });
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -135,28 +220,20 @@ function persistMessage(teamSlug: string, userId: string, body: string): void {
  * Falls back to in-memory history if the REST call fails.
  */
 async function fetchDbHistory(teamSlug: string, userId: string): Promise<ChatMessage[]> {
-  try {
-    const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages?limit=${HISTORY_LIMIT}`;
-    const headers: Record<string, string> = {
-      "x-ws-server-userId": userId,
-    };
-    if (WS_SERVER_TOKEN) headers["x-ws-server-token"] = WS_SERVER_TOKEN;
-    const res = await fetch(url, { headers });
-    if (!res.ok) return [];
-    const json = await res.json();
-    const msgs: Array<{ id: string; authorId: string; authorName: string; body: string; createdAt: string }> =
-      json?.data?.messages ?? [];
-    return msgs.map((m) => ({
-      id:        m.id,
-      teamSlug,
-      userId:    m.authorId,
-      userName:  m.authorName,
-      body:      m.body,
-      createdAt: m.createdAt,
-    }));
-  } catch {
-    return [];
-  }
+  const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages?limit=${HISTORY_LIMIT}`;
+  const res = await fetchWithWsAuth(url, userId);
+  if (!res?.ok) return [];
+  const json = await res.json().catch(() => null);
+  const msgs: Array<{ id: string; authorId: string; authorName: string; body: string; createdAt: string }> =
+    json?.data?.messages ?? [];
+  return msgs.map((m) => ({
+    id:        m.id,
+    teamSlug,
+    userId:    m.authorId,
+    userName:  m.authorName,
+    body:      m.body,
+    createdAt: m.createdAt,
+  }));
 }
 
 /**
@@ -165,20 +242,35 @@ async function fetchDbHistory(teamSlug: string, userId: string): Promise<ChatMes
  * bypassing server-side team membership changes.
  */
 async function verifyTeamMembership(teamSlug: string, userId: string): Promise<TeamMemberVerifierResult> {
-  try {
-    const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages?limit=1`;
-    const headers: Record<string, string> = {
-      "x-ws-server-userId": userId,
-    };
-    if (WS_SERVER_TOKEN) headers["x-ws-server-token"] = WS_SERVER_TOKEN;
-    const res = await fetch(url, { headers });
-    if (res.ok) return { ok: true };
-    if (res.status === 404) return { ok: false, code: "TEAM_NOT_FOUND" };
-    if (res.status === 403) return { ok: false, code: "FORBIDDEN" };
-    return { ok: false };
-  } catch {
-    return { ok: false };
-  }
+  const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages?limit=1`;
+  const res = await fetchWithWsAuth(url, userId);
+  if (!res) return { ok: false };
+  if (res.ok) return { ok: true };
+  if (res.status === 404) return { ok: false, code: "TEAM_NOT_FOUND" };
+  if (res.status === 403) return { ok: false, code: "FORBIDDEN" };
+  return { ok: false };
+}
+
+/**
+ * Persist a chat message to DB via the Next.js REST API.
+ * Uses a trusted server-to-server pattern: the WS server forwards the
+ * authenticated userId from verified chat token claims, and the Next.js
+ * endpoint still enforces team membership server-side.
+ */
+function _deprecated_persistMessage_fire_and_forget(teamSlug: string, userId: string, body: string): void {
+  const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-ws-server-userId": userId,
+  };
+  if (WS_SERVER_TOKEN) headers["x-ws-server-token"] = WS_SERVER_TOKEN;
+  fetch(url, {
+    method:  "POST",
+    headers,
+    body:    JSON.stringify({ body }),
+  }).catch((err) => {
+    console.error("[ws-server] persist failed:", err.message);
+  });
 }
 
 function sendJson(ws: WebSocket, payload: object) {
@@ -291,16 +383,7 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
         broadcastPresence(teamSlug);
 
         // Fetch DB history (async) then send; fall back to in-memory
-        fetchDbHistory(teamSlug, userId).then((dbHist) => {
-          if (dbHist.length > 0) {
-            // Replace in-memory history with authoritative DB snapshot
-            history.set(teamSlug, dbHist.slice(-HISTORY_LIMIT));
-            sendJson(ws, { type: "history", messages: dbHist });
-          } else {
-            const hist = history.get(teamSlug) ?? [];
-            sendJson(ws, { type: "history", messages: hist });
-          }
-        });
+        fetchDbHistoryOrFallback(teamSlug, userId, ws);
       });
       return;
     }
@@ -322,23 +405,7 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
         return;
       }
 
-      const msg: ChatMessage = {
-        id:        `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        teamSlug:  client.teamSlug,
-        userId:    client.userId,
-        userName:  client.userName,
-        body,
-        createdAt: new Date().toISOString(),
-      };
-
-      addToHistory(client.teamSlug, msg);
-
-      // Echo to sender + broadcast
-      sendJson(ws, { type: "message", ...msg });
-      broadcastMessage(client.teamSlug, msg, ws);
-
-      // Persist to DB (fire-and-forget, non-blocking)
-      persistMessage(client.teamSlug, client.userId, body);
+      void postMessageAndBroadcast(client, body);
       return;
     }
 

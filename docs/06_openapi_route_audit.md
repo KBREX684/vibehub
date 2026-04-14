@@ -14,16 +14,20 @@ Cross-reference every HTTP route in `web/src/app/api/v1/**` against
 
 ---
 
-## 1. New Routes Added in v1.1 (Need OpenAPI doc update)
+## 1. Route/Spec sync status (v2 refresh)
 
 | Route | Method | Documented | Action |
 |---|---|---|---|
-| `/api/v1/posts/{slug}` | PATCH | ❌ | Add to spec |
-| `/api/v1/posts/{slug}` | DELETE | ❌ | Add to spec |
-| `/api/v1/teams/{slug}/chat/messages` | GET | ❌ | Add to spec |
-| `/api/v1/teams/{slug}/chat/messages` | POST | ❌ | Add to spec |
-| `/api/v1/teams/{slug}/chat/messages` | DELETE | ❌ | Add to spec |
-| `/api/v1/admin/cleanup` | POST | ❌ | Add to spec |
+| `/api/v1/posts/{slug}` | PATCH | ✅ | keep synced with route |
+| `/api/v1/posts/{slug}` | DELETE | ✅ | keep synced with route |
+| `/api/v1/teams/{slug}/chat/messages` | GET | ✅ | keep synced with route |
+| `/api/v1/teams/{slug}/chat/messages` | POST | ✅ | keep synced with route |
+| `/api/v1/teams/{slug}/chat/messages` | DELETE | ✅ | keep synced with route |
+| `/api/v1/admin/cleanup` | POST | ✅ | keep synced with route |
+| `/api/v1/me/enterprise/verification` | GET | ✅ | keep synced with route |
+| `/api/v1/me/enterprise/verification` | POST | ✅ | keep synced with route |
+| `/api/v1/admin/enterprise/verifications` | GET | ✅ | keep synced with route |
+| `/api/v1/admin/enterprise/verifications` | PATCH | ✅ | keep synced with route |
 
 ---
 
@@ -51,8 +55,8 @@ Both endpoints are documented.
 | `/api/v1/posts` | POST | ✅ | ✅ | |
 | `/api/v1/posts/featured` | GET | ✅ | ✅ | |
 | `/api/v1/posts/{slug}` | GET | ✅ | ✅ | |
-| `/api/v1/posts/{slug}` | PATCH | ✅ **NEW** | ❌ | Add to spec |
-| `/api/v1/posts/{slug}` | DELETE | ✅ **NEW** | ❌ | Add to spec |
+| `/api/v1/posts/{slug}` | PATCH | ✅ | ✅ | |
+| `/api/v1/posts/{slug}` | DELETE | ✅ | ✅ | |
 | `/api/v1/posts/{slug}/like` | POST | ✅ | ✅ | |
 | `/api/v1/posts/{slug}/bookmark` | POST | ✅ | ✅ | |
 | `/api/v1/posts/{slug}/comments` | GET | ✅ | ✅ | |
@@ -86,7 +90,7 @@ Both endpoints are documented.
 | `POST .../tasks/{id}/reorder` | ✅ | ✅ | |
 | `GET/POST .../milestones` | ✅ | ✅ | |
 | `PATCH/DELETE .../milestones/{id}` | ✅ | ✅ | |
-| `GET/POST/DELETE .../chat/messages` | ✅ **NEW** | ❌ | Add to spec |
+| `GET/POST/DELETE .../chat/messages` | ✅ | ✅ | |
 | `PATCH /api/v1/teams/{slug}/links` | ✅ | ✅ | |
 | `GET .../activity-log` | ✅ | ✅ | |
 
@@ -122,10 +126,9 @@ Both endpoints are documented.
 
 ---
 
-## 7. Action Items (for next sprint)
+## 7. Current residual risks / next checks
 
-- [ ] Add PATCH/DELETE `/api/v1/posts/{slug}` to `openapi-spec.ts`
-- [ ] Add GET/POST/DELETE `/api/v1/teams/{slug}/chat/messages` to spec
-- [ ] Add POST `/api/v1/admin/cleanup` to spec
-- [ ] Exclude `/api/v1/auth/demo-login` from production OpenAPI
-- [ ] Run `npm run validate:openapi` after spec updates
+- [ ] Expand OpenAPI coverage for more implemented routes under `/api/v1/**` (spec still intentionally partial)
+- [ ] Decide production policy for excluding `/api/v1/auth/demo-login` from published OpenAPI
+- [ ] Keep MCP v2 invoke enum/scope mapping generated from shared source (`mcp-v2-tools.ts`)
+- [ ] Run `npm run validate:openapi` in CI gate after any route/spec change

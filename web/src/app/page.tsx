@@ -258,6 +258,61 @@ export default async function HomePage() {
         </div>
       </div>
 
+      {/* ── Flywheel: Community → Project → Team → Enterprise ────────────────── */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            step: "01",
+            title: "Discuss & Share",
+            desc: "Post ideas, get feedback, and build reputation in the community.",
+            href: "/discussions",
+            ctaLabel: "Browse Discussions",
+            color: "var(--color-accent-cyan)",
+          },
+          {
+            step: "02",
+            title: "Showcase Projects",
+            desc: "Publish your work and attract collaborators across the ecosystem.",
+            href: "/discover",
+            ctaLabel: "Explore Projects",
+            color: "var(--color-primary-hover)",
+          },
+          {
+            step: "03",
+            title: "Form Teams",
+            desc: "Coordinate with collaborators, track milestones, and ship faster.",
+            href: "/teams",
+            ctaLabel: "Find Teams",
+            color: "var(--color-accent-violet)",
+          },
+          {
+            step: "04",
+            title: "Enterprise Intelligence",
+            desc: "Organizations discover top talent and projects via the radar layer.",
+            href: "/workspace/enterprise",
+            ctaLabel: "Enterprise Workspace",
+            color: "var(--color-enterprise)",
+          },
+        ].map(({ step, title, desc, href, ctaLabel, color }) => (
+          <div key={step} className="card p-5 space-y-3 flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold font-mono" style={{ color }}>{step}</span>
+              <div className="flex-1 h-px bg-[var(--color-border)]" />
+            </div>
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h3>
+            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed flex-1">{desc}</p>
+            <Link
+              href={href}
+              className="text-xs font-medium flex items-center gap-1 hover:underline"
+              style={{ color }}
+            >
+              {ctaLabel}
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        ))}
+      </section>
+
       {/* ── CTA Banner ───────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden card p-10 text-center">
         <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-subtle)] via-transparent to-[var(--color-accent-cyan-subtle)] pointer-events-none" />

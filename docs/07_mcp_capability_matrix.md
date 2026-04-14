@@ -24,11 +24,11 @@ This is an intentional design boundary:
 | `get_project_detail` | Get project detail by slug | API key (read:projects:detail) | ✅ |
 | `search_creators` | Search creator profiles | API key (read:public) | ✅ |
 | `list_teams` | List all teams with pagination | API key (read:public) | ✅ |
-| `workspace_summary` | Enterprise workspace summary | API key (read:enterprise) | ✅ |
+| `workspace_summary` | Enterprise workspace summary | API key (`read:enterprise:workspace`) | ✅ |
 | `search_posts` | Full-text search across discussions | API key (read:public) | ✅ |
 | `get_post_detail` | Get post + comments by slug | API key (read:posts:detail) | ✅ |
 | `list_challenges` | List active challenges/campaigns | API key (read:public) | ✅ |
-| `get_talent_radar` | Top contributors by score | API key (read:enterprise) | ✅ |
+| `get_talent_radar` | Top contributors by score | API key (`read:enterprise:workspace`) | ✅ |
 
 ---
 

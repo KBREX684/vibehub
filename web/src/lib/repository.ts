@@ -33,6 +33,9 @@ import {
   mockSubscriptionPlans,
   mockUserSubscriptions,
   mockTeamChatMessages,
+  mockEnterpriseProfiles,
+  mockEnterpriseVerificationApplications,
+  MockEnterpriseProfile,
 } from "@/lib/data/mock-data";
 import type {
   ApiKeyCreated,
@@ -89,6 +92,9 @@ import type {
   WeeklyLeaderboardMaterializedSnapshot,
   WeeklyLeaderboardPublicPayload,
   TeamChatMessage,
+  EnterpriseProfile,
+  EnterpriseVerificationApplication,
+  EnterpriseVerificationStatus,
 } from "@/lib/types";
 
 const useMockData = process.env.USE_MOCK_DATA !== "false";
@@ -2134,6 +2140,15 @@ function toSubscriptionDto(row: {
   stripePriceId: string | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  enterpriseStatus?: string | null;
+  enterpriseRequestedAt?: Date | null;
+  enterpriseReviewedAt?: Date | null;
+  enterpriseReviewedBy?: string | null;
+  enterpriseOrgName?: string | null;
+  enterpriseOrgWebsite?: string | null;
+  enterpriseWorkEmail?: string | null;
+  enterpriseUseCase?: string | null;
+  enterpriseReviewNote?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): UserSubscription {
@@ -2146,6 +2161,15 @@ function toSubscriptionDto(row: {
     stripePriceId: row.stripePriceId ?? undefined,
     currentPeriodEnd: row.currentPeriodEnd?.toISOString(),
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    enterpriseStatus: (row.enterpriseStatus as UserSubscription["enterpriseStatus"] | undefined) ?? "none",
+    enterpriseRequestedAt: row.enterpriseRequestedAt?.toISOString(),
+    enterpriseReviewedAt: row.enterpriseReviewedAt?.toISOString(),
+    enterpriseReviewedBy: row.enterpriseReviewedBy ?? undefined,
+    enterpriseOrgName: row.enterpriseOrgName ?? undefined,
+    enterpriseOrgWebsite: row.enterpriseOrgWebsite ?? undefined,
+    enterpriseWorkEmail: row.enterpriseWorkEmail ?? undefined,
+    enterpriseUseCase: row.enterpriseUseCase ?? undefined,
+    enterpriseReviewNote: row.enterpriseReviewNote ?? undefined,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -2159,6 +2183,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
         ...existing,
         tier: existing.tier as UserSubscription["tier"],
         status: existing.status as UserSubscription["status"],
+        enterpriseStatus: (existing.enterpriseStatus as UserSubscription["enterpriseStatus"] | undefined) ?? "none",
       };
     }
     return {
@@ -2167,6 +2192,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       tier: "free",
       status: "active",
       cancelAtPeriodEnd: false,
+      enterpriseStatus: "none",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -2180,6 +2206,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       tier: "free",
       status: "active",
       cancelAtPeriodEnd: false,
+      enterpriseStatus: "none",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -2191,6 +2218,15 @@ export async function upsertUserSubscription(params: {
   userId: string;
   tier: UserSubscription["tier"];
   status: UserSubscription["status"];
+  enterpriseStatus?: UserSubscription["enterpriseStatus"];
+  enterpriseRequestedAt?: Date | null;
+  enterpriseReviewedAt?: Date | null;
+  enterpriseReviewedBy?: string | null;
+  enterpriseOrgName?: string | null;
+  enterpriseOrgWebsite?: string | null;
+  enterpriseWorkEmail?: string | null;
+  enterpriseUseCase?: string | null;
+  enterpriseReviewNote?: string | null;
   stripeSubscriptionId?: string;
   stripePriceId?: string;
   currentPeriodEnd?: Date;
@@ -2208,6 +2244,15 @@ export async function upsertUserSubscription(params: {
       stripePriceId: params.stripePriceId,
       currentPeriodEnd: params.currentPeriodEnd?.toISOString(),
       cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
+      enterpriseStatus: params.enterpriseStatus ?? (idx >= 0 ? (mockSubscriptions[idx].enterpriseStatus ?? "none") : "none"),
+      enterpriseRequestedAt: params.enterpriseRequestedAt?.toISOString(),
+      enterpriseReviewedAt: params.enterpriseReviewedAt?.toISOString(),
+      enterpriseReviewedBy: params.enterpriseReviewedBy ?? undefined,
+      enterpriseOrgName: params.enterpriseOrgName ?? undefined,
+      enterpriseOrgWebsite: params.enterpriseOrgWebsite ?? undefined,
+      enterpriseWorkEmail: params.enterpriseWorkEmail ?? undefined,
+      enterpriseUseCase: params.enterpriseUseCase ?? undefined,
+      enterpriseReviewNote: params.enterpriseReviewNote ?? undefined,
       createdAt: idx >= 0 ? mockSubscriptions[idx].createdAt : now,
       updatedAt: now,
     };
@@ -2217,6 +2262,7 @@ export async function upsertUserSubscription(params: {
       ...row,
       tier: row.tier as UserSubscription["tier"],
       status: row.status as UserSubscription["status"],
+      enterpriseStatus: (row.enterpriseStatus as UserSubscription["enterpriseStatus"] | undefined) ?? "none",
     };
   }
   const prisma = await getPrisma();
@@ -2227,6 +2273,15 @@ export async function upsertUserSubscription(params: {
     stripePriceId: params.stripePriceId ?? null,
     currentPeriodEnd: params.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
+    enterpriseStatus: (params.enterpriseStatus ?? "none") as "none" | "pending" | "verified" | "rejected",
+    enterpriseRequestedAt: params.enterpriseRequestedAt ?? null,
+    enterpriseReviewedAt: params.enterpriseReviewedAt ?? null,
+    enterpriseReviewedBy: params.enterpriseReviewedBy ?? null,
+    enterpriseOrgName: params.enterpriseOrgName ?? null,
+    enterpriseOrgWebsite: params.enterpriseOrgWebsite ?? null,
+    enterpriseWorkEmail: params.enterpriseWorkEmail ?? null,
+    enterpriseUseCase: params.enterpriseUseCase ?? null,
+    enterpriseReviewNote: params.enterpriseReviewNote ?? null,
   };
   const row = await prisma.userSubscription.upsert({
     where: { userId: params.userId },
@@ -3764,6 +3819,376 @@ export async function listAuditLogs(params: {
   };
 }
 
+// ─── Enterprise Verification ─────────────────────────────────────────────────
+
+function toEnterpriseProfileDto(row: {
+  userId: string;
+  status: string;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase?: string | null;
+  reviewedBy?: string | null;
+  reviewNote?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}): EnterpriseProfile {
+  return {
+    userId: row.userId,
+    status: (row.status as EnterpriseVerificationStatus) ?? "none",
+    organizationName: row.organizationName,
+    organizationWebsite: row.organizationWebsite,
+    workEmail: row.workEmail,
+    useCase: row.useCase ?? undefined,
+    reviewedBy: row.reviewedBy ?? undefined,
+    reviewNote: row.reviewNote ?? undefined,
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
+    updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : row.updatedAt.toISOString(),
+  };
+}
+
+function toEnterpriseProfileFromUser(row: {
+  id: string;
+  email: string;
+  enterpriseStatus: "none" | "pending" | "approved" | "rejected";
+  enterpriseOrganization: string | null;
+  enterpriseWebsite: string | null;
+  enterpriseUseCase: string | null;
+  enterpriseReviewedBy: string | null;
+  enterpriseReviewNote: string | null;
+  enterpriseAppliedAt: Date | null;
+  enterpriseReviewedAt: Date | null;
+}): EnterpriseProfile {
+  return {
+    userId: row.id,
+    status: row.enterpriseStatus ?? "none",
+    organizationName: row.enterpriseOrganization ?? "",
+    organizationWebsite: row.enterpriseWebsite ?? "",
+    workEmail: row.email,
+    useCase: row.enterpriseUseCase ?? undefined,
+    reviewedBy: row.enterpriseReviewedBy ?? undefined,
+    reviewNote: row.enterpriseReviewNote ?? undefined,
+    createdAt: row.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
+    updatedAt: row.enterpriseReviewedAt?.toISOString() ?? row.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
+  };
+}
+
+function toEnterpriseVerificationApplicationDto(row: {
+  id: string;
+  userId: string;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase: string | null;
+  status: "none" | "pending" | "approved" | "rejected";
+  reviewNote: string | null;
+  reviewedBy: string | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): EnterpriseVerificationApplication {
+  const status =
+    row.status === "none" ? "pending" : (row.status as Exclude<EnterpriseVerificationStatus, "none">);
+  return {
+    id: row.id,
+    userId: row.userId,
+    organizationName: row.organizationName,
+    organizationWebsite: row.organizationWebsite,
+    workEmail: row.workEmail,
+    useCase: row.useCase ?? undefined,
+    status,
+    reviewNote: row.reviewNote ?? undefined,
+    reviewedBy: row.reviewedBy ?? undefined,
+    reviewedAt: row.reviewedAt?.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export async function getEnterpriseProfileByUserId(userId: string): Promise<EnterpriseProfile | null> {
+  if (useMockData) {
+    const row = mockEnterpriseProfiles.find((p) => p.userId === userId);
+    return row ? toEnterpriseProfileDto(row) : null;
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      enterpriseStatus: true,
+      enterpriseOrganization: true,
+      enterpriseWebsite: true,
+      enterpriseUseCase: true,
+      enterpriseReviewedBy: true,
+      enterpriseReviewNote: true,
+      enterpriseAppliedAt: true,
+      enterpriseReviewedAt: true,
+      email: true,
+    },
+  });
+  return row ? toEnterpriseProfileFromUser(row) : null;
+}
+
+export async function submitEnterpriseVerification(params: {
+  userId: string;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase?: string;
+}): Promise<EnterpriseProfile> {
+  const organizationName = params.organizationName.trim();
+  const organizationWebsite = params.organizationWebsite.trim();
+  const workEmail = params.workEmail.trim().toLowerCase();
+  const useCase = params.useCase?.trim() || undefined;
+
+  if (!organizationName || organizationName.length < 2) throw new Error("INVALID_ORGANIZATION_NAME");
+  if (!/^https?:\/\//i.test(organizationWebsite)) throw new Error("INVALID_ORGANIZATION_WEBSITE");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail)) throw new Error("INVALID_WORK_EMAIL");
+
+  if (useMockData) {
+    const now = new Date().toISOString();
+    const idx = mockEnterpriseProfiles.findIndex((p) => p.userId === params.userId);
+    const existing = idx >= 0 ? mockEnterpriseProfiles[idx] : null;
+    if (existing && existing.status === "approved") throw new Error("ENTERPRISE_ALREADY_APPROVED");
+    const nextStatus: EnterpriseVerificationStatus = existing?.status === "rejected" ? "pending" : "pending";
+    const row: MockEnterpriseProfile = {
+      id: existing?.id ?? `ep_${Date.now()}`,
+      userId: params.userId,
+      status: nextStatus,
+      organizationName,
+      organizationWebsite,
+      workEmail,
+      useCase,
+      reviewedBy: undefined,
+      reviewNote: undefined,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (idx >= 0) mockEnterpriseProfiles[idx] = row;
+    else mockEnterpriseProfiles.push(row);
+
+    mockAuditLogs.unshift({
+      id: `log_ep_${Date.now()}`,
+      actorId: params.userId,
+      action: "enterprise_verification_submitted",
+      entityType: "enterprise_profile",
+      entityId: params.userId,
+      metadata: { organizationName, organizationWebsite, workEmail },
+      createdAt: now,
+    });
+    return toEnterpriseProfileDto(row);
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.user.findUnique({
+    where: { id: params.userId },
+    select: { id: true, role: true, enterpriseStatus: true, email: true },
+  });
+  if (!existing) throw new Error("USER_NOT_FOUND");
+  if (existing.enterpriseStatus === "approved") throw new Error("ENTERPRISE_ALREADY_APPROVED");
+
+  const row = await prisma.user.update({
+    where: { id: params.userId },
+    data: {
+      enterpriseStatus: "pending",
+      enterpriseOrganization: organizationName,
+      enterpriseWebsite: organizationWebsite,
+      enterpriseUseCase: useCase ?? null,
+      enterpriseAppliedAt: new Date(),
+      enterpriseReviewedAt: null,
+      enterpriseReviewedBy: null,
+      enterpriseReviewNote: null,
+    },
+    select: {
+      id: true,
+      enterpriseStatus: true,
+      enterpriseOrganization: true,
+      enterpriseWebsite: true,
+      enterpriseUseCase: true,
+      enterpriseReviewedBy: true,
+      enterpriseReviewNote: true,
+      enterpriseAppliedAt: true,
+      enterpriseReviewedAt: true,
+      email: true,
+    },
+  });
+  await prisma.auditLog.create({
+    data: {
+      actorId: params.userId,
+      action: "enterprise_verification_submitted",
+      entityType: "enterprise_profile",
+      entityId: params.userId,
+      metadata: { organizationName, organizationWebsite, workEmail },
+    },
+  });
+  return toEnterpriseProfileFromUser(row);
+}
+
+export async function listEnterpriseProfiles(params: {
+  status?: EnterpriseVerificationStatus | "all";
+  page: number;
+  limit: number;
+}): Promise<Paginated<EnterpriseProfile>> {
+  if (useMockData) {
+    const filtered = mockEnterpriseProfiles.filter((p) => {
+      if (!params.status || params.status === "all") return true;
+      return p.status === params.status;
+    });
+    return paginateArray(filtered.map(toEnterpriseProfileDto), params.page, params.limit);
+  }
+  const prisma = await getPrisma();
+  const where =
+    !params.status || params.status === "all"
+      ? {}
+      : { enterpriseStatus: params.status as "none" | "pending" | "approved" | "rejected" };
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: [{ enterpriseStatus: "asc" }, { updatedAt: "desc" }],
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+      select: {
+        id: true,
+        enterpriseStatus: true,
+        enterpriseOrganization: true,
+        enterpriseWebsite: true,
+        enterpriseUseCase: true,
+        enterpriseReviewedBy: true,
+        enterpriseReviewNote: true,
+        enterpriseAppliedAt: true,
+        enterpriseReviewedAt: true,
+        email: true,
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+  return {
+    items: items.map(toEnterpriseProfileFromUser),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function reviewEnterpriseVerification(params: {
+  userId: string;
+  adminUserId: string;
+  action: "approve" | "reject";
+  reviewNote?: string;
+}): Promise<EnterpriseProfile> {
+  const reviewNote = params.reviewNote?.trim() || undefined;
+  const nextStatus: EnterpriseVerificationStatus = params.action === "approve" ? "approved" : "rejected";
+
+  if (useMockData) {
+    const idx = mockEnterpriseProfiles.findIndex((p) => p.userId === params.userId);
+    if (idx < 0) throw new Error("ENTERPRISE_PROFILE_NOT_FOUND");
+    const row = mockEnterpriseProfiles[idx];
+    if (row.status !== "pending") throw new Error("ENTERPRISE_PROFILE_NOT_PENDING");
+    const now = new Date().toISOString();
+    row.status = nextStatus;
+    row.reviewedBy = params.adminUserId;
+    row.reviewNote = reviewNote;
+    row.updatedAt = now;
+
+    const current = mockSubscriptions.find((s) => s.userId === params.userId);
+    if (nextStatus === "approved") {
+      const activeNow = new Date().toISOString();
+      if (current) {
+        current.tier = "team_pro";
+        current.status = "active";
+        current.cancelAtPeriodEnd = false;
+        current.updatedAt = activeNow;
+      } else {
+        mockSubscriptions.push({
+          id: `sub_ent_${Date.now()}`,
+          userId: params.userId,
+          tier: "team_pro",
+          status: "active",
+          cancelAtPeriodEnd: false,
+          createdAt: activeNow,
+          updatedAt: activeNow,
+        });
+      }
+    }
+
+    mockAuditLogs.unshift({
+      id: `log_ep_review_${Date.now()}`,
+      actorId: params.adminUserId,
+      action: `enterprise_verification_${nextStatus}`,
+      entityType: "enterprise_profile",
+      entityId: params.userId,
+      metadata: { reviewNote },
+      createdAt: now,
+    });
+    return toEnterpriseProfileDto(row);
+  }
+
+  const prisma = await getPrisma();
+  const profile = await prisma.user.findUnique({
+    where: { id: params.userId },
+    select: { id: true, enterpriseStatus: true },
+  });
+  if (!profile) throw new Error("ENTERPRISE_PROFILE_NOT_FOUND");
+  if (profile.enterpriseStatus !== "pending") throw new Error("ENTERPRISE_PROFILE_NOT_PENDING");
+
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const row = await tx.user.update({
+      where: { id: params.userId },
+      data: {
+        enterpriseStatus: nextStatus as "approved" | "rejected",
+        enterpriseReviewedAt: new Date(),
+        enterpriseReviewedBy: params.adminUserId,
+        enterpriseReviewNote: reviewNote ?? null,
+      },
+      select: {
+        id: true,
+        enterpriseStatus: true,
+        enterpriseOrganization: true,
+        enterpriseWebsite: true,
+        enterpriseUseCase: true,
+        enterpriseReviewedBy: true,
+        enterpriseReviewNote: true,
+        enterpriseAppliedAt: true,
+        enterpriseReviewedAt: true,
+        email: true,
+      },
+    });
+
+    if (nextStatus === "approved") {
+      await tx.userSubscription.upsert({
+        where: { userId: params.userId },
+        update: {
+          tier: "team_pro",
+          status: "active",
+          cancelAtPeriodEnd: false,
+          updatedAt: new Date(),
+        },
+        create: {
+          userId: params.userId,
+          tier: "team_pro",
+          status: "active",
+          cancelAtPeriodEnd: false,
+        },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorId: params.adminUserId,
+        action: `enterprise_verification_${nextStatus}`,
+        entityType: "enterprise_profile",
+        entityId: params.userId,
+        metadata: { reviewNote },
+      },
+    });
+    return row;
+  });
+  return toEnterpriseProfileFromUser(updated);
+}
+
 export function listCollectionTopics(): CollectionTopic[] {
   return COLLECTION_TOPICS.map((topic) => ({
     slug: topic.slug,
@@ -4278,6 +4703,361 @@ export async function getAdminOverview() {
     auditLogs,
     collaborationIntentFunnel,
   };
+}
+
+export async function createEnterpriseVerificationApplication(params: {
+  userId: string;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase?: string;
+}): Promise<EnterpriseVerificationApplication> {
+  const organizationName = params.organizationName.trim();
+  const organizationWebsite = params.organizationWebsite.trim();
+  const workEmail = params.workEmail.trim();
+  const useCase = params.useCase?.trim();
+
+  if (!organizationName || organizationName.length > 120) throw new Error("INVALID_ORGANIZATION_NAME");
+  if (!organizationWebsite || organizationWebsite.length > 200) throw new Error("INVALID_ORGANIZATION_WEBSITE");
+  if (!workEmail || workEmail.length > 200) throw new Error("INVALID_WORK_EMAIL");
+  if (useCase && useCase.length > 2000) throw new Error("INVALID_USE_CASE");
+
+  if (useMockData) {
+    const user = mockUsers.find((u) => u.id === params.userId);
+    if (!user) throw new Error("USER_NOT_FOUND");
+    if (user.role === "admin") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
+    const existing = mockEnterpriseVerificationApplications.find(
+      (a) => a.userId === params.userId && a.status === "pending"
+    );
+    if (existing) throw new Error("APPLICATION_ALREADY_PENDING");
+    const now = new Date().toISOString();
+    const app = {
+      id: `eva_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      userId: params.userId,
+      organizationName,
+      organizationWebsite,
+      workEmail,
+      useCase,
+      status: "pending" as const,
+      createdAt: now,
+      updatedAt: now,
+    };
+    mockEnterpriseVerificationApplications.unshift(app);
+    mockAuditLogs.unshift({
+      id: `log_eva_${Date.now()}`,
+      actorId: params.userId,
+      action: "enterprise_verification_requested",
+      entityType: "enterprise_verification_application",
+      entityId: app.id,
+      metadata: { organizationName, organizationWebsite },
+      createdAt: now,
+    });
+    return { ...app };
+  }
+
+  const prisma = await getPrisma();
+  const user = await prisma.user.findUnique({
+    where: { id: params.userId },
+    select: { id: true, role: true, enterpriseStatus: true },
+  });
+  if (!user) throw new Error("USER_NOT_FOUND");
+  if (user.role === "admin") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
+  if (user.enterpriseStatus === "pending") throw new Error("APPLICATION_ALREADY_PENDING");
+  if (user.enterpriseStatus === "approved") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
+
+  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const row = await tx.user.update({
+      where: { id: params.userId },
+      data: {
+        enterpriseStatus: "pending",
+        enterpriseOrganization: organizationName,
+        enterpriseWebsite: organizationWebsite,
+        enterpriseUseCase: useCase ?? null,
+        enterpriseAppliedAt: new Date(),
+        enterpriseReviewedAt: null,
+        enterpriseReviewedBy: null,
+        enterpriseReviewNote: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        enterpriseStatus: true,
+        enterpriseOrganization: true,
+        enterpriseWebsite: true,
+        enterpriseUseCase: true,
+        enterpriseReviewNote: true,
+        enterpriseReviewedBy: true,
+        enterpriseReviewedAt: true,
+        enterpriseAppliedAt: true,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.userId,
+        action: "enterprise_verification_requested",
+        entityType: "enterprise_profile",
+        entityId: params.userId,
+        metadata: { organizationName, organizationWebsite },
+      },
+    });
+    return row;
+  });
+  return toEnterpriseVerificationApplicationDto({
+    id: `eva_user_${created.id}`,
+    userId: created.id,
+    organizationName: created.enterpriseOrganization ?? organizationName,
+    organizationWebsite: created.enterpriseWebsite ?? organizationWebsite,
+    workEmail: created.email,
+    useCase: created.enterpriseUseCase ?? null,
+    status: created.enterpriseStatus,
+    reviewNote: created.enterpriseReviewNote ?? null,
+    reviewedBy: created.enterpriseReviewedBy ?? null,
+    reviewedAt: created.enterpriseReviewedAt ?? null,
+    createdAt: created.enterpriseAppliedAt ?? new Date(),
+    updatedAt: created.enterpriseReviewedAt ?? created.enterpriseAppliedAt ?? new Date(),
+  });
+}
+
+export async function getLatestEnterpriseVerificationApplication(
+  userId: string
+): Promise<EnterpriseVerificationApplication | null> {
+  if (useMockData) {
+    const row = mockEnterpriseVerificationApplications.find((a) => a.userId === userId) ?? null;
+    return row ? { ...row } : null;
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      enterpriseStatus: true,
+      enterpriseOrganization: true,
+      enterpriseWebsite: true,
+      enterpriseUseCase: true,
+      enterpriseReviewNote: true,
+      enterpriseReviewedBy: true,
+      enterpriseReviewedAt: true,
+      enterpriseAppliedAt: true,
+    },
+  });
+  if (!row || row.enterpriseStatus === "none") return null;
+  return toEnterpriseVerificationApplicationDto({
+    id: `eva_user_${row.id}`,
+    userId: row.id,
+    organizationName: row.enterpriseOrganization ?? "",
+    organizationWebsite: row.enterpriseWebsite ?? "",
+    workEmail: row.email,
+    useCase: row.enterpriseUseCase ?? null,
+    status: row.enterpriseStatus,
+    reviewNote: row.enterpriseReviewNote ?? null,
+    reviewedBy: row.enterpriseReviewedBy ?? null,
+    reviewedAt: row.enterpriseReviewedAt ?? null,
+    createdAt: row.enterpriseAppliedAt ?? new Date(),
+    updatedAt: row.enterpriseReviewedAt ?? row.enterpriseAppliedAt ?? new Date(),
+  });
+}
+
+export async function listEnterpriseVerificationApplications(params: {
+  status?: EnterpriseVerificationStatus | "all";
+  page: number;
+  limit: number;
+}): Promise<Paginated<EnterpriseVerificationApplication>> {
+  if (useMockData) {
+    const items = mockEnterpriseVerificationApplications.filter(
+      (a) => !params.status || params.status === "all" || a.status === params.status
+    );
+    return paginateArray(items, params.page, params.limit);
+  }
+  const prisma = await getPrisma();
+  const where =
+    !params.status || params.status === "all"
+      ? { enterpriseStatus: { not: "none" as const } }
+      : { enterpriseStatus: params.status };
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { enterpriseAppliedAt: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+      select: {
+        id: true,
+        email: true,
+        enterpriseStatus: true,
+        enterpriseOrganization: true,
+        enterpriseWebsite: true,
+        enterpriseUseCase: true,
+        enterpriseReviewNote: true,
+        enterpriseReviewedBy: true,
+        enterpriseReviewedAt: true,
+        enterpriseAppliedAt: true,
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+  return {
+    items: items.map((row) =>
+      toEnterpriseVerificationApplicationDto({
+        id: `eva_user_${row.id}`,
+        userId: row.id,
+        organizationName: row.enterpriseOrganization ?? "",
+        organizationWebsite: row.enterpriseWebsite ?? "",
+        workEmail: row.email,
+        useCase: row.enterpriseUseCase ?? null,
+        status: row.enterpriseStatus,
+        reviewNote: row.enterpriseReviewNote ?? null,
+        reviewedBy: row.enterpriseReviewedBy ?? null,
+        reviewedAt: row.enterpriseReviewedAt ?? null,
+        createdAt: row.enterpriseAppliedAt ?? new Date(),
+        updatedAt: row.enterpriseReviewedAt ?? row.enterpriseAppliedAt ?? new Date(),
+      })
+    ),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+export async function reviewEnterpriseVerificationApplication(params: {
+  applicationId: string;
+  reviewerUserId: string;
+  action: "approve" | "reject";
+  note?: string;
+}): Promise<EnterpriseVerificationApplication> {
+  const note = params.note?.trim() ? params.note.trim().slice(0, 1000) : undefined;
+  const nextStatus: EnterpriseVerificationStatus =
+    params.action === "approve" ? "approved" : "rejected";
+  if (useMockData) {
+    const idx = mockEnterpriseVerificationApplications.findIndex((a) => a.id === params.applicationId);
+    if (idx < 0) throw new Error("APPLICATION_NOT_FOUND");
+    const current = mockEnterpriseVerificationApplications[idx];
+    if (current.status !== "pending") throw new Error("APPLICATION_NOT_PENDING");
+    const now = new Date().toISOString();
+    mockEnterpriseVerificationApplications[idx] = {
+      ...current,
+      status: nextStatus,
+      reviewNote: note,
+      reviewedBy: params.reviewerUserId,
+      reviewedAt: now,
+      updatedAt: now,
+    };
+    if (nextStatus === "approved") {
+      const userIdx = mockUsers.findIndex((u) => u.id === current.userId);
+      if (userIdx >= 0) mockUsers[userIdx] = { ...mockUsers[userIdx], role: "admin" };
+      const subIdx = mockSubscriptions.findIndex((s) => s.userId === current.userId);
+      const subNow = new Date().toISOString();
+      if (subIdx >= 0) {
+        mockSubscriptions[subIdx] = {
+          ...mockSubscriptions[subIdx],
+          tier: "team_pro",
+          status: "active",
+          updatedAt: subNow,
+        };
+      } else {
+        mockSubscriptions.push({
+          id: `sub_enterprise_${Date.now()}`,
+          userId: current.userId,
+          tier: "team_pro",
+          status: "active",
+          cancelAtPeriodEnd: false,
+          createdAt: subNow,
+          updatedAt: subNow,
+        });
+      }
+    }
+    mockAuditLogs.unshift({
+      id: `log_eva_review_${Date.now()}`,
+      actorId: params.reviewerUserId,
+      action: `enterprise_verification_${nextStatus}`,
+      entityType: "enterprise_verification_application",
+      entityId: current.id,
+      metadata: { note },
+      createdAt: new Date().toISOString(),
+    });
+    return { ...mockEnterpriseVerificationApplications[idx] };
+  }
+
+  const prisma = await getPrisma();
+  const userIdFromApplicationId = params.applicationId.startsWith("eva_user_")
+    ? params.applicationId.slice("eva_user_".length)
+    : params.applicationId;
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const existing = await tx.user.findUnique({
+      where: { id: userIdFromApplicationId },
+      select: { id: true, enterpriseStatus: true, email: true },
+    });
+    if (!existing) throw new Error("APPLICATION_NOT_FOUND");
+    if (existing.enterpriseStatus !== "pending") throw new Error("APPLICATION_NOT_PENDING");
+    const row = await tx.user.update({
+      where: { id: existing.id },
+      data: {
+        enterpriseStatus: nextStatus,
+        enterpriseReviewNote: note ?? null,
+        enterpriseReviewedBy: params.reviewerUserId,
+        enterpriseReviewedAt: new Date(),
+      },
+      select: {
+        id: true,
+        email: true,
+        enterpriseStatus: true,
+        enterpriseOrganization: true,
+        enterpriseWebsite: true,
+        enterpriseUseCase: true,
+        enterpriseReviewNote: true,
+        enterpriseReviewedBy: true,
+        enterpriseReviewedAt: true,
+        enterpriseAppliedAt: true,
+      },
+    });
+    if (nextStatus === "approved") {
+      await tx.user.update({
+        where: { id: existing.id },
+        data: { role: "admin" },
+      });
+      await tx.userSubscription.upsert({
+        where: { userId: existing.id },
+        update: {
+          tier: "team_pro",
+          status: "active",
+          cancelAtPeriodEnd: false,
+          updatedAt: new Date(),
+        },
+        create: {
+          userId: existing.id,
+          tier: "team_pro",
+          status: "active",
+          cancelAtPeriodEnd: false,
+        },
+      });
+    }
+    await tx.auditLog.create({
+      data: {
+        actorId: params.reviewerUserId,
+        action: `enterprise_verification_${nextStatus}`,
+        entityType: "enterprise_profile",
+        entityId: userIdFromApplicationId,
+        metadata: { note },
+      },
+    });
+    return row;
+  });
+  return toEnterpriseVerificationApplicationDto({
+    id: `eva_user_${updated.id}`,
+    userId: updated.id,
+    organizationName: updated.enterpriseOrganization ?? "",
+    organizationWebsite: updated.enterpriseWebsite ?? "",
+    workEmail: updated.email,
+    useCase: updated.enterpriseUseCase ?? null,
+    status: updated.enterpriseStatus,
+    reviewNote: updated.enterpriseReviewNote ?? null,
+    reviewedBy: updated.enterpriseReviewedBy ?? null,
+    reviewedAt: updated.enterpriseReviewedAt ?? null,
+    createdAt: updated.enterpriseAppliedAt ?? new Date(),
+    updatedAt: updated.enterpriseReviewedAt ?? updated.enterpriseAppliedAt ?? new Date(),
+  });
 }
 
 function slugifyTeamSlug(raw: string): string {
@@ -5626,7 +6406,16 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
       return null;
     }
     const scopeList = row.scopes?.length ? row.scopes : [...DEFAULT_API_KEY_SCOPES];
-    return { userId: u.id, role: u.role, name: u.name, apiKeyScopes: scopeList, apiKeyId: row.id };
+    return {
+      userId: u.id,
+      role: u.role,
+      name: u.name,
+      apiKeyScopes: scopeList,
+      apiKeyId: row.id,
+      enterpriseStatus: u.enterpriseStatus ?? "none",
+      enterpriseOrganization: u.enterpriseOrganization ?? undefined,
+      enterpriseWebsite: u.enterpriseWebsite ?? undefined,
+    };
   }
 
   const prisma = await getPrisma();
@@ -5643,7 +6432,14 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
   });
   const u = await prisma.user.findUnique({
     where: { id: row.userId },
-    select: { id: true, name: true, role: true },
+    select: {
+      id: true,
+      name: true,
+      role: true,
+      enterpriseStatus: true,
+      enterpriseOrganization: true,
+      enterpriseWebsite: true,
+    },
   });
   if (!u) {
     return null;
@@ -5656,6 +6452,9 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
     name: u.name,
     apiKeyScopes: effectiveScopes,
     apiKeyId: row.id,
+    enterpriseStatus: (u.enterpriseStatus as EnterpriseVerificationStatus) ?? "none",
+    enterpriseOrganization: u.enterpriseOrganization ?? undefined,
+    enterpriseWebsite: u.enterpriseWebsite ?? undefined,
   };
 }
 
