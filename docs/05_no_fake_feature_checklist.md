@@ -121,9 +121,9 @@ For each interactive element, confirm:
 | Enterprise open to all users | C3 | `hasEnterpriseAccess()` gate |
 | Login button → raw API URL | C4 | `/login` page created |
 | "New Discussion" → `href auth/github` | D3 | `/discussions/new` form page |
-| 7-day auto comment delete | D2 | Default 0 (disabled); admin-only |
+| Time-based comment auto cleanup | D2 | Default 0 (disabled); admin-only |
 | WS messages only in memory | G3 | DB persistence on every message |
-| Chat 7-day retention | G2 | Default 30 days |
+| Chat retention window | G2 | Default 30 days |
 
 ---
 
