@@ -76,12 +76,16 @@ export function NotificationsClient({
       {/* Controls */}
       {unreadCount > 0 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--color-text-muted)]">
+          <span
+            data-testid="notifications-unread-count"
+            className="text-xs text-[var(--color-text-muted)]"
+          >
             {unreadCount} unread
           </span>
           <button
             onClick={markAll}
             disabled={isPending}
+            data-testid="notifications-mark-all-read"
             className="btn btn-ghost text-xs px-3 py-1.5 flex items-center gap-1.5 text-[var(--color-text-secondary)] disabled:opacity-50"
           >
             <CheckCheck className="w-3.5 h-3.5" />
@@ -122,6 +126,7 @@ export function NotificationsClient({
                     {isUnread && (
                       <button
                         onClick={() => markOne(n.id)}
+                        data-testid={`notification-mark-read-${n.id}`}
                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-success)] transition-colors"
                         title="Mark as read"
                       >

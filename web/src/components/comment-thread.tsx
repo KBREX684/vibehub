@@ -210,7 +210,10 @@ function CommentCard({
 
   return (
     <div className={`${isReply ? "ml-8 mt-3" : "mt-4 first:mt-0"}`}>
-      <div className={`relative card p-4 group transition-all ${isReply ? "border-l-2 border-l-[var(--color-accent-violet)] rounded-l-none" : ""}`}>
+      <div
+        data-testid={`comment-card-${comment.id}`}
+        className={`relative card p-4 group transition-all ${isReply ? "border-l-2 border-l-[var(--color-accent-violet)] rounded-l-none" : ""}`}
+      >
 
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -229,6 +232,7 @@ function CommentCard({
             {!isReply && depth < 1 && (
               <button
                 onClick={() => setShowReply((v) => !v)}
+                data-testid={`comment-reply-${comment.id}`}
                 className="p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)] transition-colors"
                 title="Reply"
               >
@@ -238,6 +242,7 @@ function CommentCard({
             {canEdit && (
               <button
                 onClick={() => { setEditing(true); setEditBody(comment.body); }}
+                data-testid={`comment-edit-${comment.id}`}
                 className="p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] hover:bg-[var(--color-accent-cyan-subtle)] transition-colors"
                 title="Edit"
               >
@@ -247,6 +252,7 @@ function CommentCard({
             {canDelete && !confirmDelete && (
               <button
                 onClick={() => setConfirm(true)}
+                data-testid={`comment-delete-${comment.id}`}
                 className="p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-subtle)] transition-colors"
                 title="Delete"
               >
@@ -262,6 +268,7 @@ function CommentCard({
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
+              data-testid={`comment-edit-input-${comment.id}`}
               rows={3}
               maxLength={2000}
               autoFocus
@@ -273,6 +280,7 @@ function CommentCard({
               <button
                 onClick={handleEdit}
                 disabled={isPending}
+                data-testid={`comment-save-${comment.id}`}
                 className="btn btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-40"
               >
                 <Check className="w-3 h-3" />
@@ -296,6 +304,7 @@ function CommentCard({
             <button
               onClick={handleDelete}
               disabled={isPending}
+              data-testid={`comment-confirm-delete-${comment.id}`}
               className="btn text-xs px-3 py-1 bg-[var(--color-error)] text-white disabled:opacity-40"
             >
               {isPending ? "…" : "Delete"}
