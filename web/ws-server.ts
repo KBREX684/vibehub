@@ -28,7 +28,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage } from "http";
 import { createServer } from "http";
-import { decodeChatToken } from "./src/lib/chat-token";
+import { verifyChatToken, type ChatTokenErrorCode } from "./src/lib/chat-token";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -57,6 +57,11 @@ interface AuthedClient {
   teamSlug: string;
   userId: string;
   userName: string;
+}
+
+interface TeamMemberVerifierResult {
+  ok: boolean;
+  code?: "TEAM_NOT_FOUND" | "FORBIDDEN";
 }
 
 // ─── In-memory state ─────────────────────────────────────────────────────────
@@ -154,6 +159,28 @@ async function fetchDbHistory(teamSlug: string, userId: string): Promise<ChatMes
   }
 }
 
+/**
+ * Verify membership against the authoritative Next.js API before allowing
+ * a websocket client into a room. This prevents stale/replayed tokens from
+ * bypassing server-side team membership changes.
+ */
+async function verifyTeamMembership(teamSlug: string, userId: string): Promise<TeamMemberVerifierResult> {
+  try {
+    const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages?limit=1`;
+    const headers: Record<string, string> = {
+      "x-ws-server-userId": userId,
+    };
+    if (WS_SERVER_TOKEN) headers["x-ws-server-token"] = WS_SERVER_TOKEN;
+    const res = await fetch(url, { headers });
+    if (res.ok) return { ok: true };
+    if (res.status === 404) return { ok: false, code: "TEAM_NOT_FOUND" };
+    if (res.status === 403) return { ok: false, code: "FORBIDDEN" };
+    return { ok: false };
+  } catch {
+    return { ok: false };
+  }
+}
+
 function sendJson(ws: WebSocket, payload: object) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
@@ -204,12 +231,24 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
       }
 
       const token = (data.token as string | undefined)?.trim();
-      const claims = decodeChatToken(token);
-      if (!claims) {
-        sendJson(ws, { type: "error", code: "INVALID_AUTH", message: "Valid auth token required" });
+      const verification = verifyChatToken(token);
+      if (!verification.ok) {
+        const codeMap: Partial<Record<ChatTokenErrorCode, string>> = {
+          TOKEN_EXPIRED: "TOKEN_EXPIRED",
+          INVALID_SIGNATURE: "TOKEN_INVALID_SIGNATURE",
+          INVALID_CLAIMS: "TOKEN_INVALID_CLAIMS",
+          MALFORMED_TOKEN: "TOKEN_MALFORMED",
+          MISSING_TOKEN: "TOKEN_MISSING",
+        };
+        sendJson(ws, {
+          type: "error",
+          code: codeMap[verification.code] ?? "INVALID_AUTH",
+          message: "Valid auth token required",
+        });
         ws.close(4002, "Invalid auth");
         return;
       }
+      const claims = verification.claims;
       const teamSlug = claims.teamSlug;
       const userId = claims.userId;
       const userName = claims.userName;
@@ -226,25 +265,42 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
         return;
       }
 
-      clearTimeout(authTimeout);
-
-      client = { ws, teamSlug, userId, userName };
-      if (!rooms.has(teamSlug)) rooms.set(teamSlug, new Set());
-      rooms.get(teamSlug)!.add(client);
-
-      // Notify presence update immediately
-      broadcastPresence(teamSlug);
-
-      // Fetch DB history (async) then send; fall back to in-memory
-      fetchDbHistory(teamSlug, userId).then((dbHist) => {
-        if (dbHist.length > 0) {
-          // Replace in-memory history with authoritative DB snapshot
-          history.set(teamSlug, dbHist.slice(-HISTORY_LIMIT));
-          sendJson(ws, { type: "history", messages: dbHist });
-        } else {
-          const hist = history.get(teamSlug) ?? [];
-          sendJson(ws, { type: "history", messages: hist });
+      void verifyTeamMembership(teamSlug, userId).then((membership) => {
+        if (!membership.ok) {
+          const code =
+            membership.code === "TEAM_NOT_FOUND"
+              ? "TEAM_NOT_FOUND"
+              : membership.code === "FORBIDDEN"
+                ? "FORBIDDEN_MEMBER_REQUIRED"
+                : "AUTH_VERIFICATION_FAILED";
+          sendJson(ws, {
+            type: "error",
+            code,
+            message: "Team membership verification failed",
+          });
+          ws.close(4004, "Membership verification failed");
+          return;
         }
+
+        clearTimeout(authTimeout);
+        client = { ws, teamSlug, userId, userName };
+        if (!rooms.has(teamSlug)) rooms.set(teamSlug, new Set());
+        rooms.get(teamSlug)!.add(client);
+
+        // Notify presence update immediately
+        broadcastPresence(teamSlug);
+
+        // Fetch DB history (async) then send; fall back to in-memory
+        fetchDbHistory(teamSlug, userId).then((dbHist) => {
+          if (dbHist.length > 0) {
+            // Replace in-memory history with authoritative DB snapshot
+            history.set(teamSlug, dbHist.slice(-HISTORY_LIMIT));
+            sendJson(ws, { type: "history", messages: dbHist });
+          } else {
+            const hist = history.get(teamSlug) ?? [];
+            sendJson(ws, { type: "history", messages: hist });
+          }
+        });
       });
       return;
     }

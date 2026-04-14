@@ -8,6 +8,13 @@ export interface ChatAuthClaims {
   exp: number;
 }
 
+export type ChatTokenErrorCode =
+  | "MISSING_TOKEN"
+  | "MALFORMED_TOKEN"
+  | "INVALID_SIGNATURE"
+  | "INVALID_CLAIMS"
+  | "TOKEN_EXPIRED";
+
 const CHAT_TOKEN_TTL_SECONDS = parseInt(process.env.CHAT_TOKEN_TTL_SECONDS ?? "120", 10);
 
 function getChatTokenSecret(): string | null {
@@ -45,13 +52,20 @@ export function encodeChatToken(input: {
 }
 
 export function decodeChatToken(raw?: string): ChatAuthClaims | null {
-  if (!raw) return null;
+  const result = verifyChatToken(raw);
+  return result.ok ? result.claims : null;
+}
+
+export function verifyChatToken(raw?: string):
+  | { ok: true; claims: ChatAuthClaims }
+  | { ok: false; code: ChatTokenErrorCode } {
+  if (!raw) return { ok: false, code: "MISSING_TOKEN" };
 
   try {
     const [payloadBase64, signature] = raw.split(".");
-    if (!payloadBase64 || !signature) return null;
+    if (!payloadBase64 || !signature) return { ok: false, code: "MALFORMED_TOKEN" };
     const expectedSignature = signPayload(payloadBase64);
-    if (!expectedSignature) return null;
+    if (!expectedSignature) return { ok: false, code: "INVALID_SIGNATURE" };
 
     const signatureBuffer = Buffer.from(signature);
     const expectedBuffer = Buffer.from(expectedSignature);
@@ -59,15 +73,17 @@ export function decodeChatToken(raw?: string): ChatAuthClaims | null {
       signatureBuffer.length !== expectedBuffer.length ||
       !timingSafeEqual(signatureBuffer, expectedBuffer)
     ) {
-      return null;
+      return { ok: false, code: "INVALID_SIGNATURE" };
     }
 
     const parsed = JSON.parse(Buffer.from(payloadBase64, "base64url").toString("utf-8")) as ChatAuthClaims;
-    if (!parsed?.teamSlug || !parsed?.userId || !parsed?.userName || !parsed?.exp) return null;
-    if (parsed.exp <= Math.floor(Date.now() / 1000)) return null;
-    return parsed;
+    if (!parsed?.teamSlug || !parsed?.userId || !parsed?.userName || !parsed?.exp) {
+      return { ok: false, code: "INVALID_CLAIMS" };
+    }
+    if (parsed.exp <= Math.floor(Date.now() / 1000)) return { ok: false, code: "TOKEN_EXPIRED" };
+    return { ok: true, claims: parsed };
   } catch {
-    return null;
+    return { ok: false, code: "MALFORMED_TOKEN" };
   }
 }
 

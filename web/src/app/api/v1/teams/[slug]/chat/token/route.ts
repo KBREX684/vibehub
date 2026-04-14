@@ -37,5 +37,6 @@ export async function POST(_request: Request, { params }: Params) {
   return apiSuccess({
     token,
     expiresInSeconds: ChatTokenConstants.CHAT_TOKEN_TTL_SECONDS,
+    teamSlug: slug,
   });
 }

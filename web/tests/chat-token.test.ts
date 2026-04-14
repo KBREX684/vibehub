@@ -9,12 +9,12 @@ describe("chat token signing", () => {
       userName: "Alice",
     });
 
-    const claims = decodeChatToken(token);
-    expect(claims).toBeTruthy();
-    expect(claims?.teamSlug).toBe("vibehub-core");
-    expect(claims?.userId).toBe("u1");
-    expect(claims?.userName).toBe("Alice");
-    expect(typeof claims?.exp).toBe("number");
+    const decoded = decodeChatToken(token);
+    expect(decoded).toBeTruthy();
+    expect(decoded?.teamSlug).toBe("vibehub-core");
+    expect(decoded?.userId).toBe("u1");
+    expect(decoded?.userName).toBe("Alice");
+    expect(typeof decoded?.exp).toBe("number");
   });
 
   it("rejects tampered tokens", () => {
@@ -25,5 +25,9 @@ describe("chat token signing", () => {
     });
     const tampered = `${token}x`;
     expect(decodeChatToken(tampered)).toBeNull();
+  });
+
+  it("returns null on missing token", () => {
+    expect(decodeChatToken(undefined)).toBeNull();
   });
 });
