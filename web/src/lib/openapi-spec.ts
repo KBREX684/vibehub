@@ -489,6 +489,13 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot", "featured"] } },
             { name: "page", in: "query", schema: { type: "integer", default: 1 } },
             { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
+            {
+              name: "cursor",
+              in: "query",
+              schema: { type: "string" },
+              description:
+                "Opaque keyset cursor (P4-3). Only with default/recent sort, no `query`, not featured-only. Response `pagination.nextCursor` when more pages exist.",
+            },
           ],
           responses: { "200": responses["200"], "400": responses["400"], "500": responses["500"] },
         },
@@ -512,7 +519,14 @@ export function buildOpenApiDocument(): Record<string, unknown> {
               },
             },
           },
-          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+          responses: {
+            "201": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "409": responses["409"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/posts/{slug}": {
@@ -630,6 +644,13 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             { name: "status", in: "query", schema: { type: "string" } },
             { name: "page", in: "query", schema: { type: "integer" } },
             { name: "limit", in: "query", schema: { type: "integer" } },
+            {
+              name: "cursor",
+              in: "query",
+              schema: { type: "string" },
+              description:
+                "Opaque keyset cursor (P4-3). Only when `query` is unset (stable `updatedAt` + `id` sort). Response `pagination.nextCursor` when more pages exist.",
+            },
           ],
           responses: {
             "200": responses["200"],
@@ -667,7 +688,9 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "201": responses["200"],
             "400": responses["400"],
             "401": responses["401"],
+            "402": responses["402"],
             "403": responses["403"],
+            "409": responses["409"],
             "500": responses["500"],
           },
         },

@@ -7,6 +7,8 @@ import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
+import { decodeCursor, encodeCursor, type CursorPayload } from "@/lib/pagination-cursor";
+import { mapPrismaToRepositoryError, RepositoryError } from "@/lib/repository-errors";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
 import {
@@ -156,6 +158,8 @@ interface PaginationMeta {
   limit: number;
   total: number;
   totalPages: number;
+  /** P4-3: opaque cursor for next page (only when cursor mode was used). */
+  nextCursor?: string;
 }
 
 interface Paginated<T> {
@@ -451,6 +455,13 @@ function toAuditLogDto(item: {
   };
 }
 
+function projectCursorWhere(cursor: CursorPayload): Prisma.ProjectWhereInput {
+  const t = new Date(cursor.t);
+  return {
+    OR: [{ updatedAt: { lt: t } }, { AND: [{ updatedAt: t }, { id: { lt: cursor.id } }] }],
+  };
+}
+
 export async function listProjects(params: {
   query?: string;
   tag?: string;
@@ -463,10 +474,22 @@ export async function listProjects(params: {
   creatorId?: string;
   page: number;
   limit: number;
+  /** P4-3: keyset pagination when no full-text query (stable `updatedAt` + `id` sort) */
+  cursor?: string | null;
 }): Promise<Paginated<Project>> {
   const techFilter = params.tech?.trim();
   const statusFilter = params.status;
   const teamSlug = params.team?.trim();
+  const cursorRaw = params.cursor?.trim();
+  const cursorDecoded = cursorRaw ? decodeCursor(cursorRaw) : null;
+  if (cursorRaw && !cursorDecoded) {
+    throw new RepositoryError("INVALID_INPUT", "Invalid cursor", 400);
+  }
+  const canUseCursor = Boolean(cursorDecoded) && !params.query?.trim();
+  const keysetEligible = !params.query?.trim();
+  if (cursorRaw && !canUseCursor) {
+    throw new RepositoryError("INVALID_INPUT", "cursor is not supported when query is set", 400);
+  }
 
   if (useMockData) {
     const teamIdFilter = teamSlug ? mockTeams.find((x) => x.slug === teamSlug)?.id : undefined;
@@ -505,6 +528,59 @@ export async function listProjects(params: {
 
       return queryMatch && tagMatch && techMatch && statusMatch && teamMatch && creatorMatch;
     });
+
+    if (canUseCursor && cursorDecoded) {
+      const sorted = [...filtered].sort((a, b) => {
+        const ua = new Date(a.updatedAt).getTime();
+        const ub = new Date(b.updatedAt).getTime();
+        if (ub !== ua) return ub - ua;
+        return b.id.localeCompare(a.id);
+      });
+      const ct = new Date(cursorDecoded.t).getTime();
+      const after = sorted.filter((p) => {
+        const ut = new Date(p.updatedAt).getTime();
+        return ut < ct || (ut === ct && p.id < cursorDecoded.id);
+      });
+      const slice = after.slice(0, params.limit);
+      const last = slice[slice.length - 1];
+      const hasMore = after.length > params.limit;
+      const nextCursor = hasMore && last ? encodeCursor({ t: last.updatedAt, id: last.id }) : undefined;
+      return {
+        items: slice,
+        pagination: {
+          page: params.page,
+          limit: params.limit,
+          total: sorted.length,
+          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
+          ...(nextCursor ? { nextCursor } : {}),
+        },
+      };
+    }
+
+    if (keysetEligible) {
+      const sorted = [...filtered].sort((a, b) => {
+        const ua = new Date(a.updatedAt).getTime();
+        const ub = new Date(b.updatedAt).getTime();
+        if (ub !== ua) return ub - ua;
+        return b.id.localeCompare(a.id);
+      });
+      const off = (params.page - 1) * params.limit;
+      const window = sorted.slice(off, off + params.limit + 1);
+      const hasMore = window.length > params.limit;
+      const slice = hasMore ? window.slice(0, params.limit) : window;
+      const last = slice[slice.length - 1];
+      const nextCursor = hasMore && last ? encodeCursor({ t: last.updatedAt, id: last.id }) : undefined;
+      return {
+        items: slice,
+        pagination: {
+          page: params.page,
+          limit: params.limit,
+          total: sorted.length,
+          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
+          ...(nextCursor ? { nextCursor } : {}),
+        },
+      };
+    }
 
     return paginateArray(filtered, params.page, params.limit);
   }
@@ -599,26 +675,39 @@ export async function listProjects(params: {
   if (statusFilter) andParts.push({ status: statusFilter });
   if (teamSlug) andParts.push({ team: { slug: teamSlug } });
   if (params.creatorId) andParts.push({ creatorId: params.creatorId });
+  if (canUseCursor && cursorDecoded) andParts.push(projectCursorWhere(cursorDecoded));
   const where: Prisma.ProjectWhereInput = andParts.length ? { AND: andParts } : {};
+
+  const skip = canUseCursor && cursorDecoded ? 0 : offset;
+  const takePlusOne = (canUseCursor && cursorDecoded) || (!q && keysetEligible) ? take + 1 : take;
 
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where,
       orderBy: { updatedAt: "desc" },
-      skip: offset,
-      take,
+      skip,
+      take: takePlusOne,
       include: { team: { select: { slug: true, name: true } } },
     }),
     prisma.project.count({ where }),
   ]);
 
+  const hasMorePage = ((!q && keysetEligible) || (canUseCursor && cursorDecoded)) && items.length > take;
+  const pageItems = hasMorePage ? items.slice(0, take) : items;
+  const last = pageItems[pageItems.length - 1];
+  const nextCursor =
+    !q && keysetEligible && last && hasMorePage
+      ? encodeCursor({ t: last.updatedAt.toISOString(), id: last.id })
+      : undefined;
+
   return {
-    items: items.map((p) => toProjectDto({ ...p, teamId: p.teamId, team: p.team })),
+    items: pageItems.map((p) => toProjectDto({ ...p, teamId: p.teamId, team: p.team })),
     pagination: {
       page: params.page,
       limit: params.limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      ...(nextCursor ? { nextCursor } : {}),
     },
   };
 }
@@ -2635,6 +2724,8 @@ export async function createCreatorProfile(input: CreateProfileInput): Promise<C
       if (target.includes("slug")) throw new Error("SLUG_TAKEN");
       if (target.includes("userId")) throw new Error("PROFILE_ALREADY_EXISTS");
     }
+    const mapped = mapPrismaToRepositoryError(err);
+    if (mapped) throw mapped;
     throw err;
   }
 }
@@ -2728,6 +2819,13 @@ export async function listUsers(params: {
   };
 }
 
+function postCursorWhere(cursor: CursorPayload): Prisma.PostWhereInput {
+  const t = new Date(cursor.t);
+  return {
+    OR: [{ createdAt: { lt: t } }, { AND: [{ createdAt: t }, { id: { lt: cursor.id } }] }],
+  };
+}
+
 export async function listPosts(params: {
   query?: string;
   tag?: string;
@@ -2739,7 +2837,28 @@ export async function listPosts(params: {
   includeAuthorId?: string;
   page: number;
   limit: number;
+  /** P4-3: keyset pagination (only with stable sort: no query, sort recent/default, not featured-only) */
+  cursor?: string | null;
 }): Promise<Paginated<Post>> {
+  const cursorRaw = params.cursor?.trim();
+  const cursorDecoded = cursorRaw ? decodeCursor(cursorRaw) : null;
+  if (cursorRaw && !cursorDecoded) {
+    throw new RepositoryError("INVALID_INPUT", "Invalid cursor", 400);
+  }
+  const canUseCursor =
+    Boolean(cursorDecoded) &&
+    !params.query?.trim() &&
+    !params.featuredOnly &&
+    (params.sort === undefined || params.sort === "recent");
+  const keysetEligible =
+    !params.query?.trim() &&
+    !params.featuredOnly &&
+    (params.sort === undefined || params.sort === "recent");
+
+  if (cursorRaw && !canUseCursor) {
+    throw new RepositoryError("INVALID_INPUT", "cursor is not supported with this query/sort combination", 400);
+  }
+
   if (useMockData) {
     let filtered = mockPosts.filter((post) => {
       const q = params.query?.toLowerCase().trim();
@@ -2762,6 +2881,59 @@ export async function listPosts(params: {
         if (!a.featuredAt && b.featuredAt) return 1;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
+    }
+
+    if (canUseCursor && cursorDecoded) {
+      const sorted = [...filtered].sort((a, b) => {
+        const ca = new Date(a.createdAt).getTime();
+        const cb = new Date(b.createdAt).getTime();
+        if (cb !== ca) return cb - ca;
+        return b.id.localeCompare(a.id);
+      });
+      const ct = new Date(cursorDecoded.t).getTime();
+      const after = sorted.filter((p) => {
+        const pt = new Date(p.createdAt).getTime();
+        return pt < ct || (pt === ct && p.id < cursorDecoded.id);
+      });
+      const slice = after.slice(0, params.limit);
+      const last = slice[slice.length - 1];
+      const hasMore = after.length > params.limit;
+      const nextCursor = hasMore && last ? encodeCursor({ t: last.createdAt, id: last.id }) : undefined;
+      return {
+        items: slice,
+        pagination: {
+          page: params.page,
+          limit: params.limit,
+          total: sorted.length,
+          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
+          nextCursor,
+        },
+      };
+    }
+
+    if (keysetEligible) {
+      const sorted = [...filtered].sort((a, b) => {
+        const ca = new Date(a.createdAt).getTime();
+        const cb = new Date(b.createdAt).getTime();
+        if (cb !== ca) return cb - ca;
+        return b.id.localeCompare(a.id);
+      });
+      const off = (params.page - 1) * params.limit;
+      const window = sorted.slice(off, off + params.limit + 1);
+      const hasMore = window.length > params.limit;
+      const slice = hasMore ? window.slice(0, params.limit) : window;
+      const last = slice[slice.length - 1];
+      const nextCursor = hasMore && last ? encodeCursor({ t: last.createdAt, id: last.id }) : undefined;
+      return {
+        items: slice,
+        pagination: {
+          page: params.page,
+          limit: params.limit,
+          total: sorted.length,
+          totalPages: Math.max(1, Math.ceil(sorted.length / params.limit)),
+          ...(nextCursor ? { nextCursor } : {}),
+        },
+      };
     }
 
     return paginateArray(filtered, params.page, params.limit);
@@ -2847,6 +3019,7 @@ export async function listPosts(params: {
           }
         : {},
       params.featuredOnly ? { featuredAt: { not: null } } : {},
+      ...(canUseCursor && cursorDecoded ? [postCursorWhere(cursorDecoded)] : []),
     ],
   };
 
@@ -2857,12 +3030,16 @@ export async function listPosts(params: {
         ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
         : { createdAt: "desc" };
 
+  const skip = canUseCursor && cursorDecoded ? 0 : offset;
+  const takePlusOne =
+    (canUseCursor && cursorDecoded) || (!q && keysetEligible) ? take + 1 : take;
+
   const [items, total] = await Promise.all([
     prisma.post.findMany({
       where,
       orderBy,
-      skip: offset,
-      take,
+      skip,
+      take: takePlusOne,
       include: {
         author: { select: { name: true } },
         _count: { select: { likes: true, bookmarks: true } },
@@ -2876,8 +3053,17 @@ export async function listPosts(params: {
     orderedItems = [...items].sort((a, b) => b._count.likes - a._count.likes);
   }
 
+  const hasMorePage =
+    ((!q && keysetEligible) || (canUseCursor && cursorDecoded)) && orderedItems.length > take;
+  const pageItems = hasMorePage ? orderedItems.slice(0, take) : orderedItems;
+  const last = pageItems[pageItems.length - 1];
+  const nextCursor =
+    !q && keysetEligible && last && hasMorePage
+      ? encodeCursor({ t: last.createdAt.toISOString(), id: last.id })
+      : undefined;
+
   return {
-    items: orderedItems.map((p) =>
+    items: pageItems.map((p) =>
       toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })
     ),
     pagination: {
@@ -2885,6 +3071,7 @@ export async function listPosts(params: {
       limit: params.limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      ...(nextCursor ? { nextCursor } : {}),
     },
   };
 }
@@ -3080,47 +3267,53 @@ export async function createPost(input: {
   }
 
   const prisma = await getPrisma();
-  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const post = await tx.post.create({
-      data: {
-        slug: `${slug}-${Date.now()}`,
-        title: input.title,
-        body: input.body,
-        tags: input.tags,
-        authorId: input.authorId,
-        reviewStatus: "pending",
-      },
+  try {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const post = await tx.post.create({
+        data: {
+          slug: `${slug}-${Date.now()}`,
+          title: input.title,
+          body: input.body,
+          tags: input.tags,
+          authorId: input.authorId,
+          reviewStatus: "pending",
+        },
+      });
+
+      await tx.moderationCase.create({
+        data: {
+          targetType: "post",
+          targetId: post.id,
+          postId: post.id,
+          status: "pending",
+          reason: "new_post_submission",
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: input.authorId,
+          action: "post_created",
+          entityType: "post",
+          entityId: post.id,
+          metadata: { slug: post.slug, title: post.title },
+        },
+      });
+
+      return post;
     });
 
-    await tx.moderationCase.create({
-      data: {
-        targetType: "post",
-        targetId: post.id,
-        postId: post.id,
-        status: "pending",
-        reason: "new_post_submission",
-      },
+    void dispatchWebhookEvent(result.authorId, "post.created", {
+      postId: result.id,
+      slug: result.slug,
+      title: result.title,
     });
-
-    await tx.auditLog.create({
-      data: {
-        actorId: input.authorId,
-        action: "post_created",
-        entityType: "post",
-        entityId: post.id,
-        metadata: { slug: post.slug, title: post.title },
-      },
-    });
-
-    return post;
-  });
-
-  void dispatchWebhookEvent(result.authorId, "post.created", {
-    postId: result.id,
-    slug: result.slug,
-    title: result.title,
-  });
-  return toPostDto(result);
+    return toPostDto(result);
+  } catch (e) {
+    const mapped = mapPrismaToRepositoryError(e);
+    if (mapped) throw mapped;
+    throw e;
+  }
 }
 
 // ─── Post update / delete ─────────────────────────────────────────────────────
@@ -3909,7 +4102,13 @@ export async function submitCollaborationIntent(input: {
   const profile = useMockData
     ? mockCreators.find((c) => c.userId === input.applicantId)
     : await (await getPrisma()).creatorProfile.findUnique({ where: { userId: input.applicantId } });
-  if (!profile) throw new Error("CREATOR_PROFILE_REQUIRED");
+  if (!profile) {
+    throw new RepositoryError(
+      "CREATOR_PROFILE_REQUIRED",
+      "A creator profile is required to submit collaboration intents",
+      403
+    );
+  }
 
   // Prevent duplicate pending/approved intents
   if (useMockData) {
@@ -7595,7 +7794,11 @@ export async function createProject(input: {
   if (useMockData) {
     const creator = mockCreators.find((c) => c.userId === input.creatorUserId);
     if (!creator) {
-      throw new Error("CREATOR_PROFILE_REQUIRED");
+      throw new RepositoryError(
+        "CREATOR_PROFILE_REQUIRED",
+        "A creator profile is required to submit projects",
+        403
+      );
     }
     const project: Project = {
       id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -7639,46 +7842,56 @@ export async function createProject(input: {
   const prisma = await getPrisma();
   const creator = await prisma.creatorProfile.findUnique({ where: { userId: input.creatorUserId } });
   if (!creator) {
-    throw new Error("CREATOR_PROFILE_REQUIRED");
+    throw new RepositoryError(
+      "CREATOR_PROFILE_REQUIRED",
+      "A creator profile is required to submit projects",
+      403
+    );
   }
-  const project = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const p = await tx.project.create({
-      data: {
-        slug: `${slug}-${Date.now()}`,
-        creatorId: creator.id,
-        title: input.title,
-        oneLiner: input.oneLiner,
-        description: input.description,
-        techStack: input.techStack,
-        tags: input.tags,
-        status: input.status,
-        demoUrl: input.demoUrl ?? null,
-      },
-      include: { team: { select: { slug: true, name: true } } },
+  try {
+    const project = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const p = await tx.project.create({
+        data: {
+          slug: `${slug}-${Date.now()}`,
+          creatorId: creator.id,
+          title: input.title,
+          oneLiner: input.oneLiner,
+          description: input.description,
+          techStack: input.techStack,
+          tags: input.tags,
+          status: input.status,
+          demoUrl: input.demoUrl ?? null,
+        },
+        include: { team: { select: { slug: true, name: true } } },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: input.creatorUserId,
+          action: "project_created",
+          entityType: "project",
+          entityId: p.id,
+          metadata: { slug: p.slug, title: p.title },
+        },
+      });
+      return p;
     });
-    await tx.auditLog.create({
-      data: {
-        actorId: input.creatorUserId,
-        action: "project_created",
-        entityType: "project",
-        entityId: p.id,
-        metadata: { slug: p.slug, title: p.title },
-      },
+    void incrementContributionCreditField({
+      userId: input.creatorUserId,
+      useMockData: false,
+      deltaScore: contributionWeights.projectCreated,
+      field: "projectsCreated",
     });
-    return p;
-  });
-  void incrementContributionCreditField({
-    userId: input.creatorUserId,
-    useMockData: false,
-    deltaScore: contributionWeights.projectCreated,
-    field: "projectsCreated",
-  });
-  void dispatchWebhookEvent(input.creatorUserId, "project.created", {
-    projectId: project.id,
-    slug: project.slug,
-    title: project.title,
-  });
-  return toProjectDto({ ...project, team: project.team });
+    void dispatchWebhookEvent(input.creatorUserId, "project.created", {
+      projectId: project.id,
+      slug: project.slug,
+      title: project.title,
+    });
+    return toProjectDto({ ...project, team: project.team });
+  } catch (e) {
+    const mapped = mapPrismaToRepositoryError(e);
+    if (mapped) throw mapped;
+    throw e;
+  }
 }
 
 export async function updateProject(params: {

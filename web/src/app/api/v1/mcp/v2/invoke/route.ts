@@ -8,6 +8,7 @@ import { assertContentSafeText } from "@/lib/content-safety";
 import { checkMcpUserToolRateLimit } from "@/lib/mcp-user-write-rate-limit";
 import { checkQuota } from "@/lib/quota";
 import { apiError, apiSuccess } from "@/lib/response";
+import { isRepositoryError } from "@/lib/repository-errors";
 import {
   MCP_V2_TOOL_NAMES,
   type McpV2ToolName,
@@ -305,18 +306,26 @@ export async function POST(request: NextRequest) {
             402
           );
         }
-        const project = await createProject({
-          title,
-          oneLiner,
-          description,
-          techStack,
-          tags,
-          status,
-          demoUrl,
-          creatorUserId: session.userId,
-        });
-        await log(200);
-        return apiSuccess({ tool, input, output: project });
+        try {
+          const project = await createProject({
+            title,
+            oneLiner,
+            description,
+            techStack,
+            tags,
+            status,
+            demoUrl,
+            creatorUserId: session.userId,
+          });
+          await log(200);
+          return apiSuccess({ tool, input, output: project });
+        } catch (e) {
+          if (isRepositoryError(e) && e.code === "CREATOR_PROFILE_REQUIRED") {
+            await log(403, e.code);
+            return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: e.message }, 403);
+          }
+          throw e;
+        }
       }
 
       case "submit_collaboration_intent": {
@@ -351,9 +360,9 @@ export async function POST(request: NextRequest) {
             await log(409, "DUPLICATE_INTENT");
             return apiError({ code: "DUPLICATE_INTENT", message: "You already have a pending or approved intent for this project" }, 409);
           }
-          if (msg === "CREATOR_PROFILE_REQUIRED") {
-            await log(403, msg);
-            return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: "Creator profile required" }, 403);
+          if (isRepositoryError(e) && e.code === "CREATOR_PROFILE_REQUIRED") {
+            await log(403, e.code);
+            return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: e.message }, 403);
           }
           throw e;
         }

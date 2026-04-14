@@ -1,7 +1,7 @@
 # VibeHub 后端优化线路图 v1.0
 
 > 基于当前代码仓库（v3.4 封版）的全量审计，面向"可信协作平台底座"目标的系统性后端整改与演进计划。  
-> 更新日期：2026-04-14  
+> 更新日期：2026-04-15  
 > 作者：Backend Platform Engineer Agent
 
 ---
@@ -530,7 +530,8 @@ model WebhookEndpoint {
 
 ## 六、P4 优先级：基础设施级优化
 
-> P4 = 技术债清偿和长期可扩展性投资，按技术团队节奏排期。
+> P4 = 技术债清偿和长期可扩展性投资，按技术团队节奏排期。  
+> **2026-04-15 更新：** P4-1～P4-4 已在当前主线落地（见下各小节「当前状态」）。
 
 ### P4-1：数据库连接池与 Prisma 实例管理
 
@@ -545,6 +546,8 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
 在 `DATABASE_URL` 中设置连接池参数：`?connection_limit=10&pool_timeout=20`。
 
+**当前状态：** `web/src/lib/db.ts` 使用 `global.__vibehub_prisma__` 单例并注明 P4-1；连接池参数仍由部署侧在 `DATABASE_URL` 上配置（Prisma 数据源 URL）。
+
 ---
 
 ### P4-2：Repository 层统一错误处理
@@ -552,10 +555,12 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 **问题：** 各 route.ts 对 repository 抛出的错误处理方式不一致（部分用 try/catch，部分没有），导致 500 错误暴露 Prisma 内部信息。
 
 **修复：**
-1. 定义 `RepositoryError` 类型（`NOT_FOUND`、`CONFLICT`、`UNAUTHORIZED`、`INVALID_INPUT`）
+1. 定义 `RepositoryError` 类型（`NOT_FOUND`、`CONFLICT`、`UNAUTHORIZED`、`FORBIDDEN`、`CREATOR_PROFILE_REQUIRED`、`INVALID_INPUT` 等）
 2. Repository 函数抛出 `RepositoryError` 而非原始 Prisma 错误
 3. Route handler 统一转换为 `apiError` 响应
 4. `P2002`（唯一约束冲突）→ 409，`P2025`（记录不存在）→ 404
+
+**当前状态：** `web/src/lib/repository-errors.ts` 提供 `RepositoryError`、`mapPrismaToRepositoryError`、`apiErrorFromRepositoryCatch`；`createPost` / `createProject` 等对 Prisma 已知错误做映射；`listPosts` / `listProjects` 的非法 `cursor` 返回 400。`createProject` 与 `submitCollaborationIntent` 缺少创作者资料时抛出 `RepositoryError`（code `CREATOR_PROFILE_REQUIRED`，HTTP 403），对应 HTTP 路由与 MCP `invoke` 已消费该类型。其余 repository 函数可按同一模式逐步补齐。
 
 ---
 
@@ -567,6 +572,8 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 1. P4 阶段优先对高频接口 `GET /api/v1/posts`、`GET /api/v1/projects` 增加游标分页支持（向后兼容：同时支持 `cursor` 和 `page`）
 2. 游标基于 `createdAt` + `id` 组合（稳定排序）
 3. Response 中增加 `nextCursor` 字段
+
+**当前状态：** `listPosts` / `listProjects` 支持 `cursor`（与 `page` 并存）；帖子在默认/`recent` 且无全文 `query`、非 featured-only 时使用 `createdAt`+`id`；项目在无非全文 `query` 时使用 `updatedAt`+`id`。通过多取一行判定是否还有下一页，避免末页误发 `nextCursor`。`GET /api/v1/posts` 与 `GET /api/v1/projects` 已透传 `cursor` 查询参数。Mock 数据补充了第三条项目与第四条已审帖子，便于单测覆盖多页游标。
 
 ---
 
@@ -581,6 +588,8 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 2. `npm run generate:types` 生成 `web/src/lib/api-types.ts`
 3. 前端组件逐步迁移使用生成类型
 4. CI 验证：生成结果未变更（`git diff --exit-code`）
+
+**当前状态：** 已添加 `openapi-typescript` 与 `openapi-fetch`（devDependency）、`npm run generate:types`（`scripts/generate-api-types.ts`）输出 **`web/src/lib/generated/api-types.ts`**（已纳入版本库）；`npm run check` 在 `validate:openapi` 之后执行 `generate:types` 再 `build`，保证 spec 变更会驱动类型重新生成并通过类型检查。OpenAPI 已为 `GET /posts`、`GET /projects` 增加 `cursor` 参数说明，并为帖子创建补充 403/409 响应、为项目创建补充 402/409。
 
 ---
 
@@ -628,10 +637,10 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 | P3-3 | Webhook 系统通用化 | 🟢 P3 | 新模型 + 事件分发层 | L |
 | P3-4 | Enterprise 多成员架构预留 | 🟢 P3 | 模型设计（不实施） | S（设计） |
 | P3-5 | Stripe Webhook 处理 | 🟢 P3 | 新路由 + 订阅状态机 | M |
-| P4-1 | Prisma 连接池优化 | ⚪ P4 | prisma.ts | XS |
-| P4-2 | Repository 统一错误处理 | ⚪ P4 | 所有 repository 函数 | L |
-| P4-3 | 游标分页 | ⚪ P4 | 高频列表路由 | M |
-| P4-4 | OpenAPI Codegen | ⚪ P4 | CI + 前端类型层 | M |
+| P4-1 | Prisma 连接池优化 | ✅ 已完成（单例 + 部署 URL 池化） | db.ts | XS |
+| P4-2 | Repository 统一错误处理 | 🟡 部分完成（核心写路径 + 列表游标校验；其余函数可渐进） | repository-errors + routes | L |
+| P4-3 | 游标分页 | ✅ 已完成 | posts/projects + repository | M |
+| P4-4 | OpenAPI Codegen | ✅ 已完成 | generate:types + generated/api-types.ts | M |
 
 ---
 
