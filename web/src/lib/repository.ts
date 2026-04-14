@@ -2267,7 +2267,7 @@ export async function upsertUserSubscription(params: {
   }
   const prisma = await getPrisma();
   const data = {
-    tier: params.tier as "free" | "pro" | "team_pro",
+    tier: params.tier as "free" | "pro",
     status: params.status as "active" | "past_due" | "canceled" | "trialing",
     stripeSubscriptionId: params.stripeSubscriptionId ?? null,
     stripePriceId: params.stripePriceId ?? null,
@@ -4097,7 +4097,7 @@ export async function reviewEnterpriseVerification(params: {
     if (nextStatus === "approved") {
       const activeNow = new Date().toISOString();
       if (current) {
-        current.tier = "team_pro";
+        current.tier = "pro";
         current.status = "active";
         current.cancelAtPeriodEnd = false;
         current.updatedAt = activeNow;
@@ -4105,7 +4105,7 @@ export async function reviewEnterpriseVerification(params: {
         mockSubscriptions.push({
           id: `sub_ent_${Date.now()}`,
           userId: params.userId,
-          tier: "team_pro",
+          tier: "pro",
           status: "active",
           cancelAtPeriodEnd: false,
           createdAt: activeNow,
@@ -4161,14 +4161,14 @@ export async function reviewEnterpriseVerification(params: {
       await tx.userSubscription.upsert({
         where: { userId: params.userId },
         update: {
-          tier: "team_pro",
+          tier: "pro",
           status: "active",
           cancelAtPeriodEnd: false,
           updatedAt: new Date(),
         },
         create: {
           userId: params.userId,
-          tier: "team_pro",
+          tier: "pro",
           status: "active",
           cancelAtPeriodEnd: false,
         },
@@ -4952,7 +4952,7 @@ export async function reviewEnterpriseVerificationApplication(params: {
       if (subIdx >= 0) {
         mockSubscriptions[subIdx] = {
           ...mockSubscriptions[subIdx],
-          tier: "team_pro",
+          tier: "pro",
           status: "active",
           updatedAt: subNow,
         };
@@ -4960,7 +4960,7 @@ export async function reviewEnterpriseVerificationApplication(params: {
         mockSubscriptions.push({
           id: `sub_enterprise_${Date.now()}`,
           userId: current.userId,
-          tier: "team_pro",
+          tier: "pro",
           status: "active",
           cancelAtPeriodEnd: false,
           createdAt: subNow,
@@ -5020,14 +5020,14 @@ export async function reviewEnterpriseVerificationApplication(params: {
       await tx.userSubscription.upsert({
         where: { userId: existing.id },
         update: {
-          tier: "team_pro",
+          tier: "pro",
           status: "active",
           cancelAtPeriodEnd: false,
           updatedAt: new Date(),
         },
         create: {
           userId: existing.id,
-          tier: "team_pro",
+          tier: "pro",
           status: "active",
           cancelAtPeriodEnd: false,
         },

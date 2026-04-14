@@ -56,7 +56,7 @@ export default async function SubscriptionPage({ searchParams }: Props) {
           <div>
             <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Current plan</p>
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{pricing.label}</h2>
-            <p className="text-sm text-[var(--color-text-secondary)]">{pricing.priceMonthly}/month</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">{pricing.priceMonthly === 0 ? "Free" : `$${pricing.priceMonthly}/month`}</p>
           </div>
           <span className={`tag ${isActive ? "tag-green" : "tag-red"}`}>{statusLabel}</span>
         </div>

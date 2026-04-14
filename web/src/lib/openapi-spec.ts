@@ -426,7 +426,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                   type: "object",
                   required: ["planTier"],
                   properties: {
-                    planTier: { type: "string", enum: ["free", "pro", "team_pro"] },
+                    planTier: { type: "string", enum: ["free", "pro"] },
                   },
                 },
               },

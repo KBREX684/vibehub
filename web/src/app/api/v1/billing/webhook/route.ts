@@ -4,7 +4,6 @@ import type { SubscriptionTier } from "@/lib/types";
 
 const PRICE_TO_TIER: Record<string, SubscriptionTier> = {
   [process.env.STRIPE_PRICE_PRO ?? "__pro__"]: "pro",
-  [process.env.STRIPE_PRICE_TEAM_PRO ?? "__team_pro__"]: "team_pro",
 };
 
 function tierFromPriceId(priceId: string | null | undefined): SubscriptionTier {

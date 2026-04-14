@@ -7,23 +7,20 @@ import {
 } from "../src/lib/repository";
 
 describe("Subscription Plans", () => {
-  it("lists available plans", async () => {
+  it("lists available plans (Free + Pro only)", async () => {
     const plans = await getSubscriptionPlans();
-    expect(plans.length).toBeGreaterThanOrEqual(3);
+    expect(plans.length).toBeGreaterThanOrEqual(2);
     const tiers = plans.map((p) => p.tier);
     expect(tiers).toContain("free");
     expect(tiers).toContain("pro");
-    expect(tiers).toContain("team_pro");
   });
 
   it("plans have correct pricing hierarchy", async () => {
     const plans = await getSubscriptionPlans();
     const free = plans.find((p) => p.tier === "free")!;
     const pro = plans.find((p) => p.tier === "pro")!;
-    const teamPro = plans.find((p) => p.tier === "team_pro")!;
     expect(free.priceMonthly).toBe(0);
     expect(pro.priceMonthly).toBeGreaterThan(0);
-    expect(teamPro.priceMonthly).toBeGreaterThan(pro.priceMonthly);
   });
 
   it("plans have API quotas", async () => {

@@ -5,20 +5,22 @@ export default function PricingPage() {
     <>
       <main className="container">
         <section className="section" style={{ textAlign: "center" }}>
-          <h1 style={{ marginBottom: 8 }}>简单透明的定价</h1>
-          <p className="muted">免费用户完整体验社区广场；付费用户解锁更多空间和曝光。</p>
+          <h1 style={{ marginBottom: 8 }}>Simple, transparent pricing</h1>
+          <p className="muted">Free users get full community access. Pro unlocks more space, exposure, and developer tools.</p>
         </section>
 
         <PricingCards />
 
         <section className="section" style={{ maxWidth: 680, margin: "0 auto" }}>
-          <h2>常见问题</h2>
+          <h2>FAQ</h2>
           <div style={{ display: "grid", gap: 16 }}>
             {[
-              { q: "可以随时取消订阅吗？", a: "可以。取消后订阅继续到当前计费周期结束，之后自动降级为 Free。" },
-              { q: "支持哪些支付方式？", a: "通过 Stripe 支持信用卡/借记卡。微信/支付宝支持正在接入中。" },
-              { q: "团队成员也需要付费吗？", a: "不需要。只有团队创建者需要订阅，成员加入不收费。" },
-              { q: "免费版有功能限制吗？", a: "免费版可完整使用社区广场（浏览、发帖、评论、点赞、关注）。付费版解锁更多团队空间、项目数量和曝光机会。" },
+              { q: "Can I cancel anytime?", a: "Yes. After cancellation your Pro benefits continue until the end of the current billing cycle, then you automatically revert to Free." },
+              { q: "What payment methods are accepted?", a: "We use Stripe — credit cards, debit cards, and many local payment methods are supported worldwide." },
+              { q: "Do team members need to pay?", a: "No. Only the team creator needs a subscription. Members join for free." },
+              { q: "What's included in Free?", a: "Everything a developer needs to participate: browse, post, comment, like, follow, join teams, and use basic API/MCP tools. Pro adds more projects, teams, exposure features, and higher API limits." },
+              { q: "Is the price in USD?", a: "Yes. $9/month is the global price. Stripe handles currency conversion for your local payment method." },
+              { q: "Can I use VibeHub for my company?", a: "Absolutely. Companies can use the public API and MCP tools to discover projects and talent on VibeHub with a regular account. Dedicated enterprise features will be available in a future release." },
             ].map(({ q, a }) => (
               <details key={q} className="card" style={{ cursor: "pointer" }}>
                 <summary style={{ fontWeight: 600, padding: "4px 0" }}>{q}</summary>

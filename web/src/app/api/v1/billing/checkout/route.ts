@@ -3,10 +3,9 @@ import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { upsertStripeCustomer } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 
-/** M-2: Tier → Stripe price ID mapping (set these in env vars). */
+/** v4.0: Only Free + Pro — single Stripe price mapping. */
 const TIER_PRICE_IDS: Record<string, string | undefined> = {
   pro: process.env.STRIPE_PRICE_PRO,
-  team_pro: process.env.STRIPE_PRICE_TEAM_PRO,
 };
 
 async function getStripe() {
@@ -27,7 +26,7 @@ export async function POST(request: NextRequest) {
   const tier = typeof body.tier === "string" ? body.tier : "";
   const priceId = TIER_PRICE_IDS[tier];
   if (!priceId) {
-    return apiError({ code: "INVALID_TIER", message: "tier must be 'pro' or 'team_pro'" }, 400);
+    return apiError({ code: "INVALID_TIER", message: "tier must be 'pro'" }, 400);
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";

@@ -8,7 +8,7 @@ export type ProjectStatus = "idea" | "building" | "launched" | "paused";
 export type ReviewStatus = "pending" | "approved" | "rejected";
 export type CollaborationIntentType = "join" | "recruit";
 export type ChallengeStatus = "draft" | "active" | "closed";
-export type SubscriptionTier = "free" | "pro" | "team_pro";
+export type SubscriptionTier = "free" | "pro";
 export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
 
 // ─── User ─────────────────────────────────────────────────────────────────────

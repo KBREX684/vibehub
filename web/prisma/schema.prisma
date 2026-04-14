@@ -75,11 +75,10 @@ enum ChallengeStatus {
   closed
 }
 
-/// M-1/M-2: Subscription tiers
+/// v4.0: Simplified to Free + Pro only (Team Pro removed)
 enum SubscriptionTier {
   free
   pro
-  team_pro
 }
 
 /// M-1/M-2: Subscription status
