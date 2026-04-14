@@ -30,6 +30,38 @@ export interface MockUserSubscriptionInfo {
   canceledAt?: string;
 }
 
+export type EnterpriseVerificationStatus = "none" | "pending" | "approved" | "rejected";
+
+export interface MockEnterpriseProfile {
+  id: string;
+  userId: string;
+  status: EnterpriseVerificationStatus;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase?: string;
+  reviewedBy?: string;
+  reviewNote?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MockEnterpriseVerificationApplication {
+  id: string;
+  userId: string;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase?: string;
+  status: Exclude<EnterpriseVerificationStatus, "none">;
+  reviewNote?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MockTeam {
   id: string;
   slug: string;
@@ -103,6 +135,8 @@ export interface MockInAppNotification {
 }
 
 export const mockInAppNotifications: MockInAppNotification[] = [];
+export const mockEnterpriseProfiles: MockEnterpriseProfile[] = [];
+export const mockEnterpriseVerificationApplications: MockEnterpriseVerificationApplication[] = [];
 
 export const mockUsers: User[] = [
   { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin", githubId: 1001, githubUsername: "alice-ai", avatarUrl: "https://avatars.githubusercontent.com/u/1001" },
@@ -396,6 +430,15 @@ export const mockSubscriptions: Array<{
   stripePriceId?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd: boolean;
+  enterpriseStatus?: EnterpriseVerificationStatus;
+  enterpriseRequestedAt?: string;
+  enterpriseReviewedAt?: string;
+  enterpriseReviewedBy?: string;
+  enterpriseOrgName?: string;
+  enterpriseOrgWebsite?: string;
+  enterpriseWorkEmail?: string;
+  enterpriseUseCase?: string;
+  enterpriseReviewNote?: string;
   createdAt: string;
   updatedAt: string;
 }> = [];

@@ -98,10 +98,11 @@
 
 | Page/Feature | API Route | Repo Function | Schema | Status | Test | Fake-Risk | OpenAPI |
 |---|---|---|---|---|---|---|---|
-| `/workspace/enterprise` | `GET /api/v1/me/enterprise/workspace` | `getEnterpriseWorkspaceSummary` | — | ✅ **Gated C3** | ❌ E2E | Was open to all | ✅ |
+| `/workspace/enterprise` | `GET /api/v1/me/enterprise/workspace` + `GET /api/v1/me/enterprise/verification` | `getEnterpriseWorkspaceSummary` + `getEnterpriseProfileByUserId` | `EnterpriseProfile` | ✅ **Status-gated P0** | ✅ E2E (gate) | No | ✅ |
 | Project radar | `GET /api/v1/enterprise/project-radar` | `getProjectRadar` | ProjectRadarEntry | ✅ | ✅ | No | ✅ |
 | Talent radar | `GET /api/v1/enterprise/talent-radar` | `getTalentRadarLegacy` | TalentRadarEntry | ✅ | ✅ | No | ✅ |
-| `/enterprise/verify` | POST TBD | TBD | EnterpriseVerification | ⚠️ **form stub P1** | ❌ | No | ❌ |
+| `/enterprise/verify` | `GET/POST /api/v1/me/enterprise/verification` | `getEnterpriseProfileByUserId` + `submitEnterpriseVerification` | `EnterpriseProfile` | ✅ **Closed-loop P0** | ❌ | No | ✅ |
+| Admin enterprise reviews | `GET/POST /api/v1/admin/enterprise/verifications` | `listEnterpriseProfiles` + `reviewEnterpriseVerification` | `EnterpriseProfile` | ✅ **P0 review flow** | ❌ | No | ✅ |
 
 ---
 

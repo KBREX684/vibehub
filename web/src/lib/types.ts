@@ -1,6 +1,7 @@
 // ─── Core enums ───────────────────────────────────────────────────────────────
 
 export type Role = "guest" | "user" | "admin";
+export type EnterpriseVerificationStatus = "none" | "pending" | "approved" | "rejected";
 /** P2: Post sort order */
 export type PostSortOrder = "recent" | "hot" | "featured";
 export type ProjectStatus = "idea" | "building" | "launched" | "paused";
@@ -23,6 +24,13 @@ export interface User {
   avatarUrl?: string;
   /** M-2: Stripe */
   stripeCustomerId?: string;
+  enterpriseStatus?: EnterpriseVerificationStatus;
+  enterpriseOrganization?: string;
+  enterpriseWebsite?: string;
+  enterpriseAppliedAt?: string;
+  enterpriseReviewedAt?: string;
+  enterpriseReviewedBy?: string;
+  enterpriseUseCase?: string;
 }
 
 // ─── Creator / Project ────────────────────────────────────────────────────────
@@ -158,6 +166,10 @@ export interface SessionUser {
   userId: string;
   role: Role;
   name: string;
+  subscriptionTier?: SubscriptionTier;
+  enterpriseStatus?: EnterpriseVerificationStatus;
+  enterpriseOrganization?: string;
+  enterpriseWebsite?: string;
   /** Present when authenticated via API key; empty array means unrestricted. */
   apiKeyScopes?: string[];
   /** Present when authenticated via API key (DB path); used for MCP audit. */
@@ -246,7 +258,9 @@ export interface AuditLog {
     | "team_task"
     | "team_milestone"
     | "api_key"
-    | "in_app_notification";
+    | "in_app_notification"
+    | "enterprise_profile"
+    | "enterprise_verification_application";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -486,11 +500,48 @@ export interface UserSubscription {
   stripePriceId?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd: boolean;
+  enterpriseStatus?: EnterpriseVerificationStatus;
+  enterpriseRequestedAt?: string;
+  enterpriseReviewedAt?: string;
+  enterpriseReviewedBy?: string;
+  enterpriseOrgName?: string;
+  enterpriseOrgWebsite?: string;
+  enterpriseWorkEmail?: string;
+  enterpriseUseCase?: string;
+  enterpriseReviewNote?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 // ─── P4: Enterprise / Embed ───────────────────────────────────────────────────
+
+export interface EnterpriseProfile {
+  userId: string;
+  status: EnterpriseVerificationStatus;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase?: string;
+  reviewedBy?: string;
+  reviewNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EnterpriseVerificationApplication {
+  id: string;
+  userId: string;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail: string;
+  useCase?: string;
+  status: Exclude<EnterpriseVerificationStatus, "none">;
+  reviewNote?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 /** P4: Embeddable card payload for external sites. */
 export interface EmbedProjectCard {

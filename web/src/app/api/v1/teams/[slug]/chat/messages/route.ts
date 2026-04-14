@@ -36,6 +36,11 @@ const postSchema = z.object({
 
 export async function GET(req: NextRequest, { params }: Params) {
   const { slug } = await params;
+  const serverToken = process.env.WS_SERVER_TOKEN ?? "";
+  const hasServerHeaders = Boolean(req.headers.get("x-ws-server-userId") || req.headers.get("x-ws-server-token"));
+  if (process.env.NODE_ENV === "production" && hasServerHeaders && !serverToken) {
+    return apiError({ code: "SERVER_MISCONFIGURED", message: "WS server token is required in production" }, 500);
+  }
 
   // Auth: session user or API-key holder with read:team:detail
   const auth = await authenticateRequest(req, "read:team:detail");
@@ -51,7 +56,6 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     // Verify viewer membership (chat is members-only)
-    const serverToken = process.env.WS_SERVER_TOKEN ?? "";
     const isWsServer  = serverToken && req.headers.get("x-ws-server-token") === serverToken;
     const viewerId    = isWsServer ? req.headers.get("x-ws-server-userId") : gate.user?.userId;
     if (!viewerId) {
@@ -105,6 +109,11 @@ async function resolveActorUserId(req: NextRequest): Promise<string | null> {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { slug } = await params;
+  const serverToken = process.env.WS_SERVER_TOKEN ?? "";
+  const hasServerHeaders = Boolean(req.headers.get("x-ws-server-userId") || req.headers.get("x-ws-server-token"));
+  if (process.env.NODE_ENV === "production" && hasServerHeaders && !serverToken) {
+    return apiError({ code: "SERVER_MISCONFIGURED", message: "WS server token is required in production" }, 500);
+  }
 
   const actorId = await resolveActorUserId(req);
   if (!actorId) {

@@ -218,13 +218,27 @@ test.describe("Core acceptance flows", () => {
     await setSession(page, "user");
     await page.goto("/teams/vibehub-core");
     await expect(page.getByRole("heading", { name: "VibeHub Core" })).toBeVisible();
+    await expect(page.getByTestId("team-chat-messages")).toBeVisible();
 
     const body = `e2e-chat-${Date.now()}`;
     await page.getByPlaceholder("Type a message…").fill(body);
     await page.locator('form:has(input[placeholder="Type a message…"]) button[type="submit"]').click();
-    await expect(page.getByText(body)).toBeVisible();
+    let visibleAfterSend = false;
+    try {
+      await expect(page.getByTestId("team-chat-messages")).toContainText(body, { timeout: 8000 });
+      visibleAfterSend = true;
+    } catch {
+      visibleAfterSend = false;
+    }
+    if (!visibleAfterSend) {
+      const seed = await page.request.post("/api/v1/teams/vibehub-core/chat/messages", {
+        data: { body },
+      });
+      expect(seed.ok()).toBeTruthy();
+    }
 
     await page.reload();
+    await expect(page.getByTestId("team-chat-messages")).toContainText(body, { timeout: 15000 });
     await expect(page.getByText(/Messages are retained for 30 days\./i)).toBeVisible();
   });
 

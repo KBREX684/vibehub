@@ -31,6 +31,7 @@ interface ChatMsg {
 }
 
 type ConnState = "connecting" | "connected" | "disconnected" | "error" | "full";
+type HistoryState = "idle" | "loading" | "loaded" | "error";
 
 interface Props {
   teamSlug: string;
@@ -65,6 +66,8 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
   const [messages, setMessages]       = useState<ChatMsg[]>([]);
   const [input, setInput]             = useState("");
   const [connState, setConnState]     = useState<ConnState>("disconnected");
+  const [historyState, setHistoryState] = useState<HistoryState>("idle");
+  const [usingRestFallback, setUsingRestFallback] = useState(false);
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [error, setError]             = useState<string | null>(null);
 
@@ -73,6 +76,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
   const bottomRef    = useRef<HTMLDivElement | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef   = useRef(true);
+  const stopReconnectRef = useRef(false);
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
@@ -82,9 +86,16 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
   // Load REST history on mount
   const loadHistory = useCallback(async () => {
     if (!isMember || !currentUser) return;
+    setHistoryState("loading");
     try {
       const res = await fetch(`/api/v1/teams/${teamSlug}/chat/messages?limit=50`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (mountedRef.current) {
+          setHistoryState("error");
+          setError("Failed to load chat history");
+        }
+        return;
+      }
       const data = await res.json();
       const hist: ChatMsg[] = (data.data?.messages ?? []).map(
         (m: { id: string; authorId: string; authorName: string; body: string; createdAt: string }) => ({
@@ -95,9 +106,15 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
           createdAt: m.createdAt,
         })
       );
-      if (mountedRef.current) setMessages(hist);
+      if (mountedRef.current) {
+        setMessages(hist);
+        setHistoryState("loaded");
+      }
     } catch {
-      // non-fatal
+      if (mountedRef.current) {
+        setHistoryState("error");
+        setError("Unable to load chat history");
+      }
     }
   }, [teamSlug, isMember, currentUser]);
 
@@ -106,6 +123,8 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     if (!isMember || !currentUser) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    stopReconnectRef.current = false;
+    setUsingRestFallback(false);
     setConnState("connecting");
     setError(null);
 
@@ -127,6 +146,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       authTokenRef.current = token;
     } catch {
       setConnState("error");
+      setUsingRestFallback(true);
       setError("Unable to authorize chat connection");
       return;
     }
@@ -136,6 +156,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       ws = new WebSocket(WS_URL);
     } catch {
       setConnState("error");
+      setUsingRestFallback(true);
       setError("WebSocket not available");
       return;
     }
@@ -143,6 +164,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
 
     ws.onopen = () => {
       setConnState("connected");
+      setUsingRestFallback(false);
       ws.send(
         JSON.stringify({
           type:  "auth",
@@ -192,6 +214,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
         const code = data.code as string;
         if (code === "ROOM_FULL") {
           if (mountedRef.current) setConnState("full");
+          stopReconnectRef.current = true;
           ws.close();
         } else if (mountedRef.current) {
           setError(data.message as string);
@@ -201,12 +224,13 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
 
     ws.onclose = () => {
       if (!mountedRef.current) return;
-      if (connState !== "full") {
+      if (!stopReconnectRef.current) {
         setConnState("disconnected");
+        setUsingRestFallback(true);
         setOnlineCount(null);
         // Reconnect after 5 s
         reconnectRef.current = setTimeout(() => {
-          if (mountedRef.current) connect();
+          if (mountedRef.current && !stopReconnectRef.current) connect();
         }, 5000);
       }
     };
@@ -214,22 +238,26 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     ws.onerror = () => {
       if (mountedRef.current) {
         setConnState("error");
+        setUsingRestFallback(true);
         setError("Connection error. Retrying…");
       }
     };
-  }, [teamSlug, currentUser, isMember, connState]);
+  }, [teamSlug, currentUser, isMember]);
 
   useEffect(() => {
     mountedRef.current = true;
+    stopReconnectRef.current = false;
+    setMessages([]);
+    setHistoryState("idle");
     loadHistory();
     connect();
     return () => {
       mountedRef.current = false;
+      stopReconnectRef.current = true;
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       wsRef.current?.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamSlug]);
+  }, [teamSlug, isMember, currentUser?.id, loadHistory, connect]);
 
   const sendMessage = () => {
     const body = input.trim();
@@ -252,6 +280,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       wsRef.current.send(JSON.stringify({ type: "message", body }));
     } else {
       // REST fallback
+      setUsingRestFallback(true);
       fetch(`/api/v1/teams/${teamSlug}/chat/messages`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -342,9 +371,26 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
         </div>
       </div>
 
+      {usingRestFallback && (
+        <div className="mx-4 mt-2 px-3 py-1.5 bg-[var(--color-warning-subtle)] border border-[rgba(251,191,36,0.25)] rounded-[var(--radius-md)] text-xs text-[var(--color-warning)]">
+          Realtime chat unavailable. Sending via REST fallback.
+        </div>
+      )}
+
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
-        {messages.length === 0 ? (
+      <div
+        data-testid="team-chat-messages"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5"
+      >
+        {historyState === "loading" ? (
+          <div className="text-center py-8">
+            <p className="text-xs text-[var(--color-text-muted)]">Loading recent messages…</p>
+          </div>
+        ) : historyState === "error" ? (
+          <div className="text-center py-8">
+            <p className="text-xs text-[var(--color-error)]">Failed to load chat history.</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-xs text-[var(--color-text-muted)]">
               No messages yet. Say hello!

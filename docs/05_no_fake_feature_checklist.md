@@ -135,6 +135,6 @@ For each interactive element, confirm:
 | `/projects/[slug]/edit` | P1 | Low — PATCH API needs adding |
 | `DELETE /api/v1/projects/[slug]` | P1 | Low — repo needs adding |
 | `/teams/[slug]/settings` | P1 | Low — `updateTeamLinks` exists |
-| Enterprise verification backend | P1 | Medium — form stub only |
+| Enterprise verification workflow depth (advanced reviewer UX) | P1 | Medium — base submit/review/status is live; richer reviewer tooling pending |
 | Multi-team chat workspace page | P1 | Medium |
 | Playwright E2E full suite | P1 | High priority |

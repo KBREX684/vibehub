@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import {
   getEnterpriseWorkspaceSummary,
+  getLatestEnterpriseVerificationApplication,
   getProjectRadar,
   getTalentRadarLegacy as getTalentRadar,
 } from "@/lib/repository";
@@ -21,10 +22,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-// Enterprise access requires role=admin OR subscription tier=team_pro.
-// For the current mock-data mode: admin users get access, others see the gating page.
-function hasEnterpriseAccess(role: string): boolean {
-  return role === "admin";
+function hasEnterpriseAccess(session: { role: string; enterpriseStatus?: string }): boolean {
+  return session.role === "admin" || session.enterpriseStatus === "approved";
 }
 
 export default async function EnterpriseWorkspacePage() {
@@ -36,7 +35,19 @@ export default async function EnterpriseWorkspacePage() {
   }
 
   // Logged in but no enterprise access → show gating / upsell page
-  if (!hasEnterpriseAccess(session.role)) {
+  if (!hasEnterpriseAccess(session)) {
+    const latestApplication = await getLatestEnterpriseVerificationApplication(session.userId);
+    const gateMessage =
+      latestApplication?.status === "pending"
+        ? "Your enterprise verification is in review. Core enterprise data zones remain locked until approval."
+        : latestApplication?.status === "rejected"
+          ? "Your previous verification request was rejected. You can submit an updated application."
+          : "Enterprise access requires verified status or admin privileges.";
+    const gateCtaHref =
+      latestApplication?.status === "pending" ? "/enterprise/verify" : "/enterprise/verify";
+    const gateCtaLabel =
+      latestApplication?.status === "pending" ? "View Verification Status" : "Apply for Enterprise Access";
+
     return (
       <main className="container max-w-2xl pb-24 pt-12 space-y-8">
         {/* Hero */}
@@ -52,9 +63,11 @@ export default async function EnterpriseWorkspacePage() {
             <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-3">
               Enterprise Intelligence Workspace
             </h1>
-            <p className="text-sm text-[var(--color-text-secondary)] max-w-lg mx-auto mb-8">
-              Aggregate team management, collaboration funnels, project radars, and
-              talent discovery — for organizations building at scale.
+            <p className="text-sm text-[var(--color-text-secondary)] max-w-lg mx-auto mb-4">
+              Aggregate team management, collaboration funnels, project radars, and talent discovery — for organizations building at scale.
+            </p>
+            <p className="text-xs text-[var(--color-warning)] max-w-lg mx-auto mb-8">
+              {gateMessage}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 text-left">
@@ -75,12 +88,9 @@ export default async function EnterpriseWorkspacePage() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
-              <Link
-                href="/enterprise/verify"
-                className="btn btn-primary text-sm px-6 py-2.5 flex items-center gap-1.5"
-              >
+              <Link href={gateCtaHref} className="btn btn-primary text-sm px-6 py-2.5 flex items-center gap-1.5">
                 <Shield className="w-4 h-4" />
-                Apply for Enterprise Access
+                {gateCtaLabel}
               </Link>
               <Link
                 href="/pricing"
@@ -101,7 +111,7 @@ export default async function EnterpriseWorkspacePage() {
               Your account: <span className="capitalize">{session.role}</span>
             </p>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Enterprise access requires the Team Pro plan or admin privileges.
+              Enterprise access requires approved enterprise verification or admin privileges.
             </p>
           </div>
           <Link href="/pricing" className="btn btn-secondary text-xs px-3 py-1.5 shrink-0 ml-auto">
