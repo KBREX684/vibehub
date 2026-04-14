@@ -390,4 +390,45 @@ test.describe("Core acceptance flows", () => {
     expect(Boolean(json?.ok)).toBe(false);
     expect(json?.error?.code).toBe("FORBIDDEN");
   });
+
+  test("S1: project create and edit UI hits API", async ({ page }) => {
+    await setSession(page, "admin");
+    await page.goto("/projects/new");
+    await expect(page.getByRole("heading", { name: "New project" })).toBeVisible();
+
+    const suffix = Date.now();
+    await page.locator("#project-new-title").fill(`E2E Project ${suffix}`);
+    await page.locator("#project-new-one-liner").fill("One-liner for the E2E create project flow.");
+    await page.locator("#project-new-description").fill(
+      "Description for E2E project create — long enough for API validation rules."
+    );
+    await page.getByPlaceholder(/Comma or newline separated, e.g. Next.js/i).first().fill("Next.js");
+    await page.getByPlaceholder(/Comma or newline separated, e.g. agent/i).fill("e2e");
+    await page.getByRole("button", { name: "Create project" }).click();
+
+    await expect(page).toHaveURL(/\/projects\/e2e-project-/i, { timeout: 15_000 });
+    await expect(page.locator("main h1")).toContainText(`E2E Project ${suffix}`, { timeout: 10_000 });
+
+    await page.getByRole("link", { name: /Edit project/i }).click();
+    await expect(page.getByRole("heading", { name: "Edit project" })).toBeVisible();
+    await page.locator("#project-edit-one-liner").fill("Updated one-liner for E2E patch flow.");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Updated one-liner for E2E patch flow.")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("S1: team owner can PATCH external links from settings page", async ({ page }) => {
+    await setSession(page, "admin");
+    await page.goto("/teams/vibehub-core/settings");
+    await expect(page.getByRole("heading", { name: "Team settings" })).toBeVisible();
+    const url = `https://example.com/e2e-discord-${Date.now()}`;
+    await page.getByLabel("Discord invite URL").fill(url);
+    await page.getByRole("button", { name: "Save links" }).click();
+    await expect(page.getByText("Links saved.")).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("S1: creator profile shows growth panel from API", async ({ page }) => {
+    await page.goto("/creators/alice-ai-builder");
+    await expect(page.getByRole("heading", { name: "Growth" })).toBeVisible();
+    await expect(page.getByText(/Comments received/i)).toBeVisible();
+  });
 });

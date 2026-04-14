@@ -775,6 +775,39 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/teams/{slug}/links": {
+        patch: {
+          tags: ["teams"],
+          summary: "Update team external links (owner only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    discordUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    telegramUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    slackUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    githubOrgUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    githubRepoUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/teams/{slug}/chat/token": {
         post: {
           tags: ["teams"],

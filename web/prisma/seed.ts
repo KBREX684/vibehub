@@ -23,6 +23,19 @@ async function main() {
     },
   });
 
+  await prisma.creatorProfile.upsert({
+    where: { userId: bob.id },
+    update: {},
+    create: {
+      userId: bob.id,
+      slug: "bob-solo-ops",
+      headline: "Solo founder and growth engineer",
+      bio: "Building creator tools and operational automation for one-person companies.",
+      skills: ["Growth", "Node.js", "Data Analytics"],
+      collaborationPreference: "invite_only",
+    },
+  });
+
   const creator = await prisma.creatorProfile.upsert({
     where: { userId: alice.id },
     update: {},

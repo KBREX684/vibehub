@@ -25,6 +25,7 @@ export const REQUIRED_OPENAPI_PATHS = [
   "/api/v1/comments",
   "/api/v1/comments/{commentId}",
   "/api/v1/challenges",
+  "/api/v1/teams/{slug}/links",
   "/api/v1/creators/{slug}/growth",
   "/api/v1/me/api-keys",
   "/api/v1/me/reputation",

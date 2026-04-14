@@ -91,12 +91,17 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </p>
           </div>
         </div>
-        {hasFilters && (
-          <Link href="/discover" className="btn btn-ghost text-sm flex items-center gap-1.5 text-[var(--color-error)]">
-            <X className="w-4 h-4" />
-            Clear filters
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/projects/new" className="btn btn-primary text-sm px-5 py-2 inline-flex">
+            New project
           </Link>
-        )}
+          {hasFilters && (
+            <Link href="/discover" className="btn btn-ghost text-sm flex items-center gap-1.5 text-[var(--color-error)]">
+              <X className="w-4 h-4" />
+              Clear filters
+            </Link>
+          )}
+        </div>
       </section>
 
       {/* Filter bar */}

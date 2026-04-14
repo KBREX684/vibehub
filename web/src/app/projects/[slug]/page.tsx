@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CollaborationIntentForm } from "@/components/collaboration-intent-form";
 import { ProjectTeamLinkForm } from "@/components/project-team-link-form";
+import { ShareProjectButton } from "@/components/share-project-button";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import {
   getCreatorProfileById,
@@ -22,12 +23,12 @@ import {
   CheckCircle2,
   ArrowLeft,
   GitBranch,
-  Share2,
   TrendingUp,
   Zap,
   Trophy,
   Clock,
   BookOpen,
+  Pencil,
 } from "lucide-react";
 
 interface Props {
@@ -63,6 +64,7 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   const creatorProfile = await getCreatorProfileById(project.creatorId);
   const canLinkTeam = Boolean(session && creatorProfile && session.userId === creatorProfile.userId);
+  const canEditProject = Boolean(session && creatorProfile && session.userId === creatorProfile.userId);
   const [publicMilestones, relatedProjects, creatorCredit] = await Promise.all([
     listPublicMilestonesForProject(project.id),
     listProjects({ tag: project.tags[0], page: 1, limit: 4 }),
@@ -212,14 +214,23 @@ export default async function ProjectDetailPage({ params }: Props) {
                   Website
                 </a>
               )}
-              <button
-                className="btn btn-ghost text-sm px-3 py-2 flex items-center gap-1.5"
-                onClick={undefined}
-                title="Share this project"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                Share
-              </button>
+              {canEditProject && (
+                <Link
+                  href={`/projects/${encodeURIComponent(project.slug)}/edit`}
+                  className="btn btn-secondary text-sm px-4 py-2 flex items-center gap-1.5"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit project
+                </Link>
+              )}
+              <ShareProjectButton
+                title={project.title}
+                url={
+                  typeof process.env.NEXT_PUBLIC_BASE_URL === "string" && process.env.NEXT_PUBLIC_BASE_URL
+                    ? `${process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "")}/projects/${project.slug}`
+                    : `/projects/${project.slug}`
+                }
+              />
             </div>
           </div>
         </div>
