@@ -48,7 +48,7 @@ export function PricingCards() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto mb-16">
+    <div className="max-w-4xl mx-auto mb-16 animate-fade-in-up">
       {/* Tier cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] mb-12">
         {TIERS.map((tier) => {
@@ -118,7 +118,7 @@ export function PricingCards() {
       </div>
 
       {/* Feature comparison table */}
-      <div className="border border-[var(--color-border)] bg-[var(--color-bg-canvas)] overflow-hidden">
+      <div className="border border-[var(--color-border)] bg-[var(--color-bg-canvas)] overflow-hidden animate-fade-in-up delay-100">
         <div className="px-6 py-4 border-b border-[var(--color-border)]">
           <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">Feature Comparison</h3>
         </div>

@@ -25,7 +25,7 @@ export default async function HomePage() {
     <main className="container pb-24 space-y-16">
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="pt-16 pb-12 text-center">
+      <section className="pt-16 pb-12 text-center animate-fade-in-up">
         <div className="inline-flex items-center gap-2 px-3 py-1 border border-[var(--color-border)] text-xs font-mono text-[var(--color-text-secondary)] mb-8">
           <Zap className="w-3.5 h-3.5" />
           <span>[v1.0.0] Developer community for shipping together</span>
@@ -66,7 +66,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── Platform Stats ───────────────────────────────────────────────────── */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--color-border)] border border-[var(--color-border)]">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--color-border)] border border-[var(--color-border)] animate-fade-in-up delay-100">
         {[
           { icon: LayoutGrid, label: "Active Projects", value: projects.length },
           { icon: MessageSquare, label: "Discussions", value: "Live" },
@@ -87,7 +87,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── Platform Value Props ─────────────────────────────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up delay-200">
         {[
           {
             icon: Code2,

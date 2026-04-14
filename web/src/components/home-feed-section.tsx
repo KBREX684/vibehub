@@ -28,19 +28,19 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
             {session ? (
               <>
-                <Users className="w-4 h-4 text-[var(--color-accent-cyan)]" />
+                <Users className="w-4 h-4 text-[var(--color-text-primary)]" />
                 Following
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 text-[var(--color-accent-cyan)]" />
+                <Sparkles className="w-4 h-4 text-[var(--color-text-primary)]" />
                 Community feed
               </>
             )}
           </h2>
           <Link
             href="/discussions"
-            className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-accent-cyan)] transition-colors"
+            className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             View all
             <ArrowRight className="w-3 h-3" />
@@ -80,10 +80,10 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[var(--color-featured)]" />
+                <Sparkles className="w-4 h-4 text-[var(--color-text-primary)]" />
                 <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Featured today</h2>
               </div>
-              <Link href="/discover" className="text-xs text-[var(--color-primary-hover)] hover:underline shrink-0">
+              <Link href="/discover" className="text-xs text-[var(--color-text-secondary)] hover:underline shrink-0">
                 Discover
               </Link>
             </div>
@@ -98,12 +98,12 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-[var(--color-primary-hover)]" />
+              <Terminal className="w-4 h-4 text-[var(--color-text-secondary)]" />
               <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Project gallery</h2>
             </div>
             <Link
               href="/discover"
-              className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-accent-cyan)] transition-colors"
+              className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               Explore
               <ArrowRight className="w-3 h-3" />
@@ -124,12 +124,12 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[var(--color-accent-violet)]" />
+                <Users className="w-4 h-4 text-[var(--color-text-primary)]" />
                 <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Active teams</h2>
               </div>
               <Link
                 href="/teams"
-                className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-hover)] hover:text-[var(--color-accent-cyan)] transition-colors"
+                className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 View all
                 <ArrowRight className="w-3 h-3" />
@@ -140,9 +140,9 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
                 <Link
                   key={team.id}
                   href={`/teams/${team.slug}`}
-                  className="card p-4 flex items-start gap-3 hover:-translate-y-0.5 transition-all duration-200 block"
+                  className="card p-4 flex items-start gap-3 transition-colors block"
                 >
-                  <div className="w-9 h-9 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-sm font-bold text-[var(--color-accent-violet)] shrink-0">
+                  <div className="w-9 h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] flex items-center justify-center text-sm font-mono font-bold text-[var(--color-text-primary)] shrink-0">
                     {team.name.charAt(0)}
                   </div>
                   <div className="min-w-0">

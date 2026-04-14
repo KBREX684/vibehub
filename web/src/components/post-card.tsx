@@ -24,11 +24,11 @@ export function PostCard({
   });
 
   const inner = (
-    <article className="card group hover:-translate-y-0.5 transition-all duration-200 p-5">
+    <article className="card group transition-colors p-5">
       {/* Author row */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-xs font-semibold text-[var(--color-primary-hover)]">
+          <span className="w-6 h-6 rounded-full border border-[var(--color-border)] flex items-center justify-center text-xs font-mono font-semibold text-[var(--color-text-primary)]">
             {post.authorName?.charAt(0)?.toUpperCase() ?? "A"}
           </span>
           <span className="text-sm font-medium text-[var(--color-text-primary)]">
@@ -45,7 +45,7 @@ export function PostCard({
       </div>
 
       {/* Title */}
-      <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-1.5 line-clamp-2 leading-snug group-hover:text-[var(--color-primary-hover)] transition-colors">
+      <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-1.5 line-clamp-2 leading-snug group-hover:underline transition-colors">
         {post.title}
       </h3>
 
