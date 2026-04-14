@@ -29,6 +29,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage } from "http";
 import { createServer } from "http";
 import { verifyChatToken, type ChatTokenErrorCode } from "./src/lib/chat-token";
+import { assertUrlCountAtMost, escapeHtmlAngleBrackets } from "./src/lib/content-safety";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -36,6 +37,9 @@ const WS_PORT           = parseInt(process.env.WS_PORT           ?? "3001",  10)
 const CHAT_CAPACITY_DEFAULT = parseInt(process.env.CHAT_CAPACITY_DEFAULT ?? "50", 10);
 const MESSAGE_MAX_BYTES = 2000;
 const HISTORY_LIMIT     = 50;
+/** P2-5: per-user sliding window (messages per minute) while connected */
+const USER_MSG_WINDOW_MS = 60_000;
+const USER_MSG_MAX_PER_WINDOW = 30;
 // Internal base URL used for REST persistence calls (Next.js app)
 const NEXT_BASE_URL     = process.env.NEXT_BASE_URL ?? "http://localhost:3000";
 // Optional server-to-server token (set both here and on the Next.js side via WS_SERVER_TOKEN)
@@ -70,6 +74,8 @@ interface TeamMemberVerifierResult {
 const rooms = new Map<string, Set<AuthedClient>>();
 // history: teamSlug → last HISTORY_LIMIT messages (ephemeral, resets on restart)
 const history = new Map<string, ChatMessage[]>();
+// userId → message timestamps (P2-5 rate limit)
+const userMessageTimestamps = new Map<string, number[]>();
 
 function getCapacity(teamSlug: string): number {
   const envKey = `CHAT_CAPACITY_${teamSlug.toUpperCase().replace(/-/g, "_")}`;
@@ -113,6 +119,24 @@ function addToHistory(teamSlug: string, msg: ChatMessage) {
  * authenticated userId from verified chat token claims, and the Next.js
  * endpoint still enforces team membership server-side.
  */
+function checkUserMessageRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const cutoff = now - USER_MSG_WINDOW_MS;
+  let arr = userMessageTimestamps.get(userId);
+  if (!arr) {
+    arr = [];
+    userMessageTimestamps.set(userId, arr);
+  }
+  while (arr.length > 0 && arr[0]! < cutoff) {
+    arr.shift();
+  }
+  if (arr.length >= USER_MSG_MAX_PER_WINDOW) {
+    return false;
+  }
+  arr.push(now);
+  return true;
+}
+
 async function persistMessage(teamSlug: string, userId: string, userName: string, body: string): Promise<ChatMessage | null> {
   if (!WS_SERVER_TOKEN) {
     if (IS_PRODUCTION) return null;
@@ -395,15 +419,27 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
         return;
       }
 
-      const body = (data.body as string | undefined)?.trim();
-      if (!body) {
+      const rawBody = (data.body as string | undefined)?.trim();
+      if (!rawBody) {
         sendJson(ws, { type: "error", code: "EMPTY_MESSAGE", message: "Message body is required" });
         return;
       }
-      if (Buffer.byteLength(body, "utf8") > MESSAGE_MAX_BYTES) {
+      if (Buffer.byteLength(rawBody, "utf8") > MESSAGE_MAX_BYTES) {
         sendJson(ws, { type: "error", code: "MESSAGE_TOO_LONG", message: `Max ${MESSAGE_MAX_BYTES} bytes` });
         return;
       }
+      try {
+        assertUrlCountAtMost(rawBody, 3, "chat");
+      } catch {
+        sendJson(ws, { type: "error", code: "URL_LIMIT_EXCEEDED", message: "Too many links in one message" });
+        return;
+      }
+      if (!checkUserMessageRateLimit(client.userId)) {
+        sendJson(ws, { type: "error", code: "RATE_LIMITED", message: "Too many messages; try again in a minute" });
+        ws.close(4005, "Rate limited");
+        return;
+      }
+      const body = escapeHtmlAngleBrackets(rawBody);
 
       void postMessageAndBroadcast(client, body);
       return;

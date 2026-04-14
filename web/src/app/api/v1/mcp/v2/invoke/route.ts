@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { hasApprovedEnterpriseAccess } from "@/lib/enterprise-access";
 import { clientIp } from "@/lib/api-key-rate-limit";
+import { checkMcpUserToolRateLimit } from "@/lib/mcp-user-write-rate-limit";
 import { apiError, apiSuccess } from "@/lib/response";
 import {
   MCP_V2_TOOL_NAMES,
@@ -21,12 +22,14 @@ import {
   listProjects,
   listTeams,
   logMcpInvoke,
+  tryRegisterMcpInvokeIdempotency,
 } from "@/lib/repository";
 import type { ProjectStatus } from "@/lib/types";
 
 const bodySchema = z.object({
   tool: z.enum(MCP_V2_TOOL_NAMES),
   input: z.record(z.string(), z.unknown()).optional().default({}),
+  idempotencyKey: z.string().min(8).max(128).optional(),
 });
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
     return apiError({ code: "INVALID_JSON", message: "Expected JSON body" }, 400);
   }
 
-  const { tool, input } = parsed;
+  const { tool, input, idempotencyKey } = parsed;
   const requiredScope = MCP_V2_TOOL_SCOPES[tool as McpV2ToolName];
   const auth = await authenticateRequest(request, requiredScope);
   const gate = resolveReadAuth(auth, false);
@@ -81,6 +84,56 @@ export async function POST(request: NextRequest) {
   const session = gate.user!;
   userId = session.userId;
   const apiKeyId = session.apiKeyId;
+
+  const rlUser = checkMcpUserToolRateLimit(userId, tool);
+  if (!rlUser.ok) {
+    httpStatus = 429;
+    errorCode = "MCP_USER_TOOL_RATE_LIMITED";
+    await logMcpInvoke({
+      tool,
+      userId,
+      apiKeyId,
+      httpStatus,
+      clientIp: ip,
+      userAgent: ua,
+      errorCode,
+      durationMs: Date.now() - started,
+    });
+    return apiError(
+      {
+        code: "MCP_USER_TOOL_RATE_LIMITED",
+        message: "Too many MCP invocations for this tool; slow down.",
+        details: { retryAfterSeconds: rlUser.retryAfter },
+      },
+      429,
+      { "Retry-After": String(rlUser.retryAfter) }
+    );
+  }
+
+  if (idempotencyKey) {
+    const first = await tryRegisterMcpInvokeIdempotency({ userId, tool, key: idempotencyKey });
+    if (!first) {
+      httpStatus = 409;
+      errorCode = "MCP_IDEMPOTENCY_CONFLICT";
+      await logMcpInvoke({
+        tool,
+        userId,
+        apiKeyId,
+        httpStatus,
+        clientIp: ip,
+        userAgent: ua,
+        errorCode,
+        durationMs: Date.now() - started,
+      });
+      return apiError(
+        {
+          code: "MCP_IDEMPOTENCY_CONFLICT",
+          message: "This idempotency key was already used for this tool.",
+        },
+        409
+      );
+    }
+  }
 
   if (
     (tool === "workspace_summary" || tool === "get_talent_radar") &&

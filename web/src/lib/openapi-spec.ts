@@ -43,6 +43,7 @@ export const responses = {
   "401": { description: "Unauthorized", content: { "application/json": { schema: errorEnvelope } } },
   "403": { description: "Forbidden", content: { "application/json": { schema: errorEnvelope } } },
   "404": { description: "Not found", content: { "application/json": { schema: errorEnvelope } } },
+  "409": { description: "Conflict (e.g. idempotency key reuse)", content: { "application/json": { schema: errorEnvelope } } },
   "429": {
     description: "Too many requests (Bearer API key rate limit)",
     headers: {
@@ -1112,6 +1113,13 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                       enum: [...MCP_V2_TOOL_NAMES],
                     },
                     input: { type: "object", additionalProperties: true },
+                    idempotencyKey: {
+                      type: "string",
+                      minLength: 8,
+                      maxLength: 128,
+                      description:
+                        "Optional dedupe key for safe retries (same user+tool+key → 409). Used by future write tools.",
+                    },
                   },
                 },
               },
@@ -1126,6 +1134,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "400": responses["400"],
             "401": responses["401"],
             "404": responses["404"],
+            "409": responses["409"],
             "429": responses["429"],
             "500": responses["500"],
           },

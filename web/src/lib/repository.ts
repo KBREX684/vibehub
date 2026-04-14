@@ -1,3 +1,4 @@
+import { assertContentSafeText, assertUrlCountAtMost, escapeHtmlAngleBrackets } from "@/lib/content-safety";
 import { incrementContributionCreditField, contributionWeights } from "@/lib/contribution-credit-increment";
 import { dispatchNotificationPush } from "@/lib/push-dispatcher";
 import { paginateArray } from "@/lib/pagination";
@@ -5,6 +6,12 @@ import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { Prisma } from "@prisma/client";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
+import {
+  enterpriseProfileSelect,
+  enterpriseRowForProfileDto,
+  sessionEnterpriseFromProfile,
+} from "@/lib/enterprise-profile-db";
+import { creatorFtsWhereClause, postFtsWhereClause, projectFtsWhereClause } from "@/lib/fts-sql";
 import {
   mockApiKeys,
 } from "@/lib/data/mock-api-keys";
@@ -496,48 +503,104 @@ export async function listProjects(params: {
     return paginateArray(filtered, params.page, params.limit);
   }
 
-  const where = {
-    AND: [
-      params.query
-        ? {
-            OR: [
-              { title: { contains: params.query, mode: "insensitive" as const } },
-              { description: { contains: params.query, mode: "insensitive" as const } },
-            ],
-          }
-        : {},
-      params.tag
-        ? {
-            tags: {
-              has: params.tag,
-            },
-          }
-        : {},
-      techFilter
-        ? {
-            techStack: {
-              has: techFilter,
-            },
-          }
-        : {},
-      statusFilter ? { status: statusFilter } : {},
-      teamSlug
-        ? {
-            team: {
-              slug: teamSlug,
-            },
-          }
-        : {},
-    ],
-  };
-
   const prisma = await getPrisma();
+  const q = params.query?.trim();
+  const offset = (params.page - 1) * params.limit;
+  const take = params.limit;
+
+  if (q) {
+    const whereSql = projectFtsWhereClause(q, {
+      tag: params.tag?.trim(),
+      tech: techFilter,
+      status: statusFilter,
+      teamSlug,
+      creatorId: params.creatorId,
+    });
+    const [countRow] = await prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "Project" p WHERE ${whereSql}`
+    );
+    const total = Number(countRow?.count ?? 0n);
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        slug: string;
+        creatorId: string;
+        teamId: string | null;
+        title: string;
+        oneLiner: string;
+        description: string;
+        techStack: string[];
+        tags: string[];
+        status: Project["status"];
+        demoUrl: string | null;
+        repoUrl: string | null;
+        websiteUrl: string | null;
+        screenshots: string[];
+        logoUrl: string | null;
+        openSource: boolean;
+        license: string | null;
+        updatedAt: Date;
+        team_slug: string | null;
+        team_name: string | null;
+      }>
+    >(Prisma.sql`
+      SELECT p.id, p.slug, p."creatorId", p."teamId", p.title, p."oneLiner", p.description,
+        p."techStack", p.tags, p.status, p."demoUrl", p."repoUrl", p."websiteUrl", p.screenshots,
+        p."logoUrl", p."openSource", p.license, p."updatedAt",
+        te.slug AS team_slug, te.name AS team_name
+      FROM "Project" p
+      LEFT JOIN "Team" te ON te.id = p."teamId"
+      WHERE ${whereSql}
+      ORDER BY ts_rank_cd(p."searchVector", plainto_tsquery('english', ${q})) DESC, p."updatedAt" DESC
+      OFFSET ${offset} LIMIT ${take}
+    `);
+    return {
+      items: rows.map((r) =>
+        toProjectDto({
+          id: r.id,
+          slug: r.slug,
+          creatorId: r.creatorId,
+          teamId: r.teamId,
+          title: r.title,
+          oneLiner: r.oneLiner,
+          description: r.description,
+          techStack: r.techStack,
+          tags: r.tags,
+          status: r.status,
+          demoUrl: r.demoUrl,
+          repoUrl: r.repoUrl,
+          websiteUrl: r.websiteUrl,
+          screenshots: r.screenshots,
+          logoUrl: r.logoUrl,
+          openSource: r.openSource,
+          license: r.license,
+          updatedAt: r.updatedAt,
+          team: r.team_slug && r.team_name ? { slug: r.team_slug, name: r.team_name } : null,
+        })
+      ),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
+
+  const andParts: Prisma.ProjectWhereInput[] = [];
+  if (params.tag) andParts.push({ tags: { has: params.tag } });
+  if (techFilter) andParts.push({ techStack: { has: techFilter } });
+  if (statusFilter) andParts.push({ status: statusFilter });
+  if (teamSlug) andParts.push({ team: { slug: teamSlug } });
+  if (params.creatorId) andParts.push({ creatorId: params.creatorId });
+  const where: Prisma.ProjectWhereInput = andParts.length ? { AND: andParts } : {};
+
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where,
       orderBy: { updatedAt: "desc" },
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
+      skip: offset,
+      take,
       include: { team: { select: { slug: true, name: true } } },
     }),
     prisma.project.count({ where }),
@@ -998,6 +1061,29 @@ export async function logMcpInvoke(params: {
     });
   } catch {
     /* never break invoke */
+  }
+}
+
+/** P2-2: returns false if this idempotency key was already used for the user+tool. */
+export async function tryRegisterMcpInvokeIdempotency(params: {
+  userId: string;
+  tool: string;
+  key: string;
+}): Promise<boolean> {
+  if (useMockData) {
+    return true;
+  }
+  try {
+    const prisma = await getPrisma();
+    await prisma.mcpInvokeIdempotency.create({
+      data: { userId: params.userId, tool: params.tool, key: params.key },
+    });
+    return true;
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return false;
+    }
+    throw e;
   }
 }
 
@@ -2174,24 +2260,60 @@ export async function listCreators(params: {
     return paginateArray(filtered, params.page, params.limit);
   }
 
-  const where = params.query
-    ? {
-        OR: [
-          { slug: { contains: params.query, mode: "insensitive" as const } },
-          { bio: { contains: params.query, mode: "insensitive" as const } },
-        ],
-      }
-    : {};
-
   const prisma = await getPrisma();
+  const offset = (params.page - 1) * params.limit;
+  const take = params.limit;
+  const q = params.query?.trim();
+
+  if (q) {
+    const whereSql = creatorFtsWhereClause(q);
+    const [countRow] = await prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "CreatorProfile" cp WHERE ${whereSql}`
+    );
+    const total = Number(countRow?.count ?? 0n);
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        slug: string;
+        userId: string;
+        headline: string;
+        bio: string;
+        skills: string[];
+        collaborationPreference: string;
+        createdAt: Date;
+        updatedAt: Date;
+      }>
+    >(Prisma.sql`
+      SELECT cp.id, cp.slug, cp."userId", cp.headline, cp.bio, cp.skills, cp."collaborationPreference",
+        cp."createdAt", cp."updatedAt"
+      FROM "CreatorProfile" cp
+      WHERE ${whereSql}
+      ORDER BY ts_rank_cd(cp."searchVector", plainto_tsquery('english', ${q})) DESC, cp."updatedAt" DESC
+      OFFSET ${offset} LIMIT ${take}
+    `);
+    return {
+      items: rows.map((r) =>
+        toCreatorDto({
+          ...r,
+          collaborationPreference: r.collaborationPreference as CreatorProfile["collaborationPreference"],
+        })
+      ),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
+
   const [items, total] = await Promise.all([
     prisma.creatorProfile.findMany({
-      where,
       orderBy: { updatedAt: "desc" },
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
+      skip: offset,
+      take,
     }),
-    prisma.creatorProfile.count({ where }),
+    prisma.creatorProfile.count(),
   ]);
 
   return {
@@ -2622,6 +2744,66 @@ export async function listPosts(params: {
     return paginateArray(filtered, params.page, params.limit);
   }
 
+  const prisma = await getPrisma();
+  const offset = (params.page - 1) * params.limit;
+  const take = params.limit;
+  const q = params.query?.trim();
+
+  if (q) {
+    const baseWhere = postFtsWhereClause(q, {
+      tag: params.tag?.trim(),
+      includeAuthorId: params.includeAuthorId,
+    });
+    const whereSql = params.featuredOnly
+      ? Prisma.join([baseWhere, Prisma.sql`p."featuredAt" IS NOT NULL`], " AND ")
+      : baseWhere;
+
+    const [countRow] = await prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "Post" p WHERE ${whereSql}`
+    );
+    const total = Number(countRow?.count ?? 0n);
+
+    const idRows = await prisma.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`
+        SELECT p.id
+        FROM "Post" p
+        WHERE ${whereSql}
+        ORDER BY ts_rank_cd(p."searchVector", plainto_tsquery('english', ${q})) DESC, p."createdAt" DESC
+        OFFSET ${offset} LIMIT ${take}
+      `
+    );
+    const ids = idRows.map((r) => r.id);
+    if (ids.length === 0) {
+      return {
+        items: [],
+        pagination: { page: params.page, limit: params.limit, total: 0, totalPages: 1 },
+      };
+    }
+    const posts = await prisma.post.findMany({
+      where: { id: { in: ids } },
+      include: {
+        author: { select: { name: true } },
+        _count: { select: { likes: true, bookmarks: true } },
+      },
+    });
+    const byId = new Map(posts.map((p) => [p.id, p]));
+    let ordered = ids.map((id) => byId.get(id)).filter(Boolean) as typeof posts;
+    if (params.sort === "hot") {
+      ordered = [...ordered].sort((a, b) => b._count.likes - a._count.likes);
+    }
+    return {
+      items: ordered.map((p) =>
+        toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })
+      ),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
+
   const reviewFilter = params.includeAuthorId
     ? {
         OR: [
@@ -2634,14 +2816,6 @@ export async function listPosts(params: {
   const where = {
     AND: [
       reviewFilter,
-      params.query
-        ? {
-            OR: [
-              { title: { contains: params.query, mode: "insensitive" as const } },
-              { body: { contains: params.query, mode: "insensitive" as const } },
-            ],
-          }
-        : {},
       params.tag
         ? {
             tags: {
@@ -2649,16 +2823,23 @@ export async function listPosts(params: {
             },
           }
         : {},
+      params.featuredOnly ? { featuredAt: { not: null } } : {},
     ],
   };
 
-  const prisma = await getPrisma();
+  const orderBy: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[] =
+    params.sort === "featured"
+      ? [{ featuredAt: "desc" }, { createdAt: "desc" }]
+      : params.sort === "hot"
+        ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
+        : { createdAt: "desc" };
+
   const [items, total] = await Promise.all([
     prisma.post.findMany({
       where,
-      orderBy: { createdAt: "desc" },
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
+      orderBy,
+      skip: offset,
+      take,
       include: {
         author: { select: { name: true } },
         _count: { select: { likes: true, bookmarks: true } },
@@ -2667,8 +2848,13 @@ export async function listPosts(params: {
     prisma.post.count({ where }),
   ]);
 
+  let orderedItems = items;
+  if (q && params.sort === "hot") {
+    orderedItems = [...items].sort((a, b) => b._count.likes - a._count.likes);
+  }
+
   return {
-    items: items.map((p) =>
+    items: orderedItems.map((p) =>
       toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })
     ),
     pagination: {
@@ -2701,26 +2887,69 @@ export async function listPostsForModeration(params: {
   }
 
   const prisma = await getPrisma();
+  const offset = (params.page - 1) * params.limit;
+  const take = params.limit;
+  const q = params.query?.trim();
+
+  if (q) {
+    const statusSql =
+      params.status && params.status !== "all"
+        ? Prisma.sql`p."reviewStatus" = CAST(${params.status} AS "ReviewStatus")`
+        : Prisma.sql`TRUE`;
+    const whereSql = Prisma.join(
+      [statusSql, Prisma.sql`p."searchVector" @@ plainto_tsquery('english', ${q})`],
+      " AND "
+    );
+    const [countRow] = await prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "Post" p WHERE ${whereSql}`
+    );
+    const total = Number(countRow?.count ?? 0n);
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        slug: string;
+        authorId: string;
+        title: string;
+        body: string;
+        tags: string[];
+        reviewStatus: ReviewStatus;
+        moderationNote: string | null;
+        reviewedAt: Date | null;
+        reviewedBy: string | null;
+        featuredAt: Date | null;
+        featuredBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+      }>
+    >(Prisma.sql`
+      SELECT p.id, p.slug, p."authorId", p.title, p.body, p.tags, p."reviewStatus", p."moderationNote",
+        p."reviewedAt", p."reviewedBy", p."featuredAt", p."featuredBy", p."createdAt", p."updatedAt"
+      FROM "Post" p
+      WHERE ${whereSql}
+      ORDER BY p."reviewStatus" ASC, p."createdAt" DESC
+      OFFSET ${offset} LIMIT ${take}
+    `);
+    return {
+      items: rows.map(toPostDto),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
+
   const where = {
-    AND: [
-      params.status && params.status !== "all" ? { reviewStatus: params.status } : {},
-      params.query
-        ? {
-            OR: [
-              { title: { contains: params.query, mode: "insensitive" as const } },
-              { body: { contains: params.query, mode: "insensitive" as const } },
-            ],
-          }
-        : {},
-    ],
+    AND: [params.status && params.status !== "all" ? { reviewStatus: params.status } : {}],
   };
 
   const [items, total] = await Promise.all([
     prisma.post.findMany({
       where,
       orderBy: [{ reviewStatus: "asc" }, { createdAt: "desc" }],
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
+      skip: offset,
+      take,
     }),
     prisma.post.count({ where }),
   ]);
@@ -2782,6 +3011,8 @@ export async function createPost(input: {
   tags: string[];
   authorId: string;
 }) {
+  assertContentSafeText(input.title, "title");
+  assertContentSafeText(input.body, "body");
   const slug = input.title
     .trim()
     .toLowerCase()
@@ -2873,6 +3104,8 @@ export async function updatePost(params: {
   body?: string;
   tags?: string[];
 }): Promise<Post> {
+  if (params.title !== undefined) assertContentSafeText(params.title, "title");
+  if (params.body !== undefined) assertContentSafeText(params.body, "body");
   if (useMockData) {
     const post = mockPosts.find((p) => p.slug === params.slug);
     if (!post) throw new Error("POST_NOT_FOUND");
@@ -2970,6 +3203,7 @@ export async function getPostIdBySlug(slug: string): Promise<string | null> {
 }
 
 export async function createComment(input: { postId: string; body: string; authorId: string; parentCommentId?: string }) {
+  assertContentSafeText(input.body, "body");
   if (useMockData) {
     const postExists = mockPosts.some((post) => post.id === input.postId);
     if (!postExists) {
@@ -3202,6 +3436,9 @@ export async function getMyBookmarks(userId: string): Promise<{ posts: Post[]; p
 export async function getFollowFeed(userId: string, params: { page: number; limit: number }): Promise<Paginated<Post>> {
   if (useMockData) {
     const followingIds = mockUserFollows.filter((f) => f.followerId === userId).map((f) => f.followingId);
+    if (followingIds.length === 0) {
+      return listPosts({ sort: "hot", page: params.page, limit: params.limit });
+    }
     const items = mockPosts
       .filter((p) => followingIds.includes(p.authorId) && p.reviewStatus === "approved")
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -3210,6 +3447,9 @@ export async function getFollowFeed(userId: string, params: { page: number; limi
   const prisma = await getPrisma();
   const followingRows = await prisma.userFollow.findMany({ where: { followerId: userId }, select: { followingId: true } });
   const followingIds = followingRows.map((r) => r.followingId);
+  if (followingIds.length === 0) {
+    return listPosts({ sort: "hot", page: params.page, limit: params.limit });
+  }
   const where = { authorId: { in: followingIds }, reviewStatus: "approved" as const };
   const [items, total] = await Promise.all([
     prisma.post.findMany({
@@ -4115,26 +4355,30 @@ function toEnterpriseProfileDto(row: {
 function toEnterpriseProfileFromUser(row: {
   id: string;
   email: string;
-  enterpriseStatus: "none" | "pending" | "approved" | "rejected";
-  enterpriseOrganization: string | null;
-  enterpriseWebsite: string | null;
-  enterpriseUseCase: string | null;
-  enterpriseReviewedBy: string | null;
-  enterpriseReviewNote: string | null;
-  enterpriseAppliedAt: Date | null;
-  enterpriseReviewedAt: Date | null;
+  enterpriseProfile?: {
+    status: "none" | "pending" | "approved" | "rejected";
+    organization: string | null;
+    website: string | null;
+    useCase: string | null;
+    reviewedBy: string | null;
+    reviewNote: string | null;
+    appliedAt: Date | null;
+    reviewedAt: Date | null;
+  } | null;
 }): EnterpriseProfile {
+  const ep = row.enterpriseProfile;
+  const mapped = enterpriseRowForProfileDto(row.id, row.email, ep ?? undefined);
   return {
-    userId: row.id,
-    status: row.enterpriseStatus ?? "none",
-    organizationName: row.enterpriseOrganization ?? "",
-    organizationWebsite: row.enterpriseWebsite ?? "",
-    workEmail: row.email,
-    useCase: row.enterpriseUseCase ?? undefined,
-    reviewedBy: row.enterpriseReviewedBy ?? undefined,
-    reviewNote: row.enterpriseReviewNote ?? undefined,
-    createdAt: row.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
-    updatedAt: row.enterpriseReviewedAt?.toISOString() ?? row.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
+    userId: mapped.id,
+    status: mapped.enterpriseStatus,
+    organizationName: mapped.enterpriseOrganization ?? "",
+    organizationWebsite: mapped.enterpriseWebsite ?? "",
+    workEmail: mapped.email,
+    useCase: mapped.enterpriseUseCase ?? undefined,
+    reviewedBy: mapped.enterpriseReviewedBy ?? undefined,
+    reviewNote: mapped.enterpriseReviewNote ?? undefined,
+    createdAt: mapped.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
+    updatedAt: mapped.enterpriseReviewedAt?.toISOString() ?? mapped.enterpriseAppliedAt?.toISOString() ?? new Date(0).toISOString(),
   };
 }
 
@@ -4180,15 +4424,8 @@ export async function getEnterpriseProfileByUserId(userId: string): Promise<Ente
     where: { id: userId },
     select: {
       id: true,
-      enterpriseStatus: true,
-      enterpriseOrganization: true,
-      enterpriseWebsite: true,
-      enterpriseUseCase: true,
-      enterpriseReviewedBy: true,
-      enterpriseReviewNote: true,
-      enterpriseAppliedAt: true,
-      enterpriseReviewedAt: true,
       email: true,
+      enterpriseProfile: { select: enterpriseProfileSelect },
     },
   });
   return row ? toEnterpriseProfileFromUser(row) : null;
@@ -4247,34 +4484,43 @@ export async function submitEnterpriseVerification(params: {
   const prisma = await getPrisma();
   const existing = await prisma.user.findUnique({
     where: { id: params.userId },
-    select: { id: true, role: true, enterpriseStatus: true, email: true },
+    select: { id: true, role: true, email: true, enterpriseProfile: { select: { status: true } } },
   });
   if (!existing) throw new Error("USER_NOT_FOUND");
-  if (existing.enterpriseStatus === "approved") throw new Error("ENTERPRISE_ALREADY_APPROVED");
+  if (existing.enterpriseProfile?.status === "approved") throw new Error("ENTERPRISE_ALREADY_APPROVED");
 
   const row = await prisma.user.update({
     where: { id: params.userId },
     data: {
-      enterpriseStatus: "pending",
-      enterpriseOrganization: organizationName,
-      enterpriseWebsite: organizationWebsite,
-      enterpriseUseCase: useCase ?? null,
-      enterpriseAppliedAt: new Date(),
-      enterpriseReviewedAt: null,
-      enterpriseReviewedBy: null,
-      enterpriseReviewNote: null,
+      enterpriseProfile: {
+        upsert: {
+          create: {
+            status: "pending",
+            organization: organizationName,
+            website: organizationWebsite,
+            useCase: useCase ?? null,
+            appliedAt: new Date(),
+            reviewedAt: null,
+            reviewedBy: null,
+            reviewNote: null,
+          },
+          update: {
+            status: "pending",
+            organization: organizationName,
+            website: organizationWebsite,
+            useCase: useCase ?? null,
+            appliedAt: new Date(),
+            reviewedAt: null,
+            reviewedBy: null,
+            reviewNote: null,
+          },
+        },
+      },
     },
     select: {
       id: true,
-      enterpriseStatus: true,
-      enterpriseOrganization: true,
-      enterpriseWebsite: true,
-      enterpriseUseCase: true,
-      enterpriseReviewedBy: true,
-      enterpriseReviewNote: true,
-      enterpriseAppliedAt: true,
-      enterpriseReviewedAt: true,
       email: true,
+      enterpriseProfile: { select: enterpriseProfileSelect },
     },
   });
   await prisma.auditLog.create({
@@ -4304,31 +4550,39 @@ export async function listEnterpriseProfiles(params: {
   const prisma = await getPrisma();
   const where =
     !params.status || params.status === "all"
-      ? {}
-      : { enterpriseStatus: params.status as "none" | "pending" | "approved" | "rejected" };
+      ? { status: { not: "none" as const } }
+      : { status: params.status as "none" | "pending" | "approved" | "rejected" };
   const [items, total] = await Promise.all([
-    prisma.user.findMany({
+    prisma.enterpriseProfile.findMany({
       where,
-      orderBy: [{ enterpriseStatus: "asc" }, { updatedAt: "desc" }],
+      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       skip: (params.page - 1) * params.limit,
       take: params.limit,
       select: {
-        id: true,
-        enterpriseStatus: true,
-        enterpriseOrganization: true,
-        enterpriseWebsite: true,
-        enterpriseUseCase: true,
-        enterpriseReviewedBy: true,
-        enterpriseReviewNote: true,
-        enterpriseAppliedAt: true,
-        enterpriseReviewedAt: true,
-        email: true,
+        userId: true,
+        ...enterpriseProfileSelect,
+        user: { select: { email: true } },
       },
     }),
-    prisma.user.count({ where }),
+    prisma.enterpriseProfile.count({ where }),
   ]);
   return {
-    items: items.map(toEnterpriseProfileFromUser),
+    items: items.map((row) =>
+      toEnterpriseProfileFromUser({
+        id: row.userId,
+        email: row.user.email,
+        enterpriseProfile: {
+          status: row.status,
+          organization: row.organization,
+          website: row.website,
+          useCase: row.useCase,
+          reviewedBy: row.reviewedBy,
+          reviewNote: row.reviewNote,
+          appliedAt: row.appliedAt,
+          reviewedAt: row.reviewedAt,
+        },
+      })
+    ),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -4392,33 +4646,26 @@ export async function reviewEnterpriseVerification(params: {
   }
 
   const prisma = await getPrisma();
-  const profile = await prisma.user.findUnique({
-    where: { id: params.userId },
-    select: { id: true, enterpriseStatus: true },
+  const profile = await prisma.enterpriseProfile.findUnique({
+    where: { userId: params.userId },
+    select: { userId: true, status: true },
   });
   if (!profile) throw new Error("ENTERPRISE_PROFILE_NOT_FOUND");
-  if (profile.enterpriseStatus !== "pending") throw new Error("ENTERPRISE_PROFILE_NOT_PENDING");
+  if (profile.status !== "pending") throw new Error("ENTERPRISE_PROFILE_NOT_PENDING");
 
   const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const row = await tx.user.update({
-      where: { id: params.userId },
+    const row = await tx.enterpriseProfile.update({
+      where: { userId: params.userId },
       data: {
-        enterpriseStatus: nextStatus as "approved" | "rejected",
-        enterpriseReviewedAt: new Date(),
-        enterpriseReviewedBy: params.adminUserId,
-        enterpriseReviewNote: reviewNote ?? null,
+        status: nextStatus as "approved" | "rejected",
+        reviewedAt: new Date(),
+        reviewedBy: params.adminUserId,
+        reviewNote: reviewNote ?? null,
       },
       select: {
-        id: true,
-        enterpriseStatus: true,
-        enterpriseOrganization: true,
-        enterpriseWebsite: true,
-        enterpriseUseCase: true,
-        enterpriseReviewedBy: true,
-        enterpriseReviewNote: true,
-        enterpriseAppliedAt: true,
-        enterpriseReviewedAt: true,
-        email: true,
+        userId: true,
+        ...enterpriseProfileSelect,
+        user: { select: { email: true } },
       },
     });
 
@@ -4451,7 +4698,20 @@ export async function reviewEnterpriseVerification(params: {
     });
     return row;
   });
-  return toEnterpriseProfileFromUser(updated);
+  return toEnterpriseProfileFromUser({
+    id: updated.userId,
+    email: updated.user.email,
+    enterpriseProfile: {
+      status: updated.status,
+      organization: updated.organization,
+      website: updated.website,
+      useCase: updated.useCase,
+      reviewedBy: updated.reviewedBy,
+      reviewNote: updated.reviewNote,
+      appliedAt: updated.appliedAt,
+      reviewedAt: updated.reviewedAt,
+    },
+  });
 }
 
 export function listCollectionTopics(): CollectionTopic[] {
@@ -5023,37 +5283,46 @@ export async function createEnterpriseVerificationApplication(params: {
   const prisma = await getPrisma();
   const user = await prisma.user.findUnique({
     where: { id: params.userId },
-    select: { id: true, role: true, enterpriseStatus: true },
+    select: { id: true, role: true, enterpriseProfile: { select: { status: true } } },
   });
   if (!user) throw new Error("USER_NOT_FOUND");
   if (user.role === "admin") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
-  if (user.enterpriseStatus === "pending") throw new Error("APPLICATION_ALREADY_PENDING");
-  if (user.enterpriseStatus === "approved") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
+  if (user.enterpriseProfile?.status === "pending") throw new Error("APPLICATION_ALREADY_PENDING");
+  if (user.enterpriseProfile?.status === "approved") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
 
   const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const row = await tx.user.update({
       where: { id: params.userId },
       data: {
-        enterpriseStatus: "pending",
-        enterpriseOrganization: organizationName,
-        enterpriseWebsite: organizationWebsite,
-        enterpriseUseCase: useCase ?? null,
-        enterpriseAppliedAt: new Date(),
-        enterpriseReviewedAt: null,
-        enterpriseReviewedBy: null,
-        enterpriseReviewNote: null,
+        enterpriseProfile: {
+          upsert: {
+            create: {
+              status: "pending",
+              organization: organizationName,
+              website: organizationWebsite,
+              useCase: useCase ?? null,
+              appliedAt: new Date(),
+              reviewedAt: null,
+              reviewedBy: null,
+              reviewNote: null,
+            },
+            update: {
+              status: "pending",
+              organization: organizationName,
+              website: organizationWebsite,
+              useCase: useCase ?? null,
+              appliedAt: new Date(),
+              reviewedAt: null,
+              reviewedBy: null,
+              reviewNote: null,
+            },
+          },
+        },
       },
       select: {
         id: true,
         email: true,
-        enterpriseStatus: true,
-        enterpriseOrganization: true,
-        enterpriseWebsite: true,
-        enterpriseUseCase: true,
-        enterpriseReviewNote: true,
-        enterpriseReviewedBy: true,
-        enterpriseReviewedAt: true,
-        enterpriseAppliedAt: true,
+        enterpriseProfile: { select: enterpriseProfileSelect },
       },
     });
     await tx.auditLog.create({
@@ -5067,19 +5336,20 @@ export async function createEnterpriseVerificationApplication(params: {
     });
     return row;
   });
+  const ep = created.enterpriseProfile;
   return toEnterpriseVerificationApplicationDto({
     id: `eva_user_${created.id}`,
     userId: created.id,
-    organizationName: created.enterpriseOrganization ?? organizationName,
-    organizationWebsite: created.enterpriseWebsite ?? organizationWebsite,
+    organizationName: ep?.organization ?? organizationName,
+    organizationWebsite: ep?.website ?? organizationWebsite,
     workEmail: created.email,
-    useCase: created.enterpriseUseCase ?? null,
-    status: created.enterpriseStatus,
-    reviewNote: created.enterpriseReviewNote ?? null,
-    reviewedBy: created.enterpriseReviewedBy ?? null,
-    reviewedAt: created.enterpriseReviewedAt ?? null,
-    createdAt: created.enterpriseAppliedAt ?? new Date(),
-    updatedAt: created.enterpriseReviewedAt ?? created.enterpriseAppliedAt ?? new Date(),
+    useCase: ep?.useCase ?? null,
+    status: ep?.status ?? "pending",
+    reviewNote: ep?.reviewNote ?? null,
+    reviewedBy: ep?.reviewedBy ?? null,
+    reviewedAt: ep?.reviewedAt ?? null,
+    createdAt: ep?.appliedAt ?? new Date(),
+    updatedAt: ep?.reviewedAt ?? ep?.appliedAt ?? new Date(),
   });
 }
 
@@ -5096,30 +5366,24 @@ export async function getLatestEnterpriseVerificationApplication(
     select: {
       id: true,
       email: true,
-      enterpriseStatus: true,
-      enterpriseOrganization: true,
-      enterpriseWebsite: true,
-      enterpriseUseCase: true,
-      enterpriseReviewNote: true,
-      enterpriseReviewedBy: true,
-      enterpriseReviewedAt: true,
-      enterpriseAppliedAt: true,
+      enterpriseProfile: { select: enterpriseProfileSelect },
     },
   });
-  if (!row || row.enterpriseStatus === "none") return null;
+  if (!row || !row.enterpriseProfile || row.enterpriseProfile.status === "none") return null;
+  const ep = row.enterpriseProfile;
   return toEnterpriseVerificationApplicationDto({
     id: `eva_user_${row.id}`,
     userId: row.id,
-    organizationName: row.enterpriseOrganization ?? "",
-    organizationWebsite: row.enterpriseWebsite ?? "",
+    organizationName: ep.organization ?? "",
+    organizationWebsite: ep.website ?? "",
     workEmail: row.email,
-    useCase: row.enterpriseUseCase ?? null,
-    status: row.enterpriseStatus,
-    reviewNote: row.enterpriseReviewNote ?? null,
-    reviewedBy: row.enterpriseReviewedBy ?? null,
-    reviewedAt: row.enterpriseReviewedAt ?? null,
-    createdAt: row.enterpriseAppliedAt ?? new Date(),
-    updatedAt: row.enterpriseReviewedAt ?? row.enterpriseAppliedAt ?? new Date(),
+    useCase: ep.useCase ?? null,
+    status: ep.status,
+    reviewNote: ep.reviewNote ?? null,
+    reviewedBy: ep.reviewedBy ?? null,
+    reviewedAt: ep.reviewedAt ?? null,
+    createdAt: ep.appliedAt ?? new Date(),
+    updatedAt: ep.reviewedAt ?? ep.appliedAt ?? new Date(),
   });
 }
 
@@ -5137,44 +5401,37 @@ export async function listEnterpriseVerificationApplications(params: {
   const prisma = await getPrisma();
   const where =
     !params.status || params.status === "all"
-      ? { enterpriseStatus: { not: "none" as const } }
-      : { enterpriseStatus: params.status };
+      ? { status: { not: "none" as const } }
+      : { status: params.status };
   const [items, total] = await Promise.all([
-    prisma.user.findMany({
+    prisma.enterpriseProfile.findMany({
       where,
-      orderBy: { enterpriseAppliedAt: "desc" },
+      orderBy: { appliedAt: "desc" },
       skip: (params.page - 1) * params.limit,
       take: params.limit,
       select: {
-        id: true,
-        email: true,
-        enterpriseStatus: true,
-        enterpriseOrganization: true,
-        enterpriseWebsite: true,
-        enterpriseUseCase: true,
-        enterpriseReviewNote: true,
-        enterpriseReviewedBy: true,
-        enterpriseReviewedAt: true,
-        enterpriseAppliedAt: true,
+        userId: true,
+        ...enterpriseProfileSelect,
+        user: { select: { email: true } },
       },
     }),
-    prisma.user.count({ where }),
+    prisma.enterpriseProfile.count({ where }),
   ]);
   return {
     items: items.map((row) =>
       toEnterpriseVerificationApplicationDto({
-        id: `eva_user_${row.id}`,
-        userId: row.id,
-        organizationName: row.enterpriseOrganization ?? "",
-        organizationWebsite: row.enterpriseWebsite ?? "",
-        workEmail: row.email,
-        useCase: row.enterpriseUseCase ?? null,
-        status: row.enterpriseStatus,
-        reviewNote: row.enterpriseReviewNote ?? null,
-        reviewedBy: row.enterpriseReviewedBy ?? null,
-        reviewedAt: row.enterpriseReviewedAt ?? null,
-        createdAt: row.enterpriseAppliedAt ?? new Date(),
-        updatedAt: row.enterpriseReviewedAt ?? row.enterpriseAppliedAt ?? new Date(),
+        id: `eva_user_${row.userId}`,
+        userId: row.userId,
+        organizationName: row.organization ?? "",
+        organizationWebsite: row.website ?? "",
+        workEmail: row.user.email,
+        useCase: row.useCase ?? null,
+        status: row.status,
+        reviewNote: row.reviewNote ?? null,
+        reviewedBy: row.reviewedBy ?? null,
+        reviewedAt: row.reviewedAt ?? null,
+        createdAt: row.appliedAt ?? new Date(),
+        updatedAt: row.reviewedAt ?? row.appliedAt ?? new Date(),
       })
     ),
     pagination: {
@@ -5252,29 +5509,22 @@ export async function reviewEnterpriseVerificationApplication(params: {
   const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const existing = await tx.user.findUnique({
       where: { id: userIdFromApplicationId },
-      select: { id: true, enterpriseStatus: true, email: true },
+      select: { id: true, email: true, enterpriseProfile: { select: { status: true } } },
     });
     if (!existing) throw new Error("APPLICATION_NOT_FOUND");
-    if (existing.enterpriseStatus !== "pending") throw new Error("APPLICATION_NOT_PENDING");
-    const row = await tx.user.update({
-      where: { id: existing.id },
+    if (existing.enterpriseProfile?.status !== "pending") throw new Error("APPLICATION_NOT_PENDING");
+    const row = await tx.enterpriseProfile.update({
+      where: { userId: existing.id },
       data: {
-        enterpriseStatus: nextStatus,
-        enterpriseReviewNote: note ?? null,
-        enterpriseReviewedBy: params.reviewerUserId,
-        enterpriseReviewedAt: new Date(),
+        status: nextStatus,
+        reviewNote: note ?? null,
+        reviewedBy: params.reviewerUserId,
+        reviewedAt: new Date(),
       },
       select: {
-        id: true,
-        email: true,
-        enterpriseStatus: true,
-        enterpriseOrganization: true,
-        enterpriseWebsite: true,
-        enterpriseUseCase: true,
-        enterpriseReviewNote: true,
-        enterpriseReviewedBy: true,
-        enterpriseReviewedAt: true,
-        enterpriseAppliedAt: true,
+        userId: true,
+        ...enterpriseProfileSelect,
+        user: { select: { email: true } },
       },
     });
     if (nextStatus === "approved") {
@@ -5310,18 +5560,18 @@ export async function reviewEnterpriseVerificationApplication(params: {
     return row;
   });
   return toEnterpriseVerificationApplicationDto({
-    id: `eva_user_${updated.id}`,
-    userId: updated.id,
-    organizationName: updated.enterpriseOrganization ?? "",
-    organizationWebsite: updated.enterpriseWebsite ?? "",
-    workEmail: updated.email,
-    useCase: updated.enterpriseUseCase ?? null,
-    status: updated.enterpriseStatus,
-    reviewNote: updated.enterpriseReviewNote ?? null,
-    reviewedBy: updated.enterpriseReviewedBy ?? null,
-    reviewedAt: updated.enterpriseReviewedAt ?? null,
-    createdAt: updated.enterpriseAppliedAt ?? new Date(),
-    updatedAt: updated.enterpriseReviewedAt ?? updated.enterpriseAppliedAt ?? new Date(),
+    id: `eva_user_${updated.userId}`,
+    userId: updated.userId,
+    organizationName: updated.organization ?? "",
+    organizationWebsite: updated.website ?? "",
+    workEmail: updated.user.email,
+    useCase: updated.useCase ?? null,
+    status: updated.status,
+    reviewNote: updated.reviewNote ?? null,
+    reviewedBy: updated.reviewedBy ?? null,
+    reviewedAt: updated.reviewedAt ?? null,
+    createdAt: updated.appliedAt ?? new Date(),
+    updatedAt: updated.reviewedAt ?? updated.appliedAt ?? new Date(),
   });
 }
 
@@ -5772,8 +6022,10 @@ export async function createTeamChatMessage(input: {
   authorId: string;
   body: string;
 }): Promise<TeamChatMessage> {
-  const body = input.body.trim();
-  if (!body || Buffer.byteLength(body, "utf8") > 2000) throw new Error("INVALID_BODY");
+  const raw = input.body.trim();
+  if (!raw || Buffer.byteLength(raw, "utf8") > 2000) throw new Error("INVALID_BODY");
+  assertUrlCountAtMost(raw, 3, "chat");
+  const body = escapeHtmlAngleBrackets(raw);
 
   if (useMockData) {
     const team = mockTeams.find((t) => t.slug === input.teamSlug);
@@ -6761,9 +7013,7 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
       id: true,
       name: true,
       role: true,
-      enterpriseStatus: true,
-      enterpriseOrganization: true,
-      enterpriseWebsite: true,
+      enterpriseProfile: { select: enterpriseProfileSelect },
     },
   });
   if (!u) {
@@ -6772,6 +7022,7 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
   const scopeList = parseScopesFromJson(row.scopes);
   const effectiveScopes = scopeList.length ? scopeList : [...DEFAULT_API_KEY_SCOPES];
   const subscriptionTier = await getUserTier(u.id);
+  const ent = sessionEnterpriseFromProfile(u.enterpriseProfile ?? undefined);
   return {
     userId: u.id,
     role: u.role as Role,
@@ -6779,9 +7030,9 @@ export async function getSessionUserFromApiKeyToken(plaintextToken: string): Pro
     subscriptionTier,
     apiKeyScopes: effectiveScopes,
     apiKeyId: row.id,
-    enterpriseStatus: (u.enterpriseStatus as EnterpriseVerificationStatus) ?? "none",
-    enterpriseOrganization: u.enterpriseOrganization ?? undefined,
-    enterpriseWebsite: u.enterpriseWebsite ?? undefined,
+    enterpriseStatus: ent.enterpriseStatus,
+    enterpriseOrganization: ent.enterpriseOrganization,
+    enterpriseWebsite: ent.enterpriseWebsite,
   };
 }
 
@@ -6825,7 +7076,18 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
         avatarUrl: input.avatarUrl,
         githubUsername: input.githubUsername,
       },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        githubId: true,
+        githubUsername: true,
+        avatarUrl: true,
+        enterpriseProfile: { select: enterpriseProfileSelect },
+      },
     });
+    const ent = sessionEnterpriseFromProfile(updated.enterpriseProfile ?? undefined);
     return {
       id: updated.id,
       email: updated.email,
@@ -6834,9 +7096,9 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
       githubId: updated.githubId ?? undefined,
       githubUsername: updated.githubUsername ?? undefined,
       avatarUrl: updated.avatarUrl ?? undefined,
-      enterpriseStatus: (updated.enterpriseStatus as EnterpriseVerificationStatus) ?? "none",
-      enterpriseOrganization: updated.enterpriseOrganization ?? undefined,
-      enterpriseWebsite: updated.enterpriseWebsite ?? undefined,
+      enterpriseStatus: ent.enterpriseStatus,
+      enterpriseOrganization: ent.enterpriseOrganization,
+      enterpriseWebsite: ent.enterpriseWebsite,
     };
   }
 
@@ -6848,8 +7110,20 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
       githubId: input.githubId,
       githubUsername: input.githubUsername,
       avatarUrl: input.avatarUrl,
+      enterpriseProfile: { create: { status: "none" } },
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      githubId: true,
+      githubUsername: true,
+      avatarUrl: true,
+      enterpriseProfile: { select: enterpriseProfileSelect },
     },
   });
+  const ent = sessionEnterpriseFromProfile(created.enterpriseProfile ?? undefined);
   return {
     id: created.id,
     email: created.email,
@@ -6858,9 +7132,9 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
     githubId: created.githubId ?? undefined,
     githubUsername: created.githubUsername ?? undefined,
     avatarUrl: created.avatarUrl ?? undefined,
-    enterpriseStatus: (created.enterpriseStatus as EnterpriseVerificationStatus) ?? "none",
-    enterpriseOrganization: created.enterpriseOrganization ?? undefined,
-    enterpriseWebsite: created.enterpriseWebsite ?? undefined,
+    enterpriseStatus: ent.enterpriseStatus,
+    enterpriseOrganization: ent.enterpriseOrganization,
+    enterpriseWebsite: ent.enterpriseWebsite,
   };
 }
 
@@ -6889,6 +7163,7 @@ export async function updateComment(params: {
   actorUserId: string;
   body: string;
 }): Promise<Comment> {
+  assertContentSafeText(params.body, "body");
   if (useMockData) {
     const comment = mockComments.find((c) => c.id === params.commentId);
     if (!comment) {

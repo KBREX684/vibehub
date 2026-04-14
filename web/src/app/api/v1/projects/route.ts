@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
-import { listProjects, createProject } from "@/lib/repository";
+import { listProjects, createProject, getUserTier, countUserProjects } from "@/lib/repository";
+import { checkQuota } from "@/lib/quota";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import type { ProjectStatus } from "@/lib/types";
@@ -81,6 +82,28 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const parsed = createProjectSchema.parse(json);
+
+    const [tier, projectCount] = await Promise.all([
+      getUserTier(session.userId),
+      countUserProjects(session.userId),
+    ]);
+    const quota = checkQuota(tier, "projects", projectCount);
+    if (!quota.allowed) {
+      return apiError(
+        {
+          code: "QUOTA_EXCEEDED",
+          message: "You have reached the maximum number of projects for your plan.",
+          details: {
+            resource: "projects",
+            tier: quota.tier,
+            limit: quota.limit,
+            upgradeUrl: "/settings/subscription",
+          },
+        },
+        402
+      );
+    }
+
     const project = await createProject({
       ...parsed,
       creatorUserId: session.userId,
