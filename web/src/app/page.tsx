@@ -25,25 +25,25 @@ export default async function HomePage() {
     <main className="container pb-24 space-y-16">
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="page-hero pt-12 pb-10 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-primary-subtle)] border border-[rgba(59,130,246,0.2)] text-xs font-medium text-[var(--color-primary-hover)] mb-8 animate-fade-up">
+      <section className="pt-16 pb-12 text-center animate-fade-in-up">
+        <div className="inline-flex items-center gap-2 px-3 py-1 border border-[var(--color-border)] text-xs font-mono text-[var(--color-text-secondary)] mb-8">
           <Zap className="w-3.5 h-3.5" />
-          <span>VibeHub — Developer community for shipping together</span>
+          <span>[v1.0.0] Developer community for shipping together</span>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold tracking-[-0.04em] leading-[1.05] mb-6 animate-fade-up animate-delay-100">
-          <span className="gradient-text">Build projects,</span>
+        <h1 className="text-5xl md:text-7xl font-bold tracking-[-0.04em] leading-[1.05] mb-6">
+          <span className="text-[var(--color-text-primary)]">Build projects,</span>
           <br />
-          <span className="text-[var(--color-text-primary)]">find teammates, ship together.</span>
+          <span className="text-[var(--color-text-secondary)]">find teammates, ship together.</span>
         </h1>
 
-        <p className="text-base md:text-lg text-[var(--color-text-secondary)] max-w-xl mx-auto leading-relaxed mb-10 animate-fade-up animate-delay-200">
+        <p className="text-base md:text-lg text-[var(--color-text-secondary)] max-w-xl mx-auto leading-relaxed mb-10">
           Discover developer projects, join active collaborations, form small
           teams, and move work forward in one place. VibeHub is built for
           builders who want to ship with other builders.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12 animate-fade-up animate-delay-300">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12">
           <Link
             href="/discover"
             className="btn btn-primary px-6 py-2.5 text-sm font-semibold"
@@ -60,67 +60,54 @@ export default async function HomePage() {
         </div>
 
         {/* Search */}
-        <div className="max-w-xl mx-auto animate-fade-up animate-delay-400">
+        <div className="max-w-xl mx-auto">
           <SearchBar />
         </div>
       </section>
 
       {/* ── Platform Stats ───────────────────────────────────────────────────── */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--color-border)] border border-[var(--color-border)] animate-fade-in-up delay-100">
         {[
-          { icon: LayoutGrid, label: "Active Projects", value: projects.length, color: "var(--color-primary)" },
-          { icon: MessageSquare, label: "Discussions", value: "Live", color: "var(--color-accent-cyan)" },
-          { icon: Users, label: "Active Teams", value: teams.length, color: "var(--color-accent-violet)" },
-          { icon: Cpu, label: "Developer API + MCP", value: "Live", color: "var(--color-success)" },
-        ].map(({ icon: Icon, label, value, color }, i) => (
+          { icon: LayoutGrid, label: "Active Projects", value: projects.length },
+          { icon: MessageSquare, label: "Discussions", value: "Live" },
+          { icon: Users, label: "Active Teams", value: teams.length },
+          { icon: Cpu, label: "Developer API + MCP", value: "Live" },
+        ].map(({ icon: Icon, label, value }) => (
           <div
             key={label}
-            className={`card p-6 text-center animate-fade-up`}
-            style={{ animationDelay: `${i * 80}ms` }}
+            className="bg-[var(--color-bg-canvas)] p-6 text-center hover:bg-[var(--color-bg-surface)] transition-colors"
           >
-            <div
-              className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center mx-auto mb-3"
-              style={{ background: `${color}18`, color }}
-            >
+            <div className="w-10 h-10 flex items-center justify-center mx-auto mb-3 text-[var(--color-text-secondary)]">
               <Icon className="w-5 h-5" />
             </div>
-            <div className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">{value}</div>
-            <div className="text-xs text-[var(--color-text-muted)] font-medium">{label}</div>
+            <div className="text-2xl font-mono font-bold text-[var(--color-text-primary)] mb-1">{value}</div>
+            <div className="text-xs text-[var(--color-text-muted)] font-medium uppercase tracking-wider">{label}</div>
           </div>
         ))}
       </section>
 
       {/* ── Platform Value Props ─────────────────────────────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up delay-200">
         {[
           {
             icon: Code2,
-            color: "var(--color-primary)",
             title: "Project Discovery",
-            titleZh: "项目发现",
             desc: "Browse real developer projects, open-source tools, and active build logs that are looking for attention or help.",
           },
           {
             icon: Users,
-            color: "var(--color-accent-violet)",
             title: "Small-Team Delivery",
-            titleZh: "协作团队",
             desc: "Create a team, review join requests, manage tasks and milestones, and keep delivery moving with less friction.",
           },
           {
             icon: Activity,
-            color: "var(--color-accent-cyan)",
             title: "Active Community",
-            titleZh: "活跃社区",
             desc: "Share ideas, get feedback, and turn discussion into projects, collaboration intent, and actual work shipped.",
           },
-        ].map(({ icon: Icon, color, title, desc }) => (
-          <div key={title} className="card p-6 group hover:-translate-y-0.5 transition-all duration-200">
-            <div
-              className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center mb-4"
-              style={{ background: `${color}15`, color }}
-            >
-              <Icon className="w-4.5 h-4.5" />
+        ].map(({ icon: Icon, title, desc }) => (
+          <div key={title} className="card p-6">
+            <div className="w-8 h-8 flex items-center justify-center mb-4 text-[var(--color-text-primary)] border border-[var(--color-border)] rounded-[var(--radius-sm)]">
+              <Icon className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">{title}</h3>
             <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">{desc}</p>
@@ -140,7 +127,6 @@ export default async function HomePage() {
             desc: "Share ideas, publish updates, and collect the signal that helps projects improve.",
             href: "/discussions",
             ctaLabel: "Browse Discussions",
-            color: "var(--color-accent-cyan)",
           },
           {
             step: "02",
@@ -148,7 +134,6 @@ export default async function HomePage() {
             desc: "Turn ideas into project pages that other developers can discover, follow, and join.",
             href: "/discover",
             ctaLabel: "Explore Projects",
-            color: "var(--color-primary-hover)",
           },
           {
             step: "03",
@@ -156,7 +141,6 @@ export default async function HomePage() {
             desc: "Approve join requests, align around milestones, and ship as a focused small team.",
             href: "/teams",
             ctaLabel: "Find Teams",
-            color: "var(--color-accent-violet)",
           },
           {
             step: "04",
@@ -164,20 +148,18 @@ export default async function HomePage() {
             desc: "Use API keys, OpenAPI, and MCP tools to integrate discovery and collaboration into your workflow.",
             href: "/developers",
             ctaLabel: "Open Developer Hub",
-            color: "var(--color-success)",
           },
-        ].map(({ step, title, desc, href, ctaLabel, color }) => (
+        ].map(({ step, title, desc, href, ctaLabel }) => (
           <div key={step} className="card p-5 space-y-3 flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold font-mono" style={{ color }}>{step}</span>
+              <span className="text-xs font-bold font-mono text-[var(--color-text-primary)]">{step}</span>
               <div className="flex-1 h-px bg-[var(--color-border)]" />
             </div>
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h3>
             <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed flex-1">{desc}</p>
             <Link
               href={href}
-              className="text-xs font-medium flex items-center gap-1 hover:underline"
-              style={{ color }}
+              className="text-xs font-mono flex items-center gap-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               {ctaLabel}
               <ArrowRight className="w-3 h-3" />
@@ -187,8 +169,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── CTA Banner ───────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden card p-10 text-center">
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-subtle)] via-transparent to-[var(--color-accent-cyan-subtle)] pointer-events-none" />
+      <section className="card p-10 text-center border-t-2 border-t-[var(--color-text-primary)]">
         <div className="relative z-10">
           <h2 className="text-2xl md:text-3xl font-bold text-[var(--color-text-primary)] mb-3">
             Ready to ship with other builders?

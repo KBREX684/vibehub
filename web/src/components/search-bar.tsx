@@ -33,10 +33,9 @@ export function SearchBar() {
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder="Search projects, discussions, creators..."
-        className="w-full py-3 pl-11 pr-28 bg-[var(--color-bg-surface)] text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] rounded-[var(--radius-pill)] border border-[var(--color-border)] outline-none transition-all duration-200 font-medium"
+        className="w-full py-3 pl-11 pr-28 bg-[var(--color-bg-canvas)] text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] rounded-[var(--radius-md)] border border-[var(--color-border)] outline-none transition-all duration-200 font-mono"
         style={{
-          borderColor: isFocused ? "var(--color-primary)" : undefined,
-          boxShadow: isFocused ? "0 0 0 3px var(--color-primary-subtle)" : undefined,
+          borderColor: isFocused ? "var(--color-text-primary)" : undefined,
         }}
         aria-label="Search"
       />

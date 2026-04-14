@@ -20,9 +20,9 @@ export function ProjectCard({
   featured?: boolean;
 }) {
   return (
-    <article className="relative group card hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
+    <article className="relative group card transition-colors overflow-hidden">
       {featured && (
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-featured-subtle)] to-transparent pointer-events-none rounded-[var(--radius-lg)]" />
+        <div className="absolute inset-0 border-2 border-[var(--color-text-primary)] pointer-events-none rounded-[var(--radius-lg)]" />
       )}
 
       <Link
@@ -46,7 +46,7 @@ export function ProjectCard({
               />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center flex-shrink-0 text-base font-bold text-[var(--color-primary-hover)]">
+            <div className="w-10 h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 text-base font-mono font-bold text-[var(--color-text-primary)]">
               {project.title.charAt(0)}
             </div>
           )}
