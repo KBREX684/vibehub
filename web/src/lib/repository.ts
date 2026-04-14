@@ -2118,6 +2118,14 @@ export async function updateTeamMilestone(params: {
   progress?: number;
 }): Promise<TeamMilestone> {
   const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
+  // P1-4: owner can edit all fields; non-owner members can only update progress.
+  const wantsStructural =
+    params.title !== undefined ||
+    params.description !== undefined ||
+    params.targetDate !== undefined ||
+    params.sortOrder !== undefined ||
+    params.visibility !== undefined ||
+    params.completed !== undefined;
 
   if (useMockData) {
     const idx = mockTeamMilestones.findIndex((m) => m.id === params.milestoneId && m.teamId === teamId);
@@ -2128,15 +2136,7 @@ export async function updateTeamMilestone(params: {
     const wasCompletedMock = cur.completed;
     const team = mockTeams.find((t) => t.id === teamId);
     const isOwner = team?.ownerUserId === params.actorUserId || role === "owner";
-    const isCreator = cur.createdByUserId === params.actorUserId;
-    const wantsStructural =
-      params.title !== undefined ||
-      params.description !== undefined ||
-      params.targetDate !== undefined ||
-      params.sortOrder !== undefined ||
-      params.visibility !== undefined ||
-      params.completed !== undefined;
-    if (!isOwner && !isCreator) {
+    if (!isOwner) {
       if (wantsStructural || params.progress === undefined) {
         throw new Error("FORBIDDEN_MILESTONE_MEMBER_EDIT");
       }
@@ -2193,15 +2193,7 @@ export async function updateTeamMilestone(params: {
   }
   const wasCompletedPrisma = existing.completed;
   const isOwner = existing.team.ownerUserId === params.actorUserId || role === "owner";
-  const isCreator = existing.createdByUserId === params.actorUserId;
-  const wantsStructural =
-    params.title !== undefined ||
-    params.description !== undefined ||
-    params.targetDate !== undefined ||
-    params.sortOrder !== undefined ||
-    params.visibility !== undefined ||
-    params.completed !== undefined;
-  if (!isOwner && !isCreator) {
+  if (!isOwner) {
     if (wantsStructural || params.progress === undefined) {
       throw new Error("FORBIDDEN_MILESTONE_MEMBER_EDIT");
     }
@@ -7447,17 +7439,41 @@ export async function revokeApiKeyForUser(params: { userId: string; keyId: strin
     }
     const now = new Date().toISOString();
     mockApiKeys[idx].revokedAt = now;
+    mockAuditLogs.unshift({
+      id: `log_api_revoke_${Date.now()}`,
+      actorId: params.userId,
+      action: "api_key_revoked",
+      entityType: "api_key",
+      entityId: params.keyId,
+      metadata: { keyId: params.keyId },
+      createdAt: now,
+    });
     return;
   }
 
   const prisma = await getPrisma();
-  const res = await prisma.apiKey.updateMany({
+  const key = await prisma.apiKey.findFirst({
     where: { id: params.keyId, userId: params.userId, revokedAt: null },
-    data: { revokedAt: new Date() },
+    select: { id: true },
   });
-  if (res.count === 0) {
+  if (!key) {
     throw new Error("API_KEY_NOT_FOUND");
   }
+  await prisma.$transaction(async (tx) => {
+    await tx.apiKey.update({
+      where: { id: key.id },
+      data: { revokedAt: new Date() },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.userId,
+        action: "api_key_revoked",
+        entityType: "api_key",
+        entityId: key.id,
+        metadata: { keyId: key.id },
+      },
+    });
+  });
 }
 
 export async function getSessionUserFromApiKeyToken(plaintextToken: string): Promise<SessionUser | null> {

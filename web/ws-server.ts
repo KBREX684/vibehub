@@ -30,6 +30,7 @@ import { IncomingMessage } from "http";
 import { createServer } from "http";
 import { verifyChatToken, type ChatTokenErrorCode } from "./src/lib/chat-token";
 import { assertUrlCountAtMost, escapeHtmlAngleBrackets } from "./src/lib/content-safety";
+import Redis from "ioredis";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -42,8 +43,9 @@ const USER_MSG_WINDOW_MS = 60_000;
 const USER_MSG_MAX_PER_WINDOW = 30;
 // Internal base URL used for REST persistence calls (Next.js app)
 const NEXT_BASE_URL     = process.env.NEXT_BASE_URL ?? "http://localhost:3000";
-// Optional server-to-server token (set both here and on the Next.js side via WS_SERVER_TOKEN)
-const WS_SERVER_TOKEN   = process.env.WS_SERVER_TOKEN ?? "";
+// Internal service secret used for WS->HTTP trusted calls.
+const INTERNAL_SERVICE_SECRET = process.env.INTERNAL_SERVICE_SECRET ?? "";
+const REDIS_URL = process.env.REDIS_URL?.trim() || "";
 const IS_PRODUCTION     = process.env.NODE_ENV === "production";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -76,6 +78,14 @@ const rooms = new Map<string, Set<AuthedClient>>();
 const history = new Map<string, ChatMessage[]>();
 // userId → message timestamps (P2-5 rate limit)
 const userMessageTimestamps = new Map<string, number[]>();
+const redis =
+  REDIS_URL
+    ? new Redis(REDIS_URL, {
+        maxRetriesPerRequest: 2,
+        enableReadyCheck: true,
+      })
+    : null;
+const wsTokenUserCache = new Map<string, string>();
 
 function getCapacity(teamSlug: string): number {
   const envKey = `CHAT_CAPACITY_${teamSlug.toUpperCase().replace(/-/g, "_")}`;
@@ -138,7 +148,7 @@ function checkUserMessageRateLimit(userId: string): boolean {
 }
 
 async function persistMessage(teamSlug: string, userId: string, userName: string, body: string): Promise<ChatMessage | null> {
-  if (!WS_SERVER_TOKEN) {
+  if (!INTERNAL_SERVICE_SECRET) {
     if (IS_PRODUCTION) return null;
     return null;
   }
@@ -146,10 +156,9 @@ async function persistMessage(teamSlug: string, userId: string, userName: string
   const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    // Internal header — the REST endpoint accepts this when WS_SERVER_TOKEN matches
-    "x-ws-server-userId": userId,
+    "x-internal-secret": INTERNAL_SERVICE_SECRET,
+    "x-ws-auth-token": await issueWsAuthToken(userId),
   };
-  headers["x-ws-server-token"] = WS_SERVER_TOKEN;
 
   try {
     const res = await fetch(url, {
@@ -214,9 +223,9 @@ function fetchDbHistoryOrFallback(teamSlug: string, userId: string, ws: WebSocke
 }
 
 function requireWsServerTokenOrWarn() {
-  if (!WS_SERVER_TOKEN) {
+  if (!INTERNAL_SERVICE_SECRET) {
     const msg =
-      "[ws-server] WS_SERVER_TOKEN is not configured; websocket persistence and membership verification will fail.";
+      "[ws-server] INTERNAL_SERVICE_SECRET is not configured; websocket persistence and membership verification will fail.";
     if (IS_PRODUCTION) {
       throw new Error(msg);
     }
@@ -225,18 +234,39 @@ function requireWsServerTokenOrWarn() {
 }
 
 requireWsServerTokenOrWarn();
+if (redis) {
+  redis.on("error", () => {
+    // Keep WS server resilient when Redis is transiently unavailable.
+  });
+}
 
 async function fetchWithWsAuth(url: string, userId: string): Promise<Response | null> {
-  if (!WS_SERVER_TOKEN) return null;
+  if (!INTERNAL_SERVICE_SECRET) return null;
   const headers: Record<string, string> = {
-    "x-ws-server-userId": userId,
-    "x-ws-server-token": WS_SERVER_TOKEN,
+    "x-internal-secret": INTERNAL_SERVICE_SECRET,
+    "x-ws-auth-token": await issueWsAuthToken(userId),
   };
   try {
     return await fetch(url, { headers });
   } catch {
     return null;
   }
+}
+
+async function issueWsAuthToken(userId: string): Promise<string> {
+  const token = `ws_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  wsTokenUserCache.set(token, userId);
+  if (wsTokenUserCache.size > 10_000) {
+    wsTokenUserCache.clear();
+  }
+  if (redis) {
+    try {
+      await redis.set(`ws-auth:${token}`, userId, "EX", 180);
+    } catch {
+      // Best effort: keep local fallback for development and transient redis failures.
+    }
+  }
+  return token;
 }
 
 /**
@@ -281,22 +311,6 @@ async function verifyTeamMembership(teamSlug: string, userId: string): Promise<T
  * authenticated userId from verified chat token claims, and the Next.js
  * endpoint still enforces team membership server-side.
  */
-function _deprecated_persistMessage_fire_and_forget(teamSlug: string, userId: string, body: string): void {
-  const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages`;
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-ws-server-userId": userId,
-  };
-  if (WS_SERVER_TOKEN) headers["x-ws-server-token"] = WS_SERVER_TOKEN;
-  fetch(url, {
-    method:  "POST",
-    headers,
-    body:    JSON.stringify({ body }),
-  }).catch((err) => {
-    console.error("[ws-server] persist failed:", err.message);
-  });
-}
-
 function sendJson(ws: WebSocket, payload: object) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));

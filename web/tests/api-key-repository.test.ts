@@ -3,6 +3,7 @@ import {
   createApiKeyForUser,
   getSessionUserFromApiKeyToken,
   listApiKeysForUser,
+  listAuditLogs,
   listTeamsForUser,
   revokeApiKeyForUser,
 } from "../src/lib/repository";
@@ -27,6 +28,8 @@ describe("API keys (P4-1, mock)", () => {
 
     await revokeApiKeyForUser({ userId: "u1", keyId: created.id });
     await expect(getSessionUserFromApiKeyToken(created.secret)).resolves.toBeNull();
+    const logs = await listAuditLogs({ page: 1, limit: 50 });
+    expect(logs.items.some((x) => x.action === "api_key_revoked" && x.entityId === created.id)).toBe(true);
   });
 
   it("rejects invalid scopes on create", async () => {

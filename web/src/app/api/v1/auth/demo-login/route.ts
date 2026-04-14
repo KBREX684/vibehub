@@ -21,10 +21,7 @@ function sanitizeRedirectPath(value: string | null): string {
 
 export async function GET(request: Request) {
   if (process.env.NODE_ENV === "production" || process.env.DISABLE_DEMO_LOGIN === "true") {
-    return apiError(
-      { code: "DEMO_LOGIN_DISABLED", message: "Demo login is disabled in production. Use GitHub OAuth." },
-      403
-    );
+    return apiError({ code: "NOT_FOUND", message: "Not found" }, 404);
   }
 
   const url = new URL(request.url);

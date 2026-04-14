@@ -70,6 +70,24 @@ describe("team milestones (P3-5, mock)", () => {
     await deleteTeamMilestone({ teamSlug: "vibehub-core", milestoneId: m.id, actorUserId: "u1" });
   });
 
+  it("rejects member structural edits (title/description/etc)", async () => {
+    const m = await createTeamMilestone({
+      teamSlug: "vibehub-core",
+      actorUserId: "u1",
+      title: "Owner milestone",
+      targetDate: new Date(Date.UTC(2026, 11, 15)).toISOString(),
+    });
+    await expect(
+      updateTeamMilestone({
+        teamSlug: "vibehub-core",
+        milestoneId: m.id,
+        actorUserId: "u2",
+        title: "member cannot rename",
+      })
+    ).rejects.toThrow("FORBIDDEN_MILESTONE_MEMBER_EDIT");
+    await deleteTeamMilestone({ teamSlug: "vibehub-core", milestoneId: m.id, actorUserId: "u1" });
+  });
+
   it("clears task milestoneId when milestone is deleted", async () => {
     const m = await createTeamMilestone({
       teamSlug: "vibehub-core",

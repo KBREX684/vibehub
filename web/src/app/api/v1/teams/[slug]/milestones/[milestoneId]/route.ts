@@ -51,6 +51,12 @@ export async function PATCH(request: Request, { params }: Params) {
     if (msg === "FORBIDDEN_NOT_TEAM_MEMBER") {
       return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
     }
+    if (msg === "FORBIDDEN_MILESTONE_MEMBER_EDIT") {
+      return apiError(
+        { code: "FORBIDDEN", message: "Only team owners can edit milestone details; members may update progress only" },
+        403
+      );
+    }
     if (msg === "TEAM_MILESTONE_NOT_FOUND") {
       return apiError({ code: "TEAM_MILESTONE_NOT_FOUND", message: "Milestone not found" }, 404);
     }
