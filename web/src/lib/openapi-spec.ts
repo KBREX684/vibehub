@@ -1,4 +1,5 @@
 import { API_KEY_SCOPES } from "@/lib/api-key-scopes";
+import { MCP_V2_TOOL_NAMES, MCP_V2_TOOL_SCOPES } from "@/lib/mcp-v2-tools";
 
 const metaSchema = {
   type: "object",
@@ -982,7 +983,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/mcp/v2/invoke": {
         post: {
           tags: ["mcp-v2"],
-          summary: "MCP v2 invoke tool by name (session or Bearer; scope per tool, all 9 tools below)",
+          summary: "MCP v2 invoke tool by name (session or Bearer; scope per tool)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           requestBody: {
             required: true,
@@ -994,17 +995,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                   properties: {
                     tool: {
                       type: "string",
-                      enum: [
-                        "search_projects",
-                        "search_creators",
-                        "get_project_detail",
-                        "workspace_summary",
-                        "list_teams",
-                        "search_posts",
-                        "get_post_detail",
-                        "list_challenges",
-                        "get_talent_radar",
-                      ],
+                      enum: [...MCP_V2_TOOL_NAMES],
                     },
                     input: { type: "object", additionalProperties: true },
                   },
@@ -1014,15 +1005,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
           description: [
             "Tool scope mapping:",
-            "- search_projects -> read:projects:list",
-            "- search_creators -> read:creators:list",
-            "- get_project_detail -> read:projects:detail",
-            "- workspace_summary -> read:enterprise:workspace",
-            "- list_teams -> read:teams:list",
-            "- search_posts -> read:posts:list",
-            "- get_post_detail -> read:posts:detail",
-            "- list_challenges -> read:public",
-            "- get_talent_radar -> read:enterprise:workspace",
+            ...MCP_V2_TOOL_NAMES.map((name) => `- ${name} -> ${MCP_V2_TOOL_SCOPES[name]}`),
           ].join("\\n"),
           responses: {
             "200": responses["200"],

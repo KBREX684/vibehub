@@ -1,9 +1,13 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { clientIp } from "@/lib/api-key-rate-limit";
 import { apiError, apiSuccess } from "@/lib/response";
+import {
+  MCP_V2_TOOL_NAMES,
+  type McpV2ToolName,
+  MCP_V2_TOOL_SCOPES,
+} from "@/lib/mcp-v2-tools";
 import {
   getEnterpriseWorkspaceSummary,
   getPostBySlug,
@@ -19,36 +23,10 @@ import {
 } from "@/lib/repository";
 import type { ProjectStatus } from "@/lib/types";
 
-const ALL_TOOLS = [
-  "search_projects",
-  "search_creators",
-  "get_project_detail",
-  "workspace_summary",
-  "list_teams",
-  "search_posts",
-  "get_post_detail",
-  "list_challenges",
-  "get_talent_radar",
-] as const;
-
-type Tool = (typeof ALL_TOOLS)[number];
-
 const bodySchema = z.object({
-  tool: z.enum(ALL_TOOLS),
+  tool: z.enum(MCP_V2_TOOL_NAMES),
   input: z.record(z.string(), z.unknown()).optional().default({}),
 });
-
-const TOOL_SCOPES: Record<Tool, ApiKeyScope> = {
-  search_projects: "read:projects:list",
-  search_creators: "read:creators:list",
-  get_project_detail: "read:projects:detail",
-  workspace_summary: "read:enterprise:workspace",
-  list_teams: "read:teams:list",
-  search_posts: "read:posts:list",
-  get_post_detail: "read:posts:detail",
-  list_challenges: "read:public",
-  get_talent_radar: "read:enterprise:workspace",
-};
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
 
@@ -85,7 +63,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { tool, input } = parsed;
-  const requiredScope = TOOL_SCOPES[tool];
+  const requiredScope = MCP_V2_TOOL_SCOPES[tool as McpV2ToolName];
   const auth = await authenticateRequest(request, requiredScope);
   const gate = resolveReadAuth(auth, false);
   if (!gate.ok) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildOpenApiDocument } from "../src/lib/openapi-spec";
 import { validateOpenApiDocument } from "../src/lib/openapi-validate";
+import { MCP_V2_TOOL_NAMES } from "../src/lib/mcp-v2-tools";
 
 describe("OpenAPI spec (P4-4 + P4-5)", () => {
   it("passes structural validation (P4-5 CI gate)", () => {
@@ -32,16 +33,6 @@ describe("OpenAPI spec (P4-4 + P4-5)", () => {
     const mcpInvoke = doc.paths["/api/v1/mcp/v2/invoke"]?.post;
     const tools =
       mcpInvoke?.requestBody?.content?.["application/json"]?.schema?.properties?.tool?.enum ?? [];
-    expect(tools).toEqual([
-      "search_projects",
-      "search_creators",
-      "get_project_detail",
-      "workspace_summary",
-      "list_teams",
-      "search_posts",
-      "get_post_detail",
-      "list_challenges",
-      "get_talent_radar",
-    ]);
+    expect(tools).toEqual([...MCP_V2_TOOL_NAMES]);
   });
 });
