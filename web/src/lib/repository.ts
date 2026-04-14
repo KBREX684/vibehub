@@ -44,7 +44,6 @@ import {
   mockSubscriptionPlans,
   mockUserSubscriptions,
   mockTeamChatMessages,
-  mockEnterpriseVerificationApplications,
   mockWebhookEndpoints,
 } from "@/lib/data/mock-data";
 import type {
@@ -137,6 +136,10 @@ import {
   getPostBySlug as getPostBySlugFromDomain,
   listPosts as listPostsFromDomain,
 } from "@/lib/repositories/community.repository";
+import {
+  listTeamsForUser as listTeamsForUserFromShared,
+  listPendingJoinRequestsForOwner as listPendingJoinRequestsForOwnerFromShared,
+} from "@/lib/repositories/repository-shared";
 
 const useMockData = isMockDataEnabled();
 type DemoRole = Extract<Role, "admin" | "user">;
@@ -1067,41 +1070,14 @@ export async function markInAppNotificationsRead(params: {
 export async function listPendingJoinRequestsForOwner(params: {
   ownerUserId: string;
 }): Promise<Array<TeamJoinRequestRow & { teamSlug: string; teamName: string }>> {
-  if (useMockData) {
-    const owned = mockTeams.filter((t) => t.ownerUserId === params.ownerUserId);
-    const out: Array<TeamJoinRequestRow & { teamSlug: string; teamName: string }> = [];
-    for (const team of owned) {
-      for (const r of mockTeamJoinRequests) {
-        if (r.teamId === team.id && r.status === "pending") {
-          const row = toTeamJoinRequestRowMock(r);
-          out.push({ ...row, teamSlug: team.slug, teamName: team.name });
-        }
-      }
-    }
-    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-  const prisma = await getPrisma();
-  const rows = await prisma.teamJoinRequest.findMany({
-    where: { status: "pending", team: { ownerUserId: params.ownerUserId } },
-    include: {
-      team: { select: { slug: true, name: true } },
-      applicant: { select: { id: true, name: true, email: true } },
-    },
-    orderBy: { createdAt: "desc" },
+  return listPendingJoinRequestsForOwnerFromShared({
+    useMockData,
+    getPrisma,
+    ownerUserId: params.ownerUserId,
+    mockTeams,
+    mockTeamJoinRequests,
+    mockUsers,
   });
-  return rows.map((r) => ({
-    id: r.id,
-    teamId: r.teamId,
-    applicantId: r.applicant.id,
-    applicantName: r.applicant.name,
-    applicantEmail: r.applicant.email,
-    message: r.message,
-    status: r.status as TeamJoinRequestStatus,
-    reviewedAt: r.reviewedAt?.toISOString(),
-    createdAt: r.createdAt.toISOString(),
-    teamSlug: r.team.slug,
-    teamName: r.team.name,
-  }));
 }
 
 export async function listTeamTasks(params: { teamSlug: string; viewerUserId: string }): Promise<TeamTask[]> {
@@ -2153,43 +2129,7 @@ export async function deleteTeamMilestone(params: {
 }
 
 export async function listTeamsForUser(userId: string): Promise<TeamSummary[]> {
-  if (useMockData) {
-    const teamIds = new Set(
-      mockTeamMemberships.filter((m) => m.userId === userId).map((m) => m.teamId)
-    );
-    return mockTeams
-      .filter((t) => teamIds.has(t.id))
-      .map((t) => ({
-        id: t.id,
-        slug: t.slug,
-        name: t.name,
-        mission: t.mission,
-        ownerUserId: t.ownerUserId,
-        memberCount: mockTeamMemberships.filter((m) => m.teamId === t.id).length,
-        projectCount: mockProjects.filter((p) => p.teamId === t.id).length,
-        createdAt: t.createdAt,
-      }))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-
-  const prisma = await getPrisma();
-  const rows = await prisma.team.findMany({
-    where: { memberships: { some: { userId } } },
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { memberships: true, projects: true } },
-    },
-  });
-  return rows.map((t) => ({
-    id: t.id,
-    slug: t.slug,
-    name: t.name,
-    mission: t.mission ?? undefined,
-    ownerUserId: t.ownerUserId,
-    memberCount: t._count.memberships,
-    projectCount: t._count.projects,
-    createdAt: t.createdAt.toISOString(),
-  }));
+  return listTeamsForUserFromShared({ useMockData, getPrisma, userId, mockTeamMemberships, mockTeams, mockProjects });
 }
 
 export async function listCreators(params: {
@@ -4216,35 +4156,37 @@ export async function listAuditLogs(params: {
 // ─── Enterprise Verification ─────────────────────────────────────────────────
 
 
-function toEnterpriseVerificationApplicationDto(row: {
+function toEnterpriseVerificationApplicationFromProfile(row: {
   id: string;
-  userId: string;
-  organizationName: string;
-  organizationWebsite: string;
-  workEmail: string;
-  useCase: string | null;
-  status: "none" | "pending" | "approved" | "rejected";
-  reviewNote: string | null;
-  reviewedBy: string | null;
-  reviewedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): EnterpriseVerificationApplication {
+  email: string;
+  enterpriseProfile?: {
+    status: "none" | "pending" | "approved" | "rejected";
+    organization: string | null;
+    website: string | null;
+    useCase: string | null;
+    reviewedBy: string | null;
+    reviewNote: string | null;
+    appliedAt: Date | null;
+    reviewedAt: Date | null;
+  } | null;
+}): EnterpriseVerificationApplication | null {
+  const ep = row.enterpriseProfile;
+  if (!ep || ep.status === "none") return null;
   const status =
-    row.status === "none" ? "pending" : (row.status as Exclude<EnterpriseVerificationStatus, "none">);
+    ep.status === "none" ? "pending" : (ep.status as Exclude<EnterpriseVerificationStatus, "none">);
   return {
-    id: row.id,
-    userId: row.userId,
-    organizationName: row.organizationName,
-    organizationWebsite: row.organizationWebsite,
-    workEmail: row.workEmail,
-    useCase: row.useCase ?? undefined,
+    id: `eva_user_${row.id}`,
+    userId: row.id,
+    organizationName: ep.organization ?? "",
+    organizationWebsite: ep.website ?? "",
+    workEmail: row.email,
+    useCase: ep.useCase ?? undefined,
     status,
-    reviewNote: row.reviewNote ?? undefined,
-    reviewedBy: row.reviewedBy ?? undefined,
-    reviewedAt: row.reviewedAt?.toISOString(),
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    reviewNote: ep.reviewNote ?? undefined,
+    reviewedBy: ep.reviewedBy ?? undefined,
+    reviewedAt: ep.reviewedAt?.toISOString(),
+    createdAt: (ep.appliedAt ?? new Date()).toISOString(),
+    updatedAt: (ep.reviewedAt ?? ep.appliedAt ?? new Date()).toISOString(),
   };
 }
 
@@ -4795,141 +4737,25 @@ export async function getAdminOverview() {
   };
 }
 
-/**
- * @deprecated Legacy enterprise-application DTO flow retained for compatibility
- * with historical data exports. Do not use in runtime paths.
- * Use `submitEnterpriseVerification` / `getEnterpriseProfileByUserId` /
- * `listEnterpriseProfiles` / `reviewEnterpriseVerification` instead.
- */
-export async function createEnterpriseVerificationApplication(params: {
-  userId: string;
-  organizationName: string;
-  organizationWebsite: string;
-  workEmail: string;
-  useCase?: string;
-}): Promise<EnterpriseVerificationApplication> {
-  const organizationName = params.organizationName.trim();
-  const organizationWebsite = params.organizationWebsite.trim();
-  const workEmail = params.workEmail.trim();
-  const useCase = params.useCase?.trim();
-
-  if (!organizationName || organizationName.length > 120) throw new Error("INVALID_ORGANIZATION_NAME");
-  if (!organizationWebsite || organizationWebsite.length > 200) throw new Error("INVALID_ORGANIZATION_WEBSITE");
-  if (!workEmail || workEmail.length > 200) throw new Error("INVALID_WORK_EMAIL");
-  if (useCase && useCase.length > 2000) throw new Error("INVALID_USE_CASE");
-
-  if (useMockData) {
-    const user = mockUsers.find((u) => u.id === params.userId);
-    if (!user) throw new Error("USER_NOT_FOUND");
-    if (user.role === "admin") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
-    const existing = mockEnterpriseVerificationApplications.find(
-      (a) => a.userId === params.userId && a.status === "pending"
-    );
-    if (existing) throw new Error("APPLICATION_ALREADY_PENDING");
-    const now = new Date().toISOString();
-    const app = {
-      id: `eva_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      userId: params.userId,
-      organizationName,
-      organizationWebsite,
-      workEmail,
-      useCase,
-      status: "pending" as const,
-      createdAt: now,
-      updatedAt: now,
-    };
-    mockEnterpriseVerificationApplications.unshift(app);
-    mockAuditLogs.unshift({
-      id: `log_eva_${Date.now()}`,
-      actorId: params.userId,
-      action: "enterprise_verification_requested",
-      entityType: "enterprise_verification_application",
-      entityId: app.id,
-      metadata: { organizationName, organizationWebsite },
-      createdAt: now,
-    });
-    return { ...app };
-  }
-
-  const prisma = await getPrisma();
-  const user = await prisma.user.findUnique({
-    where: { id: params.userId },
-    select: { id: true, role: true, enterpriseProfile: { select: { status: true } } },
-  });
-  if (!user) throw new Error("USER_NOT_FOUND");
-  if (user.role === "admin") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
-  if (user.enterpriseProfile?.status === "pending") throw new Error("APPLICATION_ALREADY_PENDING");
-  if (user.enterpriseProfile?.status === "approved") throw new Error("ALREADY_HAS_ENTERPRISE_ACCESS");
-
-  const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const row = await tx.user.update({
-      where: { id: params.userId },
-      data: {
-        enterpriseProfile: {
-          upsert: {
-            create: {
-              status: "pending",
-              organization: organizationName,
-              website: organizationWebsite,
-              useCase: useCase ?? null,
-              appliedAt: new Date(),
-              reviewedAt: null,
-              reviewedBy: null,
-              reviewNote: null,
-            },
-            update: {
-              status: "pending",
-              organization: organizationName,
-              website: organizationWebsite,
-              useCase: useCase ?? null,
-              appliedAt: new Date(),
-              reviewedAt: null,
-              reviewedBy: null,
-              reviewNote: null,
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        email: true,
-        enterpriseProfile: { select: enterpriseProfileSelect },
-      },
-    });
-    await tx.auditLog.create({
-      data: {
-        actorId: params.userId,
-        action: "enterprise_verification_requested",
-        entityType: "enterprise_profile",
-        entityId: params.userId,
-        metadata: { organizationName, organizationWebsite },
-      },
-    });
-    return row;
-  });
-  const ep = created.enterpriseProfile;
-  return toEnterpriseVerificationApplicationDto({
-    id: `eva_user_${created.id}`,
-    userId: created.id,
-    organizationName: ep?.organization ?? organizationName,
-    organizationWebsite: ep?.website ?? organizationWebsite,
-    workEmail: created.email,
-    useCase: ep?.useCase ?? null,
-    status: ep?.status ?? "pending",
-    reviewNote: ep?.reviewNote ?? null,
-    reviewedBy: ep?.reviewedBy ?? null,
-    reviewedAt: ep?.reviewedAt ?? null,
-    createdAt: ep?.appliedAt ?? new Date(),
-    updatedAt: ep?.reviewedAt ?? ep?.appliedAt ?? new Date(),
-  });
-}
-
 export async function getLatestEnterpriseVerificationApplication(
   userId: string
 ): Promise<EnterpriseVerificationApplication | null> {
   if (useMockData) {
-    const row = mockEnterpriseVerificationApplications.find((a) => a.userId === userId) ?? null;
-    return row ? { ...row } : null;
+    const profile = mockEnterpriseProfiles.find((row) => row.userId === userId);
+    if (!profile) return null;
+    return {
+      id: `eva_user_${profile.userId}`,
+      userId: profile.userId,
+      organizationName: profile.organizationName,
+      organizationWebsite: profile.organizationWebsite,
+      workEmail: profile.workEmail,
+      useCase: profile.useCase ?? undefined,
+      status: profile.status,
+      reviewNote: profile.reviewNote ?? undefined,
+      reviewedBy: profile.reviewedBy ?? undefined,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+    };
   }
   const prisma = await getPrisma();
   const row = await prisma.user.findUnique({
@@ -4940,177 +4766,8 @@ export async function getLatestEnterpriseVerificationApplication(
       enterpriseProfile: { select: enterpriseProfileSelect },
     },
   });
-  if (!row || !row.enterpriseProfile || row.enterpriseProfile.status === "none") return null;
-  const ep = row.enterpriseProfile;
-  return toEnterpriseVerificationApplicationDto({
-    id: `eva_user_${row.id}`,
-    userId: row.id,
-    organizationName: ep.organization ?? "",
-    organizationWebsite: ep.website ?? "",
-    workEmail: row.email,
-    useCase: ep.useCase ?? null,
-    status: ep.status,
-    reviewNote: ep.reviewNote ?? null,
-    reviewedBy: ep.reviewedBy ?? null,
-    reviewedAt: ep.reviewedAt ?? null,
-    createdAt: ep.appliedAt ?? new Date(),
-    updatedAt: ep.reviewedAt ?? ep.appliedAt ?? new Date(),
-  });
-}
-
-/**
- * @deprecated Legacy enterprise-application DTO flow retained for compatibility
- * with historical data exports. Do not use in runtime paths.
- * Use `listEnterpriseProfiles` for active runtime behavior.
- */
-export async function listEnterpriseVerificationApplications(params: {
-  status?: EnterpriseVerificationStatus | "all";
-  page: number;
-  limit: number;
-}): Promise<Paginated<EnterpriseVerificationApplication>> {
-  if (useMockData) {
-    const items = mockEnterpriseVerificationApplications.filter(
-      (a) => !params.status || params.status === "all" || a.status === params.status
-    );
-    return paginateArray(items, params.page, params.limit);
-  }
-  const prisma = await getPrisma();
-  const where =
-    !params.status || params.status === "all"
-      ? { status: { not: "none" as const } }
-      : { status: params.status };
-  const [items, total] = await Promise.all([
-    prisma.enterpriseProfile.findMany({
-      where,
-      orderBy: { appliedAt: "desc" },
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
-      select: {
-        userId: true,
-        ...enterpriseProfileSelect,
-        user: { select: { email: true } },
-      },
-    }),
-    prisma.enterpriseProfile.count({ where }),
-  ]);
-  return {
-    items: items.map((row) =>
-      toEnterpriseVerificationApplicationDto({
-        id: `eva_user_${row.userId}`,
-        userId: row.userId,
-        organizationName: row.organization ?? "",
-        organizationWebsite: row.website ?? "",
-        workEmail: row.user.email,
-        useCase: row.useCase ?? null,
-        status: row.status,
-        reviewNote: row.reviewNote ?? null,
-        reviewedBy: row.reviewedBy ?? null,
-        reviewedAt: row.reviewedAt ?? null,
-        createdAt: row.appliedAt ?? new Date(),
-        updatedAt: row.reviewedAt ?? row.appliedAt ?? new Date(),
-      })
-    ),
-    pagination: {
-      page: params.page,
-      limit: params.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / params.limit)),
-    },
-  };
-}
-
-/**
- * @deprecated Legacy enterprise-application DTO flow retained for compatibility.
- * Runtime approval path must use `reviewEnterpriseVerification`, where enterprise
- * approval updates enterprise status only and MUST NOT mutate platform roles.
- */
-export async function reviewEnterpriseVerificationApplication(params: {
-  applicationId: string;
-  reviewerUserId: string;
-  action: "approve" | "reject";
-  note?: string;
-}): Promise<EnterpriseVerificationApplication> {
-  const note = params.note?.trim() ? params.note.trim().slice(0, 1000) : undefined;
-  const nextStatus: EnterpriseVerificationStatus =
-    params.action === "approve" ? "approved" : "rejected";
-  if (useMockData) {
-    const idx = mockEnterpriseVerificationApplications.findIndex((a) => a.id === params.applicationId);
-    if (idx < 0) throw new Error("APPLICATION_NOT_FOUND");
-    const current = mockEnterpriseVerificationApplications[idx];
-    if (current.status !== "pending") throw new Error("APPLICATION_NOT_PENDING");
-    const now = new Date().toISOString();
-    mockEnterpriseVerificationApplications[idx] = {
-      ...current,
-      status: nextStatus,
-      reviewNote: note,
-      reviewedBy: params.reviewerUserId,
-      reviewedAt: now,
-      updatedAt: now,
-    };
-    // Legacy path intentionally does not mutate user role or subscription.
-    mockAuditLogs.unshift({
-      id: `log_eva_review_${Date.now()}`,
-      actorId: params.reviewerUserId,
-      action: `enterprise_verification_${nextStatus}`,
-      entityType: "enterprise_verification_application",
-      entityId: current.id,
-      metadata: { note },
-      createdAt: new Date().toISOString(),
-    });
-    return { ...mockEnterpriseVerificationApplications[idx] };
-  }
-
-  const prisma = await getPrisma();
-  const userIdFromApplicationId = params.applicationId.startsWith("eva_user_")
-    ? params.applicationId.slice("eva_user_".length)
-    : params.applicationId;
-  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const existing = await tx.user.findUnique({
-      where: { id: userIdFromApplicationId },
-      select: { id: true, email: true, enterpriseProfile: { select: { status: true } } },
-    });
-    if (!existing) throw new Error("APPLICATION_NOT_FOUND");
-    if (existing.enterpriseProfile?.status !== "pending") throw new Error("APPLICATION_NOT_PENDING");
-    const row = await tx.enterpriseProfile.update({
-      where: { userId: existing.id },
-      data: {
-        status: nextStatus,
-        reviewNote: note ?? null,
-        reviewedBy: params.reviewerUserId,
-        reviewedAt: new Date(),
-      },
-      select: {
-        userId: true,
-        ...enterpriseProfileSelect,
-        user: { select: { email: true } },
-      },
-    });
-    // Legacy path intentionally does not mutate user role or subscription.
-    await tx.auditLog.create({
-      data: {
-        actorId: params.reviewerUserId,
-        action: `enterprise_verification_${nextStatus}`,
-        entityType: "enterprise_profile",
-        entityId: userIdFromApplicationId,
-        metadata: { note },
-      },
-    });
-    return row;
-  });
-  return toEnterpriseVerificationApplicationDto({
-    id: `eva_user_${updated.userId}`,
-    userId: updated.userId,
-    organizationName: updated.organization ?? "",
-    organizationWebsite: updated.website ?? "",
-    workEmail: updated.user.email,
-    useCase: updated.useCase ?? null,
-    status: updated.status,
-    reviewNote: updated.reviewNote ?? null,
-    reviewedBy: updated.reviewedBy ?? null,
-    reviewedAt: updated.reviewedAt ?? null,
-    createdAt: updated.appliedAt ?? new Date(),
-    updatedAt: updated.reviewedAt ?? updated.appliedAt ?? new Date(),
-  });
+  if (!row) return null;
+  return toEnterpriseVerificationApplicationFromProfile(row);
 }
 
 export async function listTeams(params: { page: number; limit: number }): Promise<Paginated<TeamSummary>> {
