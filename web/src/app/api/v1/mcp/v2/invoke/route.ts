@@ -42,6 +42,10 @@ function str(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
 }
 
+function assertNeverTool(value: never): never {
+  throw new Error(`Unhandled MCP tool: ${String(value)}`);
+}
+
 export async function POST(request: NextRequest) {
   const started = Date.now();
   let userId = "";
@@ -167,7 +171,7 @@ export async function POST(request: NextRequest) {
 
       default: {
         await log(400, "UNKNOWN_TOOL");
-        return apiError({ code: "UNKNOWN_TOOL", message: "Unsupported tool" }, 400);
+        return assertNeverTool(tool);
       }
     }
   } catch (error) {
