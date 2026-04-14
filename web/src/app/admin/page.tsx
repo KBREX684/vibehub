@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isDevDemoAuth } from "@/lib/dev-demo";
 import { AdminWeeklyMaterializeForm } from "@/components/admin-weekly-materialize-form";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { getAdminOverview, listFeaturedProjects, listProjects } from "@/lib/repository";
@@ -31,13 +32,23 @@ export default async function AdminPage() {
           <p className="text-sm text-[var(--color-text-secondary)] mb-6">
             Login with administrator privileges to access the moderation dashboard.
           </p>
-          <a
-            href="/api/v1/auth/demo-login?role=admin&redirect=/admin"
-            className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
-          >
-            Demo Login as Admin
-            <ArrowRight className="w-4 h-4" />
-          </a>
+          {isDevDemoAuth() ? (
+            <a
+              href="/api/v1/auth/demo-login?role=admin&redirect=/admin"
+              className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
+            >
+              Demo Login as Admin
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          ) : (
+            <Link
+              href="/login?required=admin&redirect=%2Fadmin"
+              className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
+            >
+              Sign in as Admin
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
       </main>
     );

@@ -1,10 +1,24 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { isDevDemoAuth } from "@/lib/dev-demo";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 
 interface Props {
   searchParams: Promise<{ redirect?: string; required?: string; error?: string }>;
+}
+
+function safePostLoginRedirect(value: string | undefined, fallback = "/"): string {
+  if (!value) return fallback;
+  try {
+    let t = decodeURIComponent(value.trim());
+    t = t.trim();
+    if (!t.startsWith("/") || t.startsWith("//")) return fallback;
+    if (t.includes("://") || t.includes("\\")) return fallback;
+    return t;
+  } catch {
+    return fallback;
+  }
 }
 
 export default async function LoginPage({ searchParams }: Props) {
@@ -13,11 +27,10 @@ export default async function LoginPage({ searchParams }: Props) {
   // Already logged in — redirect away
   const session = await getSessionUserFromCookie();
   if (session) {
-    const dest = sp.redirect || "/";
-    redirect(dest);
+    redirect(safePostLoginRedirect(sp.redirect));
   }
 
-  const redirectTo  = sp.redirect  ?? "/";
+  const redirectTo = safePostLoginRedirect(sp.redirect);
   const required    = sp.required;
   const errorCode   = sp.error;
 
@@ -83,7 +96,7 @@ export default async function LoginPage({ searchParams }: Props) {
           </a>
 
           {/* Demo logins */}
-          {process.env.NODE_ENV !== "production" && (
+          {isDevDemoAuth() && (
             <div className="border-t border-[var(--color-border)] pt-4 space-y-2">
               <p className="text-xs text-center text-[var(--color-text-muted)] mb-2">Development demo</p>
               <a

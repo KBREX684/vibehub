@@ -14,6 +14,9 @@
  *   DATABASE_URL=...     Use real PostgreSQL (default path)
  *   USE_MOCK_DATA=true   Opt into in-memory mock data for demos only
  *   SESSION_SECRET=...   Required when using signed web sessions
+ *
+ * Safety: stdio MCP runs with full repository access to the configured database.
+ * Refuses to start in production against a real DATABASE_URL unless explicitly allowed.
  */
 
 import * as readline from "readline";
@@ -289,6 +292,18 @@ async function handleRequest(req: McpRequest): Promise<McpResponse> {
 }
 
 // ─── Main loop ────────────────────────────────────────────────────────────────
+
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.DATABASE_URL?.trim() &&
+  process.env.ALLOW_PRODUCTION_MCP_STDIO !== "true"
+) {
+  process.stderr.write(
+    "[vibehub-mcp] Refusing to start: production NODE_ENV with DATABASE_URL set. " +
+      "stdio MCP has unrestricted DB access. Set ALLOW_PRODUCTION_MCP_STDIO=true only if you accept this risk.\n"
+  );
+  process.exit(1);
+}
 
 const rl = readline.createInterface({ input: process.stdin, terminal: false });
 

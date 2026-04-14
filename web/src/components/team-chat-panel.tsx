@@ -43,10 +43,18 @@ interface Props {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function defaultWsBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return "ws://localhost:3001";
+  }
+  const proto = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${proto}://${window.location.hostname}:3001`;
+}
+
 const WS_URL =
   typeof process !== "undefined" && process.env.NEXT_PUBLIC_WS_URL
     ? process.env.NEXT_PUBLIC_WS_URL
-    : `ws://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:3001`;
+    : defaultWsBaseUrl();
 
 function formatTime(iso: string) {
   try {
