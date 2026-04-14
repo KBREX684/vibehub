@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
-import { createApiKeyForUser, listApiKeysForUser } from "@/lib/repository";
+import { createApiKeyForUser, listApiKeysForUser, getUserTier } from "@/lib/repository";
+import { checkApiKeyLimit } from "@/lib/subscription";
 
 const createSchema = z.object({
   label: z.string().min(1).max(80),
@@ -36,6 +37,21 @@ export async function POST(request: Request) {
   }
 
   try {
+    const tier = await getUserTier(session.userId);
+    const keys = await listApiKeysForUser(session.userId);
+    const activeCount = keys.filter((k) => !k.revokedAt).length;
+    const gate = checkApiKeyLimit(tier, activeCount);
+    if (!gate.allowed) {
+      return apiError(
+        {
+          code: "API_KEY_LIMIT_REACHED",
+          message: "You have reached the maximum number of API keys for your plan.",
+          details: { upgradeReason: gate.upgradeReason, currentTier: tier },
+        },
+        403
+      );
+    }
+
     const json = await request.json();
     const parsed = createSchema.parse(json);
     const created = await createApiKeyForUser({

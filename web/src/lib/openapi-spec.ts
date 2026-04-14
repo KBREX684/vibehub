@@ -330,37 +330,65 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/enterprise/project-radar": {
         get: {
           tags: ["enterprise"],
-          summary: "Project radar — trending projects ranked by weighted score (session or Bearer read:enterprise:workspace)",
+          summary:
+            "Project radar — trending projects (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
-          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/enterprise/talent-radar": {
         get: {
           tags: ["enterprise"],
-          summary: "Talent radar — top creators ranked by contribution score (session or Bearer read:enterprise:workspace)",
+          summary:
+            "Talent radar — top creators (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
-          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/enterprise/due-diligence/{slug}": {
         get: {
           tags: ["enterprise"],
-          summary: "Project due diligence summary — deep project info with team, intent, comment stats (session or Bearer read:enterprise:workspace)",
+          summary:
+            "Project due diligence — team, intents, comment stats (session or Bearer read:public / read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
-          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/reports/ecosystem": {
         get: {
           tags: ["reports"],
-          summary: "Ecosystem report — platform-wide metrics aggregation (session or Bearer read:enterprise:workspace)",
+          summary: "Ecosystem report — aggregate metrics (session or Bearer read:public / read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "period", in: "query", schema: { type: "string", default: "current" } }],
-          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/teams/{slug}/activity-log": {
@@ -464,6 +492,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           parameters: [
             { name: "query", in: "query", schema: { type: "string" } },
             { name: "tag", in: "query", schema: { type: "string" } },
+            { name: "authorId", in: "query", schema: { type: "string", description: "Filter by post author user id" } },
             { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot", "featured"] } },
             { name: "page", in: "query", schema: { type: "integer", default: 1 } },
             { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
@@ -775,6 +804,39 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/teams/{slug}/links": {
+        patch: {
+          tags: ["teams"],
+          summary: "Update team external links (owner only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    discordUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    telegramUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    slackUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    githubOrgUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                    githubRepoUrl: { oneOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/teams/{slug}/chat/token": {
         post: {
           tags: ["teams"],
@@ -872,6 +934,38 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "201": responses["200"],
             "401": responses["401"],
             "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
+        },
+      },
+      "/api/v1/teams/{slug}/tasks/batch": {
+        patch: {
+          tags: ["teams"],
+          summary: "Batch update task status (team owner only; session or Bearer write:team:tasks)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["taskIds", "status"],
+                  properties: {
+                    taskIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 100 },
+                    status: { type: "string", enum: ["todo", "doing", "done"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
             "429": responses["429"],
             "500": responses["500"],
           },
@@ -1121,8 +1215,10 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           ].join("\n"),
           responses: {
             "200": responses["200"],
+            "201": responses["200"],
             "400": responses["400"],
             "401": responses["401"],
+            "403": responses["403"],
             "404": responses["404"],
             "429": responses["429"],
             "500": responses["500"],

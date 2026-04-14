@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
-import { listProjects, createProject } from "@/lib/repository";
+import { listProjects, createProject, countUserProjects, getUserTier } from "@/lib/repository";
+import { checkProjectLimit } from "@/lib/subscription";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import type { ProjectStatus } from "@/lib/types";
@@ -79,6 +80,19 @@ export async function POST(request: Request) {
   }
 
   try {
+    const [tier, projectCount] = await Promise.all([getUserTier(session.userId), countUserProjects(session.userId)]);
+    const gate = checkProjectLimit(tier, projectCount);
+    if (!gate.allowed) {
+      return apiError(
+        {
+          code: "PROJECT_LIMIT_REACHED",
+          message: "You have reached the maximum number of projects for your plan.",
+          details: { upgradeReason: gate.upgradeReason, currentTier: tier },
+        },
+        403
+      );
+    }
+
     const json = await request.json();
     const parsed = createProjectSchema.parse(json);
     const project = await createProject({

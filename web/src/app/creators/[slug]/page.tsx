@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getCreatorBySlug, listProjects, getCreatorGrowthStats } from "@/lib/repository";
 import { ProjectCard } from "@/components/project-card";
+import { CreatorGrowthMixChart } from "@/components/creator-growth-sparkline";
+import { CreatorPostsSection } from "./creator-posts-section";
+import { CreatorTeamsSection } from "./creator-teams-section";
 import { User, Briefcase, Code2, Users, MessageSquare, Star, FolderGit2, Activity, ShieldCheck } from "lucide-react";
 
 interface Props {
@@ -95,11 +98,14 @@ export default async function CreatorDetailPage({ params }: Props) {
           {stats && (
             <aside className="lg:col-span-4 flex flex-col gap-6">
               <div className="p-8 rounded-[32px] bg-[#2d2d30] text-white shadow-[0_16px_48px_-8px_rgba(0,0,0,0.15)] flex-1 flex flex-col">
-                <div className="flex items-center gap-2 mb-8 text-[#81e6d9]">
+                <div className="flex items-center gap-2 mb-2 text-[#81e6d9]">
                   <Activity className="w-5 h-5" />
-                  <h3 className="text-lg font-semibold tracking-tight m-0 text-white">Developer Stats</h3>
+                  <h3 className="text-lg font-semibold tracking-tight m-0 text-white">Growth</h3>
                 </div>
-                
+                <p className="text-[0.75rem] text-white/50 m-0 mb-6">
+                  From <span className="font-mono text-white/70">GET /api/v1/creators/{slug}/growth</span>
+                </p>
+
                 <div className="grid grid-cols-2 gap-4 flex-1">
                   <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center">
                     <FolderGit2 className="w-5 h-5 text-[#81e6d9] mb-3" />
@@ -121,6 +127,19 @@ export default async function CreatorDetailPage({ params }: Props) {
                     <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.collaborationIntentCount}</strong>
                     <span className="text-[0.8rem] font-medium text-white/60">Intents</span>
                   </div>
+                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center col-span-2 sm:col-span-1">
+                    <MessageSquare className="w-5 h-5 text-[#81e6d9] mb-3" />
+                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.commentCount}</strong>
+                    <span className="text-[0.8rem] font-medium text-white/60">Comments written</span>
+                  </div>
+                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center col-span-2 sm:col-span-1">
+                    <MessageSquare className="w-5 h-5 text-[#f5ebd4] mb-3" />
+                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.receivedCommentCount}</strong>
+                    <span className="text-[0.8rem] font-medium text-white/60">Comments received</span>
+                  </div>
+                </div>
+                <div className="mt-6 pt-6 border-t border-white/10 text-white">
+                  <CreatorGrowthMixChart stats={stats} />
                 </div>
               </div>
             </aside>
@@ -152,6 +171,9 @@ export default async function CreatorDetailPage({ params }: Props) {
             </div>
           )}
         </section>
+
+        <CreatorPostsSection authorUserId={creator.userId} />
+        <CreatorTeamsSection userId={creator.userId} />
       </main>
     </>
   );

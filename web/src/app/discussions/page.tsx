@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 interface Props {
-  searchParams: Promise<{ sort?: string; page?: string }>;
+  searchParams: Promise<{ sort?: string; page?: string; author?: string }>;
 }
 
 export default async function DiscussionsPage({ searchParams }: Props) {
@@ -22,7 +22,16 @@ export default async function DiscussionsPage({ searchParams }: Props) {
       : "recent"
   ) as PostSortOrder;
   const page = parseInt(params.page || "1", 10) || 1;
-  const { items, pagination } = await listPosts({ sort, page, limit: 12 });
+  const authorId = typeof params.author === "string" && params.author.trim() ? params.author.trim() : undefined;
+  const { items, pagination } = await listPosts({ sort, page, limit: 12, authorId });
+
+  const qsBase = (s: string, pageNum?: number) => {
+    const sp = new URLSearchParams();
+    sp.set("sort", s);
+    if (authorId) sp.set("author", authorId);
+    if (pageNum && pageNum > 1) sp.set("page", String(pageNum));
+    return `/discussions?${sp.toString()}`;
+  };
 
   const TABS = [
     { sort: "recent",   icon: Clock,         label: "Recent"   },
@@ -44,7 +53,8 @@ export default async function DiscussionsPage({ searchParams }: Props) {
               Discussions
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              {pagination.total} active threads · Share knowledge, ask questions
+              {pagination.total} active threads
+              {authorId ? " · Filtered by author" : " · Share knowledge, ask questions"}
             </p>
           </div>
         </div>
@@ -55,7 +65,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             {TABS.map(({ sort: s, icon: Icon, label }) => (
               <Link
                 key={s}
-                href={`/discussions?sort=${s}`}
+                href={qsBase(s)}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-[var(--radius-pill)] transition-all ${
                   sort === s
                     ? "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] shadow-sm border border-[var(--color-border)]"
@@ -107,7 +117,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
         <nav className="flex justify-center gap-2 mt-8">
           {page > 1 && (
             <Link
-              href={`/discussions?sort=${sort}&page=${page - 1}`}
+              href={qsBase(sort, page - 1)}
               className="btn btn-secondary text-sm px-5 py-2"
             >
               Previous
@@ -118,7 +128,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
           </span>
           {page < pagination.totalPages && (
             <Link
-              href={`/discussions?sort=${sort}&page=${page + 1}`}
+              href={qsBase(sort, page + 1)}
               className="btn btn-secondary text-sm px-5 py-2"
             >
               Next

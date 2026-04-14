@@ -8,6 +8,8 @@ import {
   DEFAULT_API_KEY_SCOPES,
 } from "@/lib/api-key-scopes";
 import type { ApiKeyCreated, ApiKeySummary } from "@/lib/types";
+import type { UpgradeReason } from "@/lib/subscription";
+import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
 import { Key, Plus, Trash2, Copy, CheckCircle2, AlertCircle, Clock, Shield, Sparkles } from "lucide-react";
 
 const OPTIONAL_SCOPES = API_KEY_SCOPES.filter((s) => s !== API_KEY_SCOPE_READ_PUBLIC);
@@ -20,6 +22,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
   const [keys, setKeys] = useState<ApiKeySummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | undefined>(undefined);
   const [newLabel, setNewLabel] = useState("");
   const [lastSecret, setLastSecret] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -61,6 +64,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
   async function createKey(e: FormEvent) {
     e.preventDefault();
     setMsg(null);
+    setUpgradeReason(undefined);
     setLastSecret(null);
     setCopied(false);
     try {
@@ -73,9 +77,13 @@ export function ApiKeysPanel({ currentUserId }: Props) {
           scopes: [API_KEY_SCOPE_READ_PUBLIC, ...Array.from(selectedScopes)],
         }),
       });
-      const json = (await res.json()) as { data?: { key?: ApiKeyCreated }; error?: { message?: string } };
+      const json = (await res.json()) as {
+        data?: { key?: ApiKeyCreated };
+        error?: { message?: string; details?: { upgradeReason?: UpgradeReason } };
+      };
       if (!res.ok) {
         setMsg(json.error?.message ?? "Create failed");
+        setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
       const k = json.data?.key;
@@ -264,6 +272,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
             {msg}
           </motion.p>
         )}
+        {upgradeReason ? <UpgradePlanCallout upgradeReason={upgradeReason} className="mt-4" /> : null}
       </div>
 
       {/* Keys List Bento */}

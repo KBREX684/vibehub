@@ -9,10 +9,14 @@ import {
   MCP_V2_TOOL_SCOPES,
 } from "@/lib/mcp-v2-tools";
 import {
+  countUserProjects,
+  createPost,
+  createProject,
   getEnterpriseWorkspaceSummary,
   getPostBySlug,
   getProjectBySlug,
   getTalentRadar,
+  getUserTier,
   listCollectionTopics,
   listCommentsForPost,
   listCreators,
@@ -21,11 +25,28 @@ import {
   listTeams,
   logMcpInvoke,
 } from "@/lib/repository";
+import { checkProjectLimit } from "@/lib/subscription";
 import type { ProjectStatus } from "@/lib/types";
 
 const bodySchema = z.object({
   tool: z.enum(MCP_V2_TOOL_NAMES),
   input: z.record(z.string(), z.unknown()).optional().default({}),
+});
+
+const createPostInputSchema = z.object({
+  title: z.string().min(3).max(120),
+  body: z.string().min(10),
+  tags: z.array(z.string().min(1)).default([]),
+});
+
+const createProjectInputSchema = z.object({
+  title: z.string().min(3).max(120),
+  oneLiner: z.string().min(5).max(200),
+  description: z.string().min(20),
+  techStack: z.array(z.string().min(1)).default([]),
+  tags: z.array(z.string().min(1)).default([]),
+  status: z.enum(["idea", "building", "launched", "paused"]).default("idea"),
+  demoUrl: z.string().url().optional(),
 });
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
@@ -169,6 +190,56 @@ export async function POST(request: NextRequest) {
         return apiSuccess({ tool, input, output: result });
       }
 
+      case "create_post": {
+        const parsedPost = createPostInputSchema.safeParse(input);
+        if (!parsedPost.success) {
+          await log(400, "INVALID_BODY");
+          return apiError({ code: "INVALID_BODY", message: "Invalid create_post input", details: parsedPost.error.flatten() }, 400);
+        }
+        const post = await createPost({
+          ...parsedPost.data,
+          authorId: session.userId,
+        });
+        await log(201);
+        return apiSuccess({ tool, input, output: post }, 201);
+      }
+
+      case "create_project": {
+        const parsedProj = createProjectInputSchema.safeParse(input);
+        if (!parsedProj.success) {
+          await log(400, "INVALID_BODY");
+          return apiError({ code: "INVALID_BODY", message: "Invalid create_project input", details: parsedProj.error.flatten() }, 400);
+        }
+        const [tier, projectCount] = await Promise.all([getUserTier(session.userId), countUserProjects(session.userId)]);
+        const gate = checkProjectLimit(tier, projectCount);
+        if (!gate.allowed) {
+          await log(403, "PROJECT_LIMIT_REACHED");
+          return apiError(
+            {
+              code: "PROJECT_LIMIT_REACHED",
+              message: "Project limit reached for this account",
+              details: { upgradeReason: gate.upgradeReason, currentTier: tier },
+            },
+            403
+          );
+        }
+        try {
+          const project = await createProject({
+            ...parsedProj.data,
+            creatorUserId: session.userId,
+          });
+          await log(201);
+          return apiSuccess({ tool, input, output: project }, 201);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          if (msg === "CREATOR_PROFILE_REQUIRED") {
+            await log(403, "CREATOR_PROFILE_REQUIRED");
+            return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: "A creator profile is required to create projects" }, 403);
+          }
+          throw e;
+        }
+      }
+
       default: {
         await log(400, "UNKNOWN_TOOL");
         return assertNeverTool(tool);
@@ -176,6 +247,14 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     await log(500, "MCP_V2_INVOKE_FAILED");
-    return apiError({ code: "MCP_V2_INVOKE_FAILED", message: `MCP v2 tool ${tool} failed`, details: error instanceof Error ? error.message : String(error) }, 500);
+    const err = error instanceof Error ? error : new Error(String(error));
+    const details =
+      process.env.NODE_ENV === "development"
+        ? { message: err.message, stack: err.stack }
+        : { message: err.message };
+    return apiError(
+      { code: "MCP_V2_INVOKE_FAILED", message: `MCP v2 tool ${tool} failed`, details },
+      500
+    );
   }
 }

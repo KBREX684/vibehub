@@ -165,7 +165,7 @@ export const mockCreators: CreatorProfile[] = [
   },
 ];
 
-export const mockProjects: Project[] = [
+const SEED_MOCK_PROJECTS: Project[] = [
   {
     id: "p1",
     slug: "vibehub",
@@ -187,6 +187,8 @@ export const mockProjects: Project[] = [
     openSource: true,
     license: "MIT",
     updatedAt: new Date().toISOString(),
+    featuredRank: 1,
+    featuredAt: new Date().toISOString(),
   },
   {
     id: "p2",
@@ -205,6 +207,27 @@ export const mockProjects: Project[] = [
     updatedAt: new Date().toISOString(),
   },
 ];
+
+function cloneSeedProjects(): Project[] {
+  return SEED_MOCK_PROJECTS.map((p) => {
+    const { team, techStack, tags, screenshots, ...rest } = p;
+    return {
+      ...rest,
+      team: team ? { ...team } : undefined,
+      techStack: [...techStack],
+      tags: [...tags],
+      screenshots: [...screenshots],
+    };
+  });
+}
+
+/** In Next.js dev, HMR re-evaluates modules and would reset mutable mock arrays; keep one store on globalThis. */
+const mockProjectStore = globalThis as typeof globalThis & { __vibehubMockProjects?: Project[] };
+
+export const mockProjects: Project[] =
+  process.env.NODE_ENV === "development"
+    ? (mockProjectStore.__vibehubMockProjects ??= cloneSeedProjects())
+    : cloneSeedProjects();
 
 export const mockPosts: Post[] = [
   {
@@ -450,7 +473,14 @@ export const mockSubscriptions: Array<{
 export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockPostBookmarks: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockProjectBookmarks: Array<{ id: string; userId: string; projectId: string; createdAt: string }> = [];
-export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [];
+export const mockUserFollows: Array<{ id: string; followerId: string; followingId: string; createdAt: string }> = [
+  {
+    id: "f_u2_u1",
+    followerId: "u2",
+    followingId: "u1",
+    createdAt: new Date().toISOString(),
+  },
+];
 
 // P2: Challenges
 export const mockChallenges: Challenge[] = [

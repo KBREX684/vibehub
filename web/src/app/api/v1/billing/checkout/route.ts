@@ -8,6 +8,8 @@ const TIER_PRICE_IDS: Record<string, string | undefined> = {
   pro: process.env.STRIPE_PRICE_PRO,
 };
 
+const useMockData = process.env.USE_MOCK_DATA !== "false";
+
 async function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) throw new Error("STRIPE_NOT_CONFIGURED");
@@ -34,6 +36,14 @@ export async function POST(request: NextRequest) {
   const cancelUrl = typeof body.cancelUrl === "string" ? body.cancelUrl : `${baseUrl}/pricing`;
 
   try {
+    if (!process.env.STRIPE_SECRET_KEY && useMockData) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+      return apiSuccess({
+        url: `${baseUrl}/settings/subscription?checkout=mock`,
+        sessionId: "mock_checkout_session",
+      });
+    }
+
     const stripe = await getStripe();
 
     // Look up or create Stripe customer

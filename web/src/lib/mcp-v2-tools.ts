@@ -10,6 +10,9 @@ export const MCP_V2_TOOL_NAMES = [
   "get_post_detail",
   "list_challenges",
   "get_talent_radar",
+  /** S4: opt-in write tools — Bearer must include write:mcp:v2:posts / write:mcp:v2:projects */
+  "create_post",
+  "create_project",
 ] as const;
 
 export type McpV2ToolName = (typeof MCP_V2_TOOL_NAMES)[number];
@@ -23,7 +26,9 @@ export const MCP_V2_TOOL_SCOPES: Record<McpV2ToolName, ApiKeyScope> = {
   search_posts: "read:posts:list",
   get_post_detail: "read:posts:detail",
   list_challenges: "read:public",
-  get_talent_radar: "read:enterprise:workspace",
+  get_talent_radar: "read:public",
+  create_post: "write:mcp:v2:posts",
+  create_project: "write:mcp:v2:projects",
 };
 
 export const MCP_V2_TOOL_DEFINITIONS: Array<{
@@ -123,7 +128,7 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
   },
   {
     name: "get_talent_radar",
-    description: "Enterprise talent radar: creators filtered by skill, collaboration preference, and recent activity.",
+    description: "Talent radar: creators filtered by skill, collaboration preference, and recent activity (read:public).",
     requiredScope: MCP_V2_TOOL_SCOPES.get_talent_radar,
     inputSchema: {
       type: "object",
@@ -132,6 +137,40 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
         collaborationPreference: { type: "string", enum: ["open", "invite_only", "closed"] },
         page: { type: "number", default: 1 },
         limit: { type: "number", default: 20 },
+      },
+    },
+  },
+  {
+    name: "create_post",
+    description:
+      "Create a discussion post as the API key owner (pending moderation). Requires scope write:mcp:v2:posts. Prefer human review before enabling this scope.",
+    requiredScope: MCP_V2_TOOL_SCOPES.create_post,
+    inputSchema: {
+      type: "object",
+      required: ["title", "body"],
+      properties: {
+        title: { type: "string", minLength: 3, maxLength: 120 },
+        body: { type: "string", minLength: 10 },
+        tags: { type: "array", items: { type: "string", minLength: 1 }, default: [] },
+      },
+    },
+  },
+  {
+    name: "create_project",
+    description:
+      "Create a project as the API key owner (requires creator profile). Requires scope write:mcp:v2:projects. Subject to plan project limits.",
+    requiredScope: MCP_V2_TOOL_SCOPES.create_project,
+    inputSchema: {
+      type: "object",
+      required: ["title", "oneLiner", "description"],
+      properties: {
+        title: { type: "string", minLength: 3, maxLength: 120 },
+        oneLiner: { type: "string", minLength: 5, maxLength: 200 },
+        description: { type: "string", minLength: 20 },
+        techStack: { type: "array", items: { type: "string", minLength: 1 }, default: [] },
+        tags: { type: "array", items: { type: "string", minLength: 1 }, default: [] },
+        status: { type: "string", enum: ["idea", "building", "launched", "paused"], default: "idea" },
+        demoUrl: { type: "string", description: "Optional absolute URL" },
       },
     },
   },

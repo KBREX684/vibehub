@@ -23,6 +23,19 @@ async function main() {
     },
   });
 
+  await prisma.creatorProfile.upsert({
+    where: { userId: bob.id },
+    update: {},
+    create: {
+      userId: bob.id,
+      slug: "bob-solo-ops",
+      headline: "Solo founder and growth engineer",
+      bio: "Building creator tools and operational automation for one-person companies.",
+      skills: ["Growth", "Node.js", "Data Analytics"],
+      collaborationPreference: "invite_only",
+    },
+  });
+
   const creator = await prisma.creatorProfile.upsert({
     where: { userId: alice.id },
     update: {},
@@ -38,7 +51,10 @@ async function main() {
 
   await prisma.project.upsert({
     where: { slug: "vibehub" },
-    update: {},
+    update: {
+      featuredRank: 1,
+      featuredAt: new Date(),
+    },
     create: {
       slug: "vibehub",
       creatorId: creator.id,
@@ -48,6 +64,8 @@ async function main() {
       techStack: ["Next.js", "PostgreSQL", "Prisma"],
       tags: ["community", "showcase", "agent"],
       status: "building",
+      featuredRank: 1,
+      featuredAt: new Date(),
     },
   });
 
@@ -172,6 +190,14 @@ async function main() {
   await prisma.project.update({
     where: { slug: "vibehub" },
     data: { teamId: seedTeam.id },
+  });
+
+  await prisma.userFollow.upsert({
+    where: {
+      followerId_followingId: { followerId: bob.id, followingId: alice.id },
+    },
+    update: {},
+    create: { followerId: bob.id, followingId: alice.id },
   });
 
   await prisma.teamTask.deleteMany({ where: { teamId: seedTeam.id } });
