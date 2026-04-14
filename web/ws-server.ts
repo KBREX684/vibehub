@@ -5,7 +5,7 @@
  * Runs alongside the Next.js app (port 3000).
  *
  * Protocol:
- *  Client → Server:  { type: "auth",    teamSlug: string, userId: string, userName: string }
+ *  Client → Server:  { type: "auth",    token: string }
  *  Client → Server:  { type: "message", body: string }
  *  Server → Client:  { type: "message", id: string, teamSlug: string, userId: string,
  *                       userName: string, body: string, createdAt: string }
@@ -28,6 +28,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage } from "http";
 import { createServer } from "http";
+import { decodeChatToken } from "./src/lib/chat-token";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -102,9 +103,9 @@ function addToHistory(teamSlug: string, msg: ChatMessage) {
 
 /**
  * Persist a chat message to DB via the Next.js REST API (fire-and-forget).
- * Uses a trusted server-to-server pattern: the WS server acts on behalf of
- * the authed user by forwarding userId in a custom header that the Next.js
- * endpoint can validate (only accepted from localhost / trusted IPs).
+ * Uses a trusted server-to-server pattern: the WS server forwards the
+ * authenticated userId from verified chat token claims, and the Next.js
+ * endpoint still enforces team membership server-side.
  */
 function persistMessage(teamSlug: string, userId: string, body: string): void {
   const url = `${NEXT_BASE_URL}/api/v1/teams/${encodeURIComponent(teamSlug)}/chat/messages`;
@@ -202,15 +203,16 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
         return;
       }
 
-      const teamSlug = (data.teamSlug as string | undefined)?.trim();
-      const userId   = (data.userId   as string | undefined)?.trim();
-      const userName = (data.userName as string | undefined)?.trim() ?? "Anonymous";
-
-      if (!teamSlug || !userId) {
-        sendJson(ws, { type: "error", code: "INVALID_AUTH", message: "teamSlug and userId required" });
+      const token = (data.token as string | undefined)?.trim();
+      const claims = decodeChatToken(token);
+      if (!claims) {
+        sendJson(ws, { type: "error", code: "INVALID_AUTH", message: "Valid auth token required" });
         ws.close(4002, "Invalid auth");
         return;
       }
+      const teamSlug = claims.teamSlug;
+      const userId = claims.userId;
+      const userName = claims.userName;
 
       // Capacity check
       const cap = getCapacity(teamSlug);

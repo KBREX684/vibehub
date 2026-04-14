@@ -20,4 +20,28 @@ describe("OpenAPI spec (P4-4 + P4-5)", () => {
     expect(doc.paths["/api/v1/public/projects"]).toBeDefined();
     expect(doc.paths["/api/v1/me/api-keys"]).toBeDefined();
   });
+
+  it("documents posts patch/delete and MCP v2 tool enum", () => {
+    const doc = buildOpenApiDocument() as {
+      paths: Record<string, { patch?: unknown; delete?: unknown; post?: { requestBody?: { content?: Record<string, { schema?: { properties?: { tool?: { enum?: string[] } } } }> } } }>;
+    };
+    const postBySlug = doc.paths["/api/v1/posts/{slug}"];
+    expect(postBySlug?.patch).toBeDefined();
+    expect(postBySlug?.delete).toBeDefined();
+
+    const mcpInvoke = doc.paths["/api/v1/mcp/v2/invoke"]?.post;
+    const tools =
+      mcpInvoke?.requestBody?.content?.["application/json"]?.schema?.properties?.tool?.enum ?? [];
+    expect(tools).toEqual([
+      "search_projects",
+      "search_creators",
+      "get_project_detail",
+      "workspace_summary",
+      "list_teams",
+      "search_posts",
+      "get_post_detail",
+      "list_challenges",
+      "get_talent_radar",
+    ]);
+  });
 });

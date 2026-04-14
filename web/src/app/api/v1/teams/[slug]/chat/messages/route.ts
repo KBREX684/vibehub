@@ -1,6 +1,6 @@
 /**
  * GET  /api/v1/teams/:slug/chat/messages
- *   Returns the last N chat messages within the 7-day retention window.
+ *   Returns the last N chat messages within the 30-day retention window.
  *   Authentication: team member (session or API key with read:team:detail).
  *
  * POST /api/v1/teams/:slug/chat/messages
@@ -8,7 +8,7 @@
  *   Authentication: team member (session required).
  *
  * DELETE /api/v1/teams/:slug/chat/messages
- *   Admin-only: purge all messages older than 7 days for this team (or platform-wide).
+ *   Admin-only: purge all messages older than 30 days for this team (or platform-wide).
  *   Also auto-triggered on GET requests to keep the dataset pruned.
  */
 
@@ -50,16 +50,16 @@ export async function GET(req: NextRequest, { params }: Params) {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }
 
-    // Verify the viewer is a member (chat is members-only)
-    // WS server internal GET (for DB history) is exempted via token
+    // Verify viewer membership (chat is members-only)
     const serverToken = process.env.WS_SERVER_TOKEN ?? "";
     const isWsServer  = serverToken && req.headers.get("x-ws-server-token") === serverToken;
-    const viewerId    = gate.user?.userId ?? req.headers.get("x-ws-server-userId");
-    if (!isWsServer && viewerId) {
-      const isMember = team.members.some((m) => m.userId === viewerId);
-      if (!isMember) {
-        return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
-      }
+    const viewerId    = isWsServer ? req.headers.get("x-ws-server-userId") : gate.user?.userId;
+    if (!viewerId) {
+      return apiError({ code: "UNAUTHORIZED", message: "Authentication required" }, 401);
+    }
+    const isMember = team.members.some((m) => m.userId === viewerId);
+    if (!isMember) {
+      return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
     }
 
     const url = new URL(req.url);
@@ -88,12 +88,12 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 // ─── POST ────────────────────────────────────────────────────────────────────
 
-/** Resolve acting userId: either from session cookie or WS-server internal header */
+/** Resolve acting userId: either from session cookie or trusted WS-server header. */
 async function resolveActorUserId(req: NextRequest): Promise<string | null> {
   const session = await getSessionUserFromCookie();
   if (session) return session.userId;
 
-  // Internal WS-server trust header (only when token matches)
+  // Internal WS-server trust header (only when server token matches)
   const serverToken = process.env.WS_SERVER_TOKEN ?? "";
   if (serverToken) {
     const reqToken  = req.headers.get("x-ws-server-token");
@@ -111,8 +111,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
   }
 
-  // Synthesise a minimal session for downstream checks
-  const session = await getSessionUserFromCookie();
   const userId  = actorId;
 
   try {
@@ -121,10 +119,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }
 
-    // Member check — skip for WS server internal calls (userId may not be in session)
+    // Membership is always required, including WS-server internal calls.
     const isMember = team.members.some((m) => m.userId === userId);
-    const isWsServer = !session && !!req.headers.get("x-ws-server-token");
-    if (!isMember && !isWsServer) {
+    if (!isMember) {
       return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
     }
 

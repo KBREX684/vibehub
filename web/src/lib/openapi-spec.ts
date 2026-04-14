@@ -493,6 +493,35 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           ],
           responses: { "200": responses["200"], "404": responses["404"], "429": responses["429"], "500": responses["500"] },
         },
+        patch: {
+          tags: ["posts"],
+          summary: "Update post (author or admin; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string", minLength: 3, maxLength: 200 },
+                    body: { type: "string", minLength: 10, maxLength: 50000 },
+                    tags: { type: "array", items: { type: "string", minLength: 1, maxLength: 32 }, maxItems: 10 },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["posts"],
+          summary: "Delete post (author or admin; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
       },
       "/api/v1/comments": {
         get: {
@@ -735,6 +764,68 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/teams/{slug}/chat/token": {
+        post: {
+          tags: ["teams"],
+          summary: "Issue short-lived WS chat token (team member only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "500": responses["500"],
+          },
+        },
+      },
+      "/api/v1/teams/{slug}/chat/messages": {
+        get: {
+          tags: ["teams"],
+          summary: "List recent team chat messages (30-day retention; team members only)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 50, maximum: 200 } },
+          ],
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
+        },
+        post: {
+          tags: ["teams"],
+          summary: "Create team chat message (team member only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["body"],
+                  properties: {
+                    body: { type: "string", minLength: 1, maxLength: 2000 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/teams/{slug}/tasks": {
         get: {
           tags: ["teams"],
@@ -891,7 +982,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/mcp/v2/invoke": {
         post: {
           tags: ["mcp-v2"],
-          summary: "MCP v2 invoke tool by name (session or Bearer; scope per tool)",
+          summary: "MCP v2 invoke tool by name (session or Bearer; scope per tool, all 9 tools below)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           requestBody: {
             required: true,
@@ -909,6 +1000,10 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                         "get_project_detail",
                         "workspace_summary",
                         "list_teams",
+                        "search_posts",
+                        "get_post_detail",
+                        "list_challenges",
+                        "get_talent_radar",
                       ],
                     },
                     input: { type: "object", additionalProperties: true },
@@ -917,6 +1012,18 @@ export function buildOpenApiDocument(): Record<string, unknown> {
               },
             },
           },
+          description: [
+            "Tool scope mapping:",
+            "- search_projects -> read:projects:list",
+            "- search_creators -> read:creators:list",
+            "- get_project_detail -> read:projects:detail",
+            "- workspace_summary -> read:enterprise:workspace",
+            "- list_teams -> read:teams:list",
+            "- search_posts -> read:posts:list",
+            "- get_post_detail -> read:posts:detail",
+            "- list_challenges -> read:public",
+            "- get_talent_radar -> read:enterprise:workspace",
+          ].join("\\n"),
           responses: {
             "200": responses["200"],
             "400": responses["400"],

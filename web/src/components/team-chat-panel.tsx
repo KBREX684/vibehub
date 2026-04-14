@@ -8,7 +8,7 @@
  *
  * Features:
  * - Live message delivery via WebSocket
- * - Message history from REST (7-day retention window)
+ * - Message history from REST (30-day retention window)
  * - Online presence counter
  * - Per-team capacity enforcement (server-side)
  * - Auto-scroll to latest message
@@ -36,7 +36,7 @@ interface Props {
   teamSlug: string;
   /** Logged-in user. Pass null to show login prompt. */
   currentUser: { id: string; name: string } | null;
-  /** Members-only: pass true when viewer is not a member. */
+  /** Optional UI pre-check; server remains source of truth. */
   isMember: boolean;
 }
 
@@ -69,6 +69,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
   const [error, setError]             = useState<string | null>(null);
 
   const wsRef        = useRef<WebSocket | null>(null);
+  const authTokenRef = useRef<string | null>(null);
   const bottomRef    = useRef<HTMLDivElement | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef   = useRef(true);
@@ -101,12 +102,34 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
   }, [teamSlug, isMember, currentUser]);
 
   // WebSocket connection
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!isMember || !currentUser) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     setConnState("connecting");
     setError(null);
+
+    try {
+      const tokenRes = await fetch(`/api/v1/teams/${teamSlug}/chat/token`, { method: "POST" });
+      if (!tokenRes.ok) {
+        const payload = await tokenRes.json().catch(() => null);
+        setConnState("error");
+        setError(payload?.error?.message ?? "Failed to authorize team chat");
+        return;
+      }
+      const tokenJson = await tokenRes.json();
+      const token = tokenJson?.data?.token as string | undefined;
+      if (!token) {
+        setConnState("error");
+        setError("Missing chat auth token");
+        return;
+      }
+      authTokenRef.current = token;
+    } catch {
+      setConnState("error");
+      setError("Unable to authorize chat connection");
+      return;
+    }
 
     let ws: WebSocket;
     try {
@@ -122,10 +145,8 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       setConnState("connected");
       ws.send(
         JSON.stringify({
-          type:     "auth",
-          teamSlug,
-          userId:   currentUser.id,
-          userName: currentUser.name,
+          type:  "auth",
+          token: authTokenRef.current,
         })
       );
     };
@@ -396,7 +417,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
           </button>
         </form>
         <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
-          Messages are retained for 7 days.
+          Messages are retained for 30 days.
         </p>
       </div>
     </div>

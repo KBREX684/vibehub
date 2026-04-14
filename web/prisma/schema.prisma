@@ -609,7 +609,7 @@ model ProjectBookmark {
 
 // ─── Team Chat ────────────────────────────────────────────────────────────────
 
-/// Real-time team chat message. Retained for 7 days then eligible for cleanup.
+/// Real-time team chat message. Retained for 30 days then eligible for cleanup.
 model TeamChatMessage {
   id        String   @id @default(cuid())
   teamId    String
