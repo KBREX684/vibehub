@@ -5,6 +5,7 @@ import type { PostSortOrder } from "@/lib/types";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const VALID_SORT_ORDERS: readonly PostSortOrder[] = ["recent", "hot", "featured"];
 
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
       {
         code: "POSTS_LIST_FAILED",
         message: "Failed to list discussion posts",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
       {
         code: "POST_CREATE_FAILED",
         message: "Failed to create post",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       400
     );

@@ -1,5 +1,6 @@
 import { apiError, apiSuccess } from "@/lib/response";
 import { getTeamBySlug } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -18,7 +19,7 @@ export async function GET(_request: Request, { params }: Params) {
       {
         code: "PUBLIC_TEAM_GET_FAILED",
         message: "Failed to load team",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

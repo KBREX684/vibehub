@@ -7,6 +7,7 @@ import { checkQuota } from "@/lib/quota";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import type { ProjectStatus } from "@/lib/types";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
 
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
       {
         code: "PROJECTS_LIST_FAILED",
         message: "Failed to list projects",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

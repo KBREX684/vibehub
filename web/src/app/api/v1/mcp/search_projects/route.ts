@@ -4,6 +4,7 @@ import { listProjects } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import type { ProjectStatus } from "@/lib/types";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
 
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       {
         code: "MCP_SEARCH_PROJECTS_FAILED",
         message: "Failed to execute MCP tool search_projects",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

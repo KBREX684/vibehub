@@ -3,6 +3,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { listTeamActivityLog } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     return apiSuccess(result);
   } catch (error) {
     return apiError(
-      { code: "ACTIVITY_LOG_FAILED", message: "Failed to fetch activity log", details: error instanceof Error ? error.message : String(error) },
+      { code: "ACTIVITY_LOG_FAILED", message: "Failed to fetch activity log", details: safeServerErrorDetails(error) },
       500
     );
   }

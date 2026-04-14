@@ -17,6 +17,7 @@ import {
   commentRetentionCutoff,
   chatRetentionCutoff,
 } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function POST() {
   const session = await getSessionUserFromCookie();
@@ -41,7 +42,7 @@ export async function POST() {
       {
         code: "CLEANUP_FAILED",
         message: "Cleanup failed",
-        details: err instanceof Error ? err.message : String(err),
+        details: safeServerErrorDetails(err),
       },
       500
     );

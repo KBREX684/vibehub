@@ -325,7 +325,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/embed/projects/{slug}": {
         get: {
           tags: ["embed"],
-          summary: "Embeddable project card JSON (CORS enabled, public)",
+          summary: "Embeddable project card JSON (Origin allowlist via EMBED_CORS_ORIGINS, public)",
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
           responses: { "200": responses["200"], "404": responses["404"] },
         },
@@ -333,7 +333,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/embed/teams/{slug}": {
         get: {
           tags: ["embed"],
-          summary: "Embeddable team card JSON (CORS enabled, public)",
+          summary: "Embeddable team card JSON (Origin allowlist via EMBED_CORS_ORIGINS, public)",
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
           responses: { "200": responses["200"], "404": responses["404"] },
         },

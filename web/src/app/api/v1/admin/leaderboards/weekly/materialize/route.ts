@@ -6,6 +6,7 @@ import {
   startOfUtcWeekContaining,
 } from "@/lib/repository";
 import type { WeeklyLeaderboardKind } from "@/lib/types";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const KINDS: WeeklyLeaderboardKind[] = [
   "discussions_by_weekly_comment_count",
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
       {
         code: "MATERIALIZE_FAILED",
         message: "Failed to materialize weekly leaderboard",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

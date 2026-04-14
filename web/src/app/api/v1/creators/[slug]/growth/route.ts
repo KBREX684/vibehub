@@ -1,5 +1,6 @@
 import { getCreatorGrowthStats } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -15,7 +16,7 @@ export async function GET(_request: Request, { params }: Params) {
     return apiSuccess(stats);
   } catch (error) {
     return apiError(
-      { code: "CREATOR_GROWTH_FAILED", message: "Failed to get creator growth stats", details: error instanceof Error ? error.message : String(error) },
+      { code: "CREATOR_GROWTH_FAILED", message: "Failed to get creator growth stats", details: safeServerErrorDetails(error) },
       500
     );
   }

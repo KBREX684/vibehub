@@ -4210,7 +4210,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Embeddable project card JSON (CORS enabled, public) */
+        /** Embeddable project card JSON (Origin allowlist via EMBED_CORS_ORIGINS, public) */
         get: {
             parameters: {
                 query?: never;

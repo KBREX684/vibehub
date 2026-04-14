@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { createUserWebhook, listUserWebhooks } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const createSchema = z.object({
   url: z.string().url().min(8),
@@ -16,7 +17,10 @@ export async function GET() {
     const items = await listUserWebhooks(session.userId);
     return apiSuccess({ webhooks: items });
   } catch (e) {
-    return apiError({ code: "WEBHOOK_LIST_FAILED", message: e instanceof Error ? e.message : String(e) }, 500);
+    return apiError(
+      { code: "WEBHOOK_LIST_FAILED", message: "Failed to list webhooks", details: safeServerErrorDetails(e) },
+      500
+    );
   }
 }
 
@@ -41,7 +45,16 @@ export async function POST(request: NextRequest) {
     }
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "INVALID_WEBHOOK_URL") return apiError({ code: "INVALID_WEBHOOK_URL", message: msg }, 400);
+    if (msg === "WEBHOOK_URL_BLOCKED") {
+      return apiError(
+        { code: "WEBHOOK_URL_BLOCKED", message: "Webhook URL must be a public HTTPS endpoint (private IPs and localhost are not allowed)." },
+        400
+      );
+    }
     if (msg === "INVALID_WEBHOOK_EVENT") return apiError({ code: "INVALID_WEBHOOK_EVENT", message: msg }, 400);
-    return apiError({ code: "WEBHOOK_CREATE_FAILED", message: msg }, 500);
+    return apiError(
+      { code: "WEBHOOK_CREATE_FAILED", message: "Failed to create webhook", details: safeServerErrorDetails(e) },
+      500
+    );
   }
 }

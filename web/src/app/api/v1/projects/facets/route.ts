@@ -1,5 +1,6 @@
 import { apiError, apiSuccess } from "@/lib/response";
 import { getProjectFilterFacets } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET() {
   try {
@@ -10,7 +11,7 @@ export async function GET() {
       {
         code: "PROJECT_FACETS_FAILED",
         message: "Failed to load project filter facets",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );
