@@ -81,6 +81,21 @@ async function ensureUnreadNotificationForAdmin(page: Page) {
 }
 
 test.describe("Core acceptance flows", () => {
+  test("unauthenticated user is redirected from notifications to login", async ({ page }) => {
+    await page.goto("/notifications");
+    await expect(page).toHaveURL(/\/login\?redirect=\/notifications/);
+  });
+
+  test("unauthenticated user is redirected from enterprise workspace to login", async ({ page }) => {
+    await page.goto("/workspace/enterprise");
+    await expect(page).toHaveURL(/\/login\?redirect=\/workspace\/enterprise/);
+  });
+
+  test("unauthenticated user is redirected from admin to login", async ({ page }) => {
+    await page.goto("/admin");
+    await expect(page).toHaveURL(/\/login\?required=admin/);
+  });
+
   test("login and logout flow", async ({ page }) => {
     await page.goto("/login");
     await page.getByRole("link", { name: /demo user login/i }).click();
@@ -167,22 +182,36 @@ test.describe("Core acceptance flows", () => {
   test("notifications single-read and mark-all-read", async ({ page }) => {
     await ensureUnreadNotificationForAdmin(page);
     await setSession(page, "admin");
+    const unreadBefore = (await listUnreadNotifications(page)).length;
+    expect(unreadBefore).toBeGreaterThan(0);
+
     await page.goto("/notifications");
     await expect(page.getByRole("main").getByRole("heading", { name: "Notifications", exact: true })).toBeVisible();
-    await expect(page.getByText(/unread/i)).toBeVisible();
+    await expect(page.getByRole("paragraph").filter({ hasText: /unread/i })).toBeVisible();
 
     const markOneButton = page.locator('button[data-testid^="notification-mark-read-"]').first();
+    let usedMarkOne = false;
     if (await markOneButton.isVisible()) {
       await markOneButton.click();
       await page.waitForTimeout(300);
+      usedMarkOne = true;
     }
 
     const markAll = page.locator('[data-testid="notifications-mark-all-read"]');
+    let usedMarkAll = false;
     if (await markAll.isVisible()) {
       await markAll.first().click();
       await page.waitForTimeout(300);
+      usedMarkAll = true;
     }
-    await expect(page.getByText(/0 unread/i)).toBeVisible();
+
+    const unreadAfter = (await listUnreadNotifications(page)).length;
+    expect(unreadAfter).toBeLessThanOrEqual(unreadBefore);
+    if (usedMarkAll) {
+      expect(unreadAfter).toBe(0);
+    } else if (usedMarkOne) {
+      expect(unreadAfter).toBeLessThan(unreadBefore);
+    }
   });
 
   test("team chat send and refresh keeps history", async ({ page }) => {
@@ -197,5 +226,32 @@ test.describe("Core acceptance flows", () => {
 
     await page.reload();
     await expect(page.getByText(/Messages are retained for 30 days\./i)).toBeVisible();
+  });
+
+  test("normal user cannot edit or delete another user's comment", async ({ page }) => {
+    await setSession(page, "user");
+    await page.goto("/discussions/how-i-built-an-agent-ready-project-page");
+    await expect(page.getByRole("heading", { name: "Comments" })).toBeVisible();
+
+    const chenComment = page.locator('[data-testid^="comment-card-"]').filter({
+      has: page.getByText("Great breakdown. Could you share your schema for tags?"),
+    }).first();
+    await expect(chenComment).toBeVisible();
+    await chenComment.hover();
+
+    await expect(chenComment.locator('button[data-testid^="comment-edit-"]')).toHaveCount(0);
+    await expect(chenComment.locator('button[data-testid^="comment-delete-"]')).toHaveCount(0);
+  });
+
+  test("admin moderation review updates pending post state", async ({ page }) => {
+    await setSession(page, "admin");
+    await page.goto("/admin/moderation");
+    await expect(page.getByRole("heading", { name: "Moderation Queue" })).toBeVisible();
+
+    const pendingPostCard = page.locator(".card").filter({ hasText: "Need review: Agent prompt template" }).first();
+    await expect(pendingPostCard).toBeVisible();
+    await pendingPostCard.getByRole("button", { name: "Approve" }).click();
+
+    await expect(page.locator(".card").filter({ hasText: "Need review: Agent prompt template" })).toHaveCount(0);
   });
 });
