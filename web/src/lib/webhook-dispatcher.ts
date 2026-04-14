@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import type { WebhookEventName } from "@/lib/webhook-events";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
+import { assertPublicHttpsUrl } from "@/lib/private-network-url";
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 400;
@@ -29,7 +30,12 @@ export async function dispatchWebhookEvent(
   const legacy = process.env.NOTIFICATION_WEBHOOK_URL?.trim();
   const legacySecret = process.env.NOTIFICATION_WEBHOOK_SECRET?.trim();
   if (legacy) {
-    void postWithRetries(legacy, legacySecret, body, idem).catch(() => {});
+    try {
+      assertPublicHttpsUrl(legacy);
+      void postWithRetries(legacy, legacySecret, body, idem).catch(() => {});
+    } catch {
+      /* misconfigured legacy URL — skip */
+    }
   }
 
   if (isMockDataEnabled()) {
@@ -44,6 +50,11 @@ export async function dispatchWebhookEvent(
     });
     for (const ep of endpoints) {
       if (ep.events.length > 0 && !ep.events.includes(event)) continue;
+      try {
+        assertPublicHttpsUrl(ep.url);
+      } catch {
+        continue;
+      }
       void postWithRetries(ep.url, ep.secret, body, idem).catch(() => {});
     }
   } catch {
@@ -52,6 +63,7 @@ export async function dispatchWebhookEvent(
 }
 
 async function postWithRetries(url: string, secret: string | undefined, body: string, idempotencyKey: string): Promise<void> {
+  assertPublicHttpsUrl(url);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "User-Agent": "VibeHub-Webhook/1.0",

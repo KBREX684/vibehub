@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { getProjectDueDiligence } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     return apiSuccess(dd);
   } catch (error) {
     return apiError(
-      { code: "DUE_DILIGENCE_FAILED", message: "Failed to fetch due diligence", details: error instanceof Error ? error.message : String(error) },
+      { code: "DUE_DILIGENCE_FAILED", message: "Failed to fetch due diligence", details: safeServerErrorDetails(error) },
       500
     );
   }

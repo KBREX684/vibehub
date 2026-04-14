@@ -1,33 +1,28 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getClientIp } from "@/lib/ip-rate-limit";
+import { verifySessionCookieSignature } from "@/lib/session-cookie-edge";
 
 // ─── Admin route guard ────────────────────────────────────────────────────────
-// The admin layout does a server-side session check, but we also block at
-// the edge so un-authenticated requests never reach the RSC renderer.
-// We cannot decode the JWT here (crypto not available in Edge), so we simply
-// redirect to /login if the session cookie is absent.
+// The admin layout does a server-side session check; we block at the edge so
+// unauthenticated requests never reach the RSC renderer. Session cookie must
+// verify with HMAC (same secret as Node auth) — presence alone is not enough.
 function isAdminPath(pathname: string): boolean {
   return pathname.startsWith("/admin");
 }
 
-function hasSessionCookie(request: NextRequest): boolean {
-  return Boolean(request.cookies.get("vibehub_session")?.value);
-}
-
 const WRITE_WINDOW_MS = 60_000;
-const MAX_WRITES_PER_MINUTE = 30;
+const DEFAULT_MAX = 30;
+function maxWritesPerMinute(): number {
+  const raw = process.env.WRITE_RATE_LIMIT_PER_MINUTE?.trim();
+  if (!raw) return DEFAULT_MAX;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX;
+}
 
 const ipBuckets = new Map<string, { count: number; resetAt: number }>();
 
-function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
-function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfterSeconds: number } {
+function checkWriteRateLimitEdge(ip: string, maxPerWindow: number): { ok: true } | { ok: false; retryAfterSeconds: number } {
   const now = Date.now();
   const existing = ipBuckets.get(ip);
 
@@ -37,7 +32,7 @@ function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfter
   }
 
   existing.count++;
-  if (existing.count > MAX_WRITES_PER_MINUTE) {
+  if (existing.count > maxPerWindow) {
     const retryAfterSeconds = Math.ceil((existing.resetAt - now) / 1000);
     return { ok: false, retryAfterSeconds };
   }
@@ -45,15 +40,17 @@ function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfter
   return { ok: true };
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { method, nextUrl } = request;
 
-  // Admin page protection — redirect unauthenticated to /login
-  if (isAdminPath(nextUrl.pathname) && !hasSessionCookie(request)) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("required", "admin");
-    loginUrl.searchParams.set("redirect", nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+  if (isAdminPath(nextUrl.pathname)) {
+    const raw = request.cookies.get("vibehub_session")?.value;
+    if (!raw || !(await verifySessionCookieSignature(raw))) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("required", "admin");
+      loginUrl.searchParams.set("redirect", nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   const isApi = nextUrl.pathname.startsWith("/api/");
@@ -61,7 +58,8 @@ export function middleware(request: NextRequest) {
 
   if (isApi && isWriteMethod) {
     const ip = getClientIp(request);
-    const rl = checkWriteRateLimit(ip);
+    const max = maxWritesPerMinute();
+    const rl = checkWriteRateLimitEdge(ip, max);
     if (!rl.ok) {
       return NextResponse.json(
         {

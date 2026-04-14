@@ -1,6 +1,7 @@
 import { apiError, apiSuccess } from "@/lib/response";
 import { getAdminOverview } from "@/lib/repository";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET() {
   const auth = await requireAdminSession();
@@ -16,7 +17,7 @@ export async function GET() {
       {
         code: "ADMIN_OVERVIEW_FAILED",
         message: "Failed to load admin overview",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

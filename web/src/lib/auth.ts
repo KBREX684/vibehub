@@ -6,7 +6,7 @@ import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
-import { hasConfiguredDatabaseUrl } from "@/lib/env-db";
+import { resolveSessionSigningSecret } from "@/lib/session-secret-resolver";
 import type { EnterpriseVerificationStatus, Role, SessionUser, SubscriptionTier } from "@/lib/types";
 
 const SESSION_COOKIE_KEY = "vibehub_session";
@@ -27,17 +27,7 @@ function isSubscriptionTier(v: unknown): v is SubscriptionTier {
 }
 
 function getSessionSecret(): string | null {
-  const fromEnv = process.env.SESSION_SECRET?.trim();
-  if (fromEnv) {
-    return fromEnv;
-  }
-
-  // Never use a fixed dev secret when a real database is configured — mis-set NODE_ENV would be critical.
-  if (process.env.NODE_ENV !== "production" && !hasConfiguredDatabaseUrl()) {
-    return "dev-session-secret-change-me";
-  }
-
-  return null;
+  return resolveSessionSigningSecret();
 }
 
 function signPayload(payloadBase64: string): string | null {

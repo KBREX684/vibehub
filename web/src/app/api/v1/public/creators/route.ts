@@ -1,6 +1,7 @@
 import { listCreators } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
       {
         code: "PUBLIC_CREATORS_LIST_FAILED",
         message: "Failed to list creators",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

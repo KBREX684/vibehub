@@ -1,6 +1,7 @@
 import { listPosts } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     return apiSuccess(result);
   } catch (error) {
     return apiError(
-      { code: "FEATURED_LIST_FAILED", message: "Failed to list featured posts", details: error instanceof Error ? error.message : String(error) },
+      { code: "FEATURED_LIST_FAILED", message: "Failed to list featured posts", details: safeServerErrorDetails(error) },
       500
     );
   }

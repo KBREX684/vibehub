@@ -1,5 +1,6 @@
 import { getSubscriptionPlans } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET() {
   try {
@@ -7,7 +8,7 @@ export async function GET() {
     return apiSuccess(plans);
   } catch (error) {
     return apiError(
-      { code: "PLANS_FETCH_FAILED", message: "Failed to fetch subscription plans", details: error instanceof Error ? error.message : String(error) },
+      { code: "PLANS_FETCH_FAILED", message: "Failed to fetch subscription plans", details: safeServerErrorDetails(error) },
       500
     );
   }

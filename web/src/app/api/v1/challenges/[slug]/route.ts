@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getChallengeBySlug, updateChallenge, deleteChallenge } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const patchSchema = z.object({
   title: z.string().min(3).max(120).optional(),
@@ -27,7 +28,7 @@ export async function GET(_request: Request, { params }: Params) {
     return apiSuccess(challenge);
   } catch (error) {
     return apiError(
-      { code: "CHALLENGE_GET_FAILED", message: "Failed to get challenge", details: error instanceof Error ? error.message : String(error) },
+      { code: "CHALLENGE_GET_FAILED", message: "Failed to get challenge", details: safeServerErrorDetails(error) },
       500
     );
   }

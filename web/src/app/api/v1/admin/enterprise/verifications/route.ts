@@ -6,6 +6,7 @@ import {
 } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 import type { EnterpriseVerificationStatus } from "@/lib/types";
 
 const ALLOWED_STATUS = new Set<EnterpriseVerificationStatus | "all">([
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
       {
         code: "ADMIN_ENTERPRISE_VERIFICATIONS_LIST_FAILED",
         message: "Failed to list enterprise verification applications",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

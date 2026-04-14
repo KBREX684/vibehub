@@ -3,6 +3,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { listCreators } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request, "read:creators:list");
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       {
         code: "MCP_SEARCH_CREATORS_FAILED",
         message: "Failed to execute MCP tool search_creators",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

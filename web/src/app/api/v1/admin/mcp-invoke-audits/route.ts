@@ -2,6 +2,7 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { listMcpInvokeAudits } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   const auth = await requireAdminSession();
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
       {
         code: "ADMIN_MCP_AUDITS_FAILED",
         message: "Failed to list MCP invoke audits",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

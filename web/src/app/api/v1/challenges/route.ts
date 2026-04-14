@@ -4,6 +4,7 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { requireAdminSession } from "@/lib/admin-auth";
 import type { ChallengeStatus } from "@/lib/types";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const CHALLENGE_STATUSES: readonly ChallengeStatus[] = ["draft", "active", "closed"];
 
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
     return apiSuccess(result);
   } catch (error) {
     return apiError(
-      { code: "CHALLENGES_LIST_FAILED", message: "Failed to list challenges", details: error instanceof Error ? error.message : String(error) },
+      { code: "CHALLENGES_LIST_FAILED", message: "Failed to list challenges", details: safeServerErrorDetails(error) },
       500
     );
   }
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       return apiError({ code: "INVALID_BODY", message: "Invalid challenge payload", details: error.flatten() }, 400);
     }
     return apiError(
-      { code: "CHALLENGE_CREATE_FAILED", message: "Failed to create challenge", details: error instanceof Error ? error.message : String(error) },
+      { code: "CHALLENGE_CREATE_FAILED", message: "Failed to create challenge", details: safeServerErrorDetails(error) },
       500
     );
   }

@@ -23,12 +23,19 @@ function cleanupStaleEntries() {
   }
 }
 
+/**
+ * Prefer the socket address unless TRUST_IP_HEADERS=true (e.g. behind a trusted reverse proxy).
+ * When trusted, use the first X-Forwarded-For hop or X-Real-IP.
+ */
 export function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  if (process.env.TRUST_IP_HEADERS === "true") {
+    return (
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown"
+    );
+  }
+  return request.ip?.trim() || "unknown";
 }
 
 export function checkWriteRateLimit(request: NextRequest): { ok: true } | { ok: false; retryAfterSeconds: number } {

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "crypto";
+import { assertPublicHttpsUrl } from "@/lib/private-network-url";
 import type { InAppNotificationKind } from "@/lib/types";
 
 function getWebhookUrl(): string | undefined {
@@ -34,6 +35,7 @@ export async function dispatchNotificationPush(params: {
   const webhook = getWebhookUrl();
   if (webhook) {
     try {
+      assertPublicHttpsUrl(webhook);
       const payload = {
         event: "in_app_notification",
         userId: params.userId,

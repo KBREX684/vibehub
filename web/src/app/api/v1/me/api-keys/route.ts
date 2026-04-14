@@ -3,6 +3,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { createApiKeyForUser, listApiKeysForUser, getUserTier } from "@/lib/repository";
 import { checkApiKeyLimit } from "@/lib/subscription";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const createSchema = z.object({
   label: z.string().min(1).max(80),
@@ -25,7 +26,7 @@ export async function GET() {
       {
         code: "API_KEYS_LIST_FAILED",
         message: "Failed to list API keys",
-        details: error instanceof Error ? error.message : String(error),
+        details: safeServerErrorDetails(error),
       },
       500
     );

@@ -1,6 +1,7 @@
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getContributionCredit, refreshContributionCredit } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET() {
   const session = await getSessionUserFromCookie();
@@ -13,7 +14,7 @@ export async function GET() {
     return apiSuccess(credit);
   } catch (error) {
     return apiError(
-      { code: "REPUTATION_FETCH_FAILED", message: "Failed to fetch reputation", details: error instanceof Error ? error.message : String(error) },
+      { code: "REPUTATION_FETCH_FAILED", message: "Failed to fetch reputation", details: safeServerErrorDetails(error) },
       500
     );
   }
@@ -30,7 +31,7 @@ export async function POST() {
     return apiSuccess(credit);
   } catch (error) {
     return apiError(
-      { code: "REPUTATION_REFRESH_FAILED", message: "Failed to refresh reputation", details: error instanceof Error ? error.message : String(error) },
+      { code: "REPUTATION_REFRESH_FAILED", message: "Failed to refresh reputation", details: safeServerErrorDetails(error) },
       500
     );
   }
