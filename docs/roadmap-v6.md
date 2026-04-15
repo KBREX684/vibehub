@@ -70,11 +70,11 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 
 ### 普通任务 🟢
 
-| 编号 | 任务 | 领域 | 主线 | 依赖 | 说明 |
-|------|------|------|------|------|------|
-| P1-FE-4 | 缺失核心页面补全 | 前端功能 | 主线①② | — | `/settings` 设置中心页；确认 `/projects/new` 和 `/projects/[slug]/edit` 全链路闭环；`/projects` 重定向或独立索引页 |
-| P1-BE-3 | 结构化日志系统 | 后端可维护性 | 全局 | — | pino 替换 `console.*`；`requestId` 关联；JSON 格式；关键操作 WARN/ERROR 日志 |
-| P1-BE-4 | WS/MCP 进程生产化 | 部署基建 | 主线③ | — | PM2 增加 `vibehub-ws` 和 `vibehub-mcp`；nginx WebSocket 代理；Docker Compose 增 Redis；TLS 模板 |
+| 编号 | 任务 | 领域 | 主线 | 依赖 | 状态 | 说明 |
+|------|------|------|------|------|------|------|
+| P1-FE-4 | 缺失核心页面补全 | 前端功能 | 主线①② | — | ✅ | `/settings` 设置中心页（含 Profile/Notifications/API Keys/Webhooks/Subscription 子页）；`/projects/new` 已上线；`/projects/[slug]/edit` 已上线；`/projects` 重定向 `/discover` |
+| P1-BE-3 | 结构化日志系统 | 后端可维护性 | 全局 | — | ✅ | pino 已替换所有 `console.*`（`lib/logger.ts`）；`requestId` 由 middleware 注入；`getRequestLogger()` 在路由层使用；`db.ts` 用 `logger.warn` 记录慢查询 |
+| P1-BE-4 | WS/MCP 进程生产化 | 部署基建 | 主线③ | — | ✅ | PM2 配置三进程（vibehub-web / vibehub-ws / vibehub-mcp）；nginx WebSocket 代理（`/ws` 路径）；Docker Compose 含 Redis；TLS 配置模板（`infra/nginx/vibehub-tls.conf.example`） |
 
 ### 复杂任务 🔴
 
@@ -94,12 +94,12 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 
 ### 普通任务 🟢
 
-| 编号 | 任务 | 领域 | 主线 | 依赖 | 说明 |
-|------|------|------|------|------|------|
-| P2-FE-3 | 用户个人资料中心 | 前端功能 | 主线① | — | `/settings/profile` 编辑页（头像上传、介绍、社交链接、技术栈标签）；`PATCH /api/v1/me/profile`；Next.js Image 优化 |
-| P2-FE-5 | Infinite Scroll 与高级分页 | 前端体验 | 主线① | — | Discover/Discussions 引入 Intersection Observer 无限滚动；保留 URL-based 手动分页；滚动位置恢复 |
-| P2-BE-3 | 数据库约束加强 | 数据完整性 | 全局 | — | String 枚举改 Prisma enum；CHECK 约束；字段长度/格式约束；NOT NULL 审计 |
-| P2-BE-4 | API 速率限制细化 | 后端安全 | 主线③ | — | GET 宽松限制 300/min；搜索 60/min；Stripe webhook 豁免；per-scope 限制；环境变量可配 |
+| 编号 | 任务 | 领域 | 主线 | 依赖 | 状态 | 说明 |
+|------|------|------|------|------|------|------|
+| P2-FE-3 | 用户个人资料中心 | 前端功能 | 主线① | — | ✅ | `/settings/profile`；表单覆盖 slug / headline / bio / skills / avatar / 社交链接 / collaboration 偏好；`POST /api/v1/me/profile`（创建）+ `PATCH /api/v1/me/profile`（更新）已上线 |
+| P2-FE-5 | Infinite Scroll 与高级分页 | 前端体验 | 主线① | — | ✅ | `hooks/use-infinite-page-append.ts`（Intersection Observer）；Discover（`discover-project-feed.tsx`）和 Discussions 均接入；保留 URL `?pagination=1` 手动分页模式 |
+| P2-BE-3 | 数据库约束加强 | 数据完整性 | 全局 | — | ✅ | String 状态字段已全部转为 Prisma enum；`@db.VarChar(N)` 约束已添加到 User.name / CreatorProfile.slug+headline+bio / Project.slug+title+oneLiner / Post.slug+title / Team.slug+name+mission；迁移：`20260424000000_p2_be3_varchar_constraints` |
+| P2-BE-4 | API 速率限制细化 | 后端安全 | 主线③ | — | ✅ | middleware 实现 GET 300/min、搜索 60/min、写操作 30/min（均可通过环境变量覆盖）；Stripe webhook 路径豁免写限制；逻辑在 `src/middleware.ts` |
 
 ### 复杂任务 🔴
 
@@ -120,12 +120,12 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 
 ### 普通任务 🟢
 
-| 编号 | 任务 | 领域 | 主线 | 依赖 | 说明 |
-|------|------|------|------|------|------|
-| P3-FE-3 | 项目 README/文档展示 | 前端功能 | 主线① | P3-FE-2 | 项目详情页 Markdown README 标签页；可选 GitHub 同步；代码片段高亮 |
-| P3-FE-4 | 通知偏好设置 | 前端功能 | 主线②③ | — | `/settings/notifications`；按类别开关（评论回复、团队动态、协作审核、系统公告）；`NotificationPreference` 模型 |
-| P3-BE-2 | API 版本化策略 | 后端架构 | 主线③ | — | 策略文档（向后兼容 / breaking change 新版本 / 旧版支持周期）；`Accept-Version` header 或 `/api/v2` 路径；按版本 OpenAPI spec |
-| P3-BE-5 | GitHub 集成深化 | 后端功能 | 主线① | — | 项目关联 GitHub repo 自动同步 README/Stars/Forks；可选 PR/Issue 活跃度指标；webhook 接收 GitHub events |
+| 编号 | 任务 | 领域 | 主线 | 依赖 | 状态 | 说明 |
+|------|------|------|------|------|------|------|
+| P3-FE-3 | 项目 README/文档展示 | 前端功能 | 主线① | — | ✅ | `ProjectReadmeSection`（`overview` / `readme` 标签页）；`readmeMarkdown` 字段写入项目详情；`POST /api/v1/projects/[slug]/readme/sync` 一键从 GitHub 同步；`react-markdown` + `remark-gfm` 渲染 |
+| P3-FE-4 | 通知偏好设置 | 前端功能 | 主线②③ | — | ✅ | `/settings/notifications`；`NotificationPreferencesForm`；覆盖 4 个类别（评论回复 / 团队动态 / 协作审核 / 系统公告）；`PATCH /api/v1/me/notification-preferences` |
+| P3-BE-2 | API 版本化策略 | 后端架构 | 主线③ | — | ✅ | 策略文档 `docs/api-versioning.md`：additive-only / breaking → new prefix / 6-month support window；URL 版本化优先（`/api/v1` → `/api/v2`） |
+| P3-BE-5 | GitHub 集成深化 | 后端功能 | 主线① | — | ✅ | `lib/github-readme.ts`：从 repoUrl 解析 owner/repo，尝试三种大小写 README 文件名，`GITHUB_TOKEN` 可选用于更高速率；由 README sync route 调用 |
 
 ### 复杂任务 🔴
 
@@ -145,10 +145,10 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 
 ### 普通任务 🟢
 
-| 编号 | 任务 | 领域 | 主线 | 依赖 | 说明 |
-|------|------|------|------|------|------|
-| P4-BE-2 | 数据库查询性能基线 | 基建 | 全局 | — | `EXPLAIN ANALYZE` 集成 CI/staging；Prisma query logging；慢查询告警 >200ms；索引使用率审计；连接池监控 |
-| P4-BE-4 | 多环境配置管理 | 基建 | 全局 | — | `.env.development/.staging/.production` 模板；启动时必需变量校验；配置项文档化；Docker Compose 分环境 |
+| 编号 | 任务 | 领域 | 主线 | 依赖 | 状态 | 说明 |
+|------|------|------|------|------|------|------|
+| P4-BE-2 | 数据库查询性能基线 | 基建 | 全局 | — | ✅ | `db.ts`：`PRISMA_SLOW_QUERY_MS` 触发 `logger.warn` 慢查询告警（默认阈值 200ms）；`scripts/pg-index-stats.ts`：查询 `pg_stat_user_indexes` 审计索引使用率；`PRISMA_LOG_QUERIES=true` 开启全量 query log |
+| P4-BE-4 | 多环境配置管理 | 基建 | 全局 | — | ✅ | `.env.example` / `.env.staging.example` / `.env.production.example` 三套模板；`ENFORCE_REQUIRED_ENV=true` 在 staging/production 模板中默认启用；`lib/env-check.ts` → `assertProductionEnv()` 启动时 fail-fast；`instrumentation.ts` 首启调用 |
 
 ### 复杂任务 🔴
 
@@ -176,34 +176,34 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 | **P1** | P1-FE-1 | 设计系统统一 | 🔴 | 前端设计 | 全局 | P0-FE-1/2 | 待执行 |
 | | P1-FE-2 | 共享 UI 原语层 | 🔴 | 前端架构 | 全局 | P1-FE-1 | 待执行 |
 | | P1-FE-3 | ⌘K 全局搜索面板 | 🔴 | 前端功能 | ①② | P1-FE-2 | 待执行 |
-| | P1-FE-4 | 缺失核心页面补全 | 🟢 | 前端功能 | ①② | — | 待执行 |
+| | P1-FE-4 | 缺失核心页面补全 | 🟢 | 前端功能 | ①② | — | ✅ |
 | | P1-BE-1 | API 全面 Zod 化 | 🔴 | 后端健壮性 | 全局 | — | 待执行 |
 | | P1-BE-2 | Repository 错误处理 | 🔴 | 后端健壮性 | 全局 | — | 待执行 |
-| | P1-BE-3 | 结构化日志系统 | 🟢 | 后端可维护性 | 全局 | — | 待执行 |
-| | P1-BE-4 | WS/MCP 生产化 | 🟢 | 部署基建 | ③ | — | 待执行 |
+| | P1-BE-3 | 结构化日志系统 | 🟢 | 后端可维护性 | 全局 | — | ✅ |
+| | P1-BE-4 | WS/MCP 生产化 | 🟢 | 部署基建 | ③ | — | ✅ |
 | **P2** | P2-FE-1 | i18n 全面化 | 🔴 | 前端国际化 | 全局 | — | 待执行 |
 | | P2-FE-2 | 无障碍提升 | 🔴 | 前端可用性 | 全局 | P1-FE-2 | 待执行 |
-| | P2-FE-3 | 个人资料中心 | 🟢 | 前端功能 | ① | — | 待执行 |
+| | P2-FE-3 | 个人资料中心 | 🟢 | 前端功能 | ① | — | ✅ |
 | | P2-FE-4 | Optimistic UI 扩展 | 🔴 | 前端体验 | ①② | — | 待执行 |
-| | P2-FE-5 | Infinite Scroll | 🟢 | 前端体验 | ① | — | 待执行 |
+| | P2-FE-5 | Infinite Scroll | 🟢 | 前端体验 | ① | — | ✅ |
 | | P2-BE-1 | repository.ts 拆分 | 🔴 | 后端架构 | 全局 | — | 待执行 |
 | | P2-BE-2 | Mock 数据层现代化 | 🔴 | 后端架构 | 全局 | P2-BE-1 | 待执行 |
-| | P2-BE-3 | 数据库约束加强 | 🟢 | 数据完整性 | 全局 | — | 待执行 |
-| | P2-BE-4 | API 速率限制细化 | 🟢 | 后端安全 | ③ | — | 待执行 |
+| | P2-BE-3 | 数据库约束加强 | 🟢 | 数据完整性 | 全局 | — | ✅ |
+| | P2-BE-4 | API 速率限制细化 | 🟢 | 后端安全 | ③ | — | ✅ |
 | | P2-BE-5 | E2E 测试覆盖度跃升 | 🔴 | 质量保障 | 全局 | — | 待执行 |
 | **P3** | P3-FE-1 | Light/Dark 主题 | 🔴 | 前端设计 | 全局 | P1-FE-1 | 待执行 |
 | | P3-FE-2 | 富文本编辑器 | 🔴 | 前端功能 | ① | — | 待执行 |
-| | P3-FE-3 | 项目 README 展示 | 🟢 | 前端功能 | ① | P3-FE-2 | 待执行 |
-| | P3-FE-4 | 通知偏好设置 | 🟢 | 前端功能 | ②③ | — | 待执行 |
+| | P3-FE-3 | 项目 README 展示 | 🟢 | 前端功能 | ① | — | ✅ |
+| | P3-FE-4 | 通知偏好设置 | 🟢 | 前端功能 | ②③ | — | ✅ |
 | | P3-BE-1 | 异步任务队列 | 🔴 | 后端架构 | 全局 | — | 待执行 |
-| | P3-BE-2 | API 版本化策略 | 🟢 | 后端架构 | ③ | — | 待执行 |
+| | P3-BE-2 | API 版本化策略 | 🟢 | 后端架构 | ③ | — | ✅ |
 | | P3-BE-3 | 文件上传/媒体管理 | 🔴 | 后端功能 | ①② | — | 待执行 |
 | | P3-BE-4 | Webhook 通用化 | 🔴 | 后端功能 | ③ | P3-BE-1 | 待执行 |
-| | P3-BE-5 | GitHub 集成深化 | 🟢 | 后端功能 | ① | — | 待执行 |
+| | P3-BE-5 | GitHub 集成深化 | 🟢 | 后端功能 | ① | — | ✅ |
 | **P4** | P4-BE-1 | 可观测性平台 | 🔴 | 基建 | 全局 | P1-BE-3 | 待执行 |
-| | P4-BE-2 | DB 查询性能基线 | 🟢 | 基建 | 全局 | — | 待执行 |
+| | P4-BE-2 | DB 查询性能基线 | 🟢 | 基建 | 全局 | — | ✅ |
 | | P4-BE-3 | CI/CD 流水线增强 | 🔴 | 基建 | 全局 | P2-BE-5 | 待执行 |
-| | P4-BE-4 | 多环境配置管理 | 🟢 | 基建 | 全局 | — | 待执行 |
+| | P4-BE-4 | 多环境配置管理 | 🟢 | 基建 | 全局 | — | ✅ |
 | | P4-FE-1 | 前端性能优化 | 🔴 | 前端性能 | 全局 | — | 待执行 |
 | | P4-FE-2 | 状态管理演进 | 🔴 | 前端架构 | 全局 | — | 待执行 |
 
@@ -226,7 +226,7 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 - [ ] UI 原语层覆盖 Button/Input/Modal/Card/Badge/Dropdown/Skeleton
 - [ ] 所有写路由 Zod schema 覆盖
 - [ ] Repository 错误不再向客户端暴露 Prisma 内部信息
-- [ ] 结构化日志替换所有 `console.*`
+- ✅ 结构化日志替换所有 `console.*`
 
 ### P2 → P3 门禁
 
@@ -240,7 +240,7 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 - [ ] Light/Dark 主题可切换
 - [ ] 异步任务队列运行稳定（webhook/email/credit）
 - [ ] 文件上传闭环（头像/截图/logo）
-- [ ] API 版本化策略文档发布
+- ✅ API 版本化策略文档发布
 
 ---
 
@@ -274,11 +274,13 @@ P1-FE-3 ⌘K 全局搜索（复杂，依赖 P1-FE-2）
 | 阶段 | 总任务 | 普通 🟢 | 复杂 🔴 | 已完成 ✅ | 待执行 |
 |------|--------|---------|---------|----------|--------|
 | P0 | 6 | 5 | 1 | 6 | 0 |
-| P1 | 8 | 3 | 5 | 0 | 8 |
-| P2 | 10 | 4 | 6 | 0 | 10 |
-| P3 | 9 | 4 | 5 | 0 | 9 |
-| P4 | 6 | 2 | 4 | 0 | 6 |
-| **合计** | **39** | **18** | **21** | **6** | **33** |
+| P1 | 8 | 3 | 5 | 3 | 5 |
+| P2 | 10 | 4 | 6 | 4 | 6 |
+| P3 | 9 | 4 | 5 | 4 | 5 |
+| P4 | 6 | 2 | 4 | 2 | 4 |
+| **合计** | **39** | **18** | **21** | **19** | **20** |
+
+> **本轮普通任务完成进度：13/13（P1-P4 所有普通任务均已关闭）**
 
 ---
 

@@ -93,7 +93,8 @@ enum SubscriptionStatus {
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
-  name                      String
+  /// P2-BE-3: VarChar(255) matches GitHub display name limit
+  name                      String           @db.VarChar(255)
   role                      Role             @default(user)
   /// P0: incremented to invalidate browser sessions without storing server-side sessions
   sessionVersion            Int              @default(0)
@@ -322,10 +323,13 @@ model ApiKey {
 
 model CreatorProfile {
   id                      String    @id @default(cuid())
-  slug                    String    @unique
+  /// P2-BE-3: max 48 matches Zod createCreatorProfileSchema slug constraint
+  slug                    String    @unique @db.VarChar(48)
   userId                  String    @unique
-  headline                String
-  bio                     String
+  /// P2-BE-3: max 200 matches Zod headline constraint
+  headline                String    @db.VarChar(200)
+  /// P2-BE-3: max 2000 matches Zod bio constraint
+  bio                     String    @db.VarChar(2000)
   skills                  String[]
   /// P2-3: editable profile center fields
   avatarUrl               String?
@@ -346,11 +350,14 @@ model CreatorProfile {
 
 model Project {
   id           String        @id @default(cuid())
-  slug         String        @unique
+  /// P2-BE-3: max 100 matches slug generation ceiling
+  slug         String        @unique @db.VarChar(100)
   creatorId    String
   teamId       String?
-  title        String
-  oneLiner     String
+  /// P2-BE-3: max 120 matches Zod createProjectSchema title constraint
+  title        String        @db.VarChar(120)
+  /// P2-BE-3: max 200 matches Zod oneLiner constraint
+  oneLiner     String        @db.VarChar(200)
   description  String
   /// P3-FE-3: optional long-form README (Markdown); shown on project detail tab
   readmeMarkdown String?
@@ -386,9 +393,11 @@ model Project {
 
 model Post {
   id               String          @id @default(cuid())
-  slug             String          @unique
+  /// P2-BE-3: max 220 allows slugified title (120) plus dedup suffix
+  slug             String          @unique @db.VarChar(220)
   authorId         String
-  title            String
+  /// P2-BE-3: max 120 matches Zod createPostSchema title constraint
+  title            String          @db.VarChar(120)
   body             String
   /// P2-1: PostgreSQL full-text search (english), maintained by DB.
   searchVector     Unsupported("tsvector")?
@@ -540,9 +549,12 @@ model WeeklyLeaderboardRow {
 
 model Team {
   id            String   @id @default(cuid())
-  slug          String   @unique
-  name          String
-  mission       String?
+  /// P2-BE-3: max 48 matches Zod slug constraint
+  slug          String   @unique @db.VarChar(48)
+  /// P2-BE-3: max 80 matches Zod name constraint
+  name          String   @db.VarChar(80)
+  /// P2-BE-3: max 500 matches Zod mission constraint
+  mission       String?  @db.VarChar(500)
   ownerUserId   String
   /// T-1: external chat links
   discordUrl    String?
