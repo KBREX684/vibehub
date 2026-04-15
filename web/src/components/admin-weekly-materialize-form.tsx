@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { apiFetch } from "@/lib/api-fetch";
 
 const kinds = [
   { value: "discussions_by_weekly_comment_count", label: "讨论周榜（周内新增评论数）" },
@@ -19,7 +20,7 @@ export function AdminWeeklyMaterializeForm() {
     setStatus("loading");
     setMessage(null);
     try {
-      const res = await fetch("/api/v1/admin/leaderboards/weekly/materialize", {
+      const res = await apiFetch("/api/v1/admin/leaderboards/weekly/materialize", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

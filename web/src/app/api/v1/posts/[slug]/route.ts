@@ -4,6 +4,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { getPostBySlug, listCommentsForPost, updatePost, deletePost } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -48,7 +49,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const post = await updatePost({ slug, actorUserId: auth.user.userId, actorRole: auth.user.role, ...parsed });
     return apiSuccess({ post });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "POST_NOT_FOUND")      return apiError({ code: "POST_NOT_FOUND", message: "Post not found" }, 404);
     if (msg === "FORBIDDEN_NOT_AUTHOR") return apiError({ code: "FORBIDDEN", message: "Only author or admin can edit" }, 403);
     if (err instanceof z.ZodError)     return apiError({ code: "INVALID_BODY", message: "Validation failed", details: err.flatten() }, 400);
@@ -66,7 +69,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     await deletePost({ slug, actorUserId: auth.user.userId, actorRole: auth.user.role });
     return apiSuccess({ deleted: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "POST_NOT_FOUND")      return apiError({ code: "POST_NOT_FOUND", message: "Post not found" }, 404);
     if (msg === "FORBIDDEN_NOT_AUTHOR") return apiError({ code: "FORBIDDEN", message: "Only author or admin can delete" }, 403);
     return apiError({ code: "POST_DELETE_FAILED", message: msg }, 500);

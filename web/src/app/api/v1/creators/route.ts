@@ -3,6 +3,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { listCreators } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request, "read:creators:list");
@@ -22,7 +23,9 @@ export async function GET(request: NextRequest) {
     const result = await listCreators({ query, page, limit });
     return apiSuccess(result);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "CREATORS_LIST_FAILED",
         message: "Failed to list creators",

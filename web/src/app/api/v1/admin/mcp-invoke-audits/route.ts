@@ -1,5 +1,6 @@
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { listMcpInvokeAudits } from "@/lib/repository";
 
@@ -23,7 +24,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "ADMIN_MCP_AUDITS_FAILED",
         message: "Failed to list MCP invoke audits",

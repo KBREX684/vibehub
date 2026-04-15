@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { listTeamsForUser } from "@/lib/repository";
 
 export async function GET(request: NextRequest) {
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
     const teams = await listTeamsForUser(session.userId);
     return apiSuccess({ teams });
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "ME_TEAMS_FAILED",
         message: "Failed to list teams for current user",

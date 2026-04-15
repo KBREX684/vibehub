@@ -24,8 +24,8 @@ export default async function HomePage() {
   return (
     <main className="container pb-24 space-y-16">
 
-      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="pt-16 pb-12 text-center animate-fade-in-up">
+      {/* ── Hero (anchor for footer About link) ─────────────────────────────── */}
+      <section id="about" className="pt-16 pb-12 text-center animate-fade-in-up scroll-mt-24">
         <div className="inline-flex items-center gap-2 px-3 py-1 border border-[var(--color-border)] text-xs font-mono text-[var(--color-text-secondary)] mb-8">
           <Zap className="w-3.5 h-3.5" />
           <span>[v1.0.0] Developer community for shipping together</span>

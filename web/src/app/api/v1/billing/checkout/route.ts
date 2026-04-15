@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { upsertStripeCustomer } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
 
 /** v4.0: Only Free + Pro — single Stripe price mapping. */
@@ -81,7 +82,9 @@ export async function POST(request: NextRequest) {
 
     return apiSuccess({ url: session.url, sessionId: session.id });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "STRIPE_NOT_CONFIGURED") {
       return apiError({ code: "STRIPE_NOT_CONFIGURED", message: "Stripe is not configured on this server" }, 503);
     }

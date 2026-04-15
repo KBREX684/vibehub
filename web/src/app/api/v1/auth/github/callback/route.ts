@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AuthConstants, encodeSession } from "@/lib/auth";
 import { findOrCreateGitHubUser, getUserTier } from "@/lib/repository";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 
 interface GitHubTokenResponse {
   access_token: string;
@@ -70,6 +71,7 @@ async function fetchPrimaryEmail(token: string): Promise<string | null> {
 }
 
 export async function GET(request: Request) {
+  const requestLogger = getRequestLogger(request, { route: "/api/v1/auth/github/callback" });
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -115,6 +117,7 @@ export async function GET(request: Request) {
       userId: user.id,
       role: user.role,
       name: user.name,
+      sessionVersion: user.sessionVersion ?? 0,
       enterpriseStatus: user.enterpriseStatus ?? "none",
       enterpriseOrganization: user.enterpriseOrganization,
       enterpriseWebsite: user.enterpriseWebsite,
@@ -134,7 +137,7 @@ export async function GET(request: Request) {
 
     return response;
   } catch (err) {
-    console.error("GitHub OAuth callback error:", err);
+    requestLogger.error({ err: serializeError(err) }, "GitHub OAuth callback failed");
     return NextResponse.redirect(new URL("/?error=oauth_failed", baseUrl));
   }
 }

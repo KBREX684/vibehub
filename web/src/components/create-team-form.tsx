@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UpgradeReason } from "@/lib/subscription";
 import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
+import { apiFetch } from "@/lib/api-fetch";
 
 export function CreateTeamForm() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export function CreateTeamForm() {
       if (m) {
         body.mission = m;
       }
-      const res = await fetch("/api/v1/teams", {
+      const res = await apiFetch("/api/v1/teams", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

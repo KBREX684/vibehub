@@ -18,6 +18,8 @@ export interface User {
   email: string;
   name: string;
   role: Role;
+  /** P0: bump to revoke existing browser sessions */
+  sessionVersion?: number;
   /** F-1: GitHub OAuth */
   githubId?: number;
   githubUsername?: string;
@@ -169,6 +171,8 @@ export interface SessionUser {
   userId: string;
   role: Role;
   name: string;
+  /** P0: must match User.sessionVersion or the session is rejected */
+  sessionVersion?: number;
   subscriptionTier?: SubscriptionTier;
   enterpriseStatus?: EnterpriseVerificationStatus;
   enterpriseOrganization?: string;

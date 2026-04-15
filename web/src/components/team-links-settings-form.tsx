@@ -2,6 +2,7 @@
 
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-fetch";
 
 const FIELDS = [
   { key: "discordUrl", label: "Discord invite URL" },
@@ -48,7 +49,7 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
       body[key] = v === "" ? null : v;
     }
     try {
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/links`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/links`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

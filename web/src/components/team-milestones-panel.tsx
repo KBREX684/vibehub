@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { TeamMilestone } from "@/lib/types";
 import { Target, Calendar, CheckCircle2, Circle, Plus, Trash2, Globe, Lock } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   teamSlug: string;
@@ -26,7 +27,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/milestones`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/milestones`, {
         credentials: "include",
       });
       const json = (await res.json()) as { data?: { milestones?: TeamMilestone[] }; error?: { message?: string } };
@@ -62,7 +63,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
       if (description.trim()) {
         body.description = description.trim();
       }
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/milestones`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/milestones`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -87,7 +88,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
   async function patchMilestone(id: string, patch: Record<string, unknown>) {
     setMsg(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(teamSlug)}/milestones/${encodeURIComponent(id)}`,
         {
           method: "PATCH",
@@ -112,7 +113,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
     if (!confirm("Are you sure you want to delete this milestone?")) return;
     setMsg(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(teamSlug)}/milestones/${encodeURIComponent(id)}`,
         { method: "DELETE", credentials: "include" }
       );

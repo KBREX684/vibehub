@@ -3,6 +3,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { listTeamActivityLog } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -23,7 +24,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     const result = await listTeamActivityLog({ teamSlug: slug, page, limit });
     return apiSuccess(result);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "ACTIVITY_LOG_FAILED", message: "Failed to fetch activity log", details: error instanceof Error ? error.message : String(error) },
       500
     );

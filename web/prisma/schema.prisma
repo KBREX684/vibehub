@@ -95,6 +95,8 @@ model User {
   email                     String           @unique
   name                      String
   role                      Role             @default(user)
+  /// P0: incremented to invalidate browser sessions without storing server-side sessions
+  sessionVersion            Int              @default(0)
   /// F-1: GitHub OAuth
   githubId                  Int?             @unique
   githubUsername            String?          @unique

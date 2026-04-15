@@ -3,6 +3,7 @@ import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/repository";
 import { getLimits, TIER_PRICING } from "@/lib/subscription";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 /** M-1: Get current user's subscription info + limits. */
 export async function GET(request: NextRequest) {
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest) {
     const pricing = TIER_PRICING[subscription.tier];
     return apiSuccess({ subscription, limits, pricing });
   } catch (err) {
-    return apiError({ code: "SUBSCRIPTION_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError({ code: "SUBSCRIPTION_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 }

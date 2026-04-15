@@ -6,6 +6,7 @@ import {
   updateCreatorProfile,
 } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -18,7 +19,9 @@ export async function GET(request: NextRequest) {
     const profile = await getCreatorProfileByUserId(auth.user.userId);
     return apiSuccess({ profile });
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "PROFILE_FETCH_FAILED", message: error instanceof Error ? error.message : "Unknown error" },
       500
     );
@@ -69,7 +72,9 @@ export async function POST(request: NextRequest) {
     });
     return apiSuccess({ profile }, 201);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : "Unknown error";
     if (msg === "SLUG_TAKEN") {
       return apiError({ code: "SLUG_TAKEN", message: "This slug is already taken" }, 409);
     }
@@ -121,7 +126,9 @@ export async function PATCH(request: NextRequest) {
     });
     return apiSuccess({ profile });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : "Unknown error";
     if (msg === "PROFILE_NOT_FOUND") {
       return apiError({ code: "PROFILE_NOT_FOUND", message: "No profile found. Use POST to create one first." }, 404);
     }

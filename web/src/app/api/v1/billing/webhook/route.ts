@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { upsertUserSubscription, upsertStripeCustomer } from "@/lib/repository";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 import type { SubscriptionTier } from "@/lib/types";
 
 const PRICE_TO_TIER: Record<string, SubscriptionTier> = {
@@ -18,6 +19,7 @@ function tierFromPriceId(priceId: string | null | undefined): SubscriptionTier {
  * Set STRIPE_WEBHOOK_SECRET in env (from Stripe dashboard → webhook endpoint).
  */
 export async function POST(request: NextRequest) {
+  const requestLogger = getRequestLogger(request, { route: "/api/v1/billing/webhook" });
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
       : (JSON.parse(rawBody) as unknown);
     event = raw as typeof event;
   } catch (err) {
-    console.error("[stripe-webhook] signature verification failed:", err);
+    requestLogger.warn({ err: serializeError(err) }, "Stripe webhook signature verification failed");
     return new Response(JSON.stringify({ error: "Webhook signature invalid" }), { status: 400 });
   }
 
@@ -57,7 +59,10 @@ export async function POST(request: NextRequest) {
           await upsertStripeCustomer(userId, customerId);
         }
         // Subscription details will come via customer.subscription.created event
-        console.log(`[stripe-webhook] checkout.session.completed userId=${userId} sub=${subscriptionId}`);
+        requestLogger.info(
+          { userId, subscriptionId, eventType: event.type },
+          "Stripe checkout session completed"
+        );
         break;
       }
 
@@ -171,7 +176,10 @@ export async function POST(request: NextRequest) {
         break;
     }
   } catch (err) {
-    console.error(`[stripe-webhook] error handling ${event.type}:`, err);
+    requestLogger.error(
+      { err: serializeError(err), eventType: event.type },
+      "Stripe webhook handler failed"
+    );
     return new Response(JSON.stringify({ error: "Webhook handler failed" }), { status: 500 });
   }
 

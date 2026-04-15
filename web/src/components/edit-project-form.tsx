@@ -3,6 +3,7 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Project, ProjectStatus } from "@/lib/types";
+import { apiFetch } from "@/lib/api-fetch";
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "idea", label: "Idea" },
@@ -55,7 +56,7 @@ export function EditProjectForm({ project }: Props) {
     };
 
     try {
-      const res = await fetch(`/api/v1/projects/${encodeURIComponent(project.slug)}`, {
+      const res = await apiFetch(`/api/v1/projects/${encodeURIComponent(project.slug)}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

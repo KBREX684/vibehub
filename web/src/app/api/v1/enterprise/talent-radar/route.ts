@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { getTalentRadarLegacy as getTalentRadar } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -31,7 +32,9 @@ export async function GET(request: NextRequest) {
     const radar = await getTalentRadar(limit);
     return apiSuccess(radar);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "TALENT_RADAR_FAILED", message: "Failed to fetch talent radar", details: error instanceof Error ? error.message : String(error) },
       500
     );

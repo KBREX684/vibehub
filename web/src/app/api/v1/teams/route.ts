@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createTeam, listTeams, getUserTier, countUserTeams } from "@/lib/repository";
 import { checkQuota } from "@/lib/quota";
 
@@ -33,7 +34,9 @@ export async function GET(request: NextRequest) {
     const result = await listTeams({ page, limit });
     return apiSuccess(result);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "TEAMS_LIST_FAILED",
         message: "Failed to list teams",
@@ -84,7 +87,9 @@ export async function POST(request: Request) {
     });
     return apiSuccess(team, 201);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError(
         {
           code: "INVALID_BODY",

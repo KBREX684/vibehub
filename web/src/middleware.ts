@@ -1,19 +1,53 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { decodeSessionEdge } from "@/lib/session-edge";
 
 // ─── Admin route guard ────────────────────────────────────────────────────────
-// The admin layout does a server-side session check, but we also block at
-// the edge so un-authenticated requests never reach the RSC renderer.
-// We cannot decode the JWT here (crypto not available in Edge), so we simply
-// redirect to /login if the session cookie is absent.
+// Decode HMAC session at the edge (Web Crypto) and require role === "admin".
+// Non-admins are redirected to home so they never receive the admin layout shell.
 function isAdminPath(pathname: string): boolean {
   return pathname.startsWith("/admin");
 }
 
-function hasSessionCookie(request: NextRequest): boolean {
-  return Boolean(request.cookies.get("vibehub_session")?.value);
+// ─── CSRF protection ─────────────────────────────────────────────────────────
+// Routes exempt from CSRF checks: the CSRF token endpoint itself, auth
+// callbacks (server-to-server redirects), Stripe webhook (verified by
+// HMAC signature), and the public embed endpoint (API-key only).
+const CSRF_EXEMPT_PREFIXES = [
+  "/api/v1/auth/csrf-token",
+  "/api/v1/auth/github",
+  "/api/v1/billing/webhook",
+  "/api/v1/embed/",
+];
+
+function isCsrfExempt(pathname: string): boolean {
+  return CSRF_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * Derives the expected CSRF token from the raw session cookie value using
+ * Web Crypto (available in Edge Runtime), mirroring the Node.js HMAC in
+ * auth.ts so the edge can verify without importing crypto.
+ */
+async function deriveEdgeCsrfToken(rawSession: string, secret: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`csrf:${rawSession}`));
+  // base64url-encode then take first 32 chars — same as auth.ts deriveCsrfToken
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  return b64.slice(0, 32);
+}
+
+// ─── Write rate limit ─────────────────────────────────────────────────────────
 const WRITE_WINDOW_MS = 60_000;
 const MAX_WRITES_PER_MINUTE = 30;
 
@@ -45,25 +79,69 @@ function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfter
   return { ok: true };
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { method, nextUrl } = request;
+  const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-request-id", requestId);
 
-  // Admin page protection — redirect unauthenticated to /login
-  if (isAdminPath(nextUrl.pathname) && !hasSessionCookie(request)) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("required", "admin");
-    loginUrl.searchParams.set("redirect", nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+  function withRequestId(response: NextResponse) {
+    response.headers.set("x-request-id", requestId);
+    return response;
+  }
+
+  // Admin page protection — valid session + admin role required
+  if (isAdminPath(nextUrl.pathname)) {
+    const raw = request.cookies.get("vibehub_session")?.value;
+    const session = raw ? await decodeSessionEdge(raw) : null;
+    if (!session) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("required", "admin");
+      loginUrl.searchParams.set("redirect", nextUrl.pathname);
+      return withRequestId(NextResponse.redirect(loginUrl));
+    }
+    if (session.role !== "admin") {
+      return withRequestId(NextResponse.redirect(new URL("/", request.url)));
+    }
   }
 
   const isApi = nextUrl.pathname.startsWith("/api/");
-  const isWriteMethod = method === "POST" || method === "PATCH" || method === "PUT" || method === "DELETE";
+  const isWriteMethod =
+    method === "POST" || method === "PATCH" || method === "PUT" || method === "DELETE";
 
   if (isApi && isWriteMethod) {
+    // ── CSRF double-submit check ──────────────────────────────────────────
+    // Only applies when the request is authenticated via session cookie.
+    // Bearer API-key requests are exempt (they don't use cookies at all).
+    const rawSession = request.cookies.get("vibehub_session")?.value;
+    if (rawSession && !isCsrfExempt(nextUrl.pathname)) {
+      const submittedToken = request.headers.get("x-csrf-token");
+      const secret = process.env.SESSION_SECRET ?? "dev-session-secret-change-me";
+
+      let valid = false;
+      if (submittedToken) {
+        const expected = await deriveEdgeCsrfToken(rawSession, secret);
+        valid = submittedToken === expected;
+      }
+
+      if (!valid) {
+        return withRequestId(NextResponse.json(
+          {
+            error: {
+              code: "FORBIDDEN",
+              message: "CSRF token missing or invalid",
+            },
+          },
+          { status: 403 }
+        ));
+      }
+    }
+
+    // ── Write rate limit ──────────────────────────────────────────────────
     const ip = getClientIp(request);
     const rl = checkWriteRateLimit(ip);
     if (!rl.ok) {
-      return NextResponse.json(
+      return withRequestId(NextResponse.json(
         {
           error: {
             code: "RATE_LIMITED",
@@ -72,11 +150,17 @@ export function middleware(request: NextRequest) {
           },
         },
         { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
-      );
+      ));
     }
   }
 
-  return NextResponse.next();
+  return withRequestId(
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  );
 }
 
 export const config = {

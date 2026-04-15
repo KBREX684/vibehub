@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { TeamMember, TeamMilestone, TeamTask, TeamTaskStatus } from "@/lib/types";
 import { KanbanSquare, Plus, User, Trash2, ArrowUp, ArrowDown, ChevronDown, Target } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   teamSlug: string;
@@ -60,7 +61,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks`, {
         credentials: "include",
       });
       const json = (await res.json()) as { data?: { tasks?: TeamTask[] }; error?: { message?: string } };
@@ -97,7 +98,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
       if (newMilestoneId) {
         body.milestoneId = newMilestoneId;
       }
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -126,7 +127,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
       // Optimistic Update
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...patch } as TeamTask : t));
 
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(taskId)}`,
         {
           method: "PATCH",
@@ -151,7 +152,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
   async function reorderTask(taskId: string, direction: "up" | "down") {
     setMsg(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(taskId)}/reorder`,
         {
           method: "POST",
@@ -193,7 +194,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
     if (ids.length === 0) return;
     setMsg(null);
     try {
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/batch`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/batch`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -223,7 +224,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
     if (!confirm("Are you sure you want to delete this task?")) return;
     setMsg(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(taskId)}`,
         { method: "DELETE", credentials: "include" }
       );

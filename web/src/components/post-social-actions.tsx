@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Heart, Bookmark, Share2 } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   postSlug: string;
@@ -29,7 +30,7 @@ export function PostSocialActions({
     if (loading) return;
     setLoading("like");
     try {
-      const res = await fetch(`/api/v1/posts/${postSlug}/like`, { method: "POST" });
+      const res = await apiFetch(`/api/v1/posts/${postSlug}/like`, { method: "POST" });
       if (res.ok) {
         const data = await res.json().catch(() => null);
         const toggled = data?.data?.liked ?? !liked;
@@ -47,7 +48,7 @@ export function PostSocialActions({
     if (loading) return;
     setLoading("bookmark");
     try {
-      const res = await fetch(`/api/v1/posts/${postSlug}/bookmark`, { method: "POST" });
+      const res = await apiFetch(`/api/v1/posts/${postSlug}/bookmark`, { method: "POST" });
       if (res.ok) {
         const data = await res.json().catch(() => null);
         const toggled = data?.data?.bookmarked ?? !bookmarked;

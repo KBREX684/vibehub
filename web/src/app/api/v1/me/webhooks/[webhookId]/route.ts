@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { deleteUserWebhook, updateUserWebhook } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 const patchSchema = z.object({
   url: z.string().url().optional(),
@@ -33,7 +34,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     });
     return apiSuccess(updated);
   } catch (e) {
-    if (e instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (e instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: e.flatten() }, 400);
     }
     const msg = e instanceof Error ? e.message : String(e);
@@ -53,7 +56,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     await deleteUserWebhook({ userId: session.userId, webhookId });
     return apiSuccess({ deleted: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = e instanceof Error ? e.message : String(e);
     if (msg === "WEBHOOK_NOT_FOUND") return apiError({ code: "WEBHOOK_NOT_FOUND", message: msg }, 404);
     return apiError({ code: "WEBHOOK_DELETE_FAILED", message: msg }, 500);
   }

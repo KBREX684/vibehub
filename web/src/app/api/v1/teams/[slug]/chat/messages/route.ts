@@ -15,6 +15,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getSessionUserFromCookie, authenticateRequest, resolveReadAuth } from "@/lib/auth";
 import {
   getTeamBySlug,
@@ -81,7 +82,9 @@ export async function GET(req: NextRequest, { params }: Params) {
       retainedSince: chatRetentionCutoff().toISOString(),
     });
   } catch (err) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "CHAT_FETCH_FAILED",
         message: "Failed to fetch chat messages",
@@ -172,7 +175,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     return apiSuccess(msg, 201);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "INVALID_BODY") {
       return apiError({ code: "INVALID_BODY", message: "Message body is empty or too long" }, 400);
     }
@@ -199,7 +204,9 @@ export async function DELETE() {
     const deleted = await pruneOldTeamChatMessages();
     return apiSuccess({ deleted });
   } catch (err) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "PRUNE_FAILED",
         message: "Failed to prune chat messages",

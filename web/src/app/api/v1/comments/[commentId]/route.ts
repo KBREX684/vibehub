@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { updateComment, deleteComment } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getSessionUserFromCookie } from "@/lib/auth";
 
 const patchSchema = z.object({
@@ -28,7 +29,9 @@ export async function PATCH(request: Request, { params }: Params) {
     });
     return apiSuccess(comment);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "COMMENT_NOT_FOUND") {
       return apiError({ code: "COMMENT_NOT_FOUND", message: "Comment not found" }, 404);
     }
@@ -57,7 +60,9 @@ export async function DELETE(_request: Request, { params }: Params) {
     });
     return apiSuccess({ deleted: true });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "COMMENT_NOT_FOUND") {
       return apiError({ code: "COMMENT_NOT_FOUND", message: "Comment not found" }, 404);
     }

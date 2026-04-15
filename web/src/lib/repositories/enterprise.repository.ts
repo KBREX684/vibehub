@@ -4,6 +4,7 @@ import {
   enterpriseProfileSelect,
   enterpriseRowForProfileDto,
 } from "@/lib/enterprise-profile-db";
+import { bumpUserSessionVersion } from "@/lib/session-version";
 import {
   mockAuditLogs,
   mockEnterpriseProfiles,
@@ -299,6 +300,7 @@ export async function reviewEnterpriseVerification(params: {
       metadata: { reviewNote },
       createdAt: now,
     });
+    await bumpUserSessionVersion(params.userId);
     return toEnterpriseProfileDto(row);
   }
 
@@ -337,6 +339,7 @@ export async function reviewEnterpriseVerification(params: {
     });
     return row;
   });
+  await bumpUserSessionVersion(params.userId);
   return toEnterpriseProfileFromUser({
     id: updated.userId,
     email: updated.user.email,

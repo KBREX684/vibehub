@@ -1,5 +1,6 @@
 import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { mockSubscriptions } from "@/lib/data/mock-data";
+import { bumpUserSessionVersion } from "@/lib/session-version";
 import type { UserSubscription } from "@/lib/types";
 
 const useMockData = isMockDataEnabled();
@@ -138,6 +139,7 @@ export async function upsertUserSubscription(params: {
     };
     if (idx >= 0) mockSubscriptions[idx] = row;
     else mockSubscriptions.push(row);
+    void bumpUserSessionVersion(params.userId);
     return {
       ...row,
       tier: row.tier as UserSubscription["tier"],
@@ -168,6 +170,7 @@ export async function upsertUserSubscription(params: {
     update: { ...data, updatedAt: new Date() },
     create: { userId: params.userId, ...data },
   });
+  void bumpUserSessionVersion(params.userId);
   return toSubscriptionDto(row);
 }
 

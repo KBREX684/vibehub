@@ -1,6 +1,7 @@
 import { parsePagination } from "@/lib/pagination";
 import { listPostsForModeration } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import type { ReviewStatus } from "@/lib/types";
 
@@ -32,7 +33,9 @@ export async function GET(request: Request) {
 
     return apiSuccess(result);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "ADMIN_MODERATION_POSTS_FAILED",
         message: "Failed to list moderation posts",

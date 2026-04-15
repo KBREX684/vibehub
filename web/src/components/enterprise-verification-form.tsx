@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, CheckCircle2, Clock3, ShieldAlert } from "lucide-react";
 import type { EnterpriseVerificationStatus } from "@/lib/types";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface EnterpriseVerificationSummary {
   status: EnterpriseVerificationStatus;
@@ -97,7 +98,7 @@ export function EnterpriseVerificationForm({
     setOkMessage(null);
     setSubmitting(true);
     try {
-      const response = await fetch("/api/v1/me/enterprise/verification", {
+      const response = await apiFetch("/api/v1/me/enterprise/verification", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

@@ -3,6 +3,7 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TeamDetail, TeamJoinRequestRow } from "@/lib/types";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   team: TeamDetail;
@@ -24,7 +25,7 @@ export function TeamDetailActions({ team, currentUserId }: Props) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(team.slug)}/join`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(team.slug)}/join`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +49,7 @@ export function TeamDetailActions({ team, currentUserId }: Props) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(team.slug)}/join-requests/${encodeURIComponent(requestId)}/review`,
         {
           method: "POST",
@@ -77,7 +78,7 @@ export function TeamDetailActions({ team, currentUserId }: Props) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(team.slug)}/members/${encodeURIComponent(currentUserId)}`,
         { method: "DELETE", credentials: "include" }
       );
@@ -98,7 +99,7 @@ export function TeamDetailActions({ team, currentUserId }: Props) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/teams/${encodeURIComponent(team.slug)}/members/${encodeURIComponent(userId)}`,
         { method: "DELETE", credentials: "include" }
       );
@@ -120,7 +121,7 @@ export function TeamDetailActions({ team, currentUserId }: Props) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/v1/teams/${encodeURIComponent(team.slug)}/members`, {
+      const res = await apiFetch(`/api/v1/teams/${encodeURIComponent(team.slug)}/members`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

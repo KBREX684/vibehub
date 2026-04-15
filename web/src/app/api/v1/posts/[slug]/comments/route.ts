@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { listCommentsForPost, createComment, getPostIdBySlug } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -13,7 +14,9 @@ export async function GET(_request: NextRequest, { params }: Props) {
     const { items: comments } = await listCommentsForPost(postId);
     return apiSuccess({ comments });
   } catch (err) {
-    return apiError({ code: "COMMENTS_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError({ code: "COMMENTS_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 }
 
@@ -39,7 +42,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     const comment = await createComment({ postId, body: commentBody, authorId: auth.user.userId, parentCommentId });
     return apiSuccess({ comment }, 201);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "PARENT_COMMENT_NOT_FOUND") return apiError({ code: "PARENT_COMMENT_NOT_FOUND", message: "Parent comment not found" }, 404);
     if (msg === "MAX_NESTING_DEPTH_EXCEEDED") return apiError({ code: "MAX_NESTING_DEPTH_EXCEEDED", message: "Maximum reply nesting depth (2) exceeded" }, 400);
     return apiError({ code: "COMMENT_CREATE_FAILED", message: msg }, 500);
