@@ -1,4 +1,5 @@
 import { assertContentSafeText, assertUrlCountAtMost, escapeHtmlAngleBrackets } from "@/lib/content-safety";
+import { assertPublicHttpsUrl } from "@/lib/private-network-url";
 import { incrementContributionCreditField, contributionWeights } from "@/lib/contribution-credit-increment";
 import { dispatchNotificationPush } from "@/lib/push-dispatcher";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
@@ -6024,6 +6025,7 @@ export async function createUserWebhook(params: {
 }): Promise<WebhookEndpointCreated> {
   const url = params.url.trim();
   if (!/^https:\/\//i.test(url)) throw new Error("INVALID_WEBHOOK_URL");
+  assertPublicHttpsUrl(url);
   const rawEvents = params.events.map((e) => e.trim()).filter(Boolean);
   for (const e of rawEvents) {
     if (!isWebhookEventName(e)) throw new Error("INVALID_WEBHOOK_EVENT");
@@ -6077,8 +6079,10 @@ export async function updateUserWebhook(params: {
   events?: string[];
   active?: boolean;
 }): Promise<WebhookEndpointSummary> {
-  if (params.url !== undefined && !/^https:\/\//i.test(params.url.trim())) {
-    throw new Error("INVALID_WEBHOOK_URL");
+  if (params.url !== undefined) {
+    const u = params.url.trim();
+    if (!/^https:\/\//i.test(u)) throw new Error("INVALID_WEBHOOK_URL");
+    assertPublicHttpsUrl(u);
   }
   if (params.events) {
     for (const e of params.events) {

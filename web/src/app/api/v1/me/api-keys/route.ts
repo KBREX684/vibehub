@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createApiKeyForUser, listApiKeysForUser, getUserTier } from "@/lib/repository";
 import { checkApiKeyLimit } from "@/lib/subscription";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const createSchema = z.object({
   label: z.string().min(1).max(80),
@@ -28,6 +29,7 @@ return apiError(
       {
         code: "API_KEYS_LIST_FAILED",
         message: "Failed to list API keys",
+        details: safeServerErrorDetails(error),
       },
       500
     );

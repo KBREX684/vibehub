@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import type { ReviewStatus } from "@/lib/types";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 function parseStatus(value: string | null): ReviewStatus | "all" {
   if (value === "approved" || value === "rejected" || value === "pending") {
@@ -39,6 +40,7 @@ return apiError(
       {
         code: "ADMIN_MODERATION_POSTS_FAILED",
         message: "Failed to list moderation posts",
+        details: safeServerErrorDetails(error),
       },
       500
     );

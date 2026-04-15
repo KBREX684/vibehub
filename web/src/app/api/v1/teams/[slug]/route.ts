@@ -3,6 +3,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getTeamBySlug } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -32,6 +33,7 @@ return apiError(
       {
         code: "TEAM_GET_FAILED",
         message: "Failed to load team",
+        details: safeServerErrorDetails(error),
       },
       500
     );

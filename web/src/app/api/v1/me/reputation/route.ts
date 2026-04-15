@@ -7,6 +7,7 @@ import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { logger, serializeError } from "@/lib/logger";
 import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const emptyBodySchema = z.object({}).strict();
 
@@ -23,7 +24,14 @@ export async function GET() {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
     logger.error({ err: serializeError(error) }, "reputation fetch failed");
-    return apiError({ code: "REPUTATION_FETCH_FAILED", message: "Failed to fetch reputation" }, 500);
+    return apiError(
+      {
+        code: "REPUTATION_FETCH_FAILED",
+        message: "Failed to fetch reputation",
+        details: safeServerErrorDetails(error),
+      },
+      500
+    );
   }
 }
 
@@ -45,6 +53,13 @@ export async function POST(request: NextRequest) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
     logger.error({ err: serializeError(error) }, "reputation refresh failed");
-    return apiError({ code: "REPUTATION_REFRESH_FAILED", message: "Failed to refresh reputation" }, 500);
+    return apiError(
+      {
+        code: "REPUTATION_REFRESH_FAILED",
+        message: "Failed to refresh reputation",
+        details: safeServerErrorDetails(error),
+      },
+      500
+    );
   }
 }

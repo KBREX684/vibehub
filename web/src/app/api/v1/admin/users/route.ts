@@ -3,6 +3,7 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   const auth = await requireAdminSession();
@@ -23,6 +24,7 @@ return apiError(
       {
         code: "ADMIN_USERS_LIST_FAILED",
         message: "Failed to list users",
+        details: safeServerErrorDetails(error),
       },
       500
     );

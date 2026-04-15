@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import type { NextRequest } from "next/server";
+import { getClientIp } from "@/lib/ip-rate-limit";
 
 const WINDOW_MS = 60_000;
 
@@ -15,18 +16,18 @@ function redisUrl(): string | undefined {
 }
 
 export function clientIp(request: NextRequest): string {
-  const xff = request.headers.get("x-forwarded-for");
-  if (xff) {
-    const first = xff.split(",")[0]?.trim();
-    if (first) {
-      return first;
+  if (process.env.TRUST_IP_HEADERS === "true") {
+    const xff = request.headers.get("x-forwarded-for");
+    if (xff) {
+      const first = xff.split(",")[0]?.trim();
+      if (first) return first;
     }
+    const realIp = request.headers.get("x-real-ip")?.trim();
+    if (realIp) return realIp;
+    const cf = request.headers.get("cf-connecting-ip")?.trim();
+    if (cf) return cf;
   }
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  if (realIp) {
-    return realIp;
-  }
-  return request.headers.get("cf-connecting-ip")?.trim() || "unknown";
+  return getClientIp(request);
 }
 
 export function rateLimitKeyForToken(token: string, request: NextRequest): string {

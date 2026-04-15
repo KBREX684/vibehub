@@ -5,6 +5,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import type { ChallengeStatus } from "@/lib/types";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const CHALLENGE_STATUSES: readonly ChallengeStatus[] = ["draft", "active", "closed"];
 
@@ -36,8 +37,12 @@ export async function GET(request: Request) {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
-      { code: "CHALLENGES_LIST_FAILED", message: "Failed to list challenges" },
+    return apiError(
+      {
+        code: "CHALLENGES_LIST_FAILED",
+        message: "Failed to list challenges",
+        details: safeServerErrorDetails(error),
+      },
       500
     );
   }
@@ -62,7 +67,11 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid challenge payload", details: error.flatten() }, 400);
     }
     return apiError(
-      { code: "CHALLENGE_CREATE_FAILED", message: "Failed to create challenge" },
+      {
+        code: "CHALLENGE_CREATE_FAILED",
+        message: "Failed to create challenge",
+        details: safeServerErrorDetails(error),
+      },
       500
     );
   }

@@ -24,6 +24,7 @@ import {
   pruneOldTeamChatMessages,
   chatRetentionCutoff,
 } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -88,7 +89,7 @@ return apiError(
       {
         code: "CHAT_FETCH_FAILED",
         message: "Failed to fetch chat messages",
-        details: err instanceof Error ? err.message : String(err),
+        details: safeServerErrorDetails(err),
       },
       500
     );
@@ -210,7 +211,7 @@ return apiError(
       {
         code: "PRUNE_FAILED",
         message: "Failed to prune chat messages",
-        details: err instanceof Error ? err.message : String(err),
+        details: safeServerErrorDetails(err),
       },
       500
     );

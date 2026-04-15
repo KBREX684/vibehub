@@ -4,6 +4,7 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const createCommentSchema = z.object({
   postId: z.string().min(1),
@@ -28,6 +29,7 @@ return apiError(
       {
         code: "COMMENTS_LIST_FAILED",
         message: "Failed to list comments",
+        details: safeServerErrorDetails(error),
       },
       500
     );

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getClientIp } from "@/lib/ip-rate-limit";
 import { decodeSessionEdge } from "@/lib/session-edge";
+import { resolveSessionSigningSecret } from "@/lib/session-secret-resolver";
 
 // ─── Admin route guard ────────────────────────────────────────────────────────
 // Decode HMAC session at the edge (Web Crypto) and require role === "admin".
@@ -39,7 +41,6 @@ async function deriveEdgeCsrfToken(rawSession: string, secret: string): Promise<
     ["sign"]
   );
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`csrf:${rawSession}`));
-  // base64url-encode then take first 32 chars — same as auth.ts deriveCsrfToken
   const b64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
@@ -54,14 +55,6 @@ const DEFAULT_MAX_GETS_PER_MINUTE = 300;
 const DEFAULT_MAX_SEARCH_GETS_PER_MINUTE = 60;
 
 const ipBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
 
 function maxWritesPerMinute(): number {
   const raw = process.env.WRITE_RATE_LIMIT_PER_MINUTE?.trim();
@@ -143,16 +136,18 @@ export async function middleware(request: NextRequest) {
       const readBucketKey = `${ip}:read:${isSearchPath ? "search" : "default"}`;
       const rlRead = checkIpRateLimit(readBucketKey, readMax);
       if (!rlRead.ok) {
-        return withRequestId(NextResponse.json(
-          {
-            error: {
-              code: "RATE_LIMITED",
-              message: "Too many read requests. Please try again later.",
-              details: { retryAfterSeconds: rlRead.retryAfterSeconds },
+        return withRequestId(
+          NextResponse.json(
+            {
+              error: {
+                code: "RATE_LIMITED",
+                message: "Too many read requests. Please try again later.",
+                details: { retryAfterSeconds: rlRead.retryAfterSeconds },
+              },
             },
-          },
-          { status: 429, headers: { "Retry-After": String(rlRead.retryAfterSeconds) } }
-        ));
+            { status: 429, headers: { "Retry-After": String(rlRead.retryAfterSeconds) } }
+          )
+        );
       }
     }
 
@@ -185,7 +180,7 @@ export async function middleware(request: NextRequest) {
     const rawSession = request.cookies.get("vibehub_session")?.value;
     if (rawSession && !isCsrfExempt(nextUrl.pathname)) {
       const submittedToken = request.headers.get("x-csrf-token");
-      const secret = process.env.SESSION_SECRET ?? "dev-session-secret-change-me";
+      const secret = resolveSessionSigningSecret() ?? "dev-session-secret-change-me";
 
       let valid = false;
       if (submittedToken) {
@@ -194,31 +189,35 @@ export async function middleware(request: NextRequest) {
       }
 
       if (!valid) {
-        return withRequestId(NextResponse.json(
-          {
-            error: {
-              code: "FORBIDDEN",
-              message: "CSRF token missing or invalid",
+        return withRequestId(
+          NextResponse.json(
+            {
+              error: {
+                code: "FORBIDDEN",
+                message: "CSRF token missing or invalid",
+              },
             },
-          },
-          { status: 403 }
-        ));
+            { status: 403 }
+          )
+        );
       }
     }
 
     // ── Write rate limit ──────────────────────────────────────────────────
     const rl = checkIpRateLimit(`${ip}:write`, maxWritesPerMinute());
     if (!rl.ok) {
-      return withRequestId(NextResponse.json(
-        {
-          error: {
-            code: "RATE_LIMITED",
-            message: "Too many write requests. Please try again later.",
-            details: { retryAfterSeconds: rl.retryAfterSeconds },
+      return withRequestId(
+        NextResponse.json(
+          {
+            error: {
+              code: "RATE_LIMITED",
+              message: "Too many write requests. Please try again later.",
+              details: { retryAfterSeconds: rl.retryAfterSeconds },
+            },
           },
-        },
-        { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
-      ));
+          { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+        )
+      );
     }
   }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
 
 function getGitHubOAuthConfig() {
   const clientId = process.env.GITHUB_CLIENT_ID;
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const redirect = url.searchParams.get("redirect") || "/";
+  const redirect = sanitizeSameOriginRedirectPath(url.searchParams.get("redirect"));
   const state = randomBytes(16).toString("hex");
 
   const callbackUrl = `${baseUrl}/api/v1/auth/github/callback`;
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     secure: process.env.NODE_ENV === "production",
     maxAge: 600,
   });
-  response.cookies.set("github_oauth_redirect", redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/", {
+  response.cookies.set("github_oauth_redirect", redirect, {
     httpOnly: true,
     path: "/",
     sameSite: "lax",

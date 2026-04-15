@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import { isDevDemoAuth } from "@/lib/dev-demo";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listCollaborationIntentsForModeration } from "@/lib/repository";
 import { AdminCollaborationReviewActions } from "@/components/admin-collaboration-review-actions";
@@ -17,13 +18,23 @@ export default async function AdminCollaborationQueuePage() {
           <p className="text-sm text-[var(--color-text-secondary)] mb-6">
             Login with administrator privileges to review collaboration intents.
           </p>
-          <a
-            href="/api/v1/auth/demo-login?role=admin&redirect=/admin/collaboration"
-            className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
-          >
-            Demo Login as Admin
-            <ArrowRight className="w-4 h-4" />
-          </a>
+          {isDevDemoAuth() ? (
+            <a
+              href="/api/v1/auth/demo-login?role=admin&redirect=/admin/collaboration"
+              className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
+            >
+              Demo Login as Admin
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          ) : (
+            <Link
+              href="/login?required=admin&redirect=%2Fadmin%2Fcollaboration"
+              className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
+            >
+              Sign in as Admin
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
       </main>
     );

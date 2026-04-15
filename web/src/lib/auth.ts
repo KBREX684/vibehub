@@ -6,6 +6,7 @@ import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
+import { resolveSessionSigningSecret } from "@/lib/session-secret-resolver";
 import { verifySessionVersionMatches } from "@/lib/session-version";
 import type { EnterpriseVerificationStatus, Role, SessionUser, SubscriptionTier } from "@/lib/types";
 
@@ -27,16 +28,7 @@ function isSubscriptionTier(v: unknown): v is SubscriptionTier {
 }
 
 function getSessionSecret(): string | null {
-  const fromEnv = process.env.SESSION_SECRET?.trim();
-  if (fromEnv) {
-    return fromEnv;
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    return "dev-session-secret-change-me";
-  }
-
-  return null;
+  return resolveSessionSigningSecret();
 }
 
 function signPayload(payloadBase64: string): string | null {
@@ -60,7 +52,7 @@ export function encodeSession(session: SessionUser): string {
   const signature = signPayload(payloadBase64);
 
   if (!signature) {
-    throw new Error("SESSION_SECRET is required in production");
+    throw new Error("SESSION_SECRET is required (set in production or whenever DATABASE_URL is configured)");
   }
 
   return `${payloadBase64}.${signature}`;

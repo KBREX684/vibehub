@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isDevDemoAuth } from "@/lib/dev-demo";
 import type { TeamDetail, TeamJoinRequestRow } from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
 
@@ -144,12 +146,18 @@ export function TeamDetailActions({ team, currentUserId }: Props) {
   if (!currentUserId) {
     return (
       <p className="muted small">
-        <a
-          href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${team.slug}`)}`}
-          className="inline-link"
-        >
-          Demo 登录
-        </a>
+        {isDevDemoAuth() ? (
+          <a
+            href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${team.slug}`)}`}
+            className="inline-link"
+          >
+            Demo 登录
+          </a>
+        ) : (
+          <Link href={`/login?redirect=${encodeURIComponent(`/teams/${team.slug}`)}`} className="inline-link">
+            登录
+          </Link>
+        )}
         后可提交入队申请；队长可审批申请或按邮箱直接邀请。
       </p>
     );

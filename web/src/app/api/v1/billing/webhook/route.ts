@@ -24,15 +24,21 @@ function tierFromPriceId(priceId: string | null | undefined): SubscriptionTier {
 /**
  * M-2: Stripe webhook handler.
  * Handles subscription lifecycle events to keep UserSubscription in sync.
- * Set STRIPE_WEBHOOK_SECRET in env (from Stripe dashboard → webhook endpoint).
+ * STRIPE_WEBHOOK_SECRET is required (Stripe Dashboard → webhook endpoint signing secret).
+ * Unsigned or unverified payloads are never accepted.
  */
 export async function POST(request: NextRequest) {
   const requestLogger = getRequestLogger(request, { route: "/api/v1/billing/webhook" });
   const secretKey = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
 
   if (!secretKey) {
     return new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 503 });
+  }
+
+  if (!webhookSecret) {
+    requestLogger.error({}, "STRIPE_WEBHOOK_SECRET is not configured; refusing webhook");
+    return new Response(JSON.stringify({ error: "Stripe webhook signing secret not configured" }), { status: 503 });
   }
 
   const rawBody = await request.text();
@@ -43,9 +49,7 @@ export async function POST(request: NextRequest) {
   try {
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(secretKey, { apiVersion: "2026-03-25.dahlia" });
-    const raw = webhookSecret
-      ? stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
-      : JSON.parse(rawBody);
+    const raw = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
     const parsed = stripeWebhookEventSchema.safeParse(raw);
     if (!parsed.success) {
       requestLogger.warn({ issues: parsed.error.flatten() }, "Stripe webhook payload invalid");

@@ -4,6 +4,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { deleteUserWebhook, updateUserWebhook } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const patchSchema = z.object({
   url: z.string().url().optional(),
@@ -44,7 +45,16 @@ if (e instanceof z.ZodError) {
     if (msg === "INVALID_WEBHOOK_URL" || msg === "INVALID_WEBHOOK_EVENT") {
       return apiError({ code: msg === "INVALID_WEBHOOK_URL" ? "INVALID_WEBHOOK_URL" : "INVALID_WEBHOOK_EVENT", message: msg }, 400);
     }
-    return apiError({ code: "WEBHOOK_UPDATE_FAILED", message: msg }, 500);
+    if (msg === "WEBHOOK_URL_BLOCKED") {
+      return apiError(
+        { code: "WEBHOOK_URL_BLOCKED", message: "Webhook URL must be a public HTTPS endpoint (private IPs and localhost are not allowed)." },
+        400
+      );
+    }
+    return apiError(
+      { code: "WEBHOOK_UPDATE_FAILED", message: "Failed to update webhook", details: safeServerErrorDetails(e) },
+      500
+    );
   }
 }
 
@@ -60,6 +70,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = e instanceof Error ? e.message : String(e);
     if (msg === "WEBHOOK_NOT_FOUND") return apiError({ code: "WEBHOOK_NOT_FOUND", message: msg }, 404);
-    return apiError({ code: "WEBHOOK_DELETE_FAILED", message: msg }, 500);
+    return apiError(
+      { code: "WEBHOOK_DELETE_FAILED", message: "Failed to delete webhook", details: safeServerErrorDetails(e) },
+      500
+    );
   }
 }

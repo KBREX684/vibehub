@@ -22,6 +22,7 @@ import {
   commentRetentionCutoff,
   chatRetentionCutoff,
 } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const cleanupBodySchema = z.object({}).strict();
 
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
       {
         code: "CLEANUP_FAILED",
         message: "Cleanup failed",
+        details: safeServerErrorDetails(err),
       },
       500
     );

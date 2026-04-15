@@ -3,6 +3,7 @@ import { listReportTickets } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 function parseStatus(value: string | null): "open" | "closed" | "all" {
   if (value === "open" || value === "closed") {
@@ -30,6 +31,7 @@ return apiError(
       {
         code: "ADMIN_REPORTS_LIST_FAILED",
         message: "Failed to list report tickets",
+        details: safeServerErrorDetails(error),
       },
       500
     );

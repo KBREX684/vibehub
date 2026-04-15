@@ -7,6 +7,7 @@ import {
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 import type { EnterpriseVerificationStatus } from "@/lib/types";
 
 const ALLOWED_STATUS = new Set<EnterpriseVerificationStatus | "all">([
@@ -59,6 +60,7 @@ return apiError(
       {
         code: "ADMIN_ENTERPRISE_VERIFICATIONS_LIST_FAILED",
         message: "Failed to list enterprise verification applications",
+        details: safeServerErrorDetails(error),
       },
       500
     );

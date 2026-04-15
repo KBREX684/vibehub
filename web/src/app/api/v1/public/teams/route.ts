@@ -2,6 +2,7 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { listTeams } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   try {
@@ -16,6 +17,7 @@ return apiError(
       {
         code: "PUBLIC_TEAMS_LIST_FAILED",
         message: "Failed to list teams",
+        details: safeServerErrorDetails(error),
       },
       500
     );

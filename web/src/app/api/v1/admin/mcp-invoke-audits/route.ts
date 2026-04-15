@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { listMcpInvokeAudits } from "@/lib/repository";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   const auth = await requireAdminSession();
@@ -30,6 +31,7 @@ return apiError(
       {
         code: "ADMIN_MCP_AUDITS_FAILED",
         message: "Failed to list MCP invoke audits",
+        details: safeServerErrorDetails(error),
       },
       500
     );

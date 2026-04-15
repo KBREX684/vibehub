@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { escapeHtmlForEmbed } from "@/lib/content-safety";
 import { getProjectBySlug, getGitHubRepoStats } from "@/lib/repository";
 import { NextResponse } from "next/server";
 
@@ -32,6 +33,10 @@ export async function GET(request: NextRequest) {
   const githubStats = project.repoUrl ? await getGitHubRepoStats(project.repoUrl).catch(() => null) : null;
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://vibehub.dev";
+  const escSlug = escapeHtmlForEmbed(project.slug);
+  const escTitle = escapeHtmlForEmbed(project.title);
+  const escOneLiner = escapeHtmlForEmbed(project.oneLiner);
+  const projectUrl = `${baseUrl}/projects/${project.slug}`;
 
   const response = {
     // Standard oEmbed fields
@@ -40,7 +45,7 @@ export async function GET(request: NextRequest) {
     title: project.title,
     provider_name: "VibeHub",
     provider_url: baseUrl,
-    url: `${baseUrl}/projects/${project.slug}`,
+    url: projectUrl,
     // Extended VibeHub metadata (A-3)
     description: project.oneLiner,
     status: project.status,
@@ -64,7 +69,7 @@ export async function GET(request: NextRequest) {
         }
       : null,
     // HTML embed snippet for blog/forum embeds
-    html: `<blockquote class="vibehub-embed" data-slug="${project.slug}"><a href="${baseUrl}/projects/${project.slug}" target="_blank"><strong>${project.title}</strong> — ${project.oneLiner}</a></blockquote>`,
+    html: `<blockquote class="vibehub-embed" data-slug="${escSlug}"><a href="${escapeHtmlForEmbed(projectUrl)}" target="_blank" rel="noopener noreferrer"><strong>${escTitle}</strong> — ${escOneLiner}</a></blockquote>`,
   };
 
   return NextResponse.json(response, {

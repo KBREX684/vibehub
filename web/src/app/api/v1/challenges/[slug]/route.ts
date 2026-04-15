@@ -3,6 +3,7 @@ import { getChallengeBySlug, updateChallenge, deleteChallenge } from "@/lib/repo
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const patchSchema = z.object({
   title: z.string().min(3).max(120).optional(),
@@ -29,8 +30,12 @@ export async function GET(_request: Request, { params }: Params) {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
-      { code: "CHALLENGE_GET_FAILED", message: "Failed to get challenge" },
+    return apiError(
+      {
+        code: "CHALLENGE_GET_FAILED",
+        message: "Failed to get challenge",
+        details: safeServerErrorDetails(error),
+      },
       500
     );
   }

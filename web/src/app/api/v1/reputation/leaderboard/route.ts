@@ -1,6 +1,7 @@
 import { listContributionLeaderboard } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   try {
@@ -11,8 +12,12 @@ export async function GET(request: Request) {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
-      { code: "REPUTATION_LEADERBOARD_FAILED", message: "Failed to fetch leaderboard" },
+    return apiError(
+      {
+        code: "REPUTATION_LEADERBOARD_FAILED",
+        message: "Failed to fetch leaderboard",
+        details: safeServerErrorDetails(error),
+      },
       500
     );
   }

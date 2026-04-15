@@ -11,6 +11,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createTeam, listTeams, getUserTier, countUserTeams } from "@/lib/repository";
 import { checkQuota } from "@/lib/quota";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const createTeamSchema = z.object({
   name: z.string().min(2).max(80),
@@ -40,6 +41,7 @@ return apiError(
       {
         code: "TEAMS_LIST_FAILED",
         message: "Failed to list teams",
+        details: safeServerErrorDetails(error),
       },
       500
     );

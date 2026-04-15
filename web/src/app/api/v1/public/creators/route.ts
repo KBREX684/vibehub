@@ -2,6 +2,7 @@ import { listCreators } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 export async function GET(request: Request) {
   try {
@@ -18,6 +19,7 @@ return apiError(
       {
         code: "PUBLIC_CREATORS_LIST_FAILED",
         message: "Failed to list creators",
+        details: safeServerErrorDetails(error),
       },
       500
     );

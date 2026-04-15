@@ -3,6 +3,7 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import type { ProjectStatus } from "@/lib/types";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
 
@@ -44,6 +45,7 @@ return apiError(
       {
         code: "PUBLIC_PROJECTS_LIST_FAILED",
         message: "Failed to list projects",
+        details: safeServerErrorDetails(error),
       },
       500
     );

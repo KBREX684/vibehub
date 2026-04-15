@@ -3,6 +3,8 @@
  * no Node crypto. Used for admin route role checks (P0-BE-3).
  */
 
+import { resolveSessionSigningSecret } from "@/lib/session-secret-resolver";
+
 export interface EdgeSessionPayload {
   userId: string;
   role: string;
@@ -12,12 +14,7 @@ export interface EdgeSessionPayload {
 }
 
 function getSessionSecret(): string | null {
-  const fromEnv = process.env.SESSION_SECRET?.trim();
-  if (fromEnv) return fromEnv;
-  if (process.env.NODE_ENV !== "production") {
-    return "dev-session-secret-change-me";
-  }
-  return null;
+  return resolveSessionSigningSecret();
 }
 
 async function signPayloadBase64(payloadBase64: string, secret: string): Promise<string> {

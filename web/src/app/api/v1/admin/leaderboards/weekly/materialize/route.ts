@@ -11,6 +11,7 @@ import type { WeeklyLeaderboardKind } from "@/lib/types";
 import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const KINDS: WeeklyLeaderboardKind[] = [
   "discussions_by_weekly_comment_count",
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
       {
         code: "MATERIALIZE_FAILED",
         message: "Failed to materialize weekly leaderboard",
+        details: safeServerErrorDetails(error),
       },
       500
     );
