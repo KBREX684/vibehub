@@ -34,20 +34,41 @@ export function rateLimitKeyForToken(token: string, request: NextRequest): strin
   return `${tokenHash}:${clientIp(request)}`;
 }
 
+export type ApiKeyRateLimitScopeTier = "read_public" | "write";
+
 function maxPerWindow(): number {
   const raw = process.env.API_KEY_RATE_LIMIT_PER_MINUTE?.trim();
   const n = raw ? Number.parseInt(raw, 10) : 120;
   return Number.isFinite(n) && n > 0 ? n : 120;
 }
 
-function checkMemory(token: string, request: NextRequest): { ok: true } | { ok: false; retryAfter: number } {
+function maxPerWindowByScope(scopeTier?: ApiKeyRateLimitScopeTier): number {
+  if (scopeTier === "read_public") {
+    const raw = process.env.API_KEY_RATE_LIMIT_PER_MINUTE_READ_PUBLIC?.trim();
+    const n = raw ? Number.parseInt(raw, 10) : 240;
+    return Number.isFinite(n) && n > 0 ? n : 240;
+  }
+  if (scopeTier === "write") {
+    const raw = process.env.API_KEY_RATE_LIMIT_PER_MINUTE_WRITE?.trim();
+    const n = raw ? Number.parseInt(raw, 10) : 90;
+    return Number.isFinite(n) && n > 0 ? n : 90;
+  }
+  return maxPerWindow();
+}
+
+function checkMemoryWithScope(
+  token: string,
+  request: NextRequest,
+  scopeTier?: ApiKeyRateLimitScopeTier
+): { ok: true } | { ok: false; retryAfter: number } {
   const key = rateLimitKeyForToken(token, request);
+  const bucketKey = scopeTier ? `${key}:scope:${scopeTier}` : key;
   const now = Date.now();
-  const max = maxPerWindow();
-  let b = memoryBuckets.get(key);
+  const max = maxPerWindowByScope(scopeTier);
+  let b = memoryBuckets.get(bucketKey);
   if (!b || now - b.windowStart >= WINDOW_MS) {
     b = { count: 0, windowStart: now };
-    memoryBuckets.set(key, b);
+    memoryBuckets.set(bucketKey, b);
   }
   b.count += 1;
   if (b.count > max) {
@@ -67,9 +88,10 @@ function checkMemory(token: string, request: NextRequest): { ok: true } | { ok: 
 /** Synchronous in-process limiter (default when no Redis; used by Vitest). */
 export function checkApiKeyRateLimitMemory(
   token: string,
-  request: NextRequest
+  request: NextRequest,
+  scopeTier?: ApiKeyRateLimitScopeTier
 ): { ok: true } | { ok: false; retryAfter: number } {
-  return checkMemory(token, request);
+  return checkMemoryWithScope(token, request, scopeTier);
 }
 
 async function getRedis(): Promise<import("ioredis").default | null> {
@@ -107,9 +129,10 @@ return c
  */
 export async function checkApiKeyRateLimitAsync(
   token: string,
-  request: NextRequest
+  request: NextRequest,
+  scopeTier?: ApiKeyRateLimitScopeTier
 ): Promise<{ ok: true } | { ok: false; retryAfter: number }> {
-  const max = maxPerWindow();
+  const max = maxPerWindowByScope(scopeTier);
   const redis = await getRedis();
   const now = Date.now();
 
@@ -117,7 +140,8 @@ export async function checkApiKeyRateLimitAsync(
     try {
       const keyBase = rateLimitKeyForToken(token, request);
       const windowId = Math.floor(now / WINDOW_MS);
-      const redisKey = `ratelimit:apikey:${keyBase}:${windowId}`;
+      const scopeTag = scopeTier ? `:${scopeTier}` : "";
+      const redisKey = `ratelimit:apikey${scopeTag}:${keyBase}:${windowId}`;
       const count = (await redis.eval(LUA_INCR_WINDOW, 1, redisKey, String(WINDOW_MS))) as number;
       if (count > max) {
         const pttl = await redis.pttl(redisKey);
@@ -130,5 +154,5 @@ export async function checkApiKeyRateLimitAsync(
     }
   }
 
-  return checkMemory(token, request);
+  return checkMemoryWithScope(token, request, scopeTier);
 }

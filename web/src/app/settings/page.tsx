@@ -16,6 +16,12 @@ const LINKS = [
     icon: Key,
   },
   {
+    href: "/settings/profile",
+    title: "Profile",
+    description: "Edit creator profile, links, and collaboration preferences.",
+    icon: Settings2,
+  },
+  {
     href: "/enterprise/verify",
     title: "Enterprise workspace",
     description: "Apply for observer workspace access (optional).",
@@ -43,7 +49,7 @@ export default async function SettingsIndexPage() {
       {!session && (
         <div className="card p-5 border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
           <p className="text-sm text-[var(--color-text-secondary)] m-0">
-            Sign in to change subscription and API keys. You can still browse public links below.
+            Sign in to change profile, subscription, and API keys. You can still browse public links below.
           </p>
         </div>
       )}

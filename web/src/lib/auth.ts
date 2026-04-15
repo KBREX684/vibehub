@@ -184,6 +184,15 @@ export type AuthResult =
   | { kind: "unauthorized" }
   | { kind: "rate_limited"; retryAfterSeconds: number };
 
+function rateLimitScopeTierForRequiredScope(
+  requiredScope?: ApiKeyScope
+): "read_public" | "write" | undefined {
+  if (!requiredScope) return undefined;
+  if (requiredScope.startsWith("write:")) return "write";
+  if (requiredScope === "read:public") return "read_public";
+  return undefined;
+}
+
 /**
  * After `authenticateRequest`: map to optional user for read routes.
  * - `allowAnonymous`: missing auth yields `user: null` (public read).
@@ -266,7 +275,11 @@ export async function authenticateRequest(
     return { kind: "unauthorized" };
   }
 
-  const rl = await checkApiKeyRateLimitAsync(token, request);
+  const rl = await checkApiKeyRateLimitAsync(
+    token,
+    request,
+    rateLimitScopeTierForRequiredScope(requiredScope)
+  );
   if (!rl.ok) {
     return { kind: "rate_limited", retryAfterSeconds: rl.retryAfter };
   }

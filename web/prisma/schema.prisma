@@ -151,6 +151,17 @@ enum EnterpriseRole {
   admin
 }
 
+enum EnterpriseMemberInviteStatus {
+  pending
+  accepted
+  revoked
+}
+
+enum ReportTicketStatus {
+  open
+  closed
+}
+
 /// P2-3: B2B verification profile (one per user). Source of truth for enterprise fields.
 model EnterpriseProfile {
   id             String                       @id @default(cuid())
@@ -181,7 +192,7 @@ model EnterpriseMemberInvite {
   enterpriseProfileId String
   inviteeEmail        String
   role                EnterpriseRole     @default(member)
-  status              String             @default("pending")
+  status              EnterpriseMemberInviteStatus @default(pending)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   enterpriseProfile   EnterpriseProfile  @relation(fields: [enterpriseProfileId], references: [id], onDelete: Cascade)
@@ -274,6 +285,12 @@ model CreatorProfile {
   headline                String
   bio                     String
   skills                  String[]
+  /// P2-3: editable profile center fields
+  avatarUrl               String?
+  websiteUrl              String?
+  githubUrl               String?
+  twitterUrl              String?
+  linkedinUrl             String?
   /// P2-1: full-text search (english)
   searchVector            Unsupported("tsvector")?
   collaborationPreference String    @default("open")
@@ -401,7 +418,7 @@ model ReportTicket {
   postId     String?
   reporterId String
   reason     String
-  status     String   @default("open")
+  status     ReportTicketStatus   @default(open)
   createdAt  DateTime @default(now())
   resolvedAt DateTime?
   resolvedBy String?

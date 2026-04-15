@@ -152,6 +152,10 @@ export const mockCreators: CreatorProfile[] = [
     headline: "Agent-native full-stack builder",
     bio: "Focusing on AI-native workflows, productized side projects, and rapid MVP delivery.",
     skills: ["Next.js", "Prisma", "Prompt Engineering", "Product Strategy"],
+    avatarUrl: "https://avatars.githubusercontent.com/u/1001",
+    websiteUrl: "https://vibehub.dev",
+    githubUrl: "https://github.com/alice-ai",
+    twitterUrl: "https://x.com/alice_ai",
     collaborationPreference: "open",
   },
   {
@@ -161,6 +165,9 @@ export const mockCreators: CreatorProfile[] = [
     headline: "Solo founder and growth engineer",
     bio: "Building creator tools and operational automation for one-person companies.",
     skills: ["Growth", "Node.js", "Data Analytics"],
+    avatarUrl: "https://avatars.githubusercontent.com/u/1002",
+    githubUrl: "https://github.com/bob-solo",
+    linkedinUrl: "https://www.linkedin.com/in/bob-solo",
     collaborationPreference: "invite_only",
   },
 ];

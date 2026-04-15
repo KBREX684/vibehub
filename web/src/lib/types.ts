@@ -44,6 +44,11 @@ export interface CreatorProfile {
   headline: string;
   bio: string;
   skills: string[];
+  avatarUrl?: string;
+  websiteUrl?: string;
+  githubUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
   collaborationPreference: "open" | "invite_only" | "closed";
 }
 
@@ -203,7 +208,7 @@ export interface ReportTicket {
   targetId: string;
   reporterId: string;
   reason: string;
-  status: "open" | "resolved";
+  status: "open" | "closed";
   createdAt: string;
   resolvedAt?: string;
   resolvedBy?: string;

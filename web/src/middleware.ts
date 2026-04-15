@@ -47,9 +47,11 @@ async function deriveEdgeCsrfToken(rawSession: string, secret: string): Promise<
   return b64.slice(0, 32);
 }
 
-// ─── Write rate limit ─────────────────────────────────────────────────────────
-const WRITE_WINDOW_MS = 60_000;
-const MAX_WRITES_PER_MINUTE = 30;
+// ─── API rate limit ───────────────────────────────────────────────────────────
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const DEFAULT_MAX_WRITES_PER_MINUTE = 30;
+const DEFAULT_MAX_GETS_PER_MINUTE = 300;
+const DEFAULT_MAX_SEARCH_GETS_PER_MINUTE = 60;
 
 const ipBuckets = new Map<string, { count: number; resetAt: number }>();
 
@@ -61,17 +63,38 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
-function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfterSeconds: number } {
+function maxWritesPerMinute(): number {
+  const raw = process.env.WRITE_RATE_LIMIT_PER_MINUTE?.trim();
+  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_MAX_WRITES_PER_MINUTE;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_WRITES_PER_MINUTE;
+}
+
+function maxGetsPerMinute(): number {
+  const raw = process.env.GET_RATE_LIMIT_PER_MINUTE?.trim();
+  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_MAX_GETS_PER_MINUTE;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_GETS_PER_MINUTE;
+}
+
+function maxSearchGetsPerMinute(): number {
+  const raw = process.env.SEARCH_RATE_LIMIT_PER_MINUTE?.trim();
+  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_MAX_SEARCH_GETS_PER_MINUTE;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_SEARCH_GETS_PER_MINUTE;
+}
+
+function checkIpRateLimit(
+  bucketKey: string,
+  maxRequestsPerMinute: number
+): { ok: true } | { ok: false; retryAfterSeconds: number } {
   const now = Date.now();
-  const existing = ipBuckets.get(ip);
+  const existing = ipBuckets.get(bucketKey);
 
   if (!existing || existing.resetAt <= now) {
-    ipBuckets.set(ip, { count: 1, resetAt: now + WRITE_WINDOW_MS });
+    ipBuckets.set(bucketKey, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
     return { ok: true };
   }
 
   existing.count++;
-  if (existing.count > MAX_WRITES_PER_MINUTE) {
+  if (existing.count > maxRequestsPerMinute) {
     const retryAfterSeconds = Math.ceil((existing.resetAt - now) / 1000);
     return { ok: false, retryAfterSeconds };
   }
@@ -106,10 +129,56 @@ export async function middleware(request: NextRequest) {
   }
 
   const isApi = nextUrl.pathname.startsWith("/api/");
+  const isReadMethod = method === "GET";
   const isWriteMethod =
     method === "POST" || method === "PATCH" || method === "PUT" || method === "DELETE";
 
-  if (isApi && isWriteMethod) {
+  if (isApi && (isWriteMethod || isReadMethod)) {
+    const ip = getClientIp(request);
+
+    // ── Read rate limit ───────────────────────────────────────────────────
+    if (isReadMethod) {
+      const isSearchPath = nextUrl.pathname.startsWith("/api/v1/search");
+      const readMax = isSearchPath ? maxSearchGetsPerMinute() : maxGetsPerMinute();
+      const readBucketKey = `${ip}:read:${isSearchPath ? "search" : "default"}`;
+      const rlRead = checkIpRateLimit(readBucketKey, readMax);
+      if (!rlRead.ok) {
+        return withRequestId(NextResponse.json(
+          {
+            error: {
+              code: "RATE_LIMITED",
+              message: "Too many read requests. Please try again later.",
+              details: { retryAfterSeconds: rlRead.retryAfterSeconds },
+            },
+          },
+          { status: 429, headers: { "Retry-After": String(rlRead.retryAfterSeconds) } }
+        ));
+      }
+    }
+
+    if (!isWriteMethod) {
+      return withRequestId(
+        NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        })
+      );
+    }
+
+    // Stripe webhook relies on signed payload verification and should not be
+    // blocked by IP write rate limiting.
+    const isWebhookPath = nextUrl.pathname.startsWith("/api/v1/billing/webhook");
+    if (isWebhookPath) {
+      return withRequestId(
+        NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        })
+      );
+    }
+
     // ── CSRF double-submit check ──────────────────────────────────────────
     // Only applies when the request is authenticated via session cookie.
     // Bearer API-key requests are exempt (they don't use cookies at all).
@@ -138,8 +207,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // ── Write rate limit ──────────────────────────────────────────────────
-    const ip = getClientIp(request);
-    const rl = checkWriteRateLimit(ip);
+    const rl = checkIpRateLimit(`${ip}:write`, maxWritesPerMinute());
     if (!rl.ok) {
       return withRequestId(NextResponse.json(
         {

@@ -290,6 +290,11 @@ function toCreatorDto(creator: {
   headline: string;
   bio: string;
   skills: string[];
+  avatarUrl?: string | null;
+  websiteUrl?: string | null;
+  githubUrl?: string | null;
+  twitterUrl?: string | null;
+  linkedinUrl?: string | null;
   collaborationPreference: string;
 }): CreatorProfile {
   const allowedPreference: CreatorProfile["collaborationPreference"] =
@@ -304,6 +309,11 @@ function toCreatorDto(creator: {
     headline: creator.headline,
     bio: creator.bio,
     skills: creator.skills,
+    avatarUrl: creator.avatarUrl ?? undefined,
+    websiteUrl: creator.websiteUrl ?? undefined,
+    githubUrl: creator.githubUrl ?? undefined,
+    twitterUrl: creator.twitterUrl ?? undefined,
+    linkedinUrl: creator.linkedinUrl ?? undefined,
     collaborationPreference: allowedPreference,
   };
 }
@@ -465,7 +475,7 @@ function toReportTicketDto(item: {
     targetId: item.targetId,
     reporterId: item.reporterId,
     reason: item.reason,
-    status: item.status === "resolved" ? "resolved" : "open",
+    status: item.status === "closed" ? "closed" : "open",
     createdAt: item.createdAt.toISOString(),
     resolvedAt: item.resolvedAt?.toISOString(),
     resolvedBy: item.resolvedBy ?? undefined,
@@ -1022,6 +1032,19 @@ export async function listInAppNotifications(params: {
       createdAt: r.createdAt,
     })
   );
+}
+
+export async function countUnreadInAppNotifications(userId: string): Promise<number> {
+  if (useMockData) {
+    return mockInAppNotifications.filter((n) => n.userId === userId && !n.readAt).length;
+  }
+  const prisma = await getPrisma();
+  return prisma.inAppNotification.count({
+    where: {
+      userId,
+      readAt: null,
+    },
+  });
 }
 
 export async function markInAppNotificationsRead(params: {
@@ -2429,6 +2452,11 @@ export async function updateCreatorProfile(userId: string, input: UpdateProfileI
     if (input.headline !== undefined) profile.headline = input.headline;
     if (input.bio !== undefined) profile.bio = input.bio;
     if (input.skills !== undefined) profile.skills = input.skills;
+    if (input.avatarUrl !== undefined) profile.avatarUrl = input.avatarUrl;
+    if (input.websiteUrl !== undefined) profile.websiteUrl = input.websiteUrl;
+    if (input.githubUrl !== undefined) profile.githubUrl = input.githubUrl;
+    if (input.twitterUrl !== undefined) profile.twitterUrl = input.twitterUrl;
+    if (input.linkedinUrl !== undefined) profile.linkedinUrl = input.linkedinUrl;
     if (input.collaborationPreference !== undefined) {
       profile.collaborationPreference =
         (input.collaborationPreference === "invite_only" || input.collaborationPreference === "closed")
@@ -2446,6 +2474,11 @@ export async function updateCreatorProfile(userId: string, input: UpdateProfileI
   if (input.headline !== undefined) data.headline = input.headline;
   if (input.bio !== undefined) data.bio = input.bio;
   if (input.skills !== undefined) data.skills = input.skills;
+  if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
+  if (input.websiteUrl !== undefined) data.websiteUrl = input.websiteUrl;
+  if (input.githubUrl !== undefined) data.githubUrl = input.githubUrl;
+  if (input.twitterUrl !== undefined) data.twitterUrl = input.twitterUrl;
+  if (input.linkedinUrl !== undefined) data.linkedinUrl = input.linkedinUrl;
   if (input.collaborationPreference !== undefined) data.collaborationPreference = input.collaborationPreference;
 
   const updated = await prisma.creatorProfile.update({
@@ -3920,7 +3953,7 @@ export async function reviewPost(input: ReviewPostInput): Promise<Post> {
     mockReportTickets
       .filter((ticket) => ticket.targetId === input.postId && ticket.status === "open")
       .forEach((ticket) => {
-        ticket.status = "resolved";
+        ticket.status = "closed";
         ticket.resolvedAt = new Date().toISOString();
         ticket.resolvedBy = input.adminUserId;
       });
@@ -4017,7 +4050,7 @@ export async function reviewPost(input: ReviewPostInput): Promise<Post> {
         status: "open",
       },
       data: {
-        status: "resolved",
+        status: "closed",
         resolvedAt: new Date(),
         resolvedBy: input.adminUserId,
       },
@@ -4084,7 +4117,7 @@ export async function listModerationCases(params: {
 }
 
 export async function listReportTickets(params: {
-  status?: "open" | "resolved" | "all";
+  status?: "open" | "closed" | "all";
   page: number;
   limit: number;
 }): Promise<Paginated<ReportTicket>> {

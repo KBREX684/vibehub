@@ -18,20 +18,58 @@ export type AuthUser = {
   avatarUrl?: string;
 };
 
+let _lastSseInitAt = 0;
+let _notificationSse: EventSource | null = null;
+const SSE_RECONNECT_GAP_MS = 15_000;
+
+function startNotificationSse(onUnread: (n: number) => void) {
+  if (typeof window === "undefined") return;
+  const now = Date.now();
+  if (_notificationSse && now - _lastSseInitAt < SSE_RECONNECT_GAP_MS) return;
+  _lastSseInitAt = now;
+
+  try {
+    _notificationSse?.close();
+    _notificationSse = new EventSource("/api/v1/me/notifications?stream=1");
+    _notificationSse.onmessage = (ev) => {
+      try {
+        const payload = JSON.parse(ev.data) as { data?: { unreadCount?: unknown } };
+        const unreadRaw = payload?.data?.unreadCount;
+        if (typeof unreadRaw === "number" && Number.isFinite(unreadRaw)) {
+          onUnread(unreadRaw);
+        }
+      } catch {
+        // ignore malformed SSE event payload
+      }
+    };
+    _notificationSse.onerror = () => {
+      // Let browser reconnect automatically; close stale handle.
+      _notificationSse?.close();
+      _notificationSse = null;
+    };
+  } catch {
+    _notificationSse = null;
+  }
+}
+
 type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
+  unreadCount: number;
   login: () => void;
   logout: () => void;
   refresh: () => Promise<void>;
+  setUnreadCount: (n: number) => void;
 };
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  unreadCount: 0,
   login: () => {},
   logout: () => {},
   refresh: async () => {},
+  setUnreadCount: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -39,6 +77,11 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCountState] = useState(0);
+
+  const setUnreadCount = useCallback((n: number) => {
+    setUnreadCountState(Math.max(0, Math.floor(n)));
+  }, []);
 
   const loadSession = useCallback(async () => {
     try {
@@ -86,11 +129,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore
     }
     resetCsrfToken();
+    _notificationSse?.close();
+    _notificationSse = null;
+    setUnreadCountState(0);
     setUser(null);
   };
 
+  useEffect(() => {
+    if (!user) return;
+    startNotificationSse(setUnreadCount);
+  }, [user, setUnreadCount]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refresh: loadSession }}>
+    <AuthContext.Provider value={{ user, loading, unreadCount, login, logout, refresh: loadSession, setUnreadCount }}>
       {children}
     </AuthContext.Provider>
   );

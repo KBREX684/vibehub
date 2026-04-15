@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Search,
   Bell,
@@ -34,29 +34,9 @@ const NAV_LINKS = [
 export function TopNav() {
   const pathname = usePathname();
   const { language, setLanguage } = useLanguage();
-  const { user, loading, logout } = useAuth();
-  const [mobileOpen, setMobileOpen]   = useState(false);
+  const { user, loading, logout, unreadCount } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount]   = useState(0);
-
-  // Fetch unread notification count when logged in
-  useEffect(() => {
-    if (!user) { setUnreadCount(0); return; }
-    let active = true;
-    async function fetchUnread() {
-      try {
-        const res = await fetch("/api/v1/me/notifications?unread=1&limit=50");
-        if (!res.ok) return;
-        const json = await res.json();
-        const items = json?.data?.notifications ?? [];
-        if (active) setUnreadCount(items.length);
-      } catch { /* ignore */ }
-    }
-    fetchUnread();
-    // Poll every 60 s
-    const timer = setInterval(fetchUnread, 60_000);
-    return () => { active = false; clearInterval(timer); };
-  }, [user]);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -260,10 +240,17 @@ export function TopNav() {
                 </Link>
               ))}
               <div className="border-t border-[var(--color-border)] mt-2 pt-2 flex items-center gap-3">
-                <Link href="/search" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-md)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)] flex-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    openCommandPalette();
+                    setMobileOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-md)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)] flex-1 text-left"
+                >
                   <Search className="w-4 h-4" />
                   {t(language, "Search", "搜索")}
-                </Link>
+                </button>
                 <button
                   onClick={() => setLanguage(language === "en" ? "zh" : "en")}
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-[var(--radius-md)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)]"

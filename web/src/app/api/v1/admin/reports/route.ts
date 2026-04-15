@@ -4,8 +4,8 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 
-function parseStatus(value: string | null): "open" | "resolved" | "all" {
-  if (value === "open" || value === "resolved") {
+function parseStatus(value: string | null): "open" | "closed" | "all" {
+  if (value === "open" || value === "closed") {
     return value;
   }
   return "all";
