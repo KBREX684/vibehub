@@ -1,0 +1,59 @@
+import * as React from "react";
+
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive" | "apple";
+export type ButtonSize = "sm" | "md" | "lg";
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  /** Show a spinner and disable the button */
+  loading?: boolean;
+  /** Render as a different element (e.g. an anchor tag) */
+  asChild?: boolean;
+}
+
+const variantClasses: Record<ButtonVariant, string> = {
+  primary:     "bg-[var(--color-primary)] text-[var(--color-text-inverse)] border-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)]",
+  secondary:   "bg-transparent text-[var(--color-text-primary)] border-[var(--color-border)] hover:bg-[var(--color-bg-surface-hover)] hover:border-[var(--color-border-strong)]",
+  ghost:       "bg-transparent text-[var(--color-text-secondary)] border-transparent hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-primary)]",
+  destructive: "bg-[var(--color-error-subtle)] text-[var(--color-error)] border-[rgba(248,113,113,0.3)] hover:bg-[rgba(248,113,113,0.2)]",
+  apple:       "bg-[var(--color-accent-apple)] text-white border-transparent hover:bg-[var(--color-accent-apple-hover)] shadow-[0_4px_12px_var(--color-accent-apple-subtle)]",
+};
+
+const sizeClasses: Record<ButtonSize, string> = {
+  sm: "px-3 py-1.5 text-xs gap-1.5 rounded-[var(--radius-md)]",
+  md: "px-4 py-2 text-sm gap-2 rounded-[var(--radius-md)]",
+  lg: "px-6 py-3 text-base gap-2.5 rounded-[var(--radius-lg)]",
+};
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ variant = "secondary", size = "md", loading = false, className = "", disabled, children, ...rest }, ref) => {
+    const isDisabled = disabled || loading;
+
+    return (
+      <button
+        ref={ref}
+        disabled={isDisabled}
+        className={[
+          "inline-flex items-center justify-center font-medium transition-all",
+          "border whitespace-nowrap outline-none",
+          "focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]",
+          "disabled:opacity-50 disabled:cursor-not-allowed",
+          variantClasses[variant],
+          sizeClasses[size],
+          className,
+        ].join(" ")}
+        {...rest}
+      >
+        {loading && (
+          <span
+            className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+            aria-hidden="true"
+          />
+        )}
+        {children}
+      </button>
+    );
+  }
+);
+Button.displayName = "Button";

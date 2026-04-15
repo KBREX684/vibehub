@@ -2,7 +2,10 @@
 
 /* =========================================
    VibeHub Design System — Monochrome Geek
-   Minimalist, high-contrast, dev-tool
+   Canonical dark base with accent palette.
+   Single source-of-truth: all components
+   consume these tokens; never hard-code
+   colour literals in component files.
    ========================================= */
 
 @theme {
@@ -25,20 +28,37 @@
   --color-border-subtle:      rgba(255,255,255,0.05);
   --color-border-strong:      rgba(255,255,255,0.2);
 
-  /* === Brand / Primary === */
+  /* === Brand / Primary (white on black) === */
   --color-primary:            #FFFFFF;
   --color-primary-hover:      #E5E5E5;
   --color-primary-subtle:     rgba(255,255,255,0.1);
 
-  /* === Semantic === */
-  --color-success:            #EDEDED;
-  --color-success-subtle:     rgba(255,255,255,0.1);
-  --color-warning:            #EDEDED;
-  --color-warning-subtle:     rgba(255,255,255,0.1);
-  --color-error:              #EDEDED;
-  --color-error-subtle:       rgba(255,255,255,0.1);
-  --color-info:               #EDEDED;
-  --color-info-subtle:        rgba(255,255,255,0.1);
+  /* === Semantic — real colours on the dark canvas === */
+  --color-success:            #34d399;   /* emerald-400 */
+  --color-success-subtle:     rgba(52,211,153,0.1);
+  --color-warning:            #fbbf24;   /* amber-400 */
+  --color-warning-subtle:     rgba(251,191,36,0.1);
+  --color-error:              #f87171;   /* red-400 */
+  --color-error-subtle:       rgba(248,113,113,0.1);
+  --color-info:               #60a5fa;   /* blue-400 */
+  --color-info-subtle:        rgba(96,165,250,0.1);
+
+  /* === Accent palette (all components must use these; never inline hex) === */
+  --color-accent-apple:       #0071e3;   /* Apple Blue — primary interactive CTA */
+  --color-accent-apple-hover: #0062cc;
+  --color-accent-apple-subtle: rgba(0,113,227,0.12);
+
+  --color-accent-violet:        #a78bfa;  /* violet-400 */
+  --color-accent-violet-hover:  #8b5cf6;
+  --color-accent-violet-subtle: rgba(167,139,250,0.1);
+
+  --color-accent-cyan:        #22d3ee;   /* cyan-400 */
+  --color-accent-cyan-hover:  #06b6d4;
+  --color-accent-cyan-subtle: rgba(34,211,238,0.1);
+
+  /* === Enterprise tier (emerald) === */
+  --color-enterprise:         #34d399;   /* emerald-400 — same hue as success */
+  --color-enterprise-subtle:  rgba(52,211,153,0.1);
 
   /* === Radii === */
   --radius-xs:    2px;
@@ -50,10 +70,10 @@
   --radius-3xl:   24px;
   --radius-pill:  9999px;
 
-  /* === Shadows (Removed for flat design) === */
-  --shadow-card:      none;
+  /* === Shadows === */
+  --shadow-card:       none;
   --shadow-card-hover: none;
-  --shadow-modal:     0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
+  --shadow-modal:      0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
 
   /* === Typography === */
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
