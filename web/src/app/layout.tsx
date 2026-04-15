@@ -15,6 +15,7 @@ import {
 } from "@/lib/i18n";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ThemeScript } from "@/components/theme-script";
+import { SWRProvider } from "@/lib/swr-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslator();
@@ -37,6 +38,7 @@ export default async function RootLayout({
       <body className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col">
         <ThemeScript />
         <WebVitalsReporter />
+        <SWRProvider>
         <AuthProvider>
           <LanguageProvider initialLanguage={language}>
             <ThemeProvider initialTheme={themePref}>
@@ -55,6 +57,7 @@ export default async function RootLayout({
             </ThemeProvider>
           </LanguageProvider>
         </AuthProvider>
+        </SWRProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>
