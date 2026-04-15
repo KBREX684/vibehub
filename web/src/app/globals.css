@@ -337,3 +337,94 @@ pre, code {
 .delay-200 { animation-delay: 200ms; }
 .delay-300 { animation-delay: 300ms; }
 .delay-400 { animation-delay: 400ms; }
+
+/* === P3-FE-1: Light theme tokens (html.light) === */
+.light {
+  --color-bg-canvas:          #fafafa;
+  --color-bg-surface:         #ffffff;
+  --color-bg-surface-hover:   #f4f4f5;
+  --color-bg-elevated:        #ffffff;
+  --color-bg-subtle:          rgba(0,0,0,0.03);
+
+  --color-text-primary:       #18181b;
+  --color-text-secondary:     #52525b;
+  --color-text-tertiary:      #71717a;
+  --color-text-inverse:       #fafafa;
+  --color-text-muted:         #a1a1aa;
+
+  --color-border:             rgba(0,0,0,0.08);
+  --color-border-subtle:      rgba(0,0,0,0.04);
+  --color-border-strong:      rgba(0,0,0,0.14);
+
+  --color-primary:            #18181b;
+  --color-primary-hover:      #27272a;
+  --color-primary-subtle:     rgba(0,0,0,0.06);
+
+  --secondary:                rgba(0,0,0,0.04);
+  --input:                    rgba(0,0,0,0.06);
+  --shadow-modal:             0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06);
+}
+
+.light .btn-primary {
+  color: var(--color-text-inverse);
+}
+
+/* === Markdown (README / previews) === */
+.markdown-body {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  color: var(--color-text-primary);
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.markdown-body h1 { font-size: 1.25rem; }
+.markdown-body h2 { font-size: 1.1rem; }
+.markdown-body h3 { font-size: 1rem; }
+.markdown-body p { margin: 0.5rem 0; }
+.markdown-body a {
+  color: var(--color-accent-apple);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-body pre {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+}
+.markdown-body code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-bg-subtle);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-xs);
+}
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+}
+.markdown-body ul, .markdown-body ol {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.markdown-body blockquote {
+  margin: 0.75rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-text-tertiary);
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  margin: 0.75rem 0;
+}
+.markdown-body th, .markdown-body td {
+  border: 1px solid var(--color-border);
+  padding: 0.35rem 0.5rem;
+}

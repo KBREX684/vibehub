@@ -236,6 +236,7 @@ function toProjectDto(project: {
   title: string;
   oneLiner: string;
   description: string;
+  readmeMarkdown?: string | null;
   techStack: string[];
   tags: string[];
   status: Project["status"];
@@ -258,6 +259,7 @@ function toProjectDto(project: {
     title: project.title,
     oneLiner: project.oneLiner,
     description: project.description,
+    readmeMarkdown: project.readmeMarkdown ?? undefined,
     techStack: project.techStack,
     tags: project.tags,
     status: project.status,
@@ -797,6 +799,44 @@ async function createInAppNotificationDb(params: {
   });
 }
 
+/** P3-FE-4: map notification kinds to preference columns */
+function notificationCategoryForKind(
+  kind: InAppNotificationKind
+): "commentReplies" | "teamUpdates" | "collaborationModeration" | "systemAnnouncements" {
+  switch (kind) {
+    case "post_commented":
+    case "comment_replied":
+    case "post_liked":
+      return "commentReplies";
+    case "team_join_request":
+    case "team_join_approved":
+    case "team_join_rejected":
+    case "team_task_assigned":
+      return "teamUpdates";
+    case "collaboration_intent_status_update":
+    case "project_intent_received":
+      return "collaborationModeration";
+    default:
+      return "systemAnnouncements";
+  }
+}
+
+async function shouldDeliverInAppNotification(
+  userId: string,
+  kind: InAppNotificationKind
+): Promise<boolean> {
+  if (useMockData) {
+    return true;
+  }
+  const prisma = await getPrisma();
+  const pref = await prisma.notificationPreference.findUnique({ where: { userId } });
+  if (!pref) {
+    return true;
+  }
+  const key = notificationCategoryForKind(kind);
+  return pref[key];
+}
+
 function pushMockNotification(params: {
   userId: string;
   kind: InAppNotificationKind;
@@ -824,6 +864,10 @@ async function notifyUser(params: {
   body: string;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
+  const deliver = await shouldDeliverInAppNotification(params.userId, params.kind);
+  if (!deliver) {
+    return;
+  }
   if (useMockData) {
     pushMockNotification(params);
     const u = mockUsers.find((x) => x.id === params.userId);
@@ -1008,6 +1052,73 @@ export async function listInAppNotifications(params: {
       createdAt: r.createdAt,
     })
   );
+}
+
+export interface NotificationPreferenceDto {
+  commentReplies: boolean;
+  teamUpdates: boolean;
+  collaborationModeration: boolean;
+  systemAnnouncements: boolean;
+}
+
+const mockNotificationPreferenceByUser = new Map<string, NotificationPreferenceDto>();
+
+export async function getNotificationPreference(userId: string): Promise<NotificationPreferenceDto> {
+  const defaults: NotificationPreferenceDto = {
+    commentReplies: true,
+    teamUpdates: true,
+    collaborationModeration: true,
+    systemAnnouncements: true,
+  };
+  if (useMockData) {
+    return { ...defaults, ...mockNotificationPreferenceByUser.get(userId) };
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.notificationPreference.findUnique({ where: { userId } });
+  if (!row) return defaults;
+  return {
+    commentReplies: row.commentReplies,
+    teamUpdates: row.teamUpdates,
+    collaborationModeration: row.collaborationModeration,
+    systemAnnouncements: row.systemAnnouncements,
+  };
+}
+
+export async function upsertNotificationPreference(
+  userId: string,
+  patch: Partial<NotificationPreferenceDto>
+): Promise<NotificationPreferenceDto> {
+  const next: NotificationPreferenceDto = {
+    ...(await getNotificationPreference(userId)),
+    ...patch,
+  };
+  if (useMockData) {
+    mockNotificationPreferenceByUser.set(userId, next);
+    return next;
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.notificationPreference.upsert({
+    where: { userId },
+    create: {
+      userId,
+      commentReplies: next.commentReplies,
+      teamUpdates: next.teamUpdates,
+      collaborationModeration: next.collaborationModeration,
+      systemAnnouncements: next.systemAnnouncements,
+    },
+    update: {
+      commentReplies: next.commentReplies,
+      teamUpdates: next.teamUpdates,
+      collaborationModeration: next.collaborationModeration,
+      systemAnnouncements: next.systemAnnouncements,
+    },
+  });
+  return {
+    commentReplies: row.commentReplies,
+    teamUpdates: row.teamUpdates,
+    collaborationModeration: row.collaborationModeration,
+    systemAnnouncements: row.systemAnnouncements,
+  };
 }
 
 export async function countUnreadInAppNotifications(userId: string): Promise<number> {
@@ -6388,6 +6499,7 @@ export async function createProject(input: {
   title: string;
   oneLiner: string;
   description: string;
+  readmeMarkdown?: string;
   techStack: string[];
   tags: string[];
   status: Project["status"];
@@ -6403,6 +6515,7 @@ export async function updateProject(params: {
   title?: string;
   oneLiner?: string;
   description?: string;
+  readmeMarkdown?: string | null;
   techStack?: string[];
   tags?: string[];
   status?: Project["status"];

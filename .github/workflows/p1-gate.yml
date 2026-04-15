@@ -79,3 +79,17 @@ jobs:
           NODE_ENV: "production"
           SESSION_SECRET: "ci-session-secret"
         run: npm run build
+
+      - name: Dependency audit (informational)
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: E2E (Playwright)
+        env:
+          USE_MOCK_DATA: "true"
+          SESSION_SECRET: "ci-session-secret"
+          PLAYWRIGHT_BASE_URL: "http://127.0.0.1:3100"
+        run: npm run test:e2e

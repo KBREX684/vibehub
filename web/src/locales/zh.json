@@ -39,7 +39,11 @@
     "notifications": "通知",
     "admin": "管理后台",
     "signOut": "退出登录",
-    "signIn": "登录"
+    "signIn": "登录",
+    "theme_light": "浅色主题",
+    "theme_dark": "深色主题",
+    "theme_system": "跟随系统",
+    "theme_cycle": "切换主题（浅色 / 深色 / 系统）"
   },
   "footer": {
     "platform": "平台",
@@ -170,11 +174,22 @@
     "enterprise": "企业工作台",
     "enterpriseDesc": "申请 observer workspace 访问权限（可选）。",
     "projectEditHintPrefix": "项目创建与编辑位于",
-    "projectEditHintSuffix": "和各项目详情页。"
+    "projectEditHintSuffix": "和各项目详情页。",
+    "notificationsTitle": "通知",
+    "notificationsDesc": "选择在应用内接收哪些类型的通知。",
+    "notificationsComment": "评论与回复",
+    "notificationsTeam": "团队动态",
+    "notificationsCollab": "协作与审核",
+    "notificationsSystem": "产品与系统",
+    "notificationsSaved": "偏好已保存。"
   },
   "a11y": {
     "openNavigationMenu": "打开导航菜单",
     "closeNavigationMenu": "关闭导航菜单",
     "closeDialog": "关闭对话框"
-  }
+  },
+  "discussions.new.preview": "预览",
+  "discussions.new.write": "编辑",
+  "project.readme_tab": "README",
+  "project.overview_tab": "概览"
 }

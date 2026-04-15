@@ -29,6 +29,15 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "avatars.githubusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "*.githubusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "opengraph.githubassets.com", pathname: "/**" },
+      { protocol: "https", hostname: "example.com", pathname: "/**" },
+      { protocol: "https", hostname: "placehold.co", pathname: "/**" },
+    ],
+  },
   async headers() {
     return [
       {

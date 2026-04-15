@@ -37,6 +37,7 @@ function toProjectDto(project: {
   title: string;
   oneLiner: string;
   description: string;
+  readmeMarkdown?: string | null;
   techStack: string[];
   tags: string[];
   status: Project["status"];
@@ -59,6 +60,7 @@ function toProjectDto(project: {
     title: project.title,
     oneLiner: project.oneLiner,
     description: project.description,
+    readmeMarkdown: project.readmeMarkdown ?? undefined,
     techStack: project.techStack,
     tags: project.tags,
     status: project.status,
@@ -351,6 +353,7 @@ export async function createProject(input: {
   title: string;
   oneLiner: string;
   description: string;
+  readmeMarkdown?: string;
   techStack: string[];
   tags: string[];
   status: Project["status"];
@@ -379,6 +382,7 @@ export async function createProject(input: {
       title: input.title,
       oneLiner: input.oneLiner,
       description: input.description,
+      readmeMarkdown: input.readmeMarkdown,
       techStack: input.techStack,
       tags: input.tags,
       status: input.status,
@@ -429,6 +433,7 @@ export async function createProject(input: {
           title: input.title,
           oneLiner: input.oneLiner,
           description: input.description,
+          readmeMarkdown: input.readmeMarkdown?.trim() ? input.readmeMarkdown : null,
           techStack: input.techStack,
           tags: input.tags,
           status: input.status,
@@ -472,6 +477,7 @@ export async function updateProject(params: {
   title?: string;
   oneLiner?: string;
   description?: string;
+  readmeMarkdown?: string | null;
   techStack?: string[];
   tags?: string[];
   status?: Project["status"];
@@ -485,6 +491,7 @@ export async function updateProject(params: {
     if (params.title !== undefined) project.title = params.title;
     if (params.oneLiner !== undefined) project.oneLiner = params.oneLiner;
     if (params.description !== undefined) project.description = params.description;
+    if (params.readmeMarkdown !== undefined) project.readmeMarkdown = params.readmeMarkdown ?? undefined;
     if (params.techStack !== undefined) project.techStack = params.techStack;
     if (params.tags !== undefined) project.tags = params.tags;
     if (params.status !== undefined) project.status = params.status;
@@ -505,6 +512,7 @@ export async function updateProject(params: {
   if (params.title !== undefined) data.title = params.title;
   if (params.oneLiner !== undefined) data.oneLiner = params.oneLiner;
   if (params.description !== undefined) data.description = params.description;
+  if (params.readmeMarkdown !== undefined) data.readmeMarkdown = params.readmeMarkdown;
   if (params.techStack !== undefined) data.techStack = params.techStack;
   if (params.tags !== undefined) data.tags = params.tags;
   if (params.status !== undefined) data.status = params.status;

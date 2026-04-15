@@ -183,6 +183,8 @@ const SEED_MOCK_PROJECTS: Project[] = [
     oneLiner: "Community + Showcase + Teaming for VibeCoding developers",
     description:
       "A full-stack hub where developers discuss ideas, showcase products, and form teams with AI-agent-ready metadata.",
+    readmeMarkdown:
+      "## VibeHub\n\nDeveloper-first **community** for shipping together.\n\n```bash\nnpm install && npm run dev\n```",
     techStack: ["Next.js", "PostgreSQL", "Prisma", "Tailwind CSS"],
     tags: ["community", "agent", "showcase"],
     status: "building",

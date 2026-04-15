@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Plus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import { DiscussionBodyField } from "./discussion-body-field";
 
 export function NewDiscussionForm() {
   const router = useRouter();
@@ -62,23 +63,7 @@ export function NewDiscussionForm() {
         <p className="text-[10px] text-[var(--color-text-muted)]">{title.length}/200</p>
       </div>
 
-      {/* Body */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          Content <span className="text-[var(--color-error)]">*</span>
-        </label>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          className="input-base resize-none"
-          placeholder="Share your thoughts, questions, or insights…"
-          rows={8}
-          maxLength={50000}
-          required
-          minLength={10}
-        />
-        <p className="text-[10px] text-[var(--color-text-muted)]">{body.length}/50 000</p>
-      </div>
+      <DiscussionBodyField body={body} onChange={setBody} />
 
       {/* Tags */}
       <div className="space-y-1.5">

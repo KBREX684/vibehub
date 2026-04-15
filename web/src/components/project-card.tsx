@@ -41,7 +41,6 @@ export function ProjectCard({
                 alt={`${project.title} logo`}
                 width={40}
                 height={40}
-                unoptimized
                 className="w-full h-full object-cover"
               />
             </div>
@@ -91,7 +90,6 @@ export function ProjectCard({
               alt="Project preview"
               width={400}
               height={112}
-              unoptimized
               className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
             />
           </div>

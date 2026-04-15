@@ -137,6 +137,8 @@ model User {
   enterpriseProfile         EnterpriseProfile?
   /// P3-3: user-owned webhook endpoints for outbound events
   webhookEndpoints          WebhookEndpoint[]
+  /// P3-FE-4: per-user notification channel toggles
+  notificationPreference    NotificationPreference?
 }
 
 enum EnterpriseVerificationStatus {
@@ -213,6 +215,17 @@ model WebhookEndpoint {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, active])
+}
+
+/// P3-FE-4: notification category opt-in (defaults all enabled)
+model NotificationPreference {
+  userId                   String  @id
+  commentReplies           Boolean @default(true)
+  teamUpdates              Boolean @default(true)
+  collaborationModeration Boolean @default(true)
+  systemAnnouncements      Boolean @default(true)
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model InAppNotification {
@@ -310,6 +323,8 @@ model Project {
   title        String
   oneLiner     String
   description  String
+  /// P3-FE-3: optional long-form README (Markdown); shown on project detail tab
+  readmeMarkdown String?
   /// P2-1: PostgreSQL full-text search (english), maintained by DB.
   searchVector Unsupported("tsvector")?
   techStack    String[]

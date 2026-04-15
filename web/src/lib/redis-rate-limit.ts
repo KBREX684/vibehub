@@ -156,3 +156,22 @@ export async function checkApiKeyRateLimitAsync(
 
   return checkMemoryWithScope(token, request, scopeTier);
 }
+
+/** P4-BE-1: best-effort Redis connectivity for `/api/v1/health`. */
+export async function getRedisHealth(): Promise<
+  { status: "not_configured" } | { status: "ok" } | { status: "error" }
+> {
+  if (!redisUrl()) {
+    return { status: "not_configured" };
+  }
+  const redis = await getRedis();
+  if (!redis) {
+    return { status: "error" };
+  }
+  try {
+    const pong = await redis.ping();
+    return pong === "PONG" ? { status: "ok" } : { status: "error" };
+  } catch {
+    return { status: "error" };
+  }
+}

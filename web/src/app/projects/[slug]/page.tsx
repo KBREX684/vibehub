@@ -32,6 +32,7 @@ import {
   BookOpen,
   Pencil,
 } from "lucide-react";
+import { ProjectReadmeSection } from "@/components/project-readme-section";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -124,7 +125,6 @@ export default async function ProjectDetailPage({ params }: Props) {
                   alt={`${project.title} logo`}
                   width={128}
                   height={128}
-                  unoptimized
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -258,7 +258,6 @@ export default async function ProjectDetailPage({ params }: Props) {
                 alt={`Screenshot ${i + 1}`}
                 width={800}
                 height={400}
-                unoptimized
                 className="w-full h-full object-cover"
               />
             </div>
@@ -272,39 +271,35 @@ export default async function ProjectDetailPage({ params }: Props) {
         {/* Main */}
         <div className="lg:col-span-8 space-y-6">
 
-          {/* About */}
-          <section className="card p-6">
-            <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">
-              About the Project
-            </h2>
-            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-wrap">
-              {project.description}
-            </p>
+          <ProjectReadmeSection description={project.description} readmeMarkdown={project.readmeMarkdown} />
 
-            {project.techStack?.length > 0 && (
-              <div className="mt-5 pt-5 border-t border-[var(--color-border-subtle)]">
-                <h3 className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
-                  <Code2 className="w-3.5 h-3.5" />
-                  Tech Stack
-                </h3>
-                <div className="tag-row">
-                  {project.techStack.map((tech) => (
-                    <Link key={tech} href={`/discover?tech=${encodeURIComponent(tech)}`} className="tag tag-blue hover:opacity-80 transition-opacity">{tech}</Link>
-                  ))}
+          {(project.techStack?.length ?? 0) > 0 || (project.tags?.length ?? 0) > 0 ? (
+            <section className="card p-6">
+              {project.techStack && project.techStack.length > 0 && (
+                <div>
+                  <h3 className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                    <Code2 className="w-3.5 h-3.5" />
+                    Tech Stack
+                  </h3>
+                  <div className="tag-row">
+                    {project.techStack.map((tech) => (
+                      <Link key={tech} href={`/discover?tech=${encodeURIComponent(tech)}`} className="tag tag-blue hover:opacity-80 transition-opacity">{tech}</Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {project.tags?.length > 0 && (
-              <div className="mt-4">
-                <div className="tag-row">
-                  {project.tags.map((tag) => (
-                    <Link key={tag} href={`/discover?tag=${encodeURIComponent(tag)}`} className="tag hover:opacity-80 transition-opacity">#{tag}</Link>
-                  ))}
+              {project.tags && project.tags.length > 0 && (
+                <div className={project.techStack?.length ? "mt-5 pt-5 border-t border-[var(--color-border-subtle)]" : ""}>
+                  <div className="tag-row">
+                    {project.tags.map((tag) => (
+                      <Link key={tag} href={`/discover?tag=${encodeURIComponent(tag)}`} className="tag hover:opacity-80 transition-opacity">#{tag}</Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </section>
+              )}
+            </section>
+          ) : null}
 
           {/* Collaboration CTA */}
           <section className="card p-6">

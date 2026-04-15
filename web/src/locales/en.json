@@ -31,6 +31,10 @@
   "nav.teams": "Teams",
   "nav.leaderboards": "Leaderboards",
   "nav.developers": "Developers",
+  "nav.theme_light": "Light theme",
+  "nav.theme_dark": "Dark theme",
+  "nav.theme_system": "System theme",
+  "nav.theme_cycle": "Cycle theme (light, dark, system)",
   "nav.main_label": "Main navigation",
   "nav.mobile_label": "Mobile navigation",
   "nav.open_menu": "Open navigation menu",
@@ -129,5 +133,16 @@
   "not_found.back_home": "Back to home",
   "a11y.skip_to_content": "Skip to main content",
   "a11y.command_palette": "Global search",
-  "a11y.command_palette_close": "Close search"
+  "a11y.command_palette_close": "Close search",
+  "settings.notifications_title": "Notifications",
+  "settings.notifications_desc": "Choose which in-app notification categories you receive.",
+  "settings.notifications_comment": "Comments & replies",
+  "settings.notifications_team": "Team activity",
+  "settings.notifications_collab": "Collaboration & moderation",
+  "settings.notifications_system": "Product & system",
+  "settings.notifications_saved": "Preferences saved.",
+  "discussions.new.preview": "Preview",
+  "discussions.new.write": "Write",
+  "project.readme_tab": "README",
+  "project.overview_tab": "Overview"
 }

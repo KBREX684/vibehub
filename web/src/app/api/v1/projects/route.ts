@@ -21,6 +21,7 @@ const createProjectSchema = z.object({
   title: z.string().min(3).max(120),
   oneLiner: z.string().min(5).max(200),
   description: z.string().min(20),
+  readmeMarkdown: z.string().max(200_000).optional(),
   techStack: z.array(z.string().min(1)).default([]),
   tags: z.array(z.string().min(1)).default([]),
   status: z.enum(["idea", "building", "launched", "paused"]).default("idea"),

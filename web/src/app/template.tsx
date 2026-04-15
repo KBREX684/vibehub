@@ -1,16 +1,9 @@
-"use client";
+import type { ReactNode } from "react";
 
-import { motion } from "framer-motion";
-
-export default function Template({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-    >
-      {children}
-    </motion.div>
-  );
+/**
+ * P4-FE-1: avoid wrapping every route in a client Framer Motion boundary.
+ * Page-level motion can be added selectively where it improves UX.
+ */
+export default function Template({ children }: { children: ReactNode }) {
+  return children;
 }

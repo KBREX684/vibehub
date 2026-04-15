@@ -704,6 +704,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                     title: { type: "string", minLength: 3, maxLength: 120 },
                     oneLiner: { type: "string", minLength: 5, maxLength: 200 },
                     description: { type: "string", minLength: 20 },
+                    readmeMarkdown: { type: "string", maxLength: 200000, description: "Optional Markdown README" },
                     techStack: { type: "array", items: { type: "string" } },
                     tags: { type: "array", items: { type: "string" } },
                     status: { type: "string", enum: ["idea", "building", "launched", "paused"] },
@@ -753,6 +754,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                     title: { type: "string" },
                     oneLiner: { type: "string" },
                     description: { type: "string" },
+                    readmeMarkdown: { oneOf: [{ type: "string", maxLength: 200000 }, { type: "null" }] },
                     techStack: { type: "array", items: { type: "string" } },
                     tags: { type: "array", items: { type: "string" } },
                     status: { type: "string", enum: ["idea", "building", "launched", "paused"] },
@@ -1075,6 +1077,36 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                   properties: {
                     ids: { type: "array", items: { type: "string" } },
                     markAll: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/notification-preferences": {
+        get: {
+          tags: ["me"],
+          summary: "Get in-app notification category preferences (session cookie)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        patch: {
+          tags: ["me"],
+          summary: "Update notification category preferences (session cookie)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    commentReplies: { type: "boolean" },
+                    teamUpdates: { type: "boolean" },
+                    collaborationModeration: { type: "boolean" },
+                    systemAnnouncements: { type: "boolean" },
                   },
                 },
               },

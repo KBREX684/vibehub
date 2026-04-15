@@ -15,6 +15,7 @@ const patchSchema = z.object({
   title: z.string().min(3).max(120).optional(),
   oneLiner: z.string().min(5).max(200).optional(),
   description: z.string().min(20).optional(),
+  readmeMarkdown: z.union([z.string().max(200_000), z.null()]).optional(),
   techStack: z.array(z.string().min(1)).optional(),
   tags: z.array(z.string().min(1)).optional(),
   status: z.enum(["idea", "building", "launched", "paused"]).optional(),

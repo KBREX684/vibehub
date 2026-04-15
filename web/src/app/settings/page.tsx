@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
-import { Key, CreditCard, Building2, ChevronRight, Settings2 } from "lucide-react";
+import { Key, CreditCard, Building2, ChevronRight, Settings2, Bell } from "lucide-react";
 
 export default async function SettingsIndexPage() {
   const session = await getSessionUserFromCookie();
@@ -25,6 +25,12 @@ export default async function SettingsIndexPage() {
       title: t("settings.profile_title", "Profile"),
       description: t("settings.profile_desc", "Edit creator profile, links, and collaboration preferences."),
       icon: Settings2,
+    },
+    {
+      href: "/settings/notifications",
+      title: t("settings.notifications_title", "Notifications"),
+      description: t("settings.notifications_desc", "Choose which in-app notification categories you receive."),
+      icon: Bell,
     },
     {
       href: "/enterprise/verify",

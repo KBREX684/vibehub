@@ -67,6 +67,8 @@ export interface Project {
   title: string;
   oneLiner: string;
   description: string;
+  /** P3-FE-3: optional Markdown README for the project detail page */
+  readmeMarkdown?: string;
   techStack: string[];
   tags: string[];
   status: ProjectStatus;

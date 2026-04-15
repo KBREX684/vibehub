@@ -26,6 +26,7 @@ export function CreateProjectForm() {
   const [title, setTitle] = useState("");
   const [oneLiner, setOneLiner] = useState("");
   const [description, setDescription] = useState("");
+  const [readmeMarkdown, setReadmeMarkdown] = useState("");
   const [techStackInput, setTechStackInput] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [status, setStatus] = useState<ProjectStatus>("idea");
@@ -49,6 +50,8 @@ export function CreateProjectForm() {
       tags,
       status,
     };
+    const rm = readmeMarkdown.trim();
+    if (rm) body.readmeMarkdown = rm;
     const d = demoUrl.trim();
     if (d) body.demoUrl = d;
 
@@ -126,6 +129,20 @@ export function CreateProjectForm() {
           placeholder="Problem, approach, stack, and what you want from collaborators (min 20 characters)."
         />
         <p className="text-[10px] text-[var(--color-text-muted)]">{description.length} characters (min 20)</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="project-new-readme" className="text-xs font-semibold text-[var(--color-text-secondary)]">
+          README (Markdown, optional)
+        </label>
+        <textarea
+          id="project-new-readme"
+          value={readmeMarkdown}
+          onChange={(e) => setReadmeMarkdown(e.target.value)}
+          className="input-base resize-y min-h-[120px] font-mono text-xs"
+          rows={5}
+          placeholder={"## Getting started\n```bash\nnpm install\n```"}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

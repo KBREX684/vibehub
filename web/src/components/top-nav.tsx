@@ -16,7 +16,11 @@ import {
   Shield,
   Key,
   Briefcase,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { useTheme } from "@/app/context/ThemeContext";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { openCommandPalette } from "@/components/command-palette";
@@ -34,6 +38,7 @@ const NAV_LINKS = [
 export function TopNav() {
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const { user, loading, logout, unreadCount } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -135,6 +140,16 @@ export function TopNav() {
           >
             <Globe className="w-3.5 h-3.5" />
             <span>{language === "en" ? "EN" : "中"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light")}
+            aria-label={t("nav.theme_cycle")}
+            title={`${t("nav.theme_light")} / ${t("nav.theme_dark")} / ${t("nav.theme_system")}`}
+            className="flex items-center justify-center p-2 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all"
+          >
+            {theme === "light" ? <Sun className="w-4 h-4" /> : theme === "dark" ? <Moon className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
           </button>
 
           {/* Notifications (if logged in) */}
@@ -304,6 +319,14 @@ export function TopNav() {
                 >
                   <Globe className="w-4 h-4" />
                   {language === "en" ? "EN" : "中文"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light")}
+                  aria-label={t("nav.theme_cycle")}
+                  className="flex items-center justify-center p-2.5 rounded-[var(--radius-md)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)]"
+                >
+                  {theme === "light" ? <Sun className="w-4 h-4" /> : theme === "dark" ? <Moon className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
                 </button>
               </div>
               {!loading && !user && (

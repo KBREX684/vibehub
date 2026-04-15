@@ -32,6 +32,7 @@ export function EditProjectForm({ project }: Props) {
   const [title, setTitle] = useState(project.title);
   const [oneLiner, setOneLiner] = useState(project.oneLiner);
   const [description, setDescription] = useState(project.description);
+  const [readmeMarkdown, setReadmeMarkdown] = useState(project.readmeMarkdown ?? "");
   const [techStackInput, setTechStackInput] = useState(joinList(project.techStack));
   const [tagsInput, setTagsInput] = useState(joinList(project.tags));
   const [status, setStatus] = useState<ProjectStatus>(project.status);
@@ -53,6 +54,7 @@ export function EditProjectForm({ project }: Props) {
       tags,
       status,
       demoUrl: demoUrl.trim() === "" ? null : demoUrl.trim(),
+      readmeMarkdown: readmeMarkdown.trim() === "" ? null : readmeMarkdown.trim(),
     };
 
     try {
@@ -128,6 +130,19 @@ export function EditProjectForm({ project }: Props) {
           rows={6}
         />
         <p className="text-[10px] text-[var(--color-text-muted)]">{description.length} characters (min 20)</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="project-edit-readme" className="text-xs font-semibold text-[var(--color-text-secondary)]">
+          README (Markdown, optional)
+        </label>
+        <textarea
+          id="project-edit-readme"
+          value={readmeMarkdown}
+          onChange={(e) => setReadmeMarkdown(e.target.value)}
+          className="input-base resize-y min-h-[120px] font-mono text-xs"
+          rows={5}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
