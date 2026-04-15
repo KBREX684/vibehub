@@ -14,6 +14,7 @@ code, and docs around the main loop of community -> project -> collaboration -> 
 ## Primary entry points
 
 - `web/`: Next.js full-stack app
+- `CONTRIBUTING.md`: engineering principles and contribution guidelines
 - `docs/roadmap-current.md`: current execution line and acceptance priorities
 - `docs/release-notes.md`: merged change history and notable closures
 - `docs/repository-cleanup-report.md`: repository cleanup decisions, retain/archive/delete rationale

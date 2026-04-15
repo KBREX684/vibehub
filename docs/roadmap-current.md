@@ -70,6 +70,7 @@ VibeHub 当前只聚焦三条主线：
 
 ## 配套文档
 
+- 工程原则与贡献指南：`CONTRIBUTING.md`
 - 当前主线：`docs/roadmap-current.md`
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
