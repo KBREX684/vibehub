@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { TIER_LIMITS, TIER_PRICING } from "@/lib/subscription";
 import type { SubscriptionTier } from "@/lib/subscription";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-fetch";
 
 const TIERS: SubscriptionTier[] = ["free", "pro"];
 
@@ -30,20 +32,24 @@ const FEATURE_ROWS: FeatureRow[] = [
 
 export function PricingCards() {
   async function startCheckout(tier: SubscriptionTier) {
+    const toastId = toast.loading("Preparing checkout…");
     try {
-      const res = await fetch("/api/v1/billing/checkout", {
+      const res = await apiFetch("/api/v1/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier }),
       });
       const json = (await res.json()) as { data?: { url?: string }; error?: { message?: string } };
       if (json.data?.url) {
+        toast.dismiss(toastId);
         window.location.href = json.data.url;
       } else {
-        alert(json.error?.message ?? "Could not start checkout. Please try again.");
+        toast.error(json.error?.message ?? "Could not start checkout. Please try again.", {
+          id: toastId,
+        });
       }
     } catch {
-      alert("Network error. Please try again.");
+      toast.error("Network error. Please try again.", { id: toastId });
     }
   }
 

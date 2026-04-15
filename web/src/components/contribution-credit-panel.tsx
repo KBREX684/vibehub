@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Zap, RefreshCw, Trophy, CheckCircle2, Users, MessageSquare, FolderGit2, Star } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface CreditProfile {
   userId: string;
@@ -32,7 +33,7 @@ export function ContributionCreditPanel({ userId }: { userId: string }) {
   async function refresh() {
     setRefreshing(true);
     try {
-      const r = await fetch("/api/v1/me/reputation", { method: "POST" });
+      const r = await apiFetch("/api/v1/me/reputation", { method: "POST" });
       const j = await r.json();
       if (j?.data) setCredit(j.data);
     } finally {

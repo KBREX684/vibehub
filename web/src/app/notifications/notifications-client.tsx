@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { ArrowRight, Check, CheckCheck } from "lucide-react";
 import type { InAppNotification } from "@/lib/types";
 import { groupNotificationsForDisplay } from "./notification-grouping";
+import { apiFetch } from "@/lib/api-fetch";
 
 const KIND_ICONS: Record<string, string> = {
   team_join_request:       "👥",
@@ -26,7 +27,7 @@ async function patchNotifications(ids?: string[], markAll?: boolean) {
   if (markAll) body.markAll = true;
   else body.ids = ids;
 
-  const res = await fetch("/api/v1/me/notifications", {
+  const res = await apiFetch("/api/v1/me/notifications", {
     method:  "PATCH",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify(body),

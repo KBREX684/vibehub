@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Project } from "@/lib/types";
 import { Sparkles, Trash2 } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   candidates: Project[];
@@ -25,7 +26,7 @@ export function AdminDailyFeaturedPanel({ candidates, featured }: Props) {
       return;
     }
     try {
-      const res = await fetch(`/api/v1/admin/projects/${encodeURIComponent(s)}/feature-today`, {
+      const res = await apiFetch(`/api/v1/admin/projects/${encodeURIComponent(s)}/feature-today`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +49,7 @@ export function AdminDailyFeaturedPanel({ candidates, featured }: Props) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/v1/admin/projects/${encodeURIComponent(s)}/feature-today`, {
+      const res = await apiFetch(`/api/v1/admin/projects/${encodeURIComponent(s)}/feature-today`, {
         method: "DELETE",
         credentials: "include",
       });

@@ -4,6 +4,7 @@ import { TopNav } from "@/components/top-nav";
 import { Footer } from "@/components/footer";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "VibeHub — Where Vibe Coders Build Together",
@@ -26,6 +27,7 @@ export default function RootLayout({
             <Footer />
           </LanguageProvider>
         </AuthProvider>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

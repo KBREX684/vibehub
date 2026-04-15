@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { EnterpriseVerificationStatus, Role, SubscriptionTier } from "@/lib/types";
+import { apiFetch, resetCsrfToken } from "@/lib/api-fetch";
 
 /**
  * Mirrors SessionUser from the server (userId, role, name) plus optional
@@ -80,10 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/v1/auth/logout", { method: "POST" });
+      await apiFetch("/api/v1/auth/logout", { method: "POST" });
     } catch {
       // ignore
     }
+    resetCsrfToken();
     setUser(null);
   };
 

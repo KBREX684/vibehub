@@ -3,6 +3,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Project, ProjectTeamSummary } from "@/lib/types";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface MeTeamsResponse {
   data?: { teams?: { slug: string; name: string }[] };
@@ -28,7 +29,7 @@ export function ProjectTeamLinkForm({ project, canEdit }: Props) {
     }
     let cancelled = false;
     void (async () => {
-      const res = await fetch("/api/v1/me/teams", { credentials: "include" });
+      const res = await apiFetch("/api/v1/me/teams", { credentials: "include" });
       const json = (await res.json()) as MeTeamsResponse;
       if (!cancelled && res.ok && json.data?.teams) {
         setTeams(json.data.teams);
@@ -61,7 +62,7 @@ export function ProjectTeamLinkForm({ project, canEdit }: Props) {
     try {
       const body =
         teamSlug === "" ? { teamSlug: null } : { teamSlug: teamSlug.trim() };
-      const res = await fetch(`/api/v1/projects/${encodeURIComponent(project.slug)}`, {
+      const res = await apiFetch(`/api/v1/projects/${encodeURIComponent(project.slug)}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

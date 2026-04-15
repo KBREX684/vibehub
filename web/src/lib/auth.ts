@@ -134,6 +134,33 @@ export async function getSessionUserFromCookie(): Promise<SessionUser | null> {
   return decodeSession(cookieStore.get(SESSION_COOKIE_KEY)?.value);
 }
 
+/**
+ * Derives a CSRF token from the session cookie value so it requires no
+ * separate storage. The token is a short HMAC over the raw session string
+ * using a "csrf:" prefix to keep the key space separate from session signing.
+ *
+ * Returns null when no session cookie is present or secret is unavailable.
+ */
+export function deriveCsrfToken(rawSessionCookie: string): string | null {
+  const secret = getSessionSecret();
+  if (!secret || !rawSessionCookie) return null;
+  return createHmac("sha256", secret)
+    .update(`csrf:${rawSessionCookie}`)
+    .digest("base64url")
+    .slice(0, 32);
+}
+
+/**
+ * Reads the session cookie and returns the derived CSRF token.
+ * For use in server components / route handlers that need to expose the token.
+ */
+export async function getCsrfToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(SESSION_COOKIE_KEY)?.value;
+  if (!raw) return null;
+  return deriveCsrfToken(raw);
+}
+
 function parseBearerToken(authorization: string | null): string | null {
   if (!authorization) {
     return null;

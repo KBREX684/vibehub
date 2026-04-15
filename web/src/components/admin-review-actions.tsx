@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   postId: string;
@@ -17,7 +18,7 @@ export function AdminReviewActions({ postId }: Props) {
     setLoading(action);
     setError(null);
     try {
-      const response = await fetch(`/api/v1/admin/moderation/posts/${postId}/review`, {
+      const response = await apiFetch(`/api/v1/admin/moderation/posts/${postId}/review`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action, note: note || undefined }),

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CollaborationIntentType } from "@/lib/types";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface PendingIntent {
   id: string;
@@ -35,7 +36,7 @@ export function ProjectCollaborationOwnerPanel({ projectSlug, intents, teams }: 
       if (action === "approve" && inviteSlug) {
         body.inviteToTeamSlug = inviteSlug;
       }
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/v1/projects/${encodeURIComponent(projectSlug)}/collaboration-intents/${encodeURIComponent(intentId)}/review`,
         {
           method: "POST",

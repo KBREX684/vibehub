@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Send, Wifi, WifiOff, Users, MessageSquare, Lock } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     if (!isMember || !currentUser) return;
     setHistoryState("loading");
     try {
-      const res = await fetch(`/api/v1/teams/${teamSlug}/chat/messages?limit=50`);
+      const res = await apiFetch(`/api/v1/teams/${teamSlug}/chat/messages?limit=50`);
       if (!res.ok) {
         if (mountedRef.current) {
           setHistoryState("error");
@@ -129,7 +130,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     setError(null);
 
     try {
-      const tokenRes = await fetch(`/api/v1/teams/${teamSlug}/chat/token`, { method: "POST" });
+      const tokenRes = await apiFetch(`/api/v1/teams/${teamSlug}/chat/token`, { method: "POST" });
       if (!tokenRes.ok) {
         const payload = await tokenRes.json().catch(() => null);
         setConnState("error");

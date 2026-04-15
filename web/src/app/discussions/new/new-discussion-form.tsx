@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Plus, X } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 export function NewDiscussionForm() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export function NewDiscussionForm() {
     setError(null);
     start(async () => {
       try {
-        const res = await fetch("/api/v1/posts", {
+        const res = await apiFetch("/api/v1/posts", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ title, body, tags }),

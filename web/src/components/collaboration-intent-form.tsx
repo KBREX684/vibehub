@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Users, UserPlus } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   projectSlug: string;
@@ -23,7 +24,7 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/v1/projects/${projectSlug}/collaboration-intents`, {
+      const response = await apiFetch(`/api/v1/projects/${projectSlug}/collaboration-intents`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

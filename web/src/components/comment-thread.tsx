@@ -21,11 +21,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/app/context/AuthContext";
+import { apiFetch } from "@/lib/api-fetch";
 
 // ─── API helpers ─────────────────────────────────────────────────────────────
 
 async function apiPost(url: string, body: unknown) {
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify(body),
@@ -36,7 +37,7 @@ async function apiPost(url: string, body: unknown) {
 }
 
 async function apiPatch(url: string, body: unknown) {
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     method:  "PATCH",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify(body),
@@ -47,7 +48,7 @@ async function apiPatch(url: string, body: unknown) {
 }
 
 async function apiDelete(url: string) {
-  const res = await fetch(url, { method: "DELETE" });
+  const res = await apiFetch(url, { method: "DELETE" });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
     throw new Error(json?.error?.message ?? "Delete failed");

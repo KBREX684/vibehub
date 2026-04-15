@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { UpgradeReason } from "@/lib/subscription";
 import { UPGRADE_MESSAGES } from "@/lib/subscription";
 import { Sparkles, X, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   reason: UpgradeReason;
@@ -25,20 +27,24 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
   }
 
   async function handleUpgrade() {
+    const toastId = toast.loading("Preparing checkout…");
     try {
-      const res = await fetch("/api/v1/billing/checkout", {
+      const res = await apiFetch("/api/v1/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier: "pro" }),
       });
       const json = (await res.json()) as { data?: { url?: string }; error?: { message?: string } };
       if (json.data?.url) {
+        toast.dismiss(toastId);
         window.location.href = json.data.url;
       } else {
-        alert(json.error?.message ?? "Could not start checkout. Please try again.");
+        toast.error(json.error?.message ?? "Could not start checkout. Please try again.", {
+          id: toastId,
+        });
       }
     } catch {
-      alert("Network error. Please try again.");
+      toast.error("Network error. Please try again.", { id: toastId });
     }
   }
 

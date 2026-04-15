@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
   intentId: string;
@@ -19,7 +20,7 @@ export function AdminCollaborationReviewActions({ intentId }: Props) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/admin/collaboration-intents/${intentId}/review`, {
+      const response = await apiFetch(`/api/v1/admin/collaboration-intents/${intentId}/review`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

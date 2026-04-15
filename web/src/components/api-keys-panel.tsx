@@ -11,6 +11,7 @@ import type { ApiKeyCreated, ApiKeySummary } from "@/lib/types";
 import type { UpgradeReason } from "@/lib/subscription";
 import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
 import { Key, Plus, Trash2, Copy, CheckCircle2, AlertCircle, Clock, Shield, Sparkles } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 const OPTIONAL_SCOPES = API_KEY_SCOPES.filter((s) => s !== API_KEY_SCOPE_READ_PUBLIC);
 
@@ -40,7 +41,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/v1/me/api-keys", { credentials: "include" });
+      const res = await apiFetch("/api/v1/me/api-keys", { credentials: "include" });
       const json = (await res.json()) as { data?: { keys?: ApiKeySummary[] }; error?: { message?: string } };
       if (!res.ok) {
         setMsg(json.error?.message ?? "Failed to load keys");
@@ -68,7 +69,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     setLastSecret(null);
     setCopied(false);
     try {
-      const res = await fetch("/api/v1/me/api-keys", {
+      const res = await apiFetch("/api/v1/me/api-keys", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -102,7 +103,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     
     setMsg(null);
     try {
-      const res = await fetch(`/api/v1/me/api-keys/${encodeURIComponent(id)}`, {
+      const res = await apiFetch(`/api/v1/me/api-keys/${encodeURIComponent(id)}`, {
         method: "DELETE",
         credentials: "include",
       });
