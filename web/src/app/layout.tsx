@@ -3,6 +3,7 @@ import "./globals.css";
 import { CommandPalette } from "@/components/command-palette";
 import { TopNav } from "@/components/top-nav";
 import { Footer } from "@/components/footer";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "sonner";
@@ -35,6 +36,7 @@ export default async function RootLayout({
     <html lang={language} className={htmlClassForThemePreference(themePref)} suppressHydrationWarning>
       <body className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col">
         <ThemeScript />
+        <WebVitalsReporter />
         <AuthProvider>
           <LanguageProvider initialLanguage={language}>
             <ThemeProvider initialTheme={themePref}>
