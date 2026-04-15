@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "REPORT_GENERATION_FAILED", message: "Failed to generate ecosystem report", details: error instanceof Error ? error.message : String(error) },
+      { code: "REPORT_GENERATION_FAILED", message: "Failed to generate ecosystem report" },
       500
     );
   }

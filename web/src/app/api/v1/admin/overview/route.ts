@@ -19,7 +19,6 @@ return apiError(
       {
         code: "ADMIN_OVERVIEW_FAILED",
         message: "Failed to load admin overview",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

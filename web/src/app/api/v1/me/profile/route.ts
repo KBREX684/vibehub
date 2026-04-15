@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import {
   getCreatorProfileByUserId,
@@ -11,7 +12,9 @@ import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getRequestLogger, serializeError } from "@/lib/logger";
 import { readJsonObjectBody } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
-import { createCreatorProfileSchema } from "./profile-schemas";
+import { createCreatorProfileSchema, patchCreatorProfileSchema } from "./profile-schemas";
+
+type _ProfileRouteUsesZod = z.infer<typeof createCreatorProfileSchema>;
 
 function clearableUrl(v: string | undefined): string | undefined {
   if (v === undefined) return undefined;
@@ -68,8 +71,8 @@ export async function POST(request: NextRequest) {
   const parsedBody = await readJsonObjectBody(request);
   if (!parsedBody.ok) return parsedBody.response;
 
-  const z = createCreatorProfileSchema.safeParse(parsedBody.body);
-  if (!z.success) return apiErrorFromZod(z.error);
+  const created = createCreatorProfileSchema.safeParse(parsedBody.body);
+  if (!created.success) return apiErrorFromZod(created.error);
 
   const {
     slug,
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
     twitterUrl,
     linkedinUrl,
     collaborationPreference,
-  } = z.data;
+  } = created.data;
 
   try {
     const profile = await createCreatorProfile({
@@ -107,7 +110,7 @@ export async function POST(request: NextRequest) {
     if (mapped) return mapped;
     const log = getRequestLogger(request, { route: "POST /api/v1/me/profile" });
     log.error({ err: serializeError(error) }, "profile create failed");
-    return apiError({ code: "PROFILE_CREATE_FAILED", message: msg }, 500);
+    return apiError({ code: "PROFILE_CREATE_FAILED", message: "Could not create profile" }, 500);
   }
 }
 
@@ -121,11 +124,32 @@ export async function PATCH(request: NextRequest) {
   const parsedBody = await readJsonObjectBody(request);
   if (!parsedBody.ok) return parsedBody.response;
 
-  const body = parsedBody.body;
-  if (Object.keys(body).length === 0) {
-    return apiError({ code: "NO_FIELDS", message: "Provide at least one field to update" }, 400);
+  const raw = parsedBody.body;
+  if (typeof raw.headline === "string" && raw.headline.trim().length > 200) {
+    return apiError({ code: "INVALID_HEADLINE", message: "headline must be ≤200 characters" }, 400);
   }
 
+  const linkKeys = ["avatarUrl", "websiteUrl", "githubUrl", "twitterUrl", "linkedinUrl"] as const;
+  const body = { ...raw };
+  for (const key of linkKeys) {
+    if (body[key] === undefined) continue;
+    if (normalizeOptionalUrl(body[key]) === undefined && body[key] !== "" && body[key] !== "__CLEAR__") {
+      delete body[key];
+    }
+  }
+
+  if (Object.keys(body).length === 0) {
+    const profile = await getCreatorProfileByUserId(auth.user.userId);
+    if (!profile) {
+      return apiError({ code: "PROFILE_NOT_FOUND", message: "No profile found. Use POST to create one first." }, 404);
+    }
+    return apiSuccess({ profile });
+  }
+
+  const zPatch = patchCreatorProfileSchema.safeParse(body);
+  if (!zPatch.success) return apiErrorFromZod(zPatch.error);
+
+  const parsed = zPatch.data;
   const input: {
     headline?: string;
     bio?: string;
@@ -138,33 +162,17 @@ export async function PATCH(request: NextRequest) {
     collaborationPreference?: string;
   } = {};
 
-  if (typeof body.headline === "string") {
-    const h = body.headline.trim();
-    if (h.length > 200) {
-      return apiError({ code: "INVALID_HEADLINE", message: "headline must be ≤200 characters" }, 400);
-    }
-    input.headline = h;
-  }
-  if (typeof body.bio === "string") {
-    const b = body.bio.trim();
-    if (b.length > 2000) {
-      return apiError({ code: "INVALID_BIO", message: "bio must be ≤2000 characters" }, 400);
-    }
-    input.bio = b;
-  }
-  if (Array.isArray(body.skills)) {
-    input.skills = body.skills.filter((s): s is string => typeof s === "string").slice(0, 20);
-  }
-  if (typeof body.collaborationPreference === "string") {
-    input.collaborationPreference = body.collaborationPreference;
-  }
+  if (parsed.headline !== undefined) input.headline = parsed.headline;
+  if (parsed.bio !== undefined) input.bio = parsed.bio;
+  if (parsed.skills !== undefined) input.skills = parsed.skills;
+  if (parsed.collaborationPreference !== undefined) input.collaborationPreference = parsed.collaborationPreference;
 
-  for (const key of ["avatarUrl", "websiteUrl", "githubUrl", "twitterUrl", "linkedinUrl"] as const) {
-    if (body[key] !== undefined) {
-      const next = normalizeOptionalUrl(body[key]);
-      if (next === "") input[key] = undefined;
-      else if (next !== undefined) input[key] = next;
-    }
+  for (const key of linkKeys) {
+    const val = parsed[key];
+    if (val === undefined) continue;
+    const cleared = clearableUrl(val);
+    if (val === "" || val === "__CLEAR__") input[key] = undefined;
+    else if (cleared !== undefined) input[key] = cleared;
   }
 
   try {
@@ -178,6 +186,6 @@ export async function PATCH(request: NextRequest) {
     if (mapped) return mapped;
     const log = getRequestLogger(request, { route: "PATCH /api/v1/me/profile" });
     log.error({ err: serializeError(error) }, "profile update failed");
-    return apiError({ code: "PROFILE_UPDATE_FAILED", message: msg }, 500);
+    return apiError({ code: "PROFILE_UPDATE_FAILED", message: "Could not update profile" }, 500);
   }
 }

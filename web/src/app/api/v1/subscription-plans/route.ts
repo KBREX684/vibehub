@@ -10,7 +10,7 @@ export async function GET() {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "PLANS_FETCH_FAILED", message: "Failed to fetch subscription plans", details: error instanceof Error ? error.message : String(error) },
+      { code: "PLANS_FETCH_FAILED", message: "Failed to fetch subscription plans" },
       500
     );
   }

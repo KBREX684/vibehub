@@ -21,7 +21,6 @@ return apiError(
       {
         code: "PUBLIC_TEAM_GET_FAILED",
         message: "Failed to load team",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

@@ -71,7 +71,6 @@ export async function GET(request: NextRequest) {
       {
         code: "PROJECTS_LIST_FAILED",
         message: "Failed to list projects",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

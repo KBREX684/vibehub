@@ -28,7 +28,6 @@ return apiError(
       {
         code: "API_KEYS_LIST_FAILED",
         message: "Failed to list API keys",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

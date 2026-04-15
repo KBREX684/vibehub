@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "PROJECT_RADAR_FAILED", message: "Failed to fetch project radar", details: error instanceof Error ? error.message : String(error) },
+      { code: "PROJECT_RADAR_FAILED", message: "Failed to fetch project radar" },
       500
     );
   }

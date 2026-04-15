@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "ACTIVITY_LOG_FAILED", message: "Failed to fetch activity log", details: error instanceof Error ? error.message : String(error) },
+      { code: "ACTIVITY_LOG_FAILED", message: "Failed to fetch activity log" },
       500
     );
   }

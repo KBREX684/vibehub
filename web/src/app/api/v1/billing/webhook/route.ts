@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { upsertUserSubscription, upsertStripeCustomer } from "@/lib/repository";
 import { getRequestLogger, serializeError } from "@/lib/logger";
@@ -7,6 +8,13 @@ import type { SubscriptionTier } from "@/lib/types";
 const PRICE_TO_TIER: Record<string, SubscriptionTier> = {
   [process.env.STRIPE_PRICE_PRO ?? "__pro__"]: "pro",
 };
+
+const stripeWebhookEventSchema = z.object({
+  type: z.string(),
+  data: z.object({
+    object: z.record(z.unknown()),
+  }),
+});
 
 function tierFromPriceId(priceId: string | null | undefined): SubscriptionTier {
   if (!priceId) return "free";
@@ -30,18 +38,20 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("stripe-signature") ?? "";
 
-  let event: {
-    type: string;
-    data: { object: Record<string, unknown> };
-  };
+  let event: z.infer<typeof stripeWebhookEventSchema>;
 
   try {
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(secretKey, { apiVersion: "2026-03-25.dahlia" });
     const raw = webhookSecret
       ? stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
-      : (JSON.parse(rawBody) as unknown);
-    event = raw as typeof event;
+      : JSON.parse(rawBody);
+    const parsed = stripeWebhookEventSchema.safeParse(raw);
+    if (!parsed.success) {
+      requestLogger.warn({ issues: parsed.error.flatten() }, "Stripe webhook payload invalid");
+      return new Response(JSON.stringify({ error: "Invalid webhook payload" }), { status: 400 });
+    }
+    event = parsed.data;
   } catch (err) {
     requestLogger.warn({ err: serializeError(err) }, "Stripe webhook signature verification failed");
     return new Response(JSON.stringify({ error: "Webhook signature invalid" }), { status: 400 });

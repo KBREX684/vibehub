@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "TALENT_RADAR_FAILED", message: "Failed to fetch talent radar", details: error instanceof Error ? error.message : String(error) },
+      { code: "TALENT_RADAR_FAILED", message: "Failed to fetch talent radar" },
       500
     );
   }

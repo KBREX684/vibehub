@@ -1,8 +1,14 @@
+import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getContributionCredit, refreshContributionCredit } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { logger, serializeError } from "@/lib/logger";
+import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
+import { apiErrorFromZod } from "@/lib/zod-api-error";
+
+const emptyBodySchema = z.object({}).strict();
 
 export async function GET() {
   const session = await getSessionUserFromCookie();
@@ -21,11 +27,16 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
   }
+
+  const parsed = await readJsonObjectBodyOrEmpty(request);
+  if (!parsed.ok) return parsed.response;
+  const zod = emptyBodySchema.safeParse(parsed.body);
+  if (!zod.success) return apiErrorFromZod(zod.error);
 
   try {
     const credit = await refreshContributionCredit(session.userId);

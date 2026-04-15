@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: Props) {
     if (repositoryErrorResponse) return repositoryErrorResponse;
     const log = getRequestLogger(_request, { route: "GET /api/v1/posts/[slug]/comments" });
     log.error({ err: serializeError(err) }, "comments fetch failed");
-    return apiError({ code: "COMMENTS_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    return apiError({ code: "COMMENTS_FETCH_FAILED", message: "Failed to load comments" }, 500);
   }
 }
 

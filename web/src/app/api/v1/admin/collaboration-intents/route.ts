@@ -36,7 +36,6 @@ return apiError(
       {
         code: "ADMIN_COLLABORATION_INTENTS_LIST_FAILED",
         message: "Failed to list collaboration intents",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

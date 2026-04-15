@@ -20,6 +20,22 @@ const optionalLinkField = z.union([
     .transform((s) => new URL(s).href),
 ]);
 
+/** PATCH: same link rules; optional fields. Invalid URL strings should be stripped by preprocess before parse. */
+export const patchCreatorProfileSchema = z
+  .object({
+    headline: z.string().trim().min(1).max(200).optional(),
+    bio: z.string().trim().min(1).max(2000).optional(),
+    skills: z.array(z.string()).max(20).optional(),
+    avatarUrl: optionalLinkField.optional(),
+    websiteUrl: optionalLinkField.optional(),
+    githubUrl: optionalLinkField.optional(),
+    twitterUrl: optionalLinkField.optional(),
+    linkedinUrl: optionalLinkField.optional(),
+    collaborationPreference: collaborationPreferenceSchema.optional(),
+  })
+  .strict()
+  .refine((o) => Object.keys(o).length > 0, { message: "Provide at least one field to update" });
+
 export const createCreatorProfileSchema = z.object({
   slug: z
     .string()

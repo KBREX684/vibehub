@@ -13,7 +13,6 @@ return apiError(
       {
         code: "PROJECT_FACETS_FAILED",
         message: "Failed to load project filter facets",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

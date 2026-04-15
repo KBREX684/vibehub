@@ -24,7 +24,6 @@ return apiError(
       {
         code: "ME_TEAMS_FAILED",
         message: "Failed to list teams for current user",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

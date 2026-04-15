@@ -44,7 +44,6 @@ return apiError(
       {
         code: "PUBLIC_PROJECTS_LIST_FAILED",
         message: "Failed to list projects",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

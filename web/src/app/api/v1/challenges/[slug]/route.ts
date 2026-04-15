@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "CHALLENGE_GET_FAILED", message: "Failed to get challenge", details: error instanceof Error ? error.message : String(error) },
+      { code: "CHALLENGE_GET_FAILED", message: "Failed to get challenge" },
       500
     );
   }

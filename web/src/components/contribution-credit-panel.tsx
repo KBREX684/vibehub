@@ -33,7 +33,11 @@ export function ContributionCreditPanel({ userId }: { userId: string }) {
   async function refresh() {
     setRefreshing(true);
     try {
-      const r = await apiFetch("/api/v1/me/reputation", { method: "POST" });
+      const r = await apiFetch("/api/v1/me/reputation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
       const j = await r.json();
       if (j?.data) setCredit(j.data);
     } finally {

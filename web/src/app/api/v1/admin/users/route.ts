@@ -23,7 +23,6 @@ return apiError(
       {
         code: "ADMIN_USERS_LIST_FAILED",
         message: "Failed to list users",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

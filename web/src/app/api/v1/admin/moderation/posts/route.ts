@@ -39,7 +39,6 @@ return apiError(
       {
         code: "ADMIN_MODERATION_POSTS_FAILED",
         message: "Failed to list moderation posts",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

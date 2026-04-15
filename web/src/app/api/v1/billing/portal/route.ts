@@ -59,6 +59,6 @@ export async function POST(request: NextRequest) {
     if (repositoryErrorResponse) return repositoryErrorResponse;
     const log = getRequestLogger(request, { route: "POST /api/v1/billing/portal" });
     log.error({ err: serializeError(err) }, "billing portal failed");
-    return apiError({ code: "PORTAL_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    return apiError({ code: "PORTAL_FAILED", message: "Could not open billing portal" }, 500);
   }
 }

@@ -30,6 +30,7 @@ import { IncomingMessage } from "http";
 import { createServer } from "http";
 import { verifyChatToken, type ChatTokenErrorCode } from "./src/lib/chat-token";
 import { assertUrlCountAtMost, escapeHtmlAngleBrackets } from "./src/lib/content-safety";
+import { logger, serializeError } from "./src/lib/logger";
 import Redis from "ioredis";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -231,7 +232,7 @@ function requireWsServerTokenOrWarn() {
     if (IS_PRODUCTION) {
       throw new Error(msg);
     }
-    console.warn(msg);
+    logger.warn(msg);
   }
 }
 
@@ -476,17 +477,17 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
   });
 
   ws.on("error", (err) => {
-    console.error("[ws-server] socket error:", err.message);
+    logger.error({ err: serializeError(err) }, "[ws-server] socket error");
   });
 });
 
 httpServer.listen(WS_PORT, () => {
-  console.log(`[ws-server] Listening on port ${WS_PORT} (WebSocket path: ${WS_PATH})`);
+  logger.info({ port: WS_PORT, path: WS_PATH }, "[ws-server] listening");
 });
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────
 function shutdown(signal: string) {
-  console.log(`[ws-server] ${signal} received — closing`);
+  logger.info({ signal }, "[ws-server] shutdown");
   wss.close(() => {
     httpServer.close(() => process.exit(0));
   });

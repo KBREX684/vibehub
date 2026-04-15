@@ -33,7 +33,6 @@ return apiError(
       {
         code: "MCP_SEARCH_CREATORS_FAILED",
         message: "Failed to execute MCP tool search_creators",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

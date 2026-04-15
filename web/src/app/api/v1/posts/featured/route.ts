@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "FEATURED_LIST_FAILED", message: "Failed to list featured posts", details: error instanceof Error ? error.message : String(error) },
+      { code: "FEATURED_LIST_FAILED", message: "Failed to list featured posts" },
       500
     );
   }

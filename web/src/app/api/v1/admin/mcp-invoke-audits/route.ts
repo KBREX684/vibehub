@@ -30,7 +30,6 @@ return apiError(
       {
         code: "ADMIN_MCP_AUDITS_FAILED",
         message: "Failed to list MCP invoke audits",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

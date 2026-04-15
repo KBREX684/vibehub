@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "CHALLENGES_LIST_FAILED", message: "Failed to list challenges", details: error instanceof Error ? error.message : String(error) },
+      { code: "CHALLENGES_LIST_FAILED", message: "Failed to list challenges" },
       500
     );
   }
@@ -62,7 +62,7 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid challenge payload", details: error.flatten() }, 400);
     }
     return apiError(
-      { code: "CHALLENGE_CREATE_FAILED", message: "Failed to create challenge", details: error instanceof Error ? error.message : String(error) },
+      { code: "CHALLENGE_CREATE_FAILED", message: "Failed to create challenge" },
       500
     );
   }

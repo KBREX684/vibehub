@@ -4,6 +4,7 @@ import { getUserSubscription } from "@/lib/repository";
 import { getLimits, TIER_PRICING } from "@/lib/subscription";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 
 /** M-1: Get current user's subscription info + limits. */
 export async function GET(request: NextRequest) {
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError({ code: "SUBSCRIPTION_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const log = getRequestLogger(request, { route: "GET /api/v1/me/subscription" });
+    log.error({ err: serializeError(err) }, "subscription fetch failed");
+    return apiError({ code: "SUBSCRIPTION_FETCH_FAILED", message: "Failed to load subscription" }, 500);
   }
 }

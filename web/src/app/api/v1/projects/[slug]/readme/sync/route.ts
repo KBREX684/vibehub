@@ -1,19 +1,30 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getProjectBySlug, updateProject } from "@/lib/repository";
 import { fetchGitHubReadmeMarkdown } from "@/lib/github-readme";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
+import { apiErrorFromZod } from "@/lib/zod-api-error";
 
 interface Params {
   params: Promise<{ slug: string }>;
 }
 
-export async function POST(_request: NextRequest, { params }: Params) {
+const emptyBodySchema = z.object({}).strict();
+
+export async function POST(request: NextRequest, { params }: Params) {
   const session = await getSessionUserFromCookie();
   if (!session) return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
-  const { slug } = await params;
+  const parsed = await readJsonObjectBodyOrEmpty(request);
+  if (!parsed.ok) return parsed.response;
+  const bodyZ = emptyBodySchema.safeParse(parsed.body);
+  if (!bodyZ.success) return apiErrorFromZod(bodyZ.error);
+
+  const { slug: rawSlug } = await params;
+  const slug = z.string().min(1).parse(rawSlug);
   try {
     const project = await getProjectBySlug(slug);
     if (!project) return apiError({ code: "PROJECT_NOT_FOUND", message: "Project not found" }, 404);
@@ -33,7 +44,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
   } catch (error) {
     const r = apiErrorFromRepositoryCatch(error);
     if (r) return r;
-    const log = getRequestLogger(_request, { route: "POST /api/v1/projects/[slug]/readme/sync" });
+    const log = getRequestLogger(request, { route: "POST /api/v1/projects/[slug]/readme/sync" });
     log.error({ err: serializeError(error) }, "readme sync failed");
     return apiError({ code: "README_SYNC_FAILED", message: "Could not sync README" }, 500);
   }

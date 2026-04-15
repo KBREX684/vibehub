@@ -23,7 +23,6 @@ return apiError(
       {
         code: "ADMIN_AUDIT_LOGS_FAILED",
         message: "Failed to list audit logs",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

@@ -54,7 +54,6 @@ export async function GET(request: Request) {
       {
         code: "POSTS_LIST_FAILED",
         message: "Failed to list discussion posts",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );
@@ -89,7 +88,6 @@ export async function POST(request: Request) {
       {
         code: "POST_CREATE_FAILED",
         message: "Failed to create post",
-        details: error instanceof Error ? error.message : String(error),
       },
       400
     );

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "REPUTATION_LEADERBOARD_FAILED", message: "Failed to fetch leaderboard", details: error instanceof Error ? error.message : String(error) },
+      { code: "REPUTATION_LEADERBOARD_FAILED", message: "Failed to fetch leaderboard" },
       500
     );
   }

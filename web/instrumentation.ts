@@ -12,7 +12,8 @@ export async function register() {
     const { startCreditWorkers } = await import("@/lib/queue/credit-queue");
     await startCreditWorkers();
   } catch (e) {
-    console.error("[instrumentation] bootstrap failed", e);
+    const { logger, serializeError } = await import("@/lib/logger");
+    logger.error({ err: serializeError(e) }, "[instrumentation] bootstrap failed");
     throw e;
   }
 }

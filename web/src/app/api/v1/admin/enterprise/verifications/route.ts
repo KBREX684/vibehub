@@ -59,7 +59,6 @@ return apiError(
       {
         code: "ADMIN_ENTERPRISE_VERIFICATIONS_LIST_FAILED",
         message: "Failed to list enterprise verification applications",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

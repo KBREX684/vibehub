@@ -18,7 +18,6 @@ return apiError(
       {
         code: "PUBLIC_CREATORS_LIST_FAILED",
         message: "Failed to list creators",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

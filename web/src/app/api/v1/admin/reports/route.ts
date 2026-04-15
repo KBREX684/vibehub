@@ -30,7 +30,6 @@ return apiError(
       {
         code: "ADMIN_REPORTS_LIST_FAILED",
         message: "Failed to list report tickets",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

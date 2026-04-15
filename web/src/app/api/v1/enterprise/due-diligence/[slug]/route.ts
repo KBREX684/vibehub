@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "DUE_DILIGENCE_FAILED", message: "Failed to fetch due diligence", details: error instanceof Error ? error.message : String(error) },
+      { code: "DUE_DILIGENCE_FAILED", message: "Failed to fetch due diligence" },
       500
     );
   }

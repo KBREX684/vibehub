@@ -16,7 +16,6 @@ return apiError(
       {
         code: "PUBLIC_TEAMS_LIST_FAILED",
         message: "Failed to list teams",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

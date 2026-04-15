@@ -58,7 +58,6 @@ return apiError(
       {
         code: "MCP_SEARCH_PROJECTS_FAILED",
         message: "Failed to execute MCP tool search_projects",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

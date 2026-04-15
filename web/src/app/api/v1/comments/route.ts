@@ -28,7 +28,6 @@ return apiError(
       {
         code: "COMMENTS_LIST_FAILED",
         message: "Failed to list comments",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

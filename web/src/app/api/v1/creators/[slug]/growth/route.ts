@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 return apiError(
-      { code: "CREATOR_GROWTH_FAILED", message: "Failed to get creator growth stats", details: error instanceof Error ? error.message : String(error) },
+      { code: "CREATOR_GROWTH_FAILED", message: "Failed to get creator growth stats" },
       500
     );
   }
