@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/app/context/AuthContext";
 import { apiFetch } from "@/lib/api-fetch";
+import { MarkdownDocument } from "@/components/markdown-document";
 
 // ─── API helpers ─────────────────────────────────────────────────────────────
 
@@ -293,9 +294,10 @@ function CommentCard({
             </div>
           </div>
         ) : (
-          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-wrap">
-            {comment.body}
-          </p>
+          <MarkdownDocument
+            markdown={comment.body}
+            className="markdown-body text-sm text-[var(--color-text-secondary)] [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+          />
         )}
 
         {/* Delete confirm */}
