@@ -44,10 +44,19 @@ interface Props {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const WS_URL =
-  typeof process !== "undefined" && process.env.NEXT_PUBLIC_WS_URL
-    ? process.env.NEXT_PUBLIC_WS_URL
-    : `ws://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:3001`;
+/** Resolved at connect time so SSR never pins the browser hostname to localhost. */
+function getTeamChatWsUrl(): string {
+  const fromEnv = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_WS_URL?.trim() : "";
+  if (fromEnv) return fromEnv;
+  const { protocol, hostname, host, port } = window.location;
+  const wsProto = protocol === "https:" ? "wss:" : "ws:";
+  // Reverse proxy on 80/443: nginx forwards `/ws` to ws-server
+  if (!port || port === "80" || port === "443") {
+    return `${wsProto}//${host}/ws`;
+  }
+  // Local dev: Next.js on 3000, ws-server on 3001
+  return `${wsProto}//${hostname}:3001/ws`;
+}
 
 function formatTime(iso: string) {
   try {
@@ -154,7 +163,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
 
     let ws: WebSocket;
     try {
-      ws = new WebSocket(WS_URL);
+      ws = new WebSocket(getTeamChatWsUrl());
     } catch {
       setConnState("error");
       setUsingRestFallback(true);

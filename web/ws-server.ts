@@ -35,6 +35,8 @@ import Redis from "ioredis";
 // ─── Configuration ────────────────────────────────────────────────────────────
 
 const WS_PORT           = parseInt(process.env.WS_PORT           ?? "3001",  10);
+/** WebSocket upgrade path (nginx should proxy `/ws` here). */
+const WS_PATH           = (process.env.WS_PATH ?? "/ws").trim() || "/ws";
 const CHAT_CAPACITY_DEFAULT = parseInt(process.env.CHAT_CAPACITY_DEFAULT ?? "50", 10);
 const MESSAGE_MAX_BYTES = 2000;
 const HISTORY_LIMIT     = 50;
@@ -320,7 +322,7 @@ function sendJson(ws: WebSocket, payload: object) {
 // ─── Server ───────────────────────────────────────────────────────────────────
 
 const httpServer = createServer((req, res) => {
-  if (req.url === "/health") {
+  if (req.url === "/health" || req.url?.startsWith("/health?")) {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok", service: "vibehub-ws" }));
     return;
@@ -329,7 +331,7 @@ const httpServer = createServer((req, res) => {
   res.end();
 });
 
-const wss = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({ server: httpServer, path: WS_PATH });
 
 wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
   let client: AuthedClient | null = null;
@@ -479,7 +481,7 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
 });
 
 httpServer.listen(WS_PORT, () => {
-  console.log(`[ws-server] Listening on port ${WS_PORT}`);
+  console.log(`[ws-server] Listening on port ${WS_PORT} (WebSocket path: ${WS_PATH})`);
 });
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────

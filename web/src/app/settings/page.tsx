@@ -1,0 +1,82 @@
+import Link from "next/link";
+import { getSessionUserFromCookie } from "@/lib/auth";
+import { Key, CreditCard, Building2, ChevronRight, Settings2 } from "lucide-react";
+
+const LINKS = [
+  {
+    href: "/settings/subscription",
+    title: "Subscription",
+    description: "Plan, billing, and usage limits.",
+    icon: CreditCard,
+  },
+  {
+    href: "/settings/api-keys",
+    title: "API keys",
+    description: "Developer keys, scopes, and MCP tooling.",
+    icon: Key,
+  },
+  {
+    href: "/enterprise/verify",
+    title: "Enterprise workspace",
+    description: "Apply for observer workspace access (optional).",
+    icon: Building2,
+  },
+] as const;
+
+export default async function SettingsIndexPage() {
+  const session = await getSessionUserFromCookie();
+
+  return (
+    <main className="container max-w-2xl pb-24 pt-8 space-y-8">
+      <div className="flex items-start gap-4 pb-6 border-b border-[var(--color-border)]">
+        <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-secondary)]">
+          <Settings2 className="w-6 h-6" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">Settings</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1 m-0">
+            Manage your account, billing, and developer integrations.
+          </p>
+        </div>
+      </div>
+
+      {!session && (
+        <div className="card p-5 border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <p className="text-sm text-[var(--color-text-secondary)] m-0">
+            Sign in to change subscription and API keys. You can still browse public links below.
+          </p>
+        </div>
+      )}
+
+      <ul className="space-y-3">
+        {LINKS.map(({ href, title, description, icon: Icon }) => (
+          <li key={href}>
+            <Link
+              href={href}
+              className="group flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] p-4 transition-colors hover:bg-[var(--color-bg-surface)] hover:border-[var(--color-border-strong)]"
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{title}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5 m-0">{description}</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-xs text-[var(--color-text-muted)]">
+        Project creation and editing live under{" "}
+        <Link href="/discover" className="text-[var(--color-text-secondary)] underline hover:text-[var(--color-text-primary)]">
+          Discover
+        </Link>{" "}
+        and individual project pages.
+      </p>
+    </main>
+  );
+}
