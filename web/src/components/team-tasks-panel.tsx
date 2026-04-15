@@ -290,17 +290,44 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
           >
             <div className="p-6 rounded-[24px] bg-black/5 border border-black/5 space-y-4">
               <div className="flex flex-col gap-2">
-                <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Task Title</label>
-                <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} required maxLength={200} className={inputClasses} placeholder="e.g., Design new landing page" />
+                <label htmlFor="team-task-title" className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">
+                  Task Title
+                </label>
+                <input
+                  id="team-task-title"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  required
+                  maxLength={200}
+                  className={inputClasses}
+                  placeholder="e.g., Design new landing page"
+                />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Description (optional)</label>
-                <textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={2} maxLength={2000} className={`${inputClasses} resize-none`} placeholder="Add more details..." />
+                <label htmlFor="team-task-description" className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">
+                  Description (optional)
+                </label>
+                <textarea
+                  id="team-task-description"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  rows={2}
+                  maxLength={2000}
+                  className={`${inputClasses} resize-none`}
+                  placeholder="Add more details..."
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2 relative">
-                  <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Assignee (optional)</label>
-                  <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)} className={`${inputClasses} appearance-none pr-10`}>
+                  <label htmlFor="team-task-assignee" className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">
+                    Assignee (optional)
+                  </label>
+                  <select
+                    id="team-task-assignee"
+                    value={newAssignee}
+                    onChange={(e) => setNewAssignee(e.target.value)}
+                    className={`${inputClasses} appearance-none pr-10`}
+                  >
                     <option value="">Unassigned</option>
                     {members.map((m) => (
                       <option key={m.userId} value={m.userId}>{m.name}</option>
@@ -309,8 +336,15 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
                   <ChevronDown className="absolute right-4 top-10 w-4 h-4 text-[var(--color-text-tertiary)] pointer-events-none" />
                 </div>
                 <div className="flex flex-col gap-2 relative">
-                  <label className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">Milestone (optional)</label>
-                  <select value={newMilestoneId} onChange={(e) => setNewMilestoneId(e.target.value)} className={`${inputClasses} appearance-none pr-10`}>
+                  <label htmlFor="team-task-milestone" className="text-[0.85rem] font-medium text-[var(--color-text-secondary)]">
+                    Milestone (optional)
+                  </label>
+                  <select
+                    id="team-task-milestone"
+                    value={newMilestoneId}
+                    onChange={(e) => setNewMilestoneId(e.target.value)}
+                    className={`${inputClasses} appearance-none pr-10`}
+                  >
                     <option value="">No Milestone</option>
                     {milestones.map((m) => (
                       <option key={m.id} value={m.id}>{m.title}</option>

@@ -3,6 +3,14 @@ import { encodeSession } from "../../src/lib/auth";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
+async function csrfHeadersForPage(page: Page): Promise<Record<string, string>> {
+  const res = await page.request.get("/api/v1/auth/csrf-token");
+  if (!res.ok()) return {};
+  const json = await res.json().catch(() => null);
+  const token = json?.data?.csrfToken as string | undefined;
+  return token ? { "x-csrf-token": token } : {};
+}
+
 async function setSessionCookie(page: Page, role: "user" | "admin") {
   const token = encodeSession({
     userId: role === "admin" ? "u1" : "u2",
@@ -40,10 +48,15 @@ async function requestJson(
   url: string,
   data?: unknown
 ) {
+  const headers: Record<string, string> = {};
+  if (data) {
+    headers["content-type"] = "application/json";
+    Object.assign(headers, await csrfHeadersForPage(page));
+  }
   const res = await page.request.fetch(url, {
     method,
     data,
-    headers: data ? { "content-type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
   });
   const json = await res.json().catch(() => null);
   return { res, json };
@@ -73,6 +86,10 @@ async function ensureUnreadNotificationForAdmin(page: Page) {
   for (const req of pending) {
     await page.request.post(`/api/v1/teams/vibehub-core/join-requests/${req.id}/review`, {
       data: { action: "reject" },
+      headers: {
+        "content-type": "application/json",
+        ...(await csrfHeadersForPage(page)),
+      },
     });
   }
 
@@ -91,6 +108,10 @@ async function ensureUnreadNotificationForAdmin(page: Page) {
 
   const joinRes = await page.request.post("/api/v1/teams/vibehub-core/join", {
     data: { message: `e2e-notification-${Date.now()}` },
+    headers: {
+      "content-type": "application/json",
+      ...(await csrfHeadersForPage(page)),
+    },
   });
   if (!joinRes.ok()) {
     const detail = await joinRes.text();
@@ -134,10 +155,13 @@ test.describe("Core acceptance flows", () => {
 
     await page.request.post("/api/v1/auth/logout", {
       data: "{}",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(await csrfHeadersForPage(page)),
+      },
     });
     await page.goto("/");
-    await expect(page.getByRole("link", { name: /sign in|登录/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /sign in|登录/i }).first()).toBeVisible();
   });
 
   test("admin isolation for normal user", async ({ page }) => {
@@ -151,12 +175,12 @@ test.describe("Core acceptance flows", () => {
     await setSession(page, "user");
     await page.goto("/workspace/enterprise");
     await expect(page).toHaveURL(/\/workspace\/enterprise/);
-    await expect(page.getByText("Radar workspace access")).toBeVisible();
-    await expect(page.getByText(/Request access/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Radar workspace access" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Request access/i }).first()).toBeVisible();
 
     await setSession(page, "admin");
     await page.goto("/workspace/enterprise");
-    await expect(page.getByText("Radar workspace access")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Radar workspace access" })).toBeVisible();
     await expect(page.getByText(/Admins use the governance console/i)).toBeVisible();
   });
 
@@ -263,6 +287,10 @@ test.describe("Core acceptance flows", () => {
     if (!visibleAfterSend) {
       const seed = await page.request.post("/api/v1/teams/vibehub-core/chat/messages", {
         data: { body },
+        headers: {
+          "content-type": "application/json",
+          ...(await csrfHeadersForPage(page)),
+        },
       });
       expect(seed.ok()).toBeTruthy();
     }

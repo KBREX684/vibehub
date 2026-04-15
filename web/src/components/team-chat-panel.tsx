@@ -289,19 +289,33 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: "message", body }));
     } else {
-      // REST fallback
+      // REST fallback (must use apiFetch so cookie sessions satisfy CSRF middleware)
       setUsingRestFallback(true);
-      fetch(`/api/v1/teams/${teamSlug}/chat/messages`, {
-        method:  "POST",
+      void apiFetch(`/api/v1/teams/${teamSlug}/chat/messages`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ body }),
+        body: JSON.stringify({ body }),
       })
         .then(async (res) => {
           if (!res.ok) throw new Error("send failed");
-          const data = await res.json();
-          if (mountedRef.current) {
+          const data = (await res.json()) as {
+            data?: { id: string; authorId: string; authorName: string; body: string; createdAt: string };
+          };
+          if (mountedRef.current && data.data) {
+            const saved = data.data;
             setMessages((prev) =>
-              prev.map((m) => (m.id === optimistic.id ? { ...data.data, pending: false } : m))
+              prev.map((m) =>
+                m.id === optimistic.id
+                  ? {
+                      id: saved.id,
+                      userId: saved.authorId,
+                      userName: saved.authorName,
+                      body: saved.body,
+                      createdAt: saved.createdAt,
+                      pending: false,
+                    }
+                  : m
+              )
             );
           }
         })
