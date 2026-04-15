@@ -42,7 +42,7 @@ export default async function RootLayout({
               href="#main-content"
               className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-[var(--radius-md)] focus:bg-[var(--color-bg-elevated)] focus:px-4 focus:py-2 focus:text-sm focus:text-[var(--color-text-primary)] focus:shadow-[var(--shadow-modal)]"
             >
-              {t("a11y.skipToContent")}
+              {t("a11y.skip_to_content", "Skip to main content")}
             </a>
             <TopNav />
             <CommandPalette />

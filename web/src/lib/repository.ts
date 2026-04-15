@@ -3038,7 +3038,10 @@ export async function togglePostLike(userId: string, postSlug: string): Promise<
   return { liked: true, likeCount: count };
 }
 
-export async function togglePostBookmark(userId: string, postSlug: string): Promise<{ bookmarked: boolean }> {
+export async function togglePostBookmark(
+  userId: string,
+  postSlug: string
+): Promise<{ bookmarked: boolean; bookmarkCount: number }> {
   if (useMockData) {
     const post = mockPosts.find((p) => p.slug === postSlug);
     if (!post) throw new Error("POST_NOT_FOUND");
@@ -3046,11 +3049,11 @@ export async function togglePostBookmark(userId: string, postSlug: string): Prom
     if (existing >= 0) {
       mockPostBookmarks.splice(existing, 1);
       post.bookmarkCount = Math.max(0, post.bookmarkCount - 1);
-      return { bookmarked: false };
+      return { bookmarked: false, bookmarkCount: post.bookmarkCount };
     }
     mockPostBookmarks.push({ id: `bk_${Date.now()}`, userId, postId: post.id, createdAt: new Date().toISOString() });
     post.bookmarkCount = (post.bookmarkCount || 0) + 1;
-    return { bookmarked: true };
+    return { bookmarked: true, bookmarkCount: post.bookmarkCount };
   }
   const prisma = await getPrisma();
   const post = await prisma.post.findUnique({ where: { slug: postSlug }, select: { id: true } });
@@ -3058,10 +3061,12 @@ export async function togglePostBookmark(userId: string, postSlug: string): Prom
   const existing = await prisma.postBookmark.findUnique({ where: { userId_postId: { userId, postId: post.id } } });
   if (existing) {
     await prisma.postBookmark.delete({ where: { id: existing.id } });
-    return { bookmarked: false };
+    const bookmarkCount = await prisma.postBookmark.count({ where: { postId: post.id } });
+    return { bookmarked: false, bookmarkCount };
   }
   await prisma.postBookmark.create({ data: { userId, postId: post.id } });
-  return { bookmarked: true };
+  const bookmarkCount = await prisma.postBookmark.count({ where: { postId: post.id } });
+  return { bookmarked: true, bookmarkCount };
 }
 
 export async function toggleProjectBookmark(userId: string, projectSlug: string): Promise<{ bookmarked: boolean }> {

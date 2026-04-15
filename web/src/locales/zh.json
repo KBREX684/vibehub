@@ -186,6 +186,7 @@
     "webhooksDesc": "带 HMAC 签名的出站 HTTPS Webhook。"
   },
   "a11y": {
+    "skip_to_content": "跳转到主要内容",
     "openNavigationMenu": "打开导航菜单",
     "closeNavigationMenu": "关闭导航菜单",
     "closeDialog": "关闭对话框"
