@@ -17,7 +17,8 @@ export interface DiscussionsPostFeedProps {
     page: number;
     limit: number;
   };
-  buildClassicHref: () => string;
+  /** Pre-computed string href for switching to classic pagination. */
+  classicHref: string;
 }
 
 export function DiscussionsPostFeed({
@@ -26,7 +27,7 @@ export function DiscussionsPostFeed({
   limit,
   initialItems,
   initialPagination,
-  buildClassicHref,
+  classicHref,
 }: DiscussionsPostFeedProps) {
   const qsBase = useMemo(() => {
     const sp = new URLSearchParams();
@@ -65,10 +66,9 @@ export function DiscussionsPostFeed({
   });
 
   const paginationModeHref = useMemo(() => {
-    const base = buildClassicHref();
-    const sep = base.includes("?") ? "&" : "?";
-    return `${base}${sep}pagination=1`;
-  }, [buildClassicHref]);
+    const sep = classicHref.includes("?") ? "&" : "?";
+    return `${classicHref}${sep}pagination=1`;
+  }, [classicHref]);
 
   return (
     <div className="space-y-4">

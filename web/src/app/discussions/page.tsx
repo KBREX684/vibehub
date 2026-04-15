@@ -156,7 +156,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             page: pagination.page,
             limit: pagination.limit,
           }}
-          buildClassicHref={() => buildDiscussionsHref({ sort, authorId, classicPagination: true })}
+          classicHref={buildDiscussionsHref({ sort, authorId, classicPagination: true })}
         />
       )}
     </main>

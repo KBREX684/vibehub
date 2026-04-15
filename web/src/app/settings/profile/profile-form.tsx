@@ -39,8 +39,8 @@ export function ProfileForm({ initialProfile }: Props) {
     setStatus("saving");
     setMessage(null);
 
-    const payload = {
-      slug: slug.trim(),
+    const hasProfile = Boolean(initialProfile);
+    const commonFields = {
       headline: headline.trim(),
       bio: bio.trim(),
       skills: parseSkills(skillsInput),
@@ -51,9 +51,10 @@ export function ProfileForm({ initialProfile }: Props) {
       linkedinUrl: linkedinUrl.trim() ? linkedinUrl.trim() : "__CLEAR__",
       collaborationPreference,
     };
+    // slug is only accepted by POST (create), not PATCH (update)
+    const payload = hasProfile ? commonFields : { slug: slug.trim(), ...commonFields };
 
     try {
-      const hasProfile = Boolean(initialProfile);
       const res = await apiFetch("/api/v1/me/profile", {
         method: hasProfile ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,16 +113,17 @@ export function ProfileForm({ initialProfile }: Props) {
         </label>
       </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Headline</span>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="profile-headline" className="text-xs font-semibold text-[var(--color-text-secondary)]">Headline</label>
         <input
+          id="profile-headline"
           className="input-base"
           value={headline}
           onChange={(e) => setHeadline(e.target.value)}
           maxLength={200}
           required
         />
-      </label>
+      </div>
 
       <label className="flex flex-col gap-1.5">
         <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Bio</span>
@@ -149,10 +151,10 @@ export function ProfileForm({ initialProfile }: Props) {
           <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Avatar URL</span>
           <input className="input-base" type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Website</span>
-          <input className="input-base" type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="profile-website" className="text-xs font-semibold text-[var(--color-text-secondary)]">Website</label>
+          <input id="profile-website" className="input-base" type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />
+        </div>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold text-[var(--color-text-secondary)]">GitHub</span>
           <input className="input-base" type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} />
