@@ -48,8 +48,8 @@ export async function GET(request: Request) {
     });
     return apiSuccess(result);
   } catch (error) {
-    const mapped = apiErrorFromRepositoryCatch(error);
-    if (mapped) return mapped;
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
     return apiError(
       {
         code: "POSTS_LIST_FAILED",
@@ -83,8 +83,8 @@ export async function POST(request: Request) {
 
     return apiSuccess(post, 201);
   } catch (error) {
-    const mapped = apiErrorFromRepositoryCatch(error);
-    if (mapped) return mapped;
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
     return apiError(
       {
         code: "POST_CREATE_FAILED",

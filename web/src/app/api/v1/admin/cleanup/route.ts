@@ -10,6 +10,7 @@
  */
 
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import {
   pruneOldComments,
@@ -37,7 +38,9 @@ export async function POST() {
       chatRetainedSince:     chatRetentionCutoff().toISOString(),
     });
   } catch (err) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "CLEANUP_FAILED",
         message: "Cleanup failed",

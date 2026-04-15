@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createComment, listCommentsForPost } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getSessionUserFromCookie } from "@/lib/auth";
 
 const createCommentSchema = z.object({
@@ -21,7 +22,9 @@ export async function GET(request: Request) {
     const result = await listCommentsForPost({ postId, page, limit });
     return apiSuccess(result);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "COMMENTS_LIST_FAILED",
         message: "Failed to list comments",
@@ -54,7 +57,9 @@ export async function POST(request: Request) {
 
     return apiSuccess(comment, 201);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const message = error instanceof Error ? error.message : String(error);
     if (message === "POST_NOT_FOUND") {
       return apiError(
         {

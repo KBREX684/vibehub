@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { hasEnterpriseWorkspaceAccess } from "@/lib/enterprise-access";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getEnterpriseWorkspaceSummary } from "@/lib/repository";
 
 export async function GET(request: NextRequest) {
@@ -30,7 +31,9 @@ export async function GET(request: NextRequest) {
     const summary = await getEnterpriseWorkspaceSummary({ viewerUserId: session.userId });
     return apiSuccess(summary);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     return apiError(
       { code: "ENTERPRISE_WORKSPACE_FAILED", message: "Failed to load workspace summary", details: msg },
       500

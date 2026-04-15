@@ -8,6 +8,7 @@ import { assertContentSafeText } from "@/lib/content-safety";
 import { checkMcpUserToolRateLimit } from "@/lib/mcp-user-write-rate-limit";
 import { checkQuota } from "@/lib/quota";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { isRepositoryError } from "@/lib/repository-errors";
 import {
   MCP_V2_TOOL_NAMES,
@@ -75,7 +76,9 @@ export async function POST(request: NextRequest) {
     const json = await request.json();
     parsed = bodySchema.parse(json);
   } catch (e) {
-    httpStatus = 400;
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+httpStatus = 400;
     errorCode = e instanceof z.ZodError ? "INVALID_BODY" : "INVALID_JSON";
     await logMcpInvoke({ tool: "parse_error", userId: "anonymous", httpStatus, clientIp: ip, userAgent: ua, errorCode, durationMs: Date.now() - started });
     if (e instanceof z.ZodError) return apiError({ code: "INVALID_BODY", message: "Invalid MCP v2 invoke payload", details: e.flatten() }, 400);
@@ -320,7 +323,9 @@ export async function POST(request: NextRequest) {
           await log(201);
           return apiSuccess({ tool, input, output: project }, 201);
         } catch (e) {
-          if (isRepositoryError(e) && e.code === "CREATOR_PROFILE_REQUIRED") {
+          const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+          if (repositoryErrorResponse) return repositoryErrorResponse;
+if (isRepositoryError(e) && e.code === "CREATOR_PROFILE_REQUIRED") {
             await log(403, e.code);
             return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: e.message }, 403);
           }
@@ -355,7 +360,9 @@ export async function POST(request: NextRequest) {
           await log(200);
           return apiSuccess({ tool, input, output: intent });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
+          const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+          if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = e instanceof Error ? e.message : String(e);
           if (msg === "DUPLICATE_INTENT") {
             await log(409, "DUPLICATE_INTENT");
             return apiError({ code: "DUPLICATE_INTENT", message: "You already have a pending or approved intent for this project" }, 409);
@@ -381,7 +388,9 @@ export async function POST(request: NextRequest) {
           await log(200);
           return apiSuccess({ tool, input, output: row });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
+          const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+          if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = e instanceof Error ? e.message : String(e);
           if (msg === "TEAM_NOT_FOUND") {
             await log(404, "TEAM_NOT_FOUND");
             return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
@@ -429,7 +438,9 @@ export async function POST(request: NextRequest) {
           await log(200);
           return apiSuccess({ tool, input, output: task });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
+          const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+          if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = e instanceof Error ? e.message : String(e);
           if (msg === "TEAM_NOT_FOUND") {
             await log(404, "TEAM_NOT_FOUND");
             return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
@@ -448,7 +459,9 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (error) {
-    await log(500, "MCP_V2_INVOKE_FAILED");
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+await log(500, "MCP_V2_INVOKE_FAILED");
     const err = error instanceof Error ? error : new Error(String(error));
     const details =
       process.env.NODE_ENV === "development"

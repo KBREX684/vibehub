@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createTeamTask, listTeamTasks } from "@/lib/repository";
 import type { TeamTaskStatus } from "@/lib/types";
 
@@ -34,7 +35,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     const tasks = await listTeamTasks({ teamSlug: slug, viewerUserId: session.userId });
     return apiSuccess({ tasks });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "TEAM_NOT_FOUND") {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }
@@ -79,7 +82,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     });
     return apiSuccess(task, 201);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid task payload", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);

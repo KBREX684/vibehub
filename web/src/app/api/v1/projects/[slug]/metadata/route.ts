@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getProjectMetadata } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 /** A-3: Machine-friendly project metadata for AI agents. No auth required (public data only). */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -12,7 +13,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }
     return apiSuccess({ metadata });
   } catch (err) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "METADATA_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" },
       500
     );

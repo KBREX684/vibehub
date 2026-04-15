@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { reviewCollaborationIntentByOwner } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Props { params: Promise<{ slug: string; intentId: string }> }
 
@@ -27,7 +28,9 @@ export async function POST(request: NextRequest, { params }: Props) {
   try {
     parsed = reviewSchema.parse(body);
   } catch (err) {
-    if (err instanceof z.ZodError) return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: err.flatten() }, 400);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (err instanceof z.ZodError) return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: err.flatten() }, 400);
     return apiError({ code: "INVALID_BODY", message: "Invalid payload" }, 400);
   }
 
@@ -41,7 +44,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     });
     return apiSuccess({ intent });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "COLLABORATION_INTENT_NOT_FOUND") return apiError({ code: "COLLABORATION_INTENT_NOT_FOUND", message: "Intent not found" }, 404);
     if (msg === "FORBIDDEN_NOT_PROJECT_OWNER") return apiError({ code: "FORBIDDEN", message: "Only the project owner can review intents" }, 403);
     return apiError({ code: "REVIEW_FAILED", message: msg }, 500);

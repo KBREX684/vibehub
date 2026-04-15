@@ -7,6 +7,7 @@ import {
   resolveReadAuth,
 } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getProjectBySlug, updateProjectTeamLink, updateProject, deleteProject } from "@/lib/repository";
 
 const patchSchema = z.object({
@@ -86,7 +87,9 @@ export async function PATCH(request: Request, { params }: Params) {
     });
     return apiSuccess(project);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError(
         {
           code: "INVALID_BODY",
@@ -138,7 +141,9 @@ export async function DELETE(_request: Request, { params }: Params) {
     });
     return apiSuccess({ deleted: true });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "PROJECT_NOT_FOUND") {
       return apiError({ code: "PROJECT_NOT_FOUND", message: "Project not found" }, 404);
     }

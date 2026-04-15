@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
 
 const useMockData = isMockDataEnabled();
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
 
     return apiSuccess({ url: session.url });
   } catch (err) {
-    return apiError({ code: "PORTAL_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError({ code: "PORTAL_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 }

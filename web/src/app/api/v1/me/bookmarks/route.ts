@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { getMyBookmarks } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -11,6 +12,8 @@ export async function GET(request: NextRequest) {
     const bookmarks = await getMyBookmarks(auth.user.userId);
     return apiSuccess(bookmarks);
   } catch (err) {
-    return apiError({ code: "BOOKMARKS_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError({ code: "BOOKMARKS_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 }

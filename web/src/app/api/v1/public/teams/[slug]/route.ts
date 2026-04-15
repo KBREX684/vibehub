@@ -1,4 +1,5 @@
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getTeamBySlug } from "@/lib/repository";
 
 interface Params {
@@ -14,7 +15,9 @@ export async function GET(_request: Request, { params }: Params) {
     }
     return apiSuccess(team);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "PUBLIC_TEAM_GET_FAILED",
         message: "Failed to load team",

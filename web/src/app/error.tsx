@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 
 export default function GlobalError({
   error,
@@ -10,10 +9,6 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 py-16 text-center">
       <p className="text-xs font-mono uppercase tracking-widest text-[var(--color-text-muted)] mb-3">

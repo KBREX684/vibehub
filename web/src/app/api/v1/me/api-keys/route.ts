@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createApiKeyForUser, listApiKeysForUser, getUserTier } from "@/lib/repository";
 import { checkApiKeyLimit } from "@/lib/subscription";
 
@@ -21,7 +22,9 @@ export async function GET() {
     const keys = await listApiKeysForUser(session.userId);
     return apiSuccess({ keys });
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "API_KEYS_LIST_FAILED",
         message: "Failed to list API keys",
@@ -64,7 +67,9 @@ export async function POST(request: Request) {
     });
     return apiSuccess({ key: created }, 201);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid label", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);

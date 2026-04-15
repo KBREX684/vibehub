@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { generateEcosystemReport } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -31,7 +32,9 @@ export async function GET(request: NextRequest) {
     const report = await generateEcosystemReport(period);
     return apiSuccess(report);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "REPORT_GENERATION_FAILED", message: "Failed to generate ecosystem report", details: error instanceof Error ? error.message : String(error) },
       500
     );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { CommandPalette } from "@/components/command-palette";
 import { TopNav } from "@/components/top-nav";
 import { Footer } from "@/components/footer";
 import { LanguageProvider } from "./context/LanguageContext";
@@ -23,6 +24,7 @@ export default function RootLayout({
         <AuthProvider>
           <LanguageProvider>
             <TopNav />
+            <CommandPalette />
             <div className="flex-1 flex flex-col min-w-0">{children}</div>
             <Footer />
           </LanguageProvider>

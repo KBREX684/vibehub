@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { addTeamMemberByEmail } from "@/lib/repository";
 
 const bodySchema = z.object({
@@ -28,7 +29,9 @@ export async function POST(request: Request, { params }: Params) {
     });
     return apiSuccess(member, 201);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError(
         {
           code: "INVALID_BODY",

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { toggleProjectBookmark } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -14,7 +15,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     const result = await toggleProjectBookmark(auth.user.userId, slug);
     return apiSuccess(result);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "PROJECT_NOT_FOUND") return apiError({ code: "PROJECT_NOT_FOUND", message: "Project not found" }, 404);
     return apiError({ code: "BOOKMARK_FAILED", message: msg }, 500);
   }

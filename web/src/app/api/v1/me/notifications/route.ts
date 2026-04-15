@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { listInAppNotifications, markInAppNotificationsRead } from "@/lib/repository";
 
 export async function GET(request: Request) {
@@ -20,7 +21,9 @@ export async function GET(request: Request) {
     });
     return apiSuccess({ notifications: items });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     return apiError({ code: "NOTIFICATIONS_LIST_FAILED", message: "Failed to list notifications", details: msg }, 500);
   }
 }
@@ -48,7 +51,9 @@ export async function PATCH(request: Request) {
     });
     return apiSuccess(result);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);

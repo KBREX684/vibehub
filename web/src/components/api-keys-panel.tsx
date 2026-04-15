@@ -125,7 +125,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy text", err);
+      setMsg(err instanceof Error ? err.message : "Failed to copy key");
     }
   };
 

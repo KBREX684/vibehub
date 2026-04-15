@@ -4,8 +4,47 @@ import Link from "next/link";
 import { Zap, Globe, Link2 } from "lucide-react";
 import { useLanguage, t } from "@/app/context/LanguageContext";
 
+type FooterLink =
+  | { kind: "link"; href: string; en: string; zh: string }
+  | { kind: "mailto"; href: string; en: string; zh: string }
+  | { kind: "soon"; en: string; zh: string };
+
+type FooterColumn = {
+  title: { en: string; zh: string };
+  links: FooterLink[];
+};
+
 export function Footer() {
   const { language } = useLanguage();
+  const columns: FooterColumn[] = [
+    {
+      title: { en: "Platform", zh: "平台" },
+      links: [
+        { kind: "link", href: "/discover", en: "Discover", zh: "发现项目" },
+        { kind: "link", href: "/discussions", en: "Discussions", zh: "社区讨论" },
+        { kind: "link", href: "/teams", en: "Teams", zh: "团队" },
+        { kind: "link", href: "/leaderboards", en: "Leaderboards", zh: "排行榜" },
+      ],
+    },
+    {
+      title: { en: "Developers", zh: "开发者" },
+      links: [
+        { kind: "link", href: "/settings/api-keys", en: "API Keys", zh: "API 密钥" },
+        { kind: "link", href: "/api/v1/openapi.json", en: "OpenAPI", zh: "OpenAPI 文档" },
+        { kind: "link", href: "/pricing", en: "Pricing", zh: "定价" },
+        { kind: "link", href: "/workspace/enterprise", en: "Radar Workspace", zh: "雷达工作台" },
+      ],
+    },
+    {
+      title: { en: "Company", zh: "关于" },
+      links: [
+        { kind: "link", href: "/#about", en: "About", zh: "关于我们" },
+        { kind: "soon", en: "Blog", zh: "博客" },
+        { kind: "soon", en: "Careers", zh: "招聘" },
+        { kind: "mailto", href: "mailto:support@vibehub.dev", en: "Contact", zh: "联系我们" },
+      ],
+    },
+  ];
 
   return (
     <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)] mt-20">
@@ -46,35 +85,7 @@ export function Footer() {
           </div>
 
           {/* Link columns */}
-          {[
-            {
-              title: { en: "Platform", zh: "平台" },
-              links: [
-                { href: "/discover",     en: "Discover",     zh: "发现项目" },
-                { href: "/discussions",  en: "Discussions",  zh: "社区讨论" },
-                { href: "/teams",        en: "Teams",        zh: "团队" },
-                { href: "/leaderboards", en: "Leaderboards", zh: "排行榜" },
-              ],
-            },
-            {
-              title: { en: "Developers", zh: "开发者" },
-              links: [
-                { href: "/settings/api-keys",    en: "API Keys",  zh: "API 密钥" },
-                { href: "/api/v1/openapi.json",  en: "OpenAPI",   zh: "OpenAPI 文档" },
-                { href: "/pricing",              en: "Pricing",   zh: "定价" },
-                { href: "/workspace/enterprise", en: "Radar Workspace", zh: "雷达工作台" },
-              ],
-            },
-            {
-              title: { en: "Company", zh: "关于" },
-              links: [
-                { kind: "link" as const, href: "/#about", en: "About", zh: "关于我们" },
-                { kind: "soon" as const, en: "Blog", zh: "博客" },
-                { kind: "soon" as const, en: "Careers", zh: "招聘" },
-                { kind: "mailto" as const, href: "mailto:support@vibehub.dev", en: "Contact", zh: "联系我们" },
-              ],
-            },
-          ].map((col) => (
+          {columns.map((col) => (
             <div key={col.title.en}>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
                 {t(language, col.title.en, col.title.zh)}

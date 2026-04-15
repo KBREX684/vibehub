@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getTeamBySlug } from "@/lib/repository";
 
 interface Params {
@@ -25,7 +26,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
     return apiSuccess(team);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "TEAM_GET_FAILED",
         message: "Failed to load team",

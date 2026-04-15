@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { createUserWebhook, listUserWebhooks } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 const createSchema = z.object({
   url: z.string().url().min(8),
@@ -16,7 +17,9 @@ export async function GET() {
     const items = await listUserWebhooks(session.userId);
     return apiSuccess({ webhooks: items });
   } catch (e) {
-    return apiError({ code: "WEBHOOK_LIST_FAILED", message: e instanceof Error ? e.message : String(e) }, 500);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError({ code: "WEBHOOK_LIST_FAILED", message: e instanceof Error ? e.message : String(e) }, 500);
   }
 }
 
@@ -36,7 +39,9 @@ export async function POST(request: NextRequest) {
     });
     return apiSuccess(created, 201);
   } catch (e) {
-    if (e instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (e instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: e.flatten() }, 400);
     }
     const msg = e instanceof Error ? e.message : String(e);

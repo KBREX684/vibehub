@@ -81,6 +81,14 @@ function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfter
 
 export async function middleware(request: NextRequest) {
   const { method, nextUrl } = request;
+  const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-request-id", requestId);
+
+  function withRequestId(response: NextResponse) {
+    response.headers.set("x-request-id", requestId);
+    return response;
+  }
 
   // Admin page protection — valid session + admin role required
   if (isAdminPath(nextUrl.pathname)) {
@@ -90,10 +98,10 @@ export async function middleware(request: NextRequest) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("required", "admin");
       loginUrl.searchParams.set("redirect", nextUrl.pathname);
-      return NextResponse.redirect(loginUrl);
+      return withRequestId(NextResponse.redirect(loginUrl));
     }
     if (session.role !== "admin") {
-      return NextResponse.redirect(new URL("/", request.url));
+      return withRequestId(NextResponse.redirect(new URL("/", request.url)));
     }
   }
 
@@ -117,7 +125,7 @@ export async function middleware(request: NextRequest) {
       }
 
       if (!valid) {
-        return NextResponse.json(
+        return withRequestId(NextResponse.json(
           {
             error: {
               code: "FORBIDDEN",
@@ -125,7 +133,7 @@ export async function middleware(request: NextRequest) {
             },
           },
           { status: 403 }
-        );
+        ));
       }
     }
 
@@ -133,7 +141,7 @@ export async function middleware(request: NextRequest) {
     const ip = getClientIp(request);
     const rl = checkWriteRateLimit(ip);
     if (!rl.ok) {
-      return NextResponse.json(
+      return withRequestId(NextResponse.json(
         {
           error: {
             code: "RATE_LIMITED",
@@ -142,11 +150,17 @@ export async function middleware(request: NextRequest) {
           },
         },
         { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
-      );
+      ));
     }
   }
 
-  return NextResponse.next();
+  return withRequestId(
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  );
 }
 
 export const config = {

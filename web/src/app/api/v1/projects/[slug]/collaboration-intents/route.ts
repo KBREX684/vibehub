@@ -9,6 +9,7 @@ import {
 } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { isRepositoryError } from "@/lib/repository-errors";
 import type { ReviewStatus } from "@/lib/types";
 
@@ -65,7 +66,9 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   let parsed: z.infer<typeof submitSchema>;
   try { parsed = submitSchema.parse(body); } catch (err) {
-    if (err instanceof z.ZodError) return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: err.flatten() }, 400);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (err instanceof z.ZodError) return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: err.flatten() }, 400);
     return apiError({ code: "INVALID_BODY", message: "Invalid payload" }, 400);
   }
 
@@ -79,7 +82,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     });
     return apiSuccess({ intent }, 201);
   } catch (err) {
-    if (isRepositoryError(err) && err.code === "CREATOR_PROFILE_REQUIRED") {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (isRepositoryError(err) && err.code === "CREATOR_PROFILE_REQUIRED") {
       return apiError({ code: "CREATOR_PROFILE_REQUIRED", message: err.message }, 403);
     }
     const msg = err instanceof Error ? err.message : String(err);

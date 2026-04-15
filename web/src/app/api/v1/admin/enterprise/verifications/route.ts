@@ -5,6 +5,7 @@ import {
   reviewEnterpriseVerification,
 } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import type { EnterpriseVerificationStatus } from "@/lib/types";
 
@@ -52,7 +53,9 @@ export async function GET(request: Request) {
     };
     return apiSuccess(normalized);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "ADMIN_ENTERPRISE_VERIFICATIONS_LIST_FAILED",
         message: "Failed to list enterprise verification applications",
@@ -78,7 +81,9 @@ export async function POST(request: Request) {
     });
     return apiSuccess({ ...profile, id: profile.userId });
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError(
         {
           code: "INVALID_BODY",

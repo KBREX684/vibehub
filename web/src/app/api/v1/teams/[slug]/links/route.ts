@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { updateTeamLinks } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -48,7 +49,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const team = await updateTeamLinks({ teamSlug: slug, actorUserId: auth.user.userId, ...updates });
     return apiSuccess({ team });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "TEAM_NOT_FOUND") return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     if (msg === "FORBIDDEN_NOT_OWNER") return apiError({ code: "FORBIDDEN", message: "Only the team owner can update links" }, 403);
     return apiError({ code: "UPDATE_FAILED", message: msg }, 500);

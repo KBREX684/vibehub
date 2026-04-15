@@ -1,6 +1,7 @@
 import { requireAdminSession } from "@/lib/admin-auth";
 import { featurePost, unfeaturePost } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Params {
   params: Promise<{ postId: string }>;
@@ -15,7 +16,9 @@ export async function POST(_request: Request, { params }: Params) {
     const post = await featurePost({ postId, adminUserId: auth.session.userId });
     return apiSuccess(post);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "POST_NOT_FOUND") {
       return apiError({ code: "POST_NOT_FOUND", message: "Post not found" }, 404);
     }
@@ -35,7 +38,9 @@ export async function DELETE(_request: Request, { params }: Params) {
     const post = await unfeaturePost({ postId });
     return apiSuccess(post);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "POST_NOT_FOUND") {
       return apiError({ code: "POST_NOT_FOUND", message: "Post not found" }, 404);
     }

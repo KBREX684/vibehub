@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
     const result = await listProjects({ query, tag, tech, status, team, creatorId, page, limit, cursor });
     return apiSuccess(result);
   } catch (error) {
-    const mapped = apiErrorFromRepositoryCatch(error);
-    if (mapped) return mapped;
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
     return apiError(
       {
         code: "PROJECTS_LIST_FAILED",
@@ -114,14 +114,14 @@ export async function POST(request: Request) {
     });
     return apiSuccess(project, 201);
   } catch (error) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
     if (error instanceof z.ZodError) {
       return apiError(
         { code: "INVALID_BODY", message: "Invalid project payload", details: error.flatten() },
         400
       );
     }
-    const mapped = apiErrorFromRepositoryCatch(error);
-    if (mapped) return mapped;
     const msg = error instanceof Error ? error.message : String(error);
     return apiError(
       { code: "PROJECT_CREATE_FAILED", message: "Failed to create project", details: msg },

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { listChallenges, createChallenge } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import type { ChallengeStatus } from "@/lib/types";
 
@@ -33,7 +34,9 @@ export async function GET(request: Request) {
     const result = await listChallenges({ status, page, limit });
     return apiSuccess(result);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "CHALLENGES_LIST_FAILED", message: "Failed to list challenges", details: error instanceof Error ? error.message : String(error) },
       500
     );
@@ -53,7 +56,9 @@ export async function POST(request: Request) {
     });
     return apiSuccess(challenge, 201);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid challenge payload", details: error.flatten() }, 400);
     }
     return apiError(

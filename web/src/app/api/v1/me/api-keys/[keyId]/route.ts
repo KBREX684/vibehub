@@ -1,5 +1,6 @@
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { revokeApiKeyForUser } from "@/lib/repository";
 
 interface Params {
@@ -17,7 +18,9 @@ export async function DELETE(_request: Request, { params }: Params) {
     await revokeApiKeyForUser({ userId: session.userId, keyId });
     return apiSuccess({ ok: true });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "API_KEY_NOT_FOUND") {
       return apiError({ code: "API_KEY_NOT_FOUND", message: "API key not found" }, 404);
     }

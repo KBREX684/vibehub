@@ -3,6 +3,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { listProjects } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import type { ProjectStatus } from "@/lib/types";
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
@@ -51,7 +52,9 @@ export async function GET(request: NextRequest) {
       output: result,
     });
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "MCP_SEARCH_PROJECTS_FAILED",
         message: "Failed to execute MCP tool search_projects",

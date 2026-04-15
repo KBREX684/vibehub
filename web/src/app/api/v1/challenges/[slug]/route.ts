@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getChallengeBySlug, updateChallenge, deleteChallenge } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 
 const patchSchema = z.object({
@@ -26,7 +27,9 @@ export async function GET(_request: Request, { params }: Params) {
     }
     return apiSuccess(challenge);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "CHALLENGE_GET_FAILED", message: "Failed to get challenge", details: error instanceof Error ? error.message : String(error) },
       500
     );
@@ -47,7 +50,9 @@ export async function PATCH(request: Request, { params }: Params) {
     const challenge = await updateChallenge({ challengeSlug: slug, ...parsed });
     return apiSuccess(challenge);
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);
@@ -67,7 +72,9 @@ export async function DELETE(_request: Request, { params }: Params) {
     await deleteChallenge(slug);
     return apiSuccess({ deleted: true });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = error instanceof Error ? error.message : String(error);
     if (msg === "CHALLENGE_NOT_FOUND") {
       return apiError({ code: "CHALLENGE_NOT_FOUND", message: "Challenge not found" }, 404);
     }

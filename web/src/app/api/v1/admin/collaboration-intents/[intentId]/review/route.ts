@@ -1,6 +1,7 @@
 ﻿import { z } from "zod";
 import { reviewCollaborationIntent } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { requireAdminSession } from "@/lib/admin-auth";
 
@@ -43,7 +44,9 @@ export async function POST(request: Request, { params }: Params) {
 
     return apiSuccess(reviewed);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const message = error instanceof Error ? error.message : String(error);
     if (message === "COLLABORATION_INTENT_NOT_FOUND") {
       return apiError(
         {

@@ -2,12 +2,15 @@ import type { NextRequest } from "next/server";
 import { unifiedSearch, unifiedSearchPaged } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 import type { SearchResult } from "@/lib/types";
 
 const VALID_TYPES = ["post", "project", "creator"] as const;
 type SearchType = typeof VALID_TYPES[number];
 
 export async function GET(request: NextRequest) {
+  const requestLogger = getRequestLogger(request, { route: "/api/v1/search" });
   const url = new URL(request.url);
   const { page, limit } = parsePagination(url.searchParams);
   const q = url.searchParams.get("q")?.trim() ?? "";
@@ -29,6 +32,9 @@ export async function GET(request: NextRequest) {
     const results = await unifiedSearch(q, type);
     return apiSuccess({ results, total: results.length, page: 1, limit: results.length, query: q });
   } catch (err) {
-    return apiError({ code: "SEARCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+    requestLogger.error({ err: serializeError(err) }, "Search route failed");
+    return apiError({ code: "SEARCH_FAILED", message: "Search failed" }, 500);
   }
 }

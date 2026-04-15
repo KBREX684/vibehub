@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useLanguage, t } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
+import { openCommandPalette } from "@/components/command-palette";
 
 const NAV_LINKS = [
   { href: "/",             en: "Overview",     zh: "概览" },
@@ -104,14 +105,15 @@ export function TopNav() {
         {/* Right Controls */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Search */}
-          <Link
-            href="/search"
+          <button
+            type="button"
+            onClick={openCommandPalette}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-all"
           >
             <Search className="w-3.5 h-3.5" />
             <span className="text-xs">{t(language, "Search...", "搜索...")}</span>
             <kbd className="hidden lg:inline text-[10px] bg-[var(--color-bg-elevated)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">⌘K</kbd>
-          </Link>
+          </button>
 
           {/* Language Toggle */}
           <button

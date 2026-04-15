@@ -1,5 +1,6 @@
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { listTeams } from "@/lib/repository";
 
 export async function GET(request: Request) {
@@ -9,7 +10,9 @@ export async function GET(request: Request) {
     const result = await listTeams({ page, limit });
     return apiSuccess(result);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       {
         code: "PUBLIC_TEAMS_LIST_FAILED",
         message: "Failed to list teams",

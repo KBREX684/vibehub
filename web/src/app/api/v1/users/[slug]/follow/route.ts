@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { toggleUserFollow } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -14,7 +15,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     const result = await toggleUserFollow(auth.user.userId, slug);
     return apiSuccess(result);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+const msg = err instanceof Error ? err.message : String(err);
     if (msg === "USER_NOT_FOUND") return apiError({ code: "USER_NOT_FOUND", message: "User not found" }, 404);
     if (msg === "CANNOT_FOLLOW_SELF") return apiError({ code: "CANNOT_FOLLOW_SELF", message: "Cannot follow yourself" }, 400);
     return apiError({ code: "FOLLOW_FAILED", message: msg }, 500);

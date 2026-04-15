@@ -1,5 +1,6 @@
 import { getCreatorGrowthStats } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -14,7 +15,9 @@ export async function GET(_request: Request, { params }: Params) {
     }
     return apiSuccess(stats);
   } catch (error) {
-    return apiError(
+    const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
+    if (repositoryErrorResponse) return repositoryErrorResponse;
+return apiError(
       { code: "CREATOR_GROWTH_FAILED", message: "Failed to get creator growth stats", details: error instanceof Error ? error.message : String(error) },
       500
     );
