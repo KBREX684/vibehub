@@ -15,6 +15,7 @@ describe("session signing", () => {
       userId: "u1",
       role: "user",
       name: "Alice",
+      sessionVersion: 0,
     });
   });
 
@@ -31,6 +32,7 @@ describe("session signing", () => {
       userId: "u1",
       role: "user",
       name: "Alice",
+      sessionVersion: 0,
       enterpriseStatus: "approved",
       enterpriseOrganization: "Acme",
       enterpriseWebsite: "https://acme.example",
@@ -57,6 +59,7 @@ describe("session signing", () => {
       userId: "u1",
       role: "user",
       name: "Alice",
+      sessionVersion: 0,
     });
   });
 

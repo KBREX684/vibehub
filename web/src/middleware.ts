@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { decodeSessionEdge } from "@/lib/session-edge";
 
 // ─── Admin route guard ────────────────────────────────────────────────────────
-// The admin layout does a server-side session check, but we also block at
-// the edge so un-authenticated requests never reach the RSC renderer.
-// We cannot decode the JWT here (crypto not available in Edge), so we simply
-// redirect to /login if the session cookie is absent.
+// Decode HMAC session at the edge (Web Crypto) and require role === "admin".
+// Non-admins are redirected to home so they never receive the admin layout shell.
 function isAdminPath(pathname: string): boolean {
   return pathname.startsWith("/admin");
-}
-
-function hasSessionCookie(request: NextRequest): boolean {
-  return Boolean(request.cookies.get("vibehub_session")?.value);
 }
 
 // ─── CSRF protection ─────────────────────────────────────────────────────────
@@ -87,12 +82,19 @@ function checkWriteRateLimit(ip: string): { ok: true } | { ok: false; retryAfter
 export async function middleware(request: NextRequest) {
   const { method, nextUrl } = request;
 
-  // Admin page protection — redirect unauthenticated to /login
-  if (isAdminPath(nextUrl.pathname) && !hasSessionCookie(request)) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("required", "admin");
-    loginUrl.searchParams.set("redirect", nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+  // Admin page protection — valid session + admin role required
+  if (isAdminPath(nextUrl.pathname)) {
+    const raw = request.cookies.get("vibehub_session")?.value;
+    const session = raw ? await decodeSessionEdge(raw) : null;
+    if (!session) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("required", "admin");
+      loginUrl.searchParams.set("redirect", nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    if (session.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   const isApi = nextUrl.pathname.startsWith("/api/");

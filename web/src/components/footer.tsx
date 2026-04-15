@@ -68,10 +68,10 @@ export function Footer() {
             {
               title: { en: "Company", zh: "关于" },
               links: [
-                { href: "/", en: "About",    zh: "关于我们" },
-                { href: "/", en: "Blog",     zh: "博客" },
-                { href: "/", en: "Careers",  zh: "招聘" },
-                { href: "/", en: "Contact",  zh: "联系我们" },
+                { kind: "link" as const, href: "/#about", en: "About", zh: "关于我们" },
+                { kind: "soon" as const, en: "Blog", zh: "博客" },
+                { kind: "soon" as const, en: "Careers", zh: "招聘" },
+                { kind: "mailto" as const, href: "mailto:support@vibehub.dev", en: "Contact", zh: "联系我们" },
               ],
             },
           ].map((col) => (
@@ -80,16 +80,38 @@ export function Footer() {
                 {t(language, col.title.en, col.title.zh)}
               </h4>
               <ul className="flex flex-col gap-2">
-                {col.links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                    >
-                      {t(language, link.en, link.zh)}
-                    </Link>
-                  </li>
-                ))}
+                {col.links.map((link) => {
+                  if (link.kind === "soon") {
+                    const label = `${t(language, link.en, link.zh)} (${t(language, "Coming soon", "即将推出")})`;
+                    return (
+                      <li key={link.en}>
+                        <span className="text-sm text-[var(--color-text-muted)] cursor-default">{label}</span>
+                      </li>
+                    );
+                  }
+                  if (link.kind === "mailto") {
+                    return (
+                      <li key={link.en}>
+                        <a
+                          href={link.href}
+                          className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        >
+                          {t(language, link.en, link.zh)}
+                        </a>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                      >
+                        {t(language, link.en, link.zh)}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -102,8 +124,8 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-4">
             {[
-              { href: "/", en: "Privacy Policy", zh: "隐私政策" },
-              { href: "/", en: "Terms of Service", zh: "服务条款" },
+              { href: "/privacy", en: "Privacy Policy", zh: "隐私政策" },
+              { href: "/terms", en: "Terms of Service", zh: "服务条款" },
             ].map((item) => (
               <Link
                 key={item.en}

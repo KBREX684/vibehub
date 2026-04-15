@@ -6,6 +6,7 @@ import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
+import { verifySessionVersionMatches } from "@/lib/session-version";
 import type { EnterpriseVerificationStatus, Role, SessionUser, SubscriptionTier } from "@/lib/types";
 
 const SESSION_COOKIE_KEY = "vibehub_session";
@@ -51,6 +52,7 @@ export function encodeSession(session: SessionUser): string {
   const now = Math.floor(Date.now() / 1000);
   const payload: SessionPayload = {
     ...session,
+    sessionVersion: session.sessionVersion ?? 0,
     iat: now,
     exp: now + SESSION_TTL_SECONDS,
   };
@@ -105,6 +107,9 @@ export function decodeSession(raw?: string): SessionUser | null {
       role: parsed.role,
       name: parsed.name,
     };
+    if (typeof parsed.sessionVersion === "number" && Number.isFinite(parsed.sessionVersion)) {
+      user.sessionVersion = parsed.sessionVersion;
+    }
     if (isSubscriptionTier(parsed.subscriptionTier)) {
       user.subscriptionTier = parsed.subscriptionTier;
     }
@@ -131,7 +136,10 @@ export function decodeSession(raw?: string): SessionUser | null {
 
 export async function getSessionUserFromCookie(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
-  return decodeSession(cookieStore.get(SESSION_COOKIE_KEY)?.value);
+  const user = decodeSession(cookieStore.get(SESSION_COOKIE_KEY)?.value);
+  if (!user) return null;
+  const ok = await verifySessionVersionMatches(user);
+  return ok ? user : null;
 }
 
 /**
@@ -158,6 +166,8 @@ export async function getCsrfToken(): Promise<string | null> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(SESSION_COOKIE_KEY)?.value;
   if (!raw) return null;
+  const user = decodeSession(raw);
+  if (!user || !(await verifySessionVersionMatches(user))) return null;
   return deriveCsrfToken(raw);
 }
 
@@ -235,7 +245,9 @@ export async function authenticateRequest(
 ): Promise<AuthResult> {
   const fromRequestCookie = decodeSession(request.cookies.get(SESSION_COOKIE_KEY)?.value);
   if (fromRequestCookie) {
-    return { kind: "ok", user: fromRequestCookie };
+    if (await verifySessionVersionMatches(fromRequestCookie)) {
+      return { kind: "ok", user: fromRequestCookie };
+    }
   }
 
   let fromNextCookies: SessionUser | null = null;
@@ -245,7 +257,7 @@ export async function authenticateRequest(
   } catch {
     /* Vitest / non-request context: ignore */
   }
-  if (fromNextCookies) {
+  if (fromNextCookies && (await verifySessionVersionMatches(fromNextCookies))) {
     return { kind: "ok", user: fromNextCookies };
   }
 
