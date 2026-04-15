@@ -193,7 +193,8 @@ export function CommandPalette() {
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Search projects, discussions, creators..."
-            className="w-full bg-transparent text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
+            className="w-full bg-transparent text-sm text-[var(--color-text-primary)] caret-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
+            style={{ colorScheme: "dark" }}
           />
           <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-[10px] text-[var(--color-text-muted)]">
             Esc
