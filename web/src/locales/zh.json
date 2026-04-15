@@ -60,7 +60,9 @@
     "tagline": "面向 Vibe Coding 开发者的顶尖协作与展示平台。",
     "allRightsReserved": "保留所有权利。",
     "privacyPolicy": "隐私政策",
-    "termsOfService": "服务条款"
+    "termsOfService": "服务条款",
+    "terms": "服务条款",
+    "privacy": "隐私政策"
   },
   "home": {
     "versionBadge": "[v1.0.0] 面向一起交付的开发者社区",
@@ -124,6 +126,29 @@
     "configMissing": "当前服务器未配置 OAuth。",
     "callbackError": "登录过程中发生错误。",
     "genericError": "登录错误。"
+  },
+  "auth": {
+    "admin_required": "需要管理员登录",
+    "admin_required_hint": "该区域需要管理员凭证。",
+    "sign_in_title": "登录 VibeHub",
+    "sign_in_subtitle": "面向 Vibe Coding 开发者的平台",
+    "error": {
+      "oauth_failed": "GitHub 登录失败，请重试。",
+      "state_mismatch": "登录会话已过期，请重新开始。",
+      "config_missing": "当前服务器未配置 OAuth。",
+      "callback_error": "登录过程中发生错误。",
+      "default": "登录错误。"
+    },
+    "continue_with_github": "使用 GitHub 继续",
+    "development_demo": "开发环境演示",
+    "demo_user_login": "演示用户登录",
+    "demo_admin_login": "演示管理员登录",
+    "terms_prefix": "登录即表示你同意我们的",
+    "terms_and": "和",
+    "new_to_vibehub": "第一次来到 VibeHub？",
+    "create_account": "创建账户",
+    "sign_in": "登录",
+    "sign_out": "退出登录"
   },
   "notifications": {
     "title": "通知",

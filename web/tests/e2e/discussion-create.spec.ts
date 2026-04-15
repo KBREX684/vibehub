@@ -5,8 +5,8 @@ test.use({ baseURL: "http://localhost:3100" });
 test.describe("Discussion creation flow", () => {
   test("user can submit a new discussion for moderation", async ({ page }) => {
     await page.goto("/login?redirect=/discussions/new");
-    await page.getByRole("link", { name: /demo user login|auth\.demo_user_login/i }).click();
-    await page.waitForURL(/\/discussions\/new/);
+    await page.getByRole("link", { name: /demo user login|演示用户登录/i }).click();
+    await page.waitForURL((url) => url.pathname === "/discussions/new");
     await expect(
       page.getByRole("heading", { name: /new discussion|discussions\.new\.title/i })
     ).toBeVisible();
