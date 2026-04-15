@@ -1,5 +1,7 @@
 /**
  * P3-BE-1: start pg-boss webhook workers in the Node.js runtime (not Edge).
+ * P4-BE-1: telemetry module (src/lib/telemetry/) is available for in-memory
+ *   metrics collection and system health checks — no extra init required here.
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
 export async function register() {
