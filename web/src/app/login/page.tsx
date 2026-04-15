@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
+import { getServerTranslator } from "@/lib/i18n";
 
 interface Props {
   searchParams: Promise<{ redirect?: string; required?: string; error?: string }>;
@@ -9,6 +10,7 @@ interface Props {
 
 export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
+  const { t } = await getServerTranslator();
 
   // Already logged in — redirect away
   const session = await getSessionUserFromCookie();
@@ -22,12 +24,12 @@ export default async function LoginPage({ searchParams }: Props) {
   const errorCode   = sp.error;
 
   const ERROR_MESSAGES: Record<string, string> = {
-    oauth_failed:    "GitHub login failed. Please try again.",
-    state_mismatch:  "Login session expired. Please start over.",
-    config_missing:  "OAuth is not configured on this server.",
-    callback_error:  "An error occurred during login.",
+    oauth_failed: t("auth.error.oauth_failed"),
+    state_mismatch: t("auth.error.state_mismatch"),
+    config_missing: t("auth.error.config_missing"),
+    callback_error: t("auth.error.callback_error"),
   };
-  const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? "Login error.") : null;
+  const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? t("auth.error.default")) : null;
 
   const oauthHref = `/api/v1/auth/github?redirect=${encodeURIComponent(redirectTo)}`;
 
@@ -51,16 +53,16 @@ export default async function LoginPage({ searchParams }: Props) {
               <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-error-subtle)] flex items-center justify-center mx-auto mb-3">
                 <Shield className="w-5 h-5 text-[var(--color-error)]" />
               </div>
-              <h1 className="text-lg font-bold text-[var(--color-text-primary)]">Admin login required</h1>
+              <h1 className="text-lg font-bold text-[var(--color-text-primary)]">{t("auth.admin_required")}</h1>
               <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                This area requires administrator credentials.
+                {t("auth.admin_required_hint")}
               </p>
             </div>
           ) : (
             <div className="text-center">
-              <h1 className="text-lg font-bold text-[var(--color-text-primary)]">Sign in to VibeHub</h1>
+              <h1 className="text-lg font-bold text-[var(--color-text-primary)]">{t("auth.sign_in_title")}</h1>
               <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                The platform for Vibe Coding developers
+                {t("auth.sign_in_subtitle")}
               </p>
             </div>
           )}
@@ -79,40 +81,40 @@ export default async function LoginPage({ searchParams }: Props) {
             className="btn btn-primary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
           >
             <GitBranch className="w-4 h-4" />
-            Continue with GitHub
+            {t("auth.continue_with_github")}
           </a>
 
           {/* Demo logins */}
           {process.env.NODE_ENV !== "production" && (
             <div className="border-t border-[var(--color-border)] pt-4 space-y-2">
-              <p className="text-xs text-center text-[var(--color-text-muted)] mb-2">Development demo</p>
+              <p className="text-xs text-center text-[var(--color-text-muted)] mb-2">{t("auth.development_demo")}</p>
               <a
                 href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(redirectTo)}`}
                 className="btn btn-secondary w-full text-xs py-2"
               >
-                Demo User Login
+                {t("auth.demo_user_login")}
               </a>
               <a
                 href={`/api/v1/auth/demo-login?role=admin&redirect=${encodeURIComponent(redirectTo)}`}
                 className="btn btn-secondary w-full text-xs py-2 border-[var(--color-error)] text-[var(--color-error)]"
               >
-                Demo Admin Login
+                {t("auth.demo_admin_login")}
               </a>
             </div>
           )}
 
           <p className="text-[10px] text-center text-[var(--color-text-muted)]">
-            By signing in you agree to our{" "}
-            <Link href="/" className="hover:underline">Terms of Service</Link>
-            {" "}and{" "}
-            <Link href="/" className="hover:underline">Privacy Policy</Link>.
+            {t("auth.terms_prefix")}{" "}
+            <Link href="/terms" className="hover:underline">{t("footer.terms")}</Link>
+            {" "}{t("auth.terms_and")}{" "}
+            <Link href="/privacy" className="hover:underline">{t("footer.privacy")}</Link>.
           </p>
         </div>
 
         <p className="text-center text-xs text-[var(--color-text-muted)] mt-5">
-          New to VibeHub?{" "}
+          {t("auth.new_to_vibehub")}{" "}
           <Link href="/signup" className="text-[var(--color-primary-hover)] hover:underline font-medium">
-            Create account <ArrowRight className="inline w-3 h-3" />
+            {t("auth.create_account")} <ArrowRight className="inline w-3 h-3" />
           </Link>
         </p>
       </div>

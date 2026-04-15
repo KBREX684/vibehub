@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { getServerTranslator } from "@/lib/i18n";
 import { NewDiscussionForm } from "./new-discussion-form";
 import { MessageSquare } from "lucide-react";
 
 export default async function NewDiscussionPage() {
+  const { t } = await getServerTranslator();
   const session = await getSessionUserFromCookie();
   if (!session) redirect("/login?redirect=/discussions/new");
 
@@ -14,9 +16,9 @@ export default async function NewDiscussionPage() {
           <MessageSquare className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">New Discussion</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">{t("discussions.new.title")}</h1>
           <p className="text-xs text-[var(--color-text-secondary)]">
-            Your post will enter the moderation queue before going live.
+            {t("discussions.new.subtitle")}
           </p>
         </div>
       </div>

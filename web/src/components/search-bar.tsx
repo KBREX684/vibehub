@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
+import { useLanguage } from "@/app/context/LanguageContext";
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,12 +34,12 @@ export function SearchBar() {
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        placeholder="Search projects, discussions, creators..."
+        placeholder={t("search.placeholder")}
         className="w-full py-3 pl-11 pr-28 bg-[var(--color-bg-canvas)] text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] rounded-[var(--radius-md)] border border-[var(--color-border)] outline-none transition-all duration-200 font-mono"
         style={{
           borderColor: isFocused ? "var(--color-text-primary)" : undefined,
         }}
-        aria-label="Search"
+        aria-label={t("search.label")}
       />
 
       {query.length > 0 && (
@@ -45,7 +47,7 @@ export function SearchBar() {
           type="submit"
           className="absolute right-2 btn btn-primary text-xs px-4 py-2 flex items-center gap-1"
         >
-          Search
+          {t("search.button")}
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       )}

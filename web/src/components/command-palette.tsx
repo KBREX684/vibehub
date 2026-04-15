@@ -5,20 +5,21 @@ import { usePathname, useRouter } from "next/navigation";
 import { Search, Briefcase, MessageSquare, User, CornerDownLeft } from "lucide-react";
 import { SearchHighlight } from "@/components/search-highlight";
 import type { SearchResult } from "@/lib/types";
+import { useLanguage } from "@/app/context/LanguageContext";
 
 const OPEN_EVENT = "vibehub-open-command-palette";
 const MIN_QUERY_LENGTH = 2;
 
 type SearchSection = {
   key: SearchResult["type"];
-  label: string;
+  labelKey: string;
   icon: typeof Briefcase;
 };
 
 const SECTIONS: SearchSection[] = [
-  { key: "project", label: "Projects", icon: Briefcase },
-  { key: "post", label: "Discussions", icon: MessageSquare },
-  { key: "creator", label: "Creators", icon: User },
+  { key: "project", labelKey: "search.section_projects", icon: Briefcase },
+  { key: "post", labelKey: "search.section_discussions", icon: MessageSquare },
+  { key: "creator", labelKey: "search.section_creators", icon: User },
 ];
 
 export function openCommandPalette() {
@@ -36,6 +37,7 @@ function hrefForResult(result: SearchResult) {
 export function CommandPalette() {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -175,14 +177,14 @@ export function CommandPalette() {
     <div className="fixed inset-0 z-[120] flex items-start justify-center px-4 py-20">
       <button
         type="button"
-        aria-label="Close search"
+        aria-label={t("search.close")}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={closePalette}
       />
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Global search"
+        aria-label={t("search.dialog_label")}
         className="relative w-full max-w-2xl overflow-hidden rounded-[24px] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)]"
       >
         <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
@@ -192,7 +194,7 @@ export function CommandPalette() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search projects, discussions, creators..."
+            placeholder={t("search.placeholder")}
             className="w-full bg-transparent text-sm text-[var(--color-text-primary)] caret-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
             style={{ colorScheme: "dark" }}
           />
@@ -205,15 +207,22 @@ export function CommandPalette() {
           {debouncedQuery.length < MIN_QUERY_LENGTH ? (
             <div className="px-5 py-10 text-center">
               <p className="text-sm text-[var(--color-text-secondary)]">
-                Type at least {MIN_QUERY_LENGTH} characters to search.
+                {t("search.min_query", `Type at least ${MIN_QUERY_LENGTH} characters to search.`).replace(
+                  "{count}",
+                  String(MIN_QUERY_LENGTH)
+                )}
               </p>
               <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-                Tip: use <span className="font-mono">⌘K</span> / <span className="font-mono">Ctrl+K</span> anywhere.
+                {t("search.tip_prefix")}
+                {" "}
+                <span className="font-mono">⌘K</span> / <span className="font-mono">Ctrl+K</span>
+                {" "}
+                {t("search.tip_suffix")}
               </p>
             </div>
           ) : loading ? (
             <div className="px-5 py-10 text-center text-sm text-[var(--color-text-secondary)]">
-              Searching...
+              {t("search.loading")}
             </div>
           ) : error ? (
             <div className="px-5 py-10 text-center">
@@ -221,7 +230,9 @@ export function CommandPalette() {
             </div>
           ) : groupedResults.length === 0 ? (
             <div className="px-5 py-10 text-center text-sm text-[var(--color-text-secondary)]">
-              No results for “{debouncedQuery}”.
+              {t("search.no_results_prefix")}
+              {" "}
+              “{debouncedQuery}”.
             </div>
           ) : (
             groupedResults.map((section) => {
@@ -230,7 +241,7 @@ export function CommandPalette() {
                 <section key={section.key} className="border-b border-[var(--color-border)] last:border-b-0">
                   <div className="flex items-center gap-2 px-4 py-3 text-xs font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
                     <Icon className="h-3.5 w-3.5" />
-                    {section.label}
+                    {t(section.labelKey)}
                   </div>
                   <ul className="pb-2">
                     {section.items.map((item) => {

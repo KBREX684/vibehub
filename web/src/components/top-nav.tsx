@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Search,
   Bell,
@@ -17,26 +17,54 @@ import {
   Key,
   Briefcase,
 } from "lucide-react";
-import { useLanguage, t } from "@/app/context/LanguageContext";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { openCommandPalette } from "@/components/command-palette";
 
 const NAV_LINKS = [
-  { href: "/",             en: "Overview",     zh: "概览" },
-  { href: "/discover",     en: "Discover",     zh: "发现" },
-  { href: "/discussions",  en: "Discussions",  zh: "讨论" },
-  { href: "/challenges",   en: "Challenges",   zh: "挑战赛" },
-  { href: "/teams",        en: "Teams",        zh: "团队" },
-  { href: "/leaderboards", en: "Leaderboards", zh: "排行榜" },
-  { href: "/developers",   en: "Developers",   zh: "开发者" },
+  { href: "/", key: "nav.overview" },
+  { href: "/discover", key: "nav.discover" },
+  { href: "/discussions", key: "nav.discussions" },
+  { href: "/challenges", key: "nav.challenges" },
+  { href: "/teams", key: "nav.teams" },
+  { href: "/leaderboards", key: "nav.leaderboards" },
+  { href: "/developers", key: "nav.developers" },
 ];
 
 export function TopNav() {
   const pathname = usePathname();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const { user, loading, logout, unreadCount } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuId = useId();
+  const userMenuId = useId();
+
+  useEffect(() => {
+    function onWindowKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+        setMobileOpen(false);
+      }
+    }
+
+    function onPointerDown(event: MouseEvent) {
+      if (!userMenuOpen) return;
+      if (userMenuRef.current?.contains(event.target as Node)) return;
+      if (userMenuButtonRef.current?.contains(event.target as Node)) return;
+      setUserMenuOpen(false);
+    }
+
+    window.addEventListener("keydown", onWindowKeyDown);
+    window.addEventListener("mousedown", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onWindowKeyDown);
+      window.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [userMenuOpen]);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -59,7 +87,10 @@ export function TopNav() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1 bg-[var(--color-bg-surface)] border border-[var(--color-border)] px-1.5 py-1 rounded-[var(--radius-pill)]">
+        <nav
+          aria-label={t("a11y.main_navigation")}
+          className="hidden md:flex items-center gap-1 bg-[var(--color-bg-surface)] border border-[var(--color-border)] px-1.5 py-1 rounded-[var(--radius-pill)]"
+        >
           {NAV_LINKS.map((link) => {
             const active = isActive(link.href);
             return (
@@ -76,7 +107,7 @@ export function TopNav() {
                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
-                <span className="relative z-10">{t(language, link.en, link.zh)}</span>
+                <span className="relative z-10">{t(link.key)}</span>
               </Link>
             );
           })}
@@ -88,16 +119,18 @@ export function TopNav() {
           <button
             type="button"
             onClick={openCommandPalette}
+            aria-label={t("nav.open_search")}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-all"
           >
             <Search className="w-3.5 h-3.5" />
-            <span className="text-xs">{t(language, "Search...", "搜索...")}</span>
+            <span className="text-xs">{t("search.placeholder")}</span>
             <kbd className="hidden lg:inline text-[10px] bg-[var(--color-bg-elevated)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">⌘K</kbd>
           </button>
 
           {/* Language Toggle */}
           <button
             onClick={() => setLanguage(language === "en" ? "zh" : "en")}
+            aria-label={t("nav.toggle_language")}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all"
           >
             <Globe className="w-3.5 h-3.5" />
@@ -108,6 +141,7 @@ export function TopNav() {
           {user && (
             <Link
               href="/notifications"
+              aria-label={t("nav.notifications")}
               className="relative p-2 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-all"
             >
               <Bell className="w-4 h-4" />
@@ -124,7 +158,12 @@ export function TopNav() {
             user ? (
               <div className="relative">
                 <button
+                  ref={userMenuButtonRef}
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen}
+                  aria-controls={userMenuId}
+                  aria-label={t("nav.user_menu")}
                   className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-all"
                 >
                   <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-violet)] flex items-center justify-center text-white text-xs font-semibold">
@@ -139,6 +178,9 @@ export function TopNav() {
                 <AnimatePresence>
                   {userMenuOpen && (
                     <motion.div
+                      ref={userMenuRef}
+                      id={userMenuId}
+                      role="menu"
                       initial={{ opacity: 0, y: 8, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.95 }}
@@ -154,13 +196,12 @@ export function TopNav() {
                           {
                             href: "/workspace/enterprise",
                             icon: Briefcase,
-                            en: "Radar Workspace",
-                            zh: "雷达工作台",
+                            key: "nav.radar_workspace",
                             requiresEnterprise: true,
                           },
-                          { href: "/settings/api-keys",    icon: Key,       en: "API Keys",  zh: "API 密钥" },
-                          { href: "/notifications",        icon: Bell,      en: "Notifications", zh: "通知" },
-                          { href: "/admin",                icon: Shield,    en: "Admin",     zh: "管理后台", adminOnly: true },
+                          { href: "/settings/api-keys", icon: Key, key: "nav.api_keys" },
+                          { href: "/notifications", icon: Bell, key: "nav.notifications" },
+                          { href: "/admin", icon: Shield, key: "nav.admin", adminOnly: true },
                         ]
                           .filter(
                             (item) =>
@@ -172,40 +213,43 @@ export function TopNav() {
                               key={item.href}
                               href={item.href}
                               onClick={() => setUserMenuOpen(false)}
+                              role="menuitem"
                               className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors"
                             >
                               <item.icon className="w-3.5 h-3.5" />
-                              {t(language, item.en, item.zh)}
+                              {t(item.key)}
                             </Link>
                           ))}
                         <button
                           onClick={() => { logout(); setUserMenuOpen(false); }}
+                          role="menuitem"
                           className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--color-error)] hover:bg-[var(--color-error-subtle)] transition-colors"
                         >
                           <LogOut className="w-3.5 h-3.5" />
-                          {t(language, "Sign Out", "退出登录")}
+                          {t("auth.sign_out")}
                         </button>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                {userMenuOpen && (
-                  <div className="fixed inset-0 z-[-1]" onClick={() => setUserMenuOpen(false)} />
-                )}
               </div>
             ) : (
               <Link
                 href="/login"
                 className="btn btn-primary text-sm px-4 py-1.5"
               >
-                {t(language, "Sign in", "登录")}
+                {t("auth.sign_in")}
               </Link>
             )
           )}
 
           {/* Mobile menu button */}
           <button
+            ref={mobileMenuButtonRef}
+            type="button"
+            aria-expanded={mobileOpen}
+            aria-controls={mobileMenuId}
+            aria-label={mobileOpen ? t("a11y.close_mobile_menu") : t("a11y.open_mobile_menu")}
             className="md:hidden p-2 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-all"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
@@ -218,13 +262,14 @@ export function TopNav() {
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
+            id={mobileMenuId}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
             className="md:hidden border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)]"
           >
-            <nav className="container py-3 flex flex-col gap-1">
+            <nav aria-label={t("a11y.mobile_navigation")} className="container py-3 flex flex-col gap-1">
               {NAV_LINKS.map((link) => (
                 <Link
                   key={link.href}
@@ -236,7 +281,7 @@ export function TopNav() {
                       : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)]"
                   }`}
                 >
-                  {t(language, link.en, link.zh)}
+                  {t(link.key)}
                 </Link>
               ))}
               <div className="border-t border-[var(--color-border)] mt-2 pt-2 flex items-center gap-3">
@@ -246,13 +291,15 @@ export function TopNav() {
                     openCommandPalette();
                     setMobileOpen(false);
                   }}
+                  aria-label={t("nav.open_search")}
                   className="flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-md)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)] flex-1 text-left"
                 >
                   <Search className="w-4 h-4" />
-                  {t(language, "Search", "搜索")}
+                  {t("search.button")}
                 </button>
                 <button
                   onClick={() => setLanguage(language === "en" ? "zh" : "en")}
+                  aria-label={t("nav.toggle_language")}
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-[var(--radius-md)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)]"
                 >
                   <Globe className="w-4 h-4" />
@@ -265,7 +312,7 @@ export function TopNav() {
                   onClick={() => setMobileOpen(false)}
                   className="btn btn-primary w-full mt-1 text-center"
                 >
-                  {t(language, "Sign in", "登录")}
+                  {t("auth.sign_in")}
                 </Link>
               )}
             </nav>

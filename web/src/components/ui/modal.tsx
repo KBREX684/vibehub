@@ -44,15 +44,38 @@ export function Modal({ open, onClose, size = "md", title, children, className =
     };
   }, [open]);
 
-  // Focus trap: return focus to trigger on close
+  // Focus trap: keep keyboard navigation within the open dialog.
   const panelRef = React.useRef<HTMLDivElement>(null);
+  const titleId = React.useId();
   React.useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const focusables = panelRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusables || focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
     if (open) {
       const first = panelRef.current?.querySelector<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
       first?.focus();
     }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   if (!open) return null;
@@ -61,7 +84,8 @@ export function Modal({ open, onClose, size = "md", title, children, className =
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={title}
+      aria-label={title ?? "Dialog"}
+      aria-labelledby={title ? titleId : undefined}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       {/* Backdrop */}
@@ -85,7 +109,7 @@ export function Modal({ open, onClose, size = "md", title, children, className =
       >
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{title}</h2>
+            <h2 id={titleId} className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{title}</h2>
             <button
               type="button"
               onClick={onClose}

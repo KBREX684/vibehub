@@ -3,6 +3,7 @@ import { listProjects, listTeams } from "@/lib/repository";
 import { SearchBar } from "@/components/search-bar";
 import { HomeFeedSection } from "@/components/home-feed-section";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { getServerTranslator } from "@/lib/i18n";
 import {
   Zap,
   LayoutGrid,
@@ -16,11 +17,11 @@ import {
 
 export default async function HomePage() {
   const session = await getSessionUserFromCookie();
+  const { t } = await getServerTranslator();
   const [{ items: projects }, { items: teams }] = await Promise.all([
     listProjects({ page: 1, limit: 6 }),
     listTeams({ page: 1, limit: 3 }),
   ]);
-
   return (
     <main className="container pb-24 space-y-16">
 
@@ -28,19 +29,17 @@ export default async function HomePage() {
       <section id="about" className="pt-16 pb-12 text-center animate-fade-in-up scroll-mt-24">
         <div className="inline-flex items-center gap-2 px-3 py-1 border border-[var(--color-border)] text-xs font-mono text-[var(--color-text-secondary)] mb-8">
           <Zap className="w-3.5 h-3.5" />
-          <span>[v1.0.0] Developer community for shipping together</span>
+          <span>{t("home.version_badge")}</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold tracking-[-0.04em] leading-[1.05] mb-6">
-          <span className="text-[var(--color-text-primary)]">Build projects,</span>
+          <span className="text-[var(--color-text-primary)]">{t("home.hero_line1")}</span>
           <br />
-          <span className="text-[var(--color-text-secondary)]">find teammates, ship together.</span>
+          <span className="text-[var(--color-text-secondary)]">{t("home.hero_line2")}</span>
         </h1>
 
         <p className="text-base md:text-lg text-[var(--color-text-secondary)] max-w-xl mx-auto leading-relaxed mb-10">
-          Discover developer projects, join active collaborations, form small
-          teams, and move work forward in one place. VibeHub is built for
-          builders who want to ship with other builders.
+          {t("home.hero_description")}
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12">
@@ -48,14 +47,14 @@ export default async function HomePage() {
             href="/discover"
             className="btn btn-primary px-6 py-2.5 text-sm font-semibold"
           >
-            Explore Projects
+            {t("home.explore_projects")}
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/discussions"
             className="btn btn-secondary px-6 py-2.5 text-sm font-semibold"
           >
-            Join Discussions
+            {t("home.join_discussions")}
           </Link>
         </div>
 
@@ -68,10 +67,10 @@ export default async function HomePage() {
       {/* ── Platform Stats ───────────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--color-border)] border border-[var(--color-border)] animate-fade-in-up delay-100">
         {[
-          { icon: LayoutGrid, label: "Active Projects", value: projects.length },
-          { icon: MessageSquare, label: "Discussions", value: "Live" },
-          { icon: Users, label: "Active Teams", value: teams.length },
-          { icon: Cpu, label: "Developer API + MCP", value: "Live" },
+          { icon: LayoutGrid, label: t("home.stats.active_projects"), value: projects.length },
+          { icon: MessageSquare, label: t("home.stats.discussions"), value: t("common.live") },
+          { icon: Users, label: t("home.stats.active_teams"), value: teams.length },
+          { icon: Cpu, label: t("home.stats.developer_tools"), value: t("common.live") },
         ].map(({ icon: Icon, label, value }) => (
           <div
             key={label}
@@ -91,18 +90,18 @@ export default async function HomePage() {
         {[
           {
             icon: Code2,
-            title: "Project Discovery",
-            desc: "Browse real developer projects, open-source tools, and active build logs that are looking for attention or help.",
+            title: t("home.value.discovery.title"),
+            desc: t("home.value.discovery.description"),
           },
           {
             icon: Users,
-            title: "Small-Team Delivery",
-            desc: "Create a team, review join requests, manage tasks and milestones, and keep delivery moving with less friction.",
+            title: t("home.value.delivery.title"),
+            desc: t("home.value.delivery.description"),
           },
           {
             icon: Activity,
-            title: "Active Community",
-            desc: "Share ideas, get feedback, and turn discussion into projects, collaboration intent, and actual work shipped.",
+            title: t("home.value.community.title"),
+            desc: t("home.value.community.description"),
           },
         ].map(({ icon: Icon, title, desc }) => (
           <div key={title} className="card p-6">
@@ -123,31 +122,31 @@ export default async function HomePage() {
         {[
           {
             step: "01",
-            title: "Discuss & Share",
-            desc: "Share ideas, publish updates, and collect the signal that helps projects improve.",
+            title: t("home.steps.discuss.title"),
+            desc: t("home.steps.discuss.description"),
             href: "/discussions",
-            ctaLabel: "Browse Discussions",
+            ctaLabel: t("home.steps.discuss.cta"),
           },
           {
             step: "02",
-            title: "Showcase Projects",
-            desc: "Turn ideas into project pages that other developers can discover, follow, and join.",
+            title: t("home.steps.showcase.title"),
+            desc: t("home.steps.showcase.description"),
             href: "/discover",
-            ctaLabel: "Explore Projects",
+            ctaLabel: t("home.steps.showcase.cta"),
           },
           {
             step: "03",
-            title: "Coordinate Delivery",
-            desc: "Approve join requests, align around milestones, and ship as a focused small team.",
+            title: t("home.steps.coordinate.title"),
+            desc: t("home.steps.coordinate.description"),
             href: "/teams",
-            ctaLabel: "Find Teams",
+            ctaLabel: t("home.steps.coordinate.cta"),
           },
           {
             step: "04",
-            title: "Developer Tools",
-            desc: "Use API keys, OpenAPI, and MCP tools to integrate discovery and collaboration into your workflow.",
+            title: t("home.steps.tools.title"),
+            desc: t("home.steps.tools.description"),
             href: "/developers",
-            ctaLabel: "Open Developer Hub",
+            ctaLabel: t("home.steps.tools.cta"),
           },
         ].map(({ step, title, desc, href, ctaLabel }) => (
           <div key={step} className="card p-5 space-y-3 flex flex-col">
@@ -172,17 +171,16 @@ export default async function HomePage() {
       <section className="card p-10 text-center border-t-2 border-t-[var(--color-text-primary)]">
         <div className="relative z-10">
           <h2 className="text-2xl md:text-3xl font-bold text-[var(--color-text-primary)] mb-3">
-            Ready to ship with other builders?
+            {t("home.cta.title")}
           </h2>
           <p className="text-sm text-[var(--color-text-secondary)] mb-6 max-w-md mx-auto">
-            Create your profile, publish a project, find collaborators, and
-            move from idea to delivery inside one developer-first workflow.
+            {t("home.cta.description")}
           </p>
           <a
             href="/api/v1/auth/github?redirect=/"
             className="btn btn-primary px-8 py-3 text-sm font-semibold"
           >
-            Get Started Free
+            {t("home.cta.button")}
             <ArrowRight className="w-4 h-4" />
           </a>
         </div>

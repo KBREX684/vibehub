@@ -3,10 +3,12 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getCreatorProfileByUserId } from "@/lib/repository";
+import { getServerTranslator } from "@/lib/i18n";
 import { ProfileForm } from "./profile-form";
 
 export default async function SettingsProfilePage() {
   const session = await getSessionUserFromCookie();
+  const { t } = await getServerTranslator();
   if (!session) {
     redirect("/api/v1/auth/github?redirect=/settings/profile");
   }
@@ -20,16 +22,16 @@ export default async function SettingsProfilePage() {
           <UserRound className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)] m-0">Profile Settings</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)] m-0">{t("settings.profile_heading", "Profile Settings")}</h1>
           <p className="text-sm text-[var(--color-text-secondary)] m-0">
-            Edit your creator profile and social links.
+            {t("settings.profile_subtitle", "Edit your creator profile and social links.")}
           </p>
         </div>
       </section>
 
       <div className="card p-4">
         <p className="text-xs text-[var(--color-text-muted)] m-0">
-          Public profile URL:{" "}
+          {t("settings.public_profile_url", "Public profile URL:")}{" "}
           {profile ? (
             <Link
               href={`/creators/${encodeURIComponent(profile.slug)}`}
@@ -38,7 +40,7 @@ export default async function SettingsProfilePage() {
               /creators/{profile.slug}
             </Link>
           ) : (
-            <span className="text-[var(--color-text-secondary)]">Create your profile first to claim a public URL.</span>
+            <span className="text-[var(--color-text-secondary)]">{t("settings.create_profile_first", "Create your profile first to claim a public URL.")}</span>
           )}
         </p>
       </div>

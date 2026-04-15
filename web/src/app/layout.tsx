@@ -6,26 +6,39 @@ import { Footer } from "@/components/footer";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "sonner";
+import { getServerLanguage, getServerTranslator } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "VibeHub — Where Vibe Coders Build Together",
-  description:
-    "The premier platform for Vibe Coding developers. Discover AI-native projects, join elite teams, and connect with builders worldwide.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslator();
+  return {
+    title: t("meta.title"),
+    description: t("meta.description"),
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const language = await getServerLanguage();
+  const { t } = await getServerTranslator();
   return (
-    <html lang="en" className="dark">
+    <html lang={language} className="dark">
       <body className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col">
         <AuthProvider>
-          <LanguageProvider>
+          <LanguageProvider initialLanguage={language}>
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-[var(--radius-md)] focus:bg-[var(--color-bg-elevated)] focus:px-4 focus:py-2 focus:text-sm focus:text-[var(--color-text-primary)] focus:shadow-[var(--shadow-modal)]"
+            >
+              {t("a11y.skipToContent")}
+            </a>
             <TopNav />
             <CommandPalette />
-            <div className="flex-1 flex flex-col min-w-0">{children}</div>
+            <div id="main-content" className="flex-1 flex flex-col min-w-0">
+              {children}
+            </div>
             <Footer />
           </LanguageProvider>
         </AuthProvider>

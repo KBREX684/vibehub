@@ -2,46 +2,46 @@
 
 import Link from "next/link";
 import { Zap, Globe, Link2 } from "lucide-react";
-import { useLanguage, t } from "@/app/context/LanguageContext";
+import { useLanguage } from "@/app/context/LanguageContext";
 
 type FooterLink =
-  | { kind: "link"; href: string; en: string; zh: string }
-  | { kind: "mailto"; href: string; en: string; zh: string }
-  | { kind: "soon"; en: string; zh: string };
+  | { kind: "link"; href: string; labelKey: string }
+  | { kind: "mailto"; href: string; labelKey: string }
+  | { kind: "soon"; labelKey: string };
 
 type FooterColumn = {
-  title: { en: string; zh: string };
+  titleKey: string;
   links: FooterLink[];
 };
 
 export function Footer() {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const columns: FooterColumn[] = [
     {
-      title: { en: "Platform", zh: "平台" },
+      titleKey: "footer.platform",
       links: [
-        { kind: "link", href: "/discover", en: "Discover", zh: "发现项目" },
-        { kind: "link", href: "/discussions", en: "Discussions", zh: "社区讨论" },
-        { kind: "link", href: "/teams", en: "Teams", zh: "团队" },
-        { kind: "link", href: "/leaderboards", en: "Leaderboards", zh: "排行榜" },
+        { kind: "link", href: "/discover", labelKey: "nav.discover" },
+        { kind: "link", href: "/discussions", labelKey: "nav.discussions" },
+        { kind: "link", href: "/teams", labelKey: "nav.teams" },
+        { kind: "link", href: "/leaderboards", labelKey: "nav.leaderboards" },
       ],
     },
     {
-      title: { en: "Developers", zh: "开发者" },
+      titleKey: "footer.developers",
       links: [
-        { kind: "link", href: "/settings/api-keys", en: "API Keys", zh: "API 密钥" },
-        { kind: "link", href: "/api/v1/openapi.json", en: "OpenAPI", zh: "OpenAPI 文档" },
-        { kind: "link", href: "/pricing", en: "Pricing", zh: "定价" },
-        { kind: "link", href: "/workspace/enterprise", en: "Radar Workspace", zh: "雷达工作台" },
+        { kind: "link", href: "/settings/api-keys", labelKey: "footer.apiKeys" },
+        { kind: "link", href: "/api/v1/openapi.json", labelKey: "footer.openapi" },
+        { kind: "link", href: "/pricing", labelKey: "footer.pricing" },
+        { kind: "link", href: "/workspace/enterprise", labelKey: "footer.radarWorkspace" },
       ],
     },
     {
-      title: { en: "Company", zh: "关于" },
+      titleKey: "footer.company",
       links: [
-        { kind: "link", href: "/#about", en: "About", zh: "关于我们" },
-        { kind: "soon", en: "Blog", zh: "博客" },
-        { kind: "soon", en: "Careers", zh: "招聘" },
-        { kind: "mailto", href: "mailto:support@vibehub.dev", en: "Contact", zh: "联系我们" },
+        { kind: "link", href: "/#about", labelKey: "footer.about" },
+        { kind: "soon", labelKey: "footer.blog" },
+        { kind: "soon", labelKey: "footer.careers" },
+        { kind: "mailto", href: "mailto:support@vibehub.dev", labelKey: "footer.contact" },
       ],
     },
   ];
@@ -59,22 +59,19 @@ export function Footer() {
               VibeHub
             </Link>
             <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-xs">
-              {t(language,
-                "The premier collaboration network for Vibe Coding developers.",
-                "面向 Vibe Coding 开发者的顶尖协作与展示平台。"
-              )}
+              {t("footer.tagline")}
             </p>
             <div className="flex items-center gap-3 mt-4">
               {[
-                { icon: Link2,  href: "https://github.com",  label: "GitHub"  },
-                { icon: Link2,  href: "https://twitter.com", label: "Twitter" },
-                { icon: Globe,  href: "/",                    label: "Website" },
-              ].map(({ icon: Icon, href, label }) => (
+                { icon: Link2, href: "https://github.com", labelKey: "footer.github" },
+                { icon: Link2, href: "https://twitter.com", labelKey: "footer.twitter" },
+                { icon: Globe, href: "/", labelKey: "footer.website" },
+              ].map(({ icon: Icon, href, labelKey }) => (
                 <a
-                  key={label}
+                  key={labelKey}
                   href={href}
                   className="p-2 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all"
-                  aria-label={label}
+                  aria-label={t(labelKey)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -86,28 +83,28 @@ export function Footer() {
 
           {/* Link columns */}
           {columns.map((col) => (
-            <div key={col.title.en}>
+            <div key={col.titleKey}>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
-                {t(language, col.title.en, col.title.zh)}
+                {t(col.titleKey)}
               </h4>
               <ul className="flex flex-col gap-2">
                 {col.links.map((link) => {
                   if (link.kind === "soon") {
-                    const label = `${t(language, link.en, link.zh)} (${t(language, "Coming soon", "即将推出")})`;
+                    const label = `${t(link.labelKey)} (${t("common.comingSoon")})`;
                     return (
-                      <li key={link.en}>
+                      <li key={link.labelKey}>
                         <span className="text-sm text-[var(--color-text-muted)] cursor-default">{label}</span>
                       </li>
                     );
                   }
                   if (link.kind === "mailto") {
                     return (
-                      <li key={link.en}>
+                      <li key={link.labelKey}>
                         <a
                           href={link.href}
                           className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                         >
-                          {t(language, link.en, link.zh)}
+                          {t(link.labelKey)}
                         </a>
                       </li>
                     );
@@ -118,7 +115,7 @@ export function Footer() {
                         href={link.href}
                         className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                       >
-                        {t(language, link.en, link.zh)}
+                        {t(link.labelKey)}
                       </Link>
                     </li>
                   );
@@ -130,20 +127,19 @@ export function Footer() {
 
         <div className="border-t border-[var(--color-border)] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-[var(--color-text-muted)]">
-            © {new Date().getFullYear()} VibeHub.{" "}
-            {t(language, "All rights reserved.", "保留所有权利。")}
+            © {new Date().getFullYear()} VibeHub. {t("footer.rights")}
           </p>
           <div className="flex items-center gap-4">
             {[
-              { href: "/privacy", en: "Privacy Policy", zh: "隐私政策" },
-              { href: "/terms", en: "Terms of Service", zh: "服务条款" },
+              { href: "/privacy", key: "footer.privacy" },
+              { href: "/terms", key: "footer.terms" },
             ].map((item) => (
               <Link
-                key={item.en}
+                key={item.key}
                 href={item.href}
                 className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
               >
-                {t(language, item.en, item.zh)}
+                {t(item.key)}
               </Link>
             ))}
           </div>

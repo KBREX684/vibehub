@@ -1,36 +1,38 @@
 import Link from "next/link";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { getServerTranslator } from "@/lib/i18n";
 import { Key, CreditCard, Building2, ChevronRight, Settings2 } from "lucide-react";
-
-const LINKS = [
-  {
-    href: "/settings/subscription",
-    title: "Subscription",
-    description: "Plan, billing, and usage limits.",
-    icon: CreditCard,
-  },
-  {
-    href: "/settings/api-keys",
-    title: "API keys",
-    description: "Developer keys, scopes, and MCP tooling.",
-    icon: Key,
-  },
-  {
-    href: "/settings/profile",
-    title: "Profile",
-    description: "Edit creator profile, links, and collaboration preferences.",
-    icon: Settings2,
-  },
-  {
-    href: "/enterprise/verify",
-    title: "Enterprise workspace",
-    description: "Apply for observer workspace access (optional).",
-    icon: Building2,
-  },
-] as const;
 
 export default async function SettingsIndexPage() {
   const session = await getSessionUserFromCookie();
+  const { t } = await getServerTranslator();
+
+  const links = [
+    {
+      href: "/settings/subscription",
+      title: t("settings.subscription_title", "Subscription"),
+      description: t("settings.subscription_desc", "Plan, billing, and usage limits."),
+      icon: CreditCard,
+    },
+    {
+      href: "/settings/api-keys",
+      title: t("settings.api_keys_title", "API keys"),
+      description: t("settings.api_keys_desc", "Developer keys, scopes, and MCP tooling."),
+      icon: Key,
+    },
+    {
+      href: "/settings/profile",
+      title: t("settings.profile_title", "Profile"),
+      description: t("settings.profile_desc", "Edit creator profile, links, and collaboration preferences."),
+      icon: Settings2,
+    },
+    {
+      href: "/enterprise/verify",
+      title: t("settings.enterprise_title", "Enterprise workspace"),
+      description: t("settings.enterprise_desc", "Apply for observer workspace access (optional)."),
+      icon: Building2,
+    },
+  ] as const;
 
   return (
     <main className="container max-w-2xl pb-24 pt-8 space-y-8">
@@ -39,9 +41,9 @@ export default async function SettingsIndexPage() {
           <Settings2 className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">Settings</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">{t("settings.title", "Settings")}</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 m-0">
-            Manage your account, billing, and developer integrations.
+            {t("settings.subtitle", "Manage your account, billing, and developer integrations.")}
           </p>
         </div>
       </div>
@@ -49,13 +51,13 @@ export default async function SettingsIndexPage() {
       {!session && (
         <div className="card p-5 border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
           <p className="text-sm text-[var(--color-text-secondary)] m-0">
-            Sign in to change profile, subscription, and API keys. You can still browse public links below.
+            {t("settings.sign_in_hint", "Sign in to change profile, subscription, and API keys. You can still browse public links below.")}
           </p>
         </div>
       )}
 
       <ul className="space-y-3">
-        {LINKS.map(({ href, title, description, icon: Icon }) => (
+        {links.map(({ href, title, description, icon: Icon }) => (
           <li key={href}>
             <Link
               href={href}
@@ -77,11 +79,11 @@ export default async function SettingsIndexPage() {
       </ul>
 
       <p className="text-xs text-[var(--color-text-muted)]">
-        Project creation and editing live under{" "}
+        {t("settings.project_hint_prefix", "Project creation and editing live under")}{" "}
         <Link href="/discover" className="text-[var(--color-text-secondary)] underline hover:text-[var(--color-text-primary)]">
-          Discover
+          {t("nav.discover")}
         </Link>{" "}
-        and individual project pages.
+        {t("settings.project_hint_suffix", "and individual project pages.")}
       </p>
     </main>
   );

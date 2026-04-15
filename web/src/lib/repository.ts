@@ -43,6 +43,7 @@ import {
   mockContributionCredits,
   mockSubscriptionPlans,
   mockUserSubscriptions,
+  mockEnterpriseVerificationApplications,
   mockTeamChatMessages,
   mockWebhookEndpoints,
 } from "@/lib/data/mock-data";
@@ -122,6 +123,7 @@ import {
   createProject as createProjectFromDomain,
   deleteProject as deleteProjectFromDomain,
   getProjectBySlug as getProjectBySlugFromDomain,
+  getProjectFilterFacets as getProjectFilterFacetsFromDomain,
   listProjects as listProjectsFromDomain,
   updateProject as updateProjectFromDomain,
   updateProjectTeamLink as updateProjectTeamLinkFromDomain,
@@ -521,33 +523,7 @@ export async function listProjects(params: {
 }
 
 export async function getProjectFilterFacets(): Promise<{ tags: string[]; techStack: string[] }> {
-  if (useMockData) {
-    const tagSet = new Set<string>();
-    const techSet = new Set<string>();
-    for (const project of mockProjects) {
-      project.tags.forEach((t) => tagSet.add(t));
-      project.techStack.forEach((t) => techSet.add(t));
-    }
-    return {
-      tags: [...tagSet].sort((a, b) => a.localeCompare(b)),
-      techStack: [...techSet].sort((a, b) => a.localeCompare(b)),
-    };
-  }
-
-  const prisma = await getPrisma();
-  const rows = await prisma.project.findMany({
-    select: { tags: true, techStack: true },
-  });
-  const tagSet = new Set<string>();
-  const techSet = new Set<string>();
-  for (const row of rows) {
-    row.tags.forEach((t) => tagSet.add(t));
-    row.techStack.forEach((t) => techSet.add(t));
-  }
-  return {
-    tags: [...tagSet].sort((a, b) => a.localeCompare(b)),
-    techStack: [...techSet].sort((a, b) => a.localeCompare(b)),
-  };
+  return getProjectFilterFacetsFromDomain();
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
@@ -2386,6 +2362,11 @@ export interface CreateProfileInput {
   headline: string;
   bio: string;
   skills: string[];
+  avatarUrl?: string;
+  websiteUrl?: string;
+  githubUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
   collaborationPreference?: string;
 }
 
@@ -2440,6 +2421,11 @@ export interface UpdateProfileInput {
   headline?: string;
   bio?: string;
   skills?: string[];
+  avatarUrl?: string;
+  websiteUrl?: string;
+  githubUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
   collaborationPreference?: string;
 }
 
@@ -4205,8 +4191,7 @@ function toEnterpriseVerificationApplicationFromProfile(row: {
 }): EnterpriseVerificationApplication | null {
   const ep = row.enterpriseProfile;
   if (!ep || ep.status === "none") return null;
-  const status =
-    ep.status === "none" ? "pending" : (ep.status as Exclude<EnterpriseVerificationStatus, "none">);
+  const status = ep.status as Exclude<EnterpriseVerificationStatus, "none">;
   return {
     id: `eva_user_${row.id}`,
     userId: row.id,
@@ -4774,7 +4759,7 @@ export async function getLatestEnterpriseVerificationApplication(
   userId: string
 ): Promise<EnterpriseVerificationApplication | null> {
   if (useMockData) {
-    const profile = mockEnterpriseProfiles.find((row) => row.userId === userId);
+    const profile = mockEnterpriseVerificationApplications.find((row) => row.userId === userId);
     if (!profile) return null;
     return {
       id: `eva_user_${profile.userId}`,

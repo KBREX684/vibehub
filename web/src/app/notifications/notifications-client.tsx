@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { ArrowRight, Check, CheckCheck } from "lucide-react";
 import type { InAppNotification } from "@/lib/types";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { groupNotificationsForDisplay } from "./notification-grouping";
 import { apiFetch } from "@/lib/api-fetch";
 
@@ -40,6 +41,7 @@ export function NotificationsClient({
 }: {
   initialItems: InAppNotification[];
 }) {
+  const { t } = useLanguage();
   const [items, setItems] = useState(initialItems);
   const [isPending, startTransition] = useTransition();
 
@@ -82,7 +84,7 @@ export function NotificationsClient({
             data-testid="notifications-unread-count"
             className="text-xs text-[var(--color-text-muted)]"
           >
-            {unreadCount} unread
+            {t("notifications.unread_count", `${unreadCount} unread`).replace("{count}", String(unreadCount))}
           </span>
           <button
             onClick={markAll}
@@ -91,7 +93,7 @@ export function NotificationsClient({
             className="btn btn-ghost text-xs px-3 py-1.5 flex items-center gap-1.5 text-[var(--color-text-secondary)] disabled:opacity-50"
           >
             <CheckCheck className="w-3.5 h-3.5" />
-            Mark all read
+            {t("notifications.mark_all_read")}
           </button>
         </div>
       )}
@@ -135,7 +137,8 @@ export function NotificationsClient({
                         onClick={() => markOne(row.ids)}
                         data-testid={`notification-mark-read-${primaryId}`}
                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-success)] transition-colors"
-                        title="Mark as read"
+                        title={t("notifications.mark_as_read")}
+                        aria-label={t("notifications.mark_as_read")}
                       >
                         <Check className="w-3.5 h-3.5" />
                       </button>
@@ -152,7 +155,7 @@ export function NotificationsClient({
                     className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1"
                     onClick={() => isUnread && markOne(row.ids)}
                   >
-                    Open post
+                    {t("notifications.open_post")}
                     <ArrowRight className="w-3 h-3" />
                   </Link>
                 )}
@@ -163,7 +166,7 @@ export function NotificationsClient({
                     className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1"
                     onClick={() => isUnread && markOne(row.ids)}
                   >
-                    Open team
+                    {t("notifications.open_team")}
                     <ArrowRight className="w-3 h-3" />
                   </Link>
                 )}

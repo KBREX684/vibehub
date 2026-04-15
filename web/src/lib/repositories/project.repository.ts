@@ -307,6 +307,36 @@ export async function listProjects(params: {
   };
 }
 
+export async function getProjectFilterFacets(): Promise<{ tags: string[]; techStack: string[] }> {
+  if (useMockData) {
+    const tagSet = new Set<string>();
+    const techSet = new Set<string>();
+    for (const project of mockProjects) {
+      project.tags.forEach((t) => tagSet.add(t));
+      project.techStack.forEach((t) => techSet.add(t));
+    }
+    return {
+      tags: [...tagSet].sort((a, b) => a.localeCompare(b)),
+      techStack: [...techSet].sort((a, b) => a.localeCompare(b)),
+    };
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.project.findMany({
+    select: { tags: true, techStack: true },
+  });
+  const tagSet = new Set<string>();
+  const techSet = new Set<string>();
+  for (const row of rows) {
+    row.tags.forEach((t) => tagSet.add(t));
+    row.techStack.forEach((t) => techSet.add(t));
+  }
+  return {
+    tags: [...tagSet].sort((a, b) => a.localeCompare(b)),
+    techStack: [...techSet].sort((a, b) => a.localeCompare(b)),
+  };
+}
+
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
   if (useMockData) return mockProjects.find((project) => project.slug === slug) ?? null;
   const prisma = await getPrisma();
