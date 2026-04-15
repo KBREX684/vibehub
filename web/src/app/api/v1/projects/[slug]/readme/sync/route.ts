@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getProjectBySlug, updateProject } from "@/lib/repository";
 import { fetchGitHubReadmeMarkdown } from "@/lib/github-readme";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -32,6 +33,8 @@ export async function POST(_request: NextRequest, { params }: Params) {
   } catch (error) {
     const r = apiErrorFromRepositoryCatch(error);
     if (r) return r;
-    return apiError({ code: "README_SYNC_FAILED", message: error instanceof Error ? error.message : String(error) }, 500);
+    const log = getRequestLogger(_request, { route: "POST /api/v1/projects/[slug]/readme/sync" });
+    log.error({ err: serializeError(error) }, "readme sync failed");
+    return apiError({ code: "README_SYNC_FAILED", message: "Could not sync README" }, 500);
   }
 }

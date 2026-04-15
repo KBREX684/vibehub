@@ -1,10 +1,20 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { listCommentsForPost, createComment, getPostIdBySlug } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
+import { readJsonObjectBody } from "@/lib/api-json-body";
+import { apiErrorFromZod } from "@/lib/zod-api-error";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 
 interface Props { params: Promise<{ slug: string }> }
+
+const createCommentBodySchema = z.object({
+  body: z.string().trim().min(2, "Comment body too short").max(2000, "Comment body too long (max 2000)"),
+  parentCommentId: z.string().min(1).optional(),
+});
 
 export async function GET(_request: NextRequest, { params }: Props) {
   const { slug } = await params;
@@ -16,7 +26,9 @@ export async function GET(_request: NextRequest, { params }: Props) {
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError({ code: "COMMENTS_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const log = getRequestLogger(_request, { route: "GET /api/v1/posts/[slug]/comments" });
+    log.error({ err: serializeError(err) }, "comments fetch failed");
+    return apiError({ code: "COMMENTS_FETCH_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 }
 
@@ -29,14 +41,11 @@ export async function POST(request: NextRequest, { params }: Props) {
   const postId = await getPostIdBySlug(slug);
   if (!postId) return apiError({ code: "POST_NOT_FOUND", message: "Post not found" }, 404);
 
-  let body: Record<string, unknown>;
-  try { body = await request.json(); } catch { return apiError({ code: "INVALID_JSON", message: "Invalid JSON" }, 400); }
-
-  const commentBody = typeof body.body === "string" ? body.body.trim() : "";
-  const parentCommentId = typeof body.parentCommentId === "string" ? body.parentCommentId : undefined;
-
-  if (!commentBody || commentBody.length < 2) return apiError({ code: "INVALID_BODY", message: "Comment body too short" }, 400);
-  if (commentBody.length > 2000) return apiError({ code: "INVALID_BODY", message: "Comment body too long (max 2000)" }, 400);
+  const parsed = await readJsonObjectBody(request);
+  if (!parsed.ok) return parsed.response;
+  const zod = createCommentBodySchema.safeParse(parsed.body);
+  if (!zod.success) return apiErrorFromZod(zod.error);
+  const { body: commentBody, parentCommentId } = zod.data;
 
   try {
     const comment = await createComment({ postId, body: commentBody, authorId: auth.user.userId, parentCommentId });
@@ -45,8 +54,10 @@ export async function POST(request: NextRequest, { params }: Props) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "PARENT_COMMENT_NOT_FOUND") return apiError({ code: "PARENT_COMMENT_NOT_FOUND", message: "Parent comment not found" }, 404);
-    if (msg === "MAX_NESTING_DEPTH_EXCEEDED") return apiError({ code: "MAX_NESTING_DEPTH_EXCEEDED", message: "Maximum reply nesting depth (2) exceeded" }, 400);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
+    const log = getRequestLogger(request, { route: "POST /api/v1/posts/[slug]/comments" });
+    log.error({ err: serializeError(err) }, "comment create failed");
     return apiError({ code: "COMMENT_CREATE_FAILED", message: msg }, 500);
   }
 }

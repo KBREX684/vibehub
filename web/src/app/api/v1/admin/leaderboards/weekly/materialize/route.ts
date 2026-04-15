@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
@@ -7,18 +8,20 @@ import {
   startOfUtcWeekContaining,
 } from "@/lib/repository";
 import type { WeeklyLeaderboardKind } from "@/lib/types";
+import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
+import { apiErrorFromZod } from "@/lib/zod-api-error";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 
 const KINDS: WeeklyLeaderboardKind[] = [
   "discussions_by_weekly_comment_count",
   "projects_by_weekly_collaboration_intent_count",
 ];
 
-function parseKind(value: unknown): WeeklyLeaderboardKind | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  return KINDS.includes(value as WeeklyLeaderboardKind) ? (value as WeeklyLeaderboardKind) : null;
-}
+const materializeBodySchema = z.object({
+  weekStart: z.string().trim().min(1).optional(),
+  kind: z.enum(KINDS as [WeeklyLeaderboardKind, WeeklyLeaderboardKind]),
+  limit: z.coerce.number().int().min(1).optional(),
+});
 
 export async function POST(request: Request) {
   const auth = await requireAdminSession();
@@ -26,14 +29,12 @@ export async function POST(request: Request) {
     return auth.response;
   }
 
-  let body: Record<string, unknown> = {};
-  try {
-    body = (await request.json()) as Record<string, unknown>;
-  } catch {
-    body = {};
-  }
+  const parsed = await readJsonObjectBodyOrEmpty(request);
+  if (!parsed.ok) return parsed.response;
+  const zod = materializeBodySchema.safeParse(parsed.body);
+  if (!zod.success) return apiErrorFromZod(zod.error);
+  const { weekStart: weekRaw, kind, limit: limitFromBody } = zod.data;
 
-  const weekRaw = typeof body.weekStart === "string" ? body.weekStart : undefined;
   const weekStart =
     weekRaw && weekRaw.trim()
       ? parseUtcWeekStartParam(weekRaw)
@@ -49,34 +50,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const kind = parseKind(body.kind);
-  if (!kind) {
-    return apiError(
-      {
-        code: "INVALID_KIND",
-        message: `kind must be one of: ${KINDS.join(", ")}`,
-      },
-      400
-    );
-  }
-
-  const limitRaw = body.limit;
-  const limit =
-    typeof limitRaw === "number" && Number.isFinite(limitRaw)
-      ? limitRaw
-      : typeof limitRaw === "string"
-        ? Number.parseInt(limitRaw, 10)
-        : 15;
-
-  if (Number.isNaN(limit) || limit < 1) {
-    return apiError(
-      {
-        code: "INVALID_LIMIT",
-        message: "limit must be a positive integer",
-      },
-      400
-    );
-  }
+  const limit = limitFromBody ?? 15;
 
   try {
     const snapshot = await materializeWeeklyLeaderboardSnapshot({
@@ -89,11 +63,12 @@ export async function POST(request: Request) {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
+    const log = getRequestLogger(request, { route: "POST /api/v1/admin/leaderboards/weekly/materialize" });
+    log.error({ err: serializeError(error) }, "materialize weekly leaderboard failed");
+    return apiError(
       {
         code: "MATERIALIZE_FAILED",
         message: "Failed to materialize weekly leaderboard",
-        details: error instanceof Error ? error.message : String(error),
       },
       500
     );

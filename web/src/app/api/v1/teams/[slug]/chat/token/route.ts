@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { encodeChatToken, ChatTokenConstants } from "@/lib/chat-token";
 import { getTeamBySlug } from "@/lib/repository";
@@ -18,7 +19,10 @@ export async function POST(_request: Request, { params }: Params) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
   }
 
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slugParse = z.string().min(1).safeParse(rawSlug);
+  if (!slugParse.success) return apiError({ code: "INVALID_SLUG", message: "Invalid team slug" }, 400);
+  const slug = slugParse.data;
   const team = await getTeamBySlug(slug, session.userId);
   if (!team) {
     return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);

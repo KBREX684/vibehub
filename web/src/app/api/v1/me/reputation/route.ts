@@ -2,6 +2,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { getContributionCredit, refreshContributionCredit } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { logger, serializeError } from "@/lib/logger";
 
 export async function GET() {
   const session = await getSessionUserFromCookie();
@@ -15,10 +16,8 @@ export async function GET() {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
-      { code: "REPUTATION_FETCH_FAILED", message: "Failed to fetch reputation", details: error instanceof Error ? error.message : String(error) },
-      500
-    );
+    logger.error({ err: serializeError(error) }, "reputation fetch failed");
+    return apiError({ code: "REPUTATION_FETCH_FAILED", message: "Failed to fetch reputation" }, 500);
   }
 }
 
@@ -34,9 +33,7 @@ export async function POST() {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
-      { code: "REPUTATION_REFRESH_FAILED", message: "Failed to refresh reputation", details: error instanceof Error ? error.message : String(error) },
-      500
-    );
+    logger.error({ err: serializeError(error) }, "reputation refresh failed");
+    return apiError({ code: "REPUTATION_REFRESH_FAILED", message: "Failed to refresh reputation" }, 500);
   }
 }

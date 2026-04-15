@@ -1,10 +1,18 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
+import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
+import { apiErrorFromZod } from "@/lib/zod-api-error";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 
 const useMockData = isMockDataEnabled();
+
+const portalBodySchema = z.object({
+  returnUrl: z.string().url().optional(),
+});
 
 /** M-2: Create a Stripe Customer Portal session for managing/canceling subscriptions. */
 export async function POST(request: NextRequest) {
@@ -24,11 +32,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    let body: { returnUrl?: unknown } = {};
-    try { body = await request.json(); } catch { /* ignore */ }
+    const parsed = await readJsonObjectBodyOrEmpty(request);
+    if (!parsed.ok) return parsed.response;
+    const zod = portalBodySchema.safeParse(parsed.body);
+    if (!zod.success) return apiErrorFromZod(zod.error);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-    const returnUrl = typeof body.returnUrl === "string" ? body.returnUrl : `${baseUrl}/settings/subscription`;
+    const returnUrl = zod.data.returnUrl ?? `${baseUrl}/settings/subscription`;
 
     const { prisma } = await import("@/lib/db");
     const user = await prisma.user.findUnique({ where: { id: auth.user.userId }, select: { stripeCustomerId: true } });
@@ -47,6 +57,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError({ code: "PORTAL_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
+    const log = getRequestLogger(request, { route: "POST /api/v1/billing/portal" });
+    log.error({ err: serializeError(err) }, "billing portal failed");
+    return apiError({ code: "PORTAL_FAILED", message: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 }

@@ -124,7 +124,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await apiFetch("/api/v1/auth/logout", { method: "POST" });
+      await apiFetch("/api/v1/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
     } catch {
       // ignore
     }

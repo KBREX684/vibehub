@@ -132,7 +132,10 @@ test.describe("Core acceptance flows", () => {
     const jsonBefore = await sessionBefore.json();
     expect(jsonBefore?.data?.session?.userId).toBe("u2");
 
-    await page.request.post("/api/v1/auth/logout");
+    await page.request.post("/api/v1/auth/logout", {
+      data: "{}",
+      headers: { "Content-Type": "application/json" },
+    });
     await page.goto("/");
     await expect(page.getByRole("link", { name: /sign in|登录/i })).toBeVisible();
   });

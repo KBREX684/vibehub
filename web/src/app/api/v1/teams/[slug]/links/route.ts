@@ -1,24 +1,35 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { updateTeamLinks } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
+import { readJsonObjectBody } from "@/lib/api-json-body";
+import { apiErrorFromZod } from "@/lib/zod-api-error";
+import { getRequestLogger, serializeError } from "@/lib/logger";
 
 interface Props { params: Promise<{ slug: string }> }
 
-const URL_FIELDS = ["discordUrl", "telegramUrl", "slackUrl", "githubOrgUrl", "githubRepoUrl"] as const;
+const optionalHttpUrl = z.union([
+  z.literal(""),
+  z.null(),
+  z
+    .string()
+    .url()
+    .refine((u) => ["http:", "https:"].includes(new URL(u).protocol), "Must be http(s) URL"),
+]);
 
-function isValidUrlOrNull(v: unknown): v is string | null {
-  if (v === null) return true;
-  if (typeof v !== "string") return false;
-  if (v === "") return true;
-  try {
-    const u = new URL(v);
-    return u.protocol === "https:" || u.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
+const patchTeamLinksSchema = z
+  .object({
+    discordUrl: optionalHttpUrl.optional(),
+    telegramUrl: optionalHttpUrl.optional(),
+    slackUrl: optionalHttpUrl.optional(),
+    githubOrgUrl: optionalHttpUrl.optional(),
+    githubRepoUrl: optionalHttpUrl.optional(),
+  })
+  .strict()
+  .refine((o) => Object.keys(o).length > 0, { message: "Provide at least one field to update" });
 
 export async function PATCH(request: NextRequest, { params }: Props) {
   const auth = await authenticateRequest(request);
@@ -27,22 +38,15 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
   const { slug } = await params;
 
-  let body: Record<string, unknown>;
-  try { body = await request.json(); } catch { return apiError({ code: "INVALID_JSON", message: "Invalid JSON" }, 400); }
+  const parsed = await readJsonObjectBody(request);
+  if (!parsed.ok) return parsed.response;
+  const zod = patchTeamLinksSchema.safeParse(parsed.body);
+  if (!zod.success) return apiErrorFromZod(zod.error);
 
   const updates: Record<string, string | null> = {};
-  for (const field of URL_FIELDS) {
-    if (field in body) {
-      const val = body[field] === "" ? null : body[field];
-      if (!isValidUrlOrNull(val)) {
-        return apiError({ code: "INVALID_URL", message: `${field} must be a valid URL or null` }, 400);
-      }
-      updates[field] = val as string | null;
-    }
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return apiError({ code: "NO_FIELDS", message: "Provide at least one field to update" }, 400);
+  for (const [field, val] of Object.entries(zod.data)) {
+    if (val === undefined) continue;
+    updates[field] = val === "" || val === null ? null : val;
   }
 
   try {
@@ -51,9 +55,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "TEAM_NOT_FOUND") return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
-    if (msg === "FORBIDDEN_NOT_OWNER") return apiError({ code: "FORBIDDEN", message: "Only the team owner can update links" }, 403);
+    const msg = err instanceof Error ? err.message : String(err);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
+    const log = getRequestLogger(request, { route: "PATCH /api/v1/teams/[slug]/links" });
+    log.error({ err: serializeError(err) }, "team links update failed");
     return apiError({ code: "UPDATE_FAILED", message: msg }, 500);
   }
 }
