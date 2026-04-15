@@ -17,15 +17,27 @@ export async function GET() {
 
   const redis = await getRedisHealth();
 
+  let websocket: "ok" | "error" | "skipped" = "skipped";
+  const wsCheckUrl = process.env.WS_HEALTH_URL?.trim();
+  if (wsCheckUrl) {
+    try {
+      const r = await fetch(wsCheckUrl, { signal: AbortSignal.timeout(2000) });
+      websocket = r.ok ? "ok" : "error";
+    } catch {
+      websocket = "error";
+    }
+  }
+
   return apiSuccess({
     service: "vibehub-api",
     version: "v1",
-    status: database === "error" ? "degraded" : "ok",
+    status: database === "error" || websocket === "error" ? "degraded" : "ok",
     dataMode: getRuntimeDataMode(),
     useMockData: useMock,
     checks: {
       database,
       redis: redis.status,
+      websocket,
     },
   });
 }

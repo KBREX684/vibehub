@@ -2728,7 +2728,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Health check */
+        /** Health check (DB/Redis when configured) */
         get: {
             parameters: {
                 query?: never;
@@ -2759,6 +2759,142 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign S3-compatible PUT for image upload (session) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        filename: string;
+                        /** @enum {string} */
+                        contentType: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -7722,6 +7858,157 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/projects/{slug}/readme/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync README from linked GitHub repo default branch (creator; session) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/facets": {
         parameters: {
             query?: never;
@@ -10086,6 +10373,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/webhook-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List webhook delivery log (admin; optional userId filter) */
+        get: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/enterprise/verifications": {
         parameters: {
             query?: never;
@@ -10735,7 +11132,7 @@ export interface paths {
                          */
                         url: string;
                         /** @description Optional filter; omit or empty = all supported events */
-                        events?: ("in_app_notification" | "post.created" | "project.created" | "team.join_requested" | "team.join_approved" | "subscription.past_due")[];
+                        events?: ("in_app_notification" | "post.created" | "project.created" | "project.updated" | "team.join_requested" | "team.join_approved" | "team.member_joined" | "subscription.past_due")[];
                     };
                 };
             };
@@ -10822,6 +11219,203 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/webhooks/{webhookId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a signed test payload to the webhook endpoint (session) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    webhookId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/webhook-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List recent webhook delivery attempts for current user (session) */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10948,7 +11542,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         url?: string;
-                        events?: ("in_app_notification" | "post.created" | "project.created" | "team.join_requested" | "team.join_approved" | "subscription.past_due")[];
+                        events?: ("in_app_notification" | "post.created" | "project.created" | "project.updated" | "team.join_requested" | "team.join_approved" | "team.member_joined" | "subscription.past_due")[];
                         active?: boolean;
                     };
                 };

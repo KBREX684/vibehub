@@ -1,10 +1,12 @@
-/** P3-3: event names for user webhooks + optional legacy notification URL. */
+/** P3-BE-4: event names for user webhooks + optional legacy notification URL. */
 export const WEBHOOK_EVENT_NAMES = [
   "in_app_notification",
   "post.created",
   "project.created",
+  "project.updated",
   "team.join_requested",
   "team.join_approved",
+  "team.member_joined",
   "subscription.past_due",
 ] as const;
 

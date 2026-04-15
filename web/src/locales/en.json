@@ -141,6 +141,8 @@
   "settings.notifications_collab": "Collaboration & moderation",
   "settings.notifications_system": "Product & system",
   "settings.notifications_saved": "Preferences saved.",
+  "settings.webhooks_title": "Webhooks",
+  "settings.webhooks_desc": "Outbound HTTPS webhooks with HMAC signatures.",
   "discussions.new.preview": "Preview",
   "discussions.new.write": "Write",
   "project.readme_tab": "README",

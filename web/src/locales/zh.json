@@ -181,7 +181,9 @@
     "notificationsTeam": "团队动态",
     "notificationsCollab": "协作与审核",
     "notificationsSystem": "产品与系统",
-    "notificationsSaved": "偏好已保存。"
+    "notificationsSaved": "偏好已保存。",
+    "webhooksTitle": "Webhooks",
+    "webhooksDesc": "带 HMAC 签名的出站 HTTPS Webhook。"
   },
   "a11y": {
     "openNavigationMenu": "打开导航菜单",

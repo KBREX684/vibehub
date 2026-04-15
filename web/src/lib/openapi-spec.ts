@@ -103,6 +103,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       { name: "subscription", description: "Subscription plans and billing-adjacent endpoints" },
       { name: "reputation", description: "Contribution credit and leaderboards" },
       { name: "admin", description: "Admin-only endpoints" },
+      { name: "uploads", description: "Presigned object storage uploads" },
     ],
     components: {
       securitySchemes: {
@@ -147,8 +148,40 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/health": {
         get: {
           tags: ["health"],
-          summary: "Health check",
+          summary: "Health check (DB/Redis when configured)",
           responses: { "200": responses["200"] },
+        },
+      },
+      "/api/v1/uploads/presign": {
+        post: {
+          tags: ["uploads"],
+          summary: "Presign S3-compatible PUT for image upload (session)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["filename", "contentType"],
+                  properties: {
+                    filename: { type: "string" },
+                    contentType: {
+                      type: "string",
+                      enum: ["image/png", "image/jpeg", "image/webp", "image/gif"],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "503": responses["500"],
+            "500": responses["500"],
+          },
         },
       },
       "/api/v1/openapi.json": {
@@ -787,6 +820,22 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/projects/{slug}/readme/sync": {
+        post: {
+          tags: ["projects"],
+          summary: "Sync README from linked GitHub repo default branch (creator; session)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "404": responses["404"],
+            "502": responses["500"],
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/projects/facets": {
         get: {
           tags: ["projects"],
@@ -1170,6 +1219,18 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/admin/webhook-deliveries": {
+        get: {
+          tags: ["admin"],
+          summary: "List webhook delivery log (admin; optional userId filter)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "userId", in: "query", schema: { type: "string" } },
+            { name: "limit", in: "query", schema: { type: "integer" } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
       "/api/v1/admin/enterprise/verifications": {
         get: {
           tags: ["admin"],
@@ -1287,6 +1348,24 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             },
           },
           responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/webhooks/{webhookId}/test": {
+        post: {
+          tags: ["me"],
+          summary: "Send a signed test payload to the webhook endpoint (session)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "webhookId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/webhook-deliveries": {
+        get: {
+          tags: ["me"],
+          summary: "List recent webhook delivery attempts for current user (session)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "limit", in: "query", schema: { type: "integer" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
         },
       },
       "/api/v1/me/webhooks/{webhookId}": {

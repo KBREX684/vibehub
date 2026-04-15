@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
-import { Key, CreditCard, Building2, ChevronRight, Settings2, Bell } from "lucide-react";
+import { Key, CreditCard, Building2, ChevronRight, Settings2, Bell, Webhook } from "lucide-react";
 
 export default async function SettingsIndexPage() {
   const session = await getSessionUserFromCookie();
@@ -31,6 +31,12 @@ export default async function SettingsIndexPage() {
       title: t("settings.notifications_title", "Notifications"),
       description: t("settings.notifications_desc", "Choose which in-app notification categories you receive."),
       icon: Bell,
+    },
+    {
+      href: "/settings/webhooks",
+      title: t("settings.webhooks_title", "Webhooks"),
+      description: t("settings.webhooks_desc", "Outbound HTTPS webhooks with HMAC signatures."),
+      icon: Webhook,
     },
     {
       href: "/enterprise/verify",

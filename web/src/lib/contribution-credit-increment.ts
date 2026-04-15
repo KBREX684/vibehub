@@ -42,7 +42,7 @@ function bumpMockScore(userId: string, deltaScore: number, field: MockCreditBump
   row.updatedAt = new Date().toISOString();
 }
 
-type MockCreditBump =
+export type MockCreditBump =
   | "tasksCompleted"
   | "milestonesHit"
   | "postsAuthored"
@@ -82,9 +82,24 @@ export async function incrementContributionCreditField(params: {
   useMockData: boolean;
   deltaScore: number;
   field: MockCreditBump;
+  /** Internal: worker path — skip pg-boss enqueue to avoid recursion (P3-BE-1). */
+  skipQueue?: boolean;
 }): Promise<void> {
   if (params.useMockData) {
     bumpMockScore(params.userId, params.deltaScore, params.field);
+    return;
+  }
+  const asyncCredit =
+    !params.skipQueue &&
+    process.env.USE_ASYNC_CREDIT === "true" &&
+    Boolean(process.env.DATABASE_URL?.trim());
+  if (asyncCredit) {
+    const { enqueueCreditIncrement } = await import("@/lib/queue/credit-queue");
+    void enqueueCreditIncrement({
+      userId: params.userId,
+      deltaScore: params.deltaScore,
+      field: params.field,
+    }).catch(() => {});
     return;
   }
   await prismaBump(params.userId, params.deltaScore, params.field);

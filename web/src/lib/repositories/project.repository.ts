@@ -497,6 +497,13 @@ export async function updateProject(params: {
     if (params.status !== undefined) project.status = params.status;
     if (params.demoUrl !== undefined) project.demoUrl = params.demoUrl ?? undefined;
     project.updatedAt = new Date().toISOString();
+    if (creator) {
+      void dispatchWebhookEvent(creator.userId, "project.updated", {
+        projectId: project.id,
+        slug: project.slug,
+        title: project.title,
+      });
+    }
     return { ...project };
   }
 
@@ -523,6 +530,17 @@ export async function updateProject(params: {
     data,
     include: { team: { select: { slug: true, name: true } } },
   });
+  const creatorRow = await prisma.creatorProfile.findUnique({
+    where: { id: updated.creatorId },
+    select: { userId: true },
+  });
+  if (creatorRow) {
+    void dispatchWebhookEvent(creatorRow.userId, "project.updated", {
+      projectId: updated.id,
+      slug: updated.slug,
+      title: updated.title,
+    });
+  }
   return toProjectDto({ ...updated, team: updated.team });
 }
 

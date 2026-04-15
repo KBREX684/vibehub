@@ -5710,13 +5710,19 @@ export async function addTeamMemberByEmail(params: {
         mockTeamJoinRequests[i] = { ...jr, status: "approved", reviewedAt: now };
       }
     }
+    void dispatchWebhookEvent(team.ownerUserId, "team.member_joined", {
+      teamId: team.id,
+      teamSlug: team.slug,
+      memberUserId: target.id,
+      memberName: target.name,
+    });
     return { userId: target.id, name: target.name, email: target.email, role: "member", joinedAt };
   }
 
   const prisma = await getPrisma();
   const team = await prisma.team.findUnique({
     where: { slug: params.teamSlug },
-    select: { id: true, ownerUserId: true },
+    select: { id: true, ownerUserId: true, slug: true },
   });
   if (!team) {
     throw new Error("TEAM_NOT_FOUND");
@@ -5740,6 +5746,12 @@ export async function addTeamMemberByEmail(params: {
         data: { status: "approved", reviewedAt: new Date() },
       });
       return m;
+    });
+    void dispatchWebhookEvent(team.ownerUserId, "team.member_joined", {
+      teamId: team.id,
+      teamSlug: team.slug,
+      memberUserId: target.id,
+      memberName: row.user.name,
     });
     return {
       userId: row.user.id,
@@ -6110,6 +6122,98 @@ export async function updateUserWebhook(params: {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+export async function listWebhookDeliveries(params: {
+  userId?: string;
+  limit?: number;
+}): Promise<
+  Array<{
+    id: string;
+    userId: string;
+    webhookEndpointId: string | null;
+    event: string;
+    targetUrl: string;
+    status: string;
+    httpStatus: number | null;
+    errorMessage: string | null;
+    attempts: number;
+    createdAt: string;
+  }>
+> {
+  const limit = Math.min(Math.max(params.limit ?? 50, 1), 200);
+  if (useMockData) {
+    return [];
+  }
+  const prisma = await getPrisma();
+  const rows = await prisma.webhookDelivery.findMany({
+    where: params.userId ? { userId: params.userId } : {},
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    webhookEndpointId: r.webhookEndpointId,
+    event: r.event,
+    targetUrl: r.targetUrl,
+    status: r.status,
+    httpStatus: r.httpStatus,
+    errorMessage: r.errorMessage,
+    attempts: r.attempts,
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
+export async function getUserWebhookSecret(params: { userId: string; webhookId: string }): Promise<string | null> {
+  if (useMockData) {
+    const w = mockWebhookEndpoints.find((x) => x.id === params.webhookId && x.userId === params.userId);
+    return w?.secret ?? null;
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.webhookEndpoint.findFirst({
+    where: { id: params.webhookId, userId: params.userId },
+    select: { secret: true },
+  });
+  return row?.secret ?? null;
+}
+
+export async function testUserWebhook(params: {
+  userId: string;
+  webhookId: string;
+}): Promise<{ ok: boolean; httpStatus?: number; error?: string }> {
+  const secret = await getUserWebhookSecret(params);
+  if (!secret) throw new Error("WEBHOOK_NOT_FOUND");
+  if (useMockData) {
+    const w = mockWebhookEndpoints.find((x) => x.id === params.webhookId && x.userId === params.userId);
+    if (!w) throw new Error("WEBHOOK_NOT_FOUND");
+    return { ok: true, httpStatus: 200 };
+  }
+  const prisma = await getPrisma();
+  const ep = await prisma.webhookEndpoint.findFirst({
+    where: { id: params.webhookId, userId: params.userId },
+    select: { url: true },
+  });
+  if (!ep) throw new Error("WEBHOOK_NOT_FOUND");
+  const { deliverWebhookHttp } = await import("@/lib/webhook-deliver-http");
+  const bodyObj = {
+    event: "in_app_notification",
+    userId: params.userId,
+    payload: { test: true },
+    ts: new Date().toISOString(),
+  };
+  const body = JSON.stringify(bodyObj);
+  const idem = `test_${params.webhookId}_${Date.now()}`;
+  const result = await deliverWebhookHttp({
+    userId: params.userId,
+    event: "in_app_notification",
+    body,
+    targetUrl: ep.url,
+    secret,
+    idempotencyKey: idem,
+    webhookEndpointId: params.webhookId,
+  });
+  return { ok: result.ok, httpStatus: result.httpStatus, error: result.error };
 }
 
 export async function deleteUserWebhook(params: { userId: string; webhookId: string }): Promise<void> {

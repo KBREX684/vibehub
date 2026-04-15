@@ -38,7 +38,32 @@ export function EditProjectForm({ project }: Props) {
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [demoUrl, setDemoUrl] = useState(project.demoUrl ?? "");
   const [formStatus, setFormStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [syncStatus, setSyncStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+
+  const canSyncReadme = Boolean(project.repoUrl?.includes("github.com"));
+
+  async function syncReadmeFromGitHub() {
+    setSyncStatus("loading");
+    setMessage(null);
+    try {
+      const res = await apiFetch(`/api/v1/projects/${encodeURIComponent(project.slug)}/readme/sync`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = (await res.json()) as { error?: { message?: string } };
+      if (!res.ok) {
+        setSyncStatus("error");
+        setMessage(json.error?.message ?? "README sync failed");
+        return;
+      }
+      setSyncStatus("idle");
+      router.refresh();
+    } catch (err) {
+      setSyncStatus("error");
+      setMessage(err instanceof Error ? err.message : String(err));
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -143,6 +168,21 @@ export function EditProjectForm({ project }: Props) {
           className="input-base resize-y min-h-[120px] font-mono text-xs"
           rows={5}
         />
+        {canSyncReadme ? (
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              className="btn btn-secondary text-xs px-3 py-1.5"
+              disabled={syncStatus === "loading"}
+              onClick={() => void syncReadmeFromGitHub()}
+            >
+              {syncStatus === "loading" ? "Syncing…" : "Sync from GitHub"}
+            </button>
+            <span className="text-[10px] text-[var(--color-text-muted)]">
+              Fetches default branch README.md via raw.githubusercontent.com
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
