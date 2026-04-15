@@ -1,0 +1,15 @@
+# Minimal TLS template — copy and adjust certificate paths / server_name.
+# Include after obtaining certificates (e.g. Let's Encrypt).
+
+# ssl_certificate     /etc/letsencrypt/live/your.domain/fullchain.pem;
+# ssl_certificate_key /etc/letsencrypt/live/your.domain/privkey.pem;
+# ssl_protocols TLSv1.2 TLSv1.3;
+# ssl_prefer_server_ciphers off;
+
+# server {
+#     listen 443 ssl http2;
+#     server_name your.domain;
+#
+#     # Reuse the same `location` blocks as vibehub.conf (map + upstreams + /ws + /)
+#     # or `include /path/to/vibehub.conf` inside this server block if structured accordingly.
+# }

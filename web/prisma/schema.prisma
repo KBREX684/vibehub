@@ -1,0 +1,781 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  guest
+  user
+  admin
+}
+
+enum ProjectStatus {
+  idea
+  building
+  launched
+  paused
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+enum CollaborationIntentType {
+  join
+  recruit
+}
+
+enum WeeklyLeaderboardKind {
+  discussions_by_weekly_comment_count
+  projects_by_weekly_collaboration_intent_count
+}
+
+enum TeamRole {
+  owner
+  member
+}
+
+enum TeamJoinRequestStatus {
+  pending
+  approved
+  rejected
+}
+
+enum TeamTaskStatus {
+  todo
+  doing
+  done
+}
+
+enum InAppNotificationKind {
+  team_join_request
+  team_join_approved
+  team_join_rejected
+  team_task_assigned
+  /// C-3 social events
+  post_commented
+  comment_replied
+  post_liked
+  project_bookmarked
+  user_followed
+  project_intent_received
+  post_featured
+  collaboration_intent_status_update
+}
+
+/// P2: Challenge campaign status
+enum ChallengeStatus {
+  draft
+  active
+  closed
+}
+
+/// v4.0: Simplified to Free + Pro only (Team Pro removed)
+enum SubscriptionTier {
+  free
+  pro
+}
+
+/// M-1/M-2: Subscription status
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+  trialing
+}
+
+model User {
+  id                        String           @id @default(cuid())
+  email                     String           @unique
+  name                      String
+  role                      Role             @default(user)
+  /// P0: incremented to invalidate browser sessions without storing server-side sessions
+  sessionVersion            Int              @default(0)
+  /// F-1: GitHub OAuth
+  githubId                  Int?             @unique
+  githubUsername            String?          @unique
+  avatarUrl                 String?
+  /// M-2: Stripe customer
+  stripeCustomerId          String?          @unique
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+  creatorProfile            CreatorProfile?
+  posts                     Post[]           @relation("PostAuthor")
+  reviewedPosts             Post[]           @relation("PostReviewer")
+  featuredPosts             Post[]           @relation("PostFeaturedBy")
+  comments                  Comment[]
+  resolvedModerationCases   ModerationCase[] @relation("ModerationResolvedBy")
+  reportTickets             ReportTicket[]   @relation("ReportReporter")
+  resolvedReportTickets     ReportTicket[]   @relation("ReportResolvedBy")
+  auditLogs                 AuditLog[]
+  collaborationIntents      CollaborationIntent[] @relation("CollaborationApplicant")
+  reviewedCollabIntents     CollaborationIntent[] @relation("CollaborationReviewer")
+  ownedTeams                Team[]                @relation("TeamOwner")
+  teamMemberships           TeamMembership[]
+  teamJoinRequests          TeamJoinRequest[]     @relation("TeamJoinApplicant")
+  teamTasksCreated          TeamTask[]            @relation("TeamTaskCreator")
+  teamTasksAssigned         TeamTask[]            @relation("TeamTaskAssignee")
+  teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
+  apiKeys                   ApiKey[]
+  notifications             InAppNotification[]
+  challengesCreated         Challenge[]           @relation("ChallengeCreator")
+  subscription              UserSubscription?
+  teamChatMessages          TeamChatMessage[]
+  /// C-1: social graph
+  following                 UserFollow[]          @relation("Follower")
+  followers                 UserFollow[]          @relation("Following")
+  postLikes                 PostLike[]
+  postBookmarks             PostBookmark[]
+  projectBookmarks          ProjectBookmark[]
+  /// P2-3: enterprise verification lives on `EnterpriseProfile`, not on `User`.
+  enterpriseProfile         EnterpriseProfile?
+  /// P3-3: user-owned webhook endpoints for outbound events
+  webhookEndpoints          WebhookEndpoint[]
+  /// P3-FE-4: per-user notification channel toggles
+  notificationPreference    NotificationPreference?
+  /// P3-BE-1 / P3-BE-4: outbound webhook delivery audit trail
+  webhookDeliveries         WebhookDelivery[]
+}
+
+enum EnterpriseVerificationStatus {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum EnterpriseRole {
+  member
+  admin
+}
+
+enum EnterpriseMemberInviteStatus {
+  pending
+  accepted
+  revoked
+}
+
+enum ReportTicketStatus {
+  open
+  closed
+}
+
+/// P2-3: B2B verification profile (one per user). Source of truth for enterprise fields.
+model EnterpriseProfile {
+  id             String                       @id @default(cuid())
+  userId         String                       @unique
+  status         EnterpriseVerificationStatus @default(none)
+  organization   String?
+  website        String?
+  useCase        String?
+  role           EnterpriseRole?
+  logoUrl        String?
+  industry       String?
+  appliedAt      DateTime?
+  reviewedAt     DateTime?
+  reviewedBy     String?
+  reviewNote     String?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+  user           User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// P3-4: future B2B invites (schema only; no CRUD in app yet)
+  memberInvites  EnterpriseMemberInvite[]
+
+  @@index([status])
+}
+
+/// P3-4: reserved for multi-seat enterprise (no workflow wired yet).
+model EnterpriseMemberInvite {
+  id                  String             @id @default(cuid())
+  enterpriseProfileId String
+  inviteeEmail        String
+  role                EnterpriseRole     @default(member)
+  status              EnterpriseMemberInviteStatus @default(pending)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  enterpriseProfile   EnterpriseProfile  @relation(fields: [enterpriseProfileId], references: [id], onDelete: Cascade)
+
+  @@index([enterpriseProfileId])
+}
+
+/// P3-3: per-user webhook targets with event allow-list
+model WebhookEndpoint {
+  id        String   @id @default(cuid())
+  userId    String
+  url       String
+  secret    String
+  events    String[]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([userId, active])
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  success
+  failed
+}
+
+/// P3-BE-4: one row per HTTP delivery attempt outcome (after retries) for a target URL
+model WebhookDelivery {
+  id                 String                 @id @default(cuid())
+  userId             String
+  webhookEndpointId  String?
+  event              String
+  targetUrl          String
+  status             WebhookDeliveryStatus
+  httpStatus         Int?
+  errorMessage       String?
+  attempts           Int                    @default(0)
+  idempotencyKey     String?
+  createdAt          DateTime               @default(now())
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webhookEndpoint    WebhookEndpoint?       @relation(fields: [webhookEndpointId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([webhookEndpointId])
+}
+
+/// P3-FE-4: notification category opt-in (defaults all enabled)
+model NotificationPreference {
+  userId                   String  @id
+  commentReplies           Boolean @default(true)
+  teamUpdates              Boolean @default(true)
+  collaborationModeration Boolean @default(true)
+  systemAnnouncements      Boolean @default(true)
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model InAppNotification {
+  id        String                @id @default(cuid())
+  userId    String
+  kind      InAppNotificationKind
+  title     String
+  body      String
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+/// MCP v2 HTTP invoke audit (Bearer or session).
+model McpInvokeAudit {
+  id           String   @id @default(cuid())
+  tool         String
+  userId       String
+  apiKeyId     String?
+  httpStatus   Int
+  clientIp     String?
+  userAgent    String?
+  errorCode    String?
+  durationMs   Int?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([tool, createdAt])
+}
+
+/// P2-2: reserved for future MCP write tools — dedupe key per user + tool.
+model McpInvokeIdempotency {
+  id        String   @id @default(cuid())
+  userId    String
+  tool      String
+  key       String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tool, key])
+  @@index([userId, createdAt])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  label      String
+  keyHash    String    @unique
+  prefix     String
+  /// JSON string[] of scope tokens (e.g. read:public, read:projects:list)
+  scopes     Json
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  /// When set, Bearer auth rejects the key after this instant (P1).
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CreatorProfile {
+  id                      String    @id @default(cuid())
+  slug                    String    @unique
+  userId                  String    @unique
+  headline                String
+  bio                     String
+  skills                  String[]
+  /// P2-3: editable profile center fields
+  avatarUrl               String?
+  websiteUrl              String?
+  githubUrl               String?
+  twitterUrl              String?
+  linkedinUrl             String?
+  /// P2-1: full-text search (english)
+  searchVector            Unsupported("tsvector")?
+  collaborationPreference String    @default("open")
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects                Project[]
+
+  @@index([searchVector], type: Gin)
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  creatorId    String
+  teamId       String?
+  title        String
+  oneLiner     String
+  description  String
+  /// P3-FE-3: optional long-form README (Markdown); shown on project detail tab
+  readmeMarkdown String?
+  /// P2-1: PostgreSQL full-text search (english), maintained by DB.
+  searchVector Unsupported("tsvector")?
+  techStack    String[]
+  tags         String[]
+  status       ProjectStatus @default(idea)
+  demoUrl      String?
+  /// F-3: extra display fields
+  repoUrl      String?
+  websiteUrl   String?
+  screenshots  String[]
+  logoUrl      String?
+  openSource   Boolean       @default(false)
+  license      String?
+  /// C-5: daily featured rank (admin-set)
+  featuredRank Int?
+  featuredAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  team         Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  collaborationIntents CollaborationIntent[]
+
+  @@index([searchVector], type: Gin)
+  bookmarks            ProjectBookmark[]
+
+  @@index([creatorId])
+  @@index([teamId])
+  @@index([featuredRank])
+}
+
+model Post {
+  id               String          @id @default(cuid())
+  slug             String          @unique
+  authorId         String
+  title            String
+  body             String
+  /// P2-1: PostgreSQL full-text search (english), maintained by DB.
+  searchVector     Unsupported("tsvector")?
+  tags             String[]
+  reviewStatus     ReviewStatus    @default(pending)
+  moderationNote   String?
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  /// P2/C-4: admin featured post
+  featuredAt       DateTime?
+  featuredBy       String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  author           User            @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewer         User?           @relation("PostReviewer", fields: [reviewedBy], references: [id])
+  featuredByUser   User?           @relation("PostFeaturedBy", fields: [featuredBy], references: [id])
+  comments         Comment[]
+  moderationCases  ModerationCase[]
+  reportTickets    ReportTicket[]
+  likes            PostLike[]
+  bookmarks        PostBookmark[]
+
+  @@index([searchVector], type: Gin)
+  @@index([authorId])
+  @@index([reviewStatus])
+  @@index([reviewedBy])
+  @@index([featuredAt])
+}
+
+model Comment {
+  id              String    @id @default(cuid())
+  postId          String
+  authorId        String
+  body            String
+  /// C-2: nested replies (max depth 2)
+  parentCommentId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  post            Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies         Comment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentCommentId])
+}
+
+model ModerationCase {
+  id         String       @id @default(cuid())
+  targetType String
+  targetId   String
+  postId     String?
+  status     ReviewStatus @default(pending)
+  reason     String?
+  note       String?
+  createdAt  DateTime     @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?
+  post       Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  resolver   User?        @relation("ModerationResolvedBy", fields: [resolvedBy], references: [id])
+
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+model ReportTicket {
+  id         String   @id @default(cuid())
+  targetType String
+  targetId   String
+  postId     String?
+  reporterId String
+  reason     String
+  status     ReportTicketStatus   @default(open)
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter   User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolver   User?    @relation("ReportResolvedBy", fields: [resolvedBy], references: [id])
+
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+}
+
+model CollaborationIntent {
+  id                        String                  @id @default(cuid())
+  projectId                 String
+  applicantId               String
+  intentType                CollaborationIntentType
+  message                   String
+  contact                   String?
+  status                    ReviewStatus            @default(pending)
+  reviewNote                String?
+  reviewedAt                DateTime?
+  reviewedBy                String?
+  /// T-4: tracks conversion to team membership
+  convertedToTeamMembership Boolean                 @default(false)
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  project                   Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  applicant                 User                    @relation("CollaborationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  reviewer                  User?                   @relation("CollaborationReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([projectId])
+  @@index([applicantId])
+  @@index([status])
+  @@index([reviewedBy])
+}
+
+/// UTC week starting Monday 00:00:00. Materialized ranking rows for stable weekly leaderboards.
+model WeeklyLeaderboardSnapshot {
+  id          String               @id @default(cuid())
+  weekStart   DateTime
+  kind        WeeklyLeaderboardKind
+  generatedAt DateTime             @default(now())
+  rows        WeeklyLeaderboardRow[]
+
+  @@unique([weekStart, kind])
+  @@index([weekStart])
+}
+
+model WeeklyLeaderboardRow {
+  id         String                   @id @default(cuid())
+  snapshotId String
+  rank       Int
+  entityId   String
+  score      Int
+  slug       String
+  title      String
+  snapshot   WeeklyLeaderboardSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId])
+}
+
+model Team {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  mission       String?
+  ownerUserId   String
+  /// T-1: external chat links
+  discordUrl    String?
+  telegramUrl   String?
+  slackUrl      String?
+  /// T-3: GitHub integration
+  githubOrgUrl  String?
+  githubRepoUrl String?
+  /// Chat capacity: max concurrent WebSocket connections (default 50)
+  chatCapacity  Int      @default(50)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  owner         User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  memberships   TeamMembership[]
+  joinRequests  TeamJoinRequest[]
+  projects      Project[]
+  tasks         TeamTask[]
+  milestones    TeamMilestone[]
+  chatMessages  TeamChatMessage[]
+
+  @@index([ownerUserId])
+}
+
+model TeamMembership {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamRole @default(member)
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model TeamJoinRequest {
+  id          String                 @id @default(cuid())
+  teamId      String
+  applicantId String
+  message     String                 @default("")
+  status      TeamJoinRequestStatus  @default(pending)
+  reviewedAt  DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  team        Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  applicant   User                   @relation("TeamJoinApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, applicantId])
+  @@index([teamId, status])
+  @@index([applicantId])
+}
+
+model TeamTask {
+  id                String         @id @default(cuid())
+  teamId            String
+  title             String
+  description       String?
+  status            TeamTaskStatus @default(todo)
+  sortOrder         Int            @default(0)
+  milestoneId       String?
+  createdByUserId   String
+  assigneeUserId    String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  team              Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  milestone         TeamMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  createdBy         User           @relation("TeamTaskCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  assignee          User?          @relation("TeamTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+
+  @@index([teamId])
+  @@index([teamId, status])
+  @@index([teamId, sortOrder])
+  @@index([teamId, milestoneId])
+}
+
+model TeamMilestone {
+  id                String   @id @default(cuid())
+  teamId            String
+  title             String
+  description       String?
+  targetDate        DateTime
+  completed         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  /// T-2: public visibility + progress
+  visibility        String   @default("team_only")
+  progress          Int      @default(0)
+  createdByUserId   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy         User     @relation("TeamMilestoneCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  tasks             TeamTask[]
+
+  @@index([teamId])
+  @@index([teamId, completed])
+  @@index([teamId, sortOrder])
+  @@index([teamId, visibility])
+}
+
+// ─── P2: 挑战赛 (Challenges) ─────────────────────────────────────────────────
+
+/// P2: 挑战赛/活动页
+model Challenge {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  description     String
+  rules           String?
+  tags            String[]
+  status          ChallengeStatus @default(draft)
+  startDate       DateTime
+  endDate         DateTime
+  createdByUserId String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdBy       User            @relation("ChallengeCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+// ─── P3: 信誉系统 (Contribution Credits) ─────────────────────────────────────
+
+/// Aggregated public collaboration credit for a user.
+model ContributionCredit {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  score              Int      @default(0)
+  tasksCompleted     Int      @default(0)
+  milestonesHit      Int      @default(0)
+  joinRequestsMade   Int      @default(0)
+  postsAuthored      Int      @default(0)
+  commentsAuthored   Int      @default(0)
+  projectsCreated    Int      @default(0)
+  intentsApproved    Int      @default(0)
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+
+  @@index([score])
+}
+
+// ─── M-1/M-2: 商业化订阅 (Subscription) ──────────────────────────────────────
+
+/// M-1: per-user subscription (Stripe-backed)
+model UserSubscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  tier                 SubscriptionTier   @default(free)
+  status               SubscriptionStatus @default(active)
+  /// M-2: Stripe subscription ID
+  stripeSubscriptionId String?            @unique
+  /// M-2: Stripe price ID
+  stripePriceId        String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stripeSubscriptionId])
+}
+
+// ─── C-1: Social interactions ────────────────────────────────────────────────
+
+/// C-1: follow relationship between users
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+/// C-1: post like
+model PostLike {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+/// C-1: post bookmark
+model PostBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+}
+
+/// C-1: project bookmark
+model ProjectBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// ─── Team Chat ────────────────────────────────────────────────────────────────
+
+/// Real-time team chat message. Retained for 30 days then eligible for cleanup.
+model TeamChatMessage {
+  id        String   @id @default(cuid())
+  teamId    String
+  authorId  String
+  body      String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([createdAt])
+}

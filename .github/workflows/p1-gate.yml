@@ -1,0 +1,101 @@
+# Lint, test, and build the Next app; also applies Prisma migrations against
+# a disposable Postgres so broken SQL migrations fail CI before production.
+name: p1-gate
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vibehub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d vibehub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vibehub?schema=public
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Dependency audit (fail on high severity)
+        run: npm audit --audit-level=high
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prisma migrate deploy (validates migration SQL)
+        run: npx prisma migrate deploy
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Prisma seed
+        run: npm run prisma:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Live-data smoke (real DB path)
+        env:
+          USE_MOCK_DATA: "false"
+          SESSION_SECRET: "ci-session-secret"
+        run: npm run smoke:live-data
+
+      - name: Validate OpenAPI document
+        run: npm run validate:openapi
+
+      - name: Verify generated API types match OpenAPI spec
+        run: |
+          npm run generate:types
+          git diff --exit-code
+
+      - name: Build
+        env:
+          USE_MOCK_DATA: "true"
+          NODE_ENV: "production"
+          SESSION_SECRET: "ci-session-secret"
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: E2E (Playwright)
+        env:
+          USE_MOCK_DATA: "true"
+          SESSION_SECRET: "ci-session-secret"
+          PLAYWRIGHT_BASE_URL: "http://127.0.0.1:3100"
+        run: npm run test:e2e
