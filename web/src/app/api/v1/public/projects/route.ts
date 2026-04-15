@@ -18,6 +18,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
+    const cursor = url.searchParams.get("cursor")?.trim() || undefined;
     const query = url.searchParams.get("query")?.trim() || undefined;
     const tag = url.searchParams.get("tag")?.trim() || undefined;
     const tech = url.searchParams.get("tech")?.trim() || undefined;
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const result = await listProjects({ query, tag, tech, status, team, page, limit });
+    const result = await listProjects({ query, tag, tech, status, team, page, limit, cursor });
     return apiSuccess(result);
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);

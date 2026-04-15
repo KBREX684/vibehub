@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PostCard } from "@/components/post-card";
+import { DiscussionsPostFeed } from "@/components/discussions-post-feed";
 import { listPosts } from "@/lib/repository";
 import type { PostSortOrder } from "@/lib/types";
 import {
@@ -11,7 +12,21 @@ import {
 } from "lucide-react";
 
 interface Props {
-  searchParams: Promise<{ sort?: string; page?: string; author?: string }>;
+  searchParams: Promise<{ sort?: string; page?: string; author?: string; pagination?: string }>;
+}
+
+function buildDiscussionsHref(opts: {
+  sort: PostSortOrder;
+  authorId?: string;
+  page?: number;
+  classicPagination: boolean;
+}): string {
+  const sp = new URLSearchParams();
+  sp.set("sort", opts.sort);
+  if (opts.authorId) sp.set("author", opts.authorId);
+  if (opts.page && opts.page > 1) sp.set("page", String(opts.page));
+  if (opts.classicPagination) sp.set("pagination", "1");
+  return `/discussions?${sp.toString()}`;
 }
 
 export default async function DiscussionsPage({ searchParams }: Props) {
@@ -23,20 +38,13 @@ export default async function DiscussionsPage({ searchParams }: Props) {
   ) as PostSortOrder;
   const page = parseInt(params.page || "1", 10) || 1;
   const authorId = typeof params.author === "string" && params.author.trim() ? params.author.trim() : undefined;
+  const classicPagination = params.pagination === "1";
   const { items, pagination } = await listPosts({ sort, page, limit: 12, authorId });
 
-  const qsBase = (s: string, pageNum?: number) => {
-    const sp = new URLSearchParams();
-    sp.set("sort", s);
-    if (authorId) sp.set("author", authorId);
-    if (pageNum && pageNum > 1) sp.set("page", String(pageNum));
-    return `/discussions?${sp.toString()}`;
-  };
-
   const TABS = [
-    { sort: "recent",   icon: Clock,         label: "Recent"   },
-    { sort: "hot",      icon: Flame,         label: "Hot"      },
-    { sort: "featured", icon: Star,          label: "Featured" },
+    { sort: "recent" as const, icon: Clock, label: "Recent" },
+    { sort: "hot" as const, icon: Flame, label: "Hot" },
+    { sort: "featured" as const, icon: Star, label: "Featured" },
   ];
 
   return (
@@ -65,7 +73,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             {TABS.map(({ sort: s, icon: Icon, label }) => (
               <Link
                 key={s}
-                href={qsBase(s)}
+                href={buildDiscussionsHref({ sort: s, authorId, classicPagination })}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-[var(--radius-pill)] transition-all ${
                   sort === s
                     ? "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] shadow-sm border border-[var(--color-border)]"
@@ -99,42 +107,57 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             Be the first to start a conversation.
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              truncateBody={160}
-              detailHref={`/discussions/${post.slug}`}
-            />
-          ))}
-        </div>
-      )}
+      ) : classicPagination ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {items.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                truncateBody={160}
+                detailHref={`/discussions/${post.slug}`}
+              />
+            ))}
+          </div>
 
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <nav className="flex justify-center gap-2 mt-8">
-          {page > 1 && (
-            <Link
-              href={qsBase(sort, page - 1)}
-              className="btn btn-secondary text-sm px-5 py-2"
-            >
-              Previous
-            </Link>
+          {pagination.totalPages > 1 && (
+            <nav className="flex justify-center gap-2 mt-8" aria-label="Pagination">
+              {page > 1 && (
+                <Link
+                  href={buildDiscussionsHref({ sort, authorId, page: page - 1, classicPagination: true })}
+                  className="btn btn-secondary text-sm px-5 py-2"
+                >
+                  Previous
+                </Link>
+              )}
+              <span className="btn btn-ghost text-sm px-4 py-2 text-[var(--color-text-muted)]">
+                {page} / {pagination.totalPages}
+              </span>
+              {page < pagination.totalPages && (
+                <Link
+                  href={buildDiscussionsHref({ sort, authorId, page: page + 1, classicPagination: true })}
+                  className="btn btn-secondary text-sm px-5 py-2"
+                >
+                  Next
+                </Link>
+              )}
+            </nav>
           )}
-          <span className="btn btn-ghost text-sm px-4 py-2 text-[var(--color-text-muted)]">
-            {page} / {pagination.totalPages}
-          </span>
-          {page < pagination.totalPages && (
-            <Link
-              href={qsBase(sort, page + 1)}
-              className="btn btn-secondary text-sm px-5 py-2"
-            >
-              Next
-            </Link>
-          )}
-        </nav>
+        </>
+      ) : (
+        <DiscussionsPostFeed
+          sort={sort}
+          authorId={authorId}
+          limit={12}
+          initialItems={items}
+          initialPagination={{
+            total: pagination.total,
+            totalPages: pagination.totalPages,
+            page: pagination.page,
+            limit: pagination.limit,
+          }}
+          buildClassicHref={() => buildDiscussionsHref({ sort, authorId, classicPagination: true })}
+        />
       )}
     </main>
   );

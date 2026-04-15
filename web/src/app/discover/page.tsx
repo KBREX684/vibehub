@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ProjectCard } from "@/components/project-card";
+import { DiscoverProjectFeed } from "@/components/discover-project-feed";
 import { parsePagination } from "@/lib/pagination";
 import { getProjectFilterFacets, listFeaturedProjects, listProjects, listTeams } from "@/lib/repository";
 import type { ProjectStatus } from "@/lib/types";
@@ -14,9 +15,13 @@ const STATUSES: { value: ProjectStatus; label: string }[] = [
 
 function buildHref(
   base: Record<string, string | undefined>,
-  overrides: Record<string, string | undefined>
+  overrides: Record<string, string | undefined>,
+  classicPagination: boolean
 ): string {
   const next = { ...base, ...overrides };
+  if (classicPagination) {
+    next.pagination = "1";
+  }
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(next)) {
     if (v) params.set(k, v);
@@ -40,6 +45,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   const statusRaw  = get("status")?.trim();
   const pageRaw    = get("page");
   const limitRaw   = get("limit");
+  const classicPagination = get("pagination") === "1";
 
   const qs = new URLSearchParams();
   if (query)     qs.set("query", query);
@@ -49,6 +55,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   if (statusRaw) qs.set("status", statusRaw);
   if (pageRaw)   qs.set("page", pageRaw);
   if (limitRaw)  qs.set("limit", limitRaw);
+  if (classicPagination) qs.set("pagination", "1");
 
   const { page, limit } = parsePagination(qs);
   const status =
@@ -127,6 +134,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
         action="/discover"
       >
         <input type="hidden" name="limit" value={String(limit)} />
+        {classicPagination && <input type="hidden" name="pagination" value="1" />}
 
         <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-[var(--color-text-primary)]">
           <SlidersHorizontal className="w-4 h-4 text-[var(--color-primary-hover)]" />
@@ -217,10 +225,11 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
         </h2>
         <span className="text-xs text-[var(--color-text-muted)]">
           Page {pagination.page} / {pagination.totalPages}
+          {!classicPagination && " · Infinite scroll"}
         </span>
       </div>
 
-      {/* Results grid */}
+      {/* Results */}
       {items.length === 0 ? (
         <div className="card p-16 text-center">
           <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-bg-elevated)] flex items-center justify-center mx-auto mb-4">
@@ -236,45 +245,65 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             Clear all filters
           </Link>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
-      )}
+      ) : classicPagination ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {items.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
 
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <nav className="flex justify-center gap-2 mt-8" aria-label="Pagination">
-          {pagination.page > 1 ? (
-            <Link
-              className="btn btn-secondary text-sm px-5 py-2"
-              href={buildHref(baseFilters, { page: String(pagination.page - 1) })}
-            >
-              Previous
-            </Link>
-          ) : (
-            <span className="btn btn-secondary text-sm px-5 py-2 opacity-40 cursor-not-allowed">
-              Previous
-            </span>
+          {pagination.totalPages > 1 && (
+            <nav className="flex justify-center gap-2 mt-8" aria-label="Pagination">
+              {pagination.page > 1 ? (
+                <Link
+                  className="btn btn-secondary text-sm px-5 py-2"
+                  href={buildHref(baseFilters, { page: String(pagination.page - 1) }, true)}
+                >
+                  Previous
+                </Link>
+              ) : (
+                <span className="btn btn-secondary text-sm px-5 py-2 opacity-40 cursor-not-allowed">
+                  Previous
+                </span>
+              )}
+              <span className="btn btn-ghost text-sm px-4 py-2 text-[var(--color-text-muted)]">
+                {pagination.page} / {pagination.totalPages}
+              </span>
+              {pagination.page < pagination.totalPages ? (
+                <Link
+                  className="btn btn-secondary text-sm px-5 py-2"
+                  href={buildHref(baseFilters, { page: String(pagination.page + 1) }, true)}
+                >
+                  Next
+                </Link>
+              ) : (
+                <span className="btn btn-secondary text-sm px-5 py-2 opacity-40 cursor-not-allowed">
+                  Next
+                </span>
+              )}
+            </nav>
           )}
-          <span className="btn btn-ghost text-sm px-4 py-2 text-[var(--color-text-muted)]">
-            {pagination.page} / {pagination.totalPages}
-          </span>
-          {pagination.page < pagination.totalPages ? (
-            <Link
-              className="btn btn-secondary text-sm px-5 py-2"
-              href={buildHref(baseFilters, { page: String(pagination.page + 1) })}
-            >
-              Next
-            </Link>
-          ) : (
-            <span className="btn btn-secondary text-sm px-5 py-2 opacity-40 cursor-not-allowed">
-              Next
-            </span>
-          )}
-        </nav>
+        </>
+      ) : (
+        <DiscoverProjectFeed
+          filters={{
+            query,
+            tag,
+            tech,
+            team,
+            status: statusRaw,
+            limit,
+          }}
+          initialItems={items}
+          initialPagination={{
+            total: pagination.total,
+            totalPages: pagination.totalPages,
+            page: pagination.page,
+            limit: pagination.limit,
+          }}
+          buildPageHref={(p) => buildHref(baseFilters, { page: String(p) }, false)}
+        />
       )}
     </main>
   );
