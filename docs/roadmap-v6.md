@@ -3,7 +3,8 @@
 > 基于 v5.0 路线图 + 后端优化路线图 v1.0 + 项目计划书 v4.0 + 成熟度收敛审计  
 > 规划日期：2026-04-15  
 > 视角：按交付阶段（P0→P4）× 难度等级（普通/复杂）组织，明确优先级与执行顺序  
-> 状态：**规划文档——指导后续迭代执行**
+> 审计日期：2026-04-15  
+> 状态：**规划文档——指导后续迭代执行（P0-P4 全量审计已通过）**
 
 ---
 
@@ -159,6 +160,8 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 | P4-FE-1 | 前端性能优化 | 前端性能 | 全局 | — | `template.tsx` 全局动画改可选；移除 `unoptimized`；`next/dynamic` 懒加载大型组件；Core Web Vitals 基线（LCP <2.5s、FID <100ms、CLS <0.1）；PWA 可选 |
 | P4-FE-2 | 前端状态管理演进 | 前端架构 | 全局 | — | SWR 或 TanStack Query；请求去重/缓存/后台刷新/Optimistic Updates；重构高频数据获取；减少 network waterfall |
 
+> **P4 普通任务状态：已全部关闭（2/2）。** 复杂任务 4 项待后续迭代执行。
+
 ---
 
 ## 执行优先级全景矩阵
@@ -242,18 +245,29 @@ v6.0 是在 v5.0（全栈审计规划）基础上的**执行化升级**：
 - [ ] 文件上传闭环（头像/截图/logo）
 - ✅ API 版本化策略文档发布
 
+### P4 完成门禁
+
+- [ ] OpenTelemetry 可观测性全链路接入（traces + metrics + alerts）
+- [ ] CI/CD 含 E2E、漏洞扫描、性能门禁
+- [ ] Core Web Vitals 基线达标（LCP <2.5s、FID <100ms、CLS <0.1）
+- [ ] 前端状态管理迁移到 SWR / TanStack Query
+- ✅ 慢查询告警 + 索引审计工具就位
+- ✅ 多环境配置 fail-fast 机制上线
+
 ---
 
-## 建议执行顺序（P1 内部）
+## 建议执行顺序
+
+### P1 内部
 
 基于依赖关系和投入产出比，P1 建议执行顺序为：
 
 ```
-P1-BE-3 结构化日志（普通，无依赖）
+P1-BE-3 结构化日志（普通，无依赖）        ✅
   ↓
-P1-FE-4 缺失核心页面（普通，无依赖）
+P1-FE-4 缺失核心页面（普通，无依赖）       ✅
   ↓
-P1-BE-4 WS/MCP 生产化（普通，无依赖）
+P1-BE-4 WS/MCP 生产化（普通，无依赖）      ✅
   ↓
 P1-BE-1 API 全面 Zod 化（复杂，无依赖）  ← 可与下方并行
 P1-BE-2 Repository 错误处理（复杂，无依赖）← 可与上方并行
@@ -263,6 +277,54 @@ P1-FE-1 设计系统统一（复杂，依赖 P0-FE-1/2 ✅）
 P1-FE-2 共享 UI 原语层（复杂，依赖 P1-FE-1）
   ↓
 P1-FE-3 ⌘K 全局搜索（复杂，依赖 P1-FE-2）
+```
+
+### P2 内部
+
+```
+P2-FE-3 个人资料中心（普通，无依赖）       ✅
+P2-FE-5 Infinite Scroll（普通，无依赖）    ✅
+P2-BE-3 数据库约束加强（普通，无依赖）      ✅
+P2-BE-4 API 速率限制（普通，无依赖）        ✅
+  ↓
+P2-BE-1 repository.ts 拆分（复杂，无依赖）  ← 可与 P2-FE-1 并行
+P2-FE-1 i18n 全面化（复杂，无依赖）         ← 可与 P2-BE-1 并行
+  ↓
+P2-BE-2 Mock 数据层现代化（复杂，依赖 P2-BE-1）
+P2-FE-2 无障碍提升（复杂，依赖 P1-FE-2）
+P2-FE-4 Optimistic UI 扩展（复杂，无依赖）
+  ↓
+P2-BE-5 E2E 测试覆盖度跃升（复杂，无依赖）← 建议在架构变更后进行
+```
+
+### P3 内部
+
+```
+P3-FE-3 项目 README 展示（普通，无依赖）   ✅
+P3-FE-4 通知偏好设置（普通，无依赖）        ✅
+P3-BE-2 API 版本化策略（普通，无依赖）      ✅
+P3-BE-5 GitHub 集成深化（普通，无依赖）     ✅
+  ↓
+P3-BE-1 异步任务队列（复杂，无依赖）       ← 最优先，是 P3-BE-4 前置
+P3-FE-2 富文本编辑器（复杂，无依赖）       ← 可与 P3-BE-1 并行
+  ↓
+P3-FE-1 Light/Dark 主题（复杂，依赖 P1-FE-1）
+P3-BE-3 文件上传/媒体管理（复杂，无依赖）  ← 可与上方并行
+  ↓
+P3-BE-4 Webhook 通用化（复杂，依赖 P3-BE-1）
+```
+
+### P4 内部
+
+```
+P4-BE-2 DB 查询性能基线（普通，无依赖）    ✅
+P4-BE-4 多环境配置管理（普通，无依赖）      ✅
+  ↓
+P4-FE-1 前端性能优化（复杂，无依赖）       ← 可与 P4-FE-2 / P4-BE-1 并行
+P4-FE-2 状态管理演进（复杂，无依赖）        ← 可与 P4-FE-1 / P4-BE-1 并行
+P4-BE-1 可观测性平台（复杂，依赖 P1-BE-3 ✅）← 可与前端并行
+  ↓
+P4-BE-3 CI/CD 流水线增强（复杂，依赖 P2-BE-5）← 需等 E2E 基线就位
 ```
 
 **原则：** 先普通后复杂，先无依赖后有依赖，后端与前端可并行。
@@ -280,7 +342,47 @@ P1-FE-3 ⌘K 全局搜索（复杂，依赖 P1-FE-2）
 | P4 | 6 | 2 | 4 | 2 | 4 |
 | **合计** | **39** | **18** | **21** | **19** | **20** |
 
-> **本轮普通任务完成进度：13/13（P1-P4 所有普通任务均已关闭）**
+> **普通任务完成进度：13/13（P1-P4 所有普通任务均已关闭）**  
+> **总完成进度：19/39（P0 全部 + P1-P4 所有普通任务已关闭，剩余 20 项复杂任务待执行）**  
+> **P0-P4 全量审计：19/19 已完成项全部验证通过（2026-04-15）**
+
+---
+
+## P0-P4 全量审计记录
+
+> 审计日期：2026-04-15
+> 审计范围：所有标记为 ✅ 的已完成任务（共 19 项）
+> 审计方式：逐项核查实现产物是否存在于代码仓库中
+
+### 审计结果
+
+| 阶段 | 编号 | 任务 | 审计结果 | 核查产物 |
+|------|------|------|----------|----------|
+| P0 | P0-BE-1 | Session 服务端吊销 | ✅ 通过 | `prisma/schema.prisma`（`sessionVersion`）、`lib/session-edge.ts`（`decodeSession`） |
+| P0 | P0-BE-2 | CSRF 防护加固 | ✅ 通过 | `middleware.ts`（HMAC 双重校验）、`lib/api-fetch.ts`（前端携带 token） |
+| P0 | P0-BE-3 | Admin 边缘验证 | ✅ 通过 | `middleware.ts`（`/admin` 路径 session decode + role 校验） |
+| P0 | P0-FE-1 | Error/NotFound/Loading | ✅ 通过 | `app/error.tsx`、`app/not-found.tsx`、`app/loading.tsx` + 子路由级页面 |
+| P0 | P0-FE-2 | Toast 通知系统 | ✅ 通过 | `sonner ^2.0.7`、`layout.tsx`（`<Toaster>`）、全局替换 `alert()` |
+| P0 | P0-FE-3 | Footer 链接清理 | ✅ 通过 | `components/footer.tsx`、`app/privacy/page.tsx`、`app/terms/page.tsx` |
+| P1 | P1-FE-4 | 缺失核心页面补全 | ✅ 通过 | `app/settings/` 含 profile/notifications/api-keys/webhooks/subscription 子页 |
+| P1 | P1-BE-3 | 结构化日志系统 | ✅ 通过 | `lib/logger.ts`（pino）、`getRequestLogger()`、`requestId` 注入 |
+| P1 | P1-BE-4 | WS/MCP 生产化 | ✅ 通过 | `infra/pm2/ecosystem.config.cjs`（3 进程）、`infra/nginx/vibehub.conf`、`infra/docker-compose.yml` |
+| P2 | P2-FE-3 | 个人资料中心 | ✅ 通过 | `app/settings/profile/`（表单）、`api/v1/me/profile/route.ts`（POST + PATCH） |
+| P2 | P2-FE-5 | Infinite Scroll | ✅ 通过 | `hooks/use-infinite-page-append.ts`（Intersection Observer）、Discover/Discussions 接入 |
+| P2 | P2-BE-3 | 数据库约束加强 | ✅ 通过 | `schema.prisma`（`@db.VarChar(N)`）、`migrations/20260424000000_p2_be3_varchar_constraints/` |
+| P2 | P2-BE-4 | API 速率限制 | ✅ 通过 | `middleware.ts`（GET 300/min、搜索 60/min、写 30/min + env 覆盖 + Stripe 豁免） |
+| P3 | P3-FE-3 | 项目 README 展示 | ✅ 通过 | `components/project-readme-section.tsx`、`api/v1/projects/[slug]/readme/sync/route.ts` |
+| P3 | P3-FE-4 | 通知偏好设置 | ✅ 通过 | `app/settings/notifications/`（`NotificationPreferencesForm`）、`api/v1/me/notification-preferences/route.ts` |
+| P3 | P3-BE-2 | API 版本化策略 | ✅ 通过 | `docs/api-versioning.md`（additive-only + URL 版本化） |
+| P3 | P3-BE-5 | GitHub 集成深化 | ✅ 通过 | `lib/github-readme.ts`（owner/repo 解析 + 3 种 README 文件名 + GITHUB_TOKEN） |
+| P4 | P4-BE-2 | DB 查询性能基线 | ✅ 通过 | `lib/db.ts`（慢查询告警）、`scripts/pg-index-stats.ts`（索引审计） |
+| P4 | P4-BE-4 | 多环境配置管理 | ✅ 通过 | `.env.*.example`（3 套）、`lib/env-check.ts`（`assertProductionEnv`）、`instrumentation.ts` |
+
+### 审计结论
+
+- **19/19 已完成项全部通过**，实现产物与路线图描述一致
+- **0 项缺失**，无虚假标记
+- 剩余 **20 项待执行**（均为复杂任务 🔴），分布于 P1（5）、P2（6）、P3（5）、P4（4）
 
 ---
 
