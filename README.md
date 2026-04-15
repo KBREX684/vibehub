@@ -15,6 +15,7 @@ code, and docs around the main loop of community -> project -> collaboration -> 
 
 - `web/`: Next.js full-stack app
 - `CONTRIBUTING.md`: engineering principles and contribution guidelines
+- `docs/roadmap-v6.md`: v6.0 roadmap — phases (P0–P4) × difficulty (普通/复杂)
 - `docs/roadmap-current.md`: current execution line and acceptance priorities
 - `docs/release-notes.md`: merged change history and notable closures
 - `docs/repository-cleanup-report.md`: repository cleanup decisions, retain/archive/delete rationale
