@@ -1,6 +1,6 @@
 # VibeHub release notes
 
-Updated: 2026-04-14
+Updated: 2026-04-16
 
 ## Current release baseline
 
@@ -11,6 +11,14 @@ Updated: 2026-04-14
 - Real database + seed path documented as the primary validation route
 
 ## Recent notable changes
+
+### 2026-04-16 — launch readiness gap analysis (roadmap v7.0)
+
+- Added `docs/launch-readiness-standard.md` — frozen standard for Go-Live control.
+- Added `docs/roadmap-v7.md` — gap analysis against launch readiness standard.
+  - Identified 4 hard blockers: no email login, production mock fallback, incomplete fail-fast, missing China payment path.
+  - Identified 6 enhancement gaps: compliance checklist, agent binding model, audit log coverage, payment abstraction, alerting, rollback SOP.
+  - Execution plan with dependency graph and acceptance criteria.
 
 ### 2026-04-14 — maturity convergence pass
 

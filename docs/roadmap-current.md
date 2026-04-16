@@ -71,6 +71,9 @@ VibeHub 当前只聚焦三条主线：
 ## 配套文档
 
 - 当前主线：`docs/roadmap-current.md`
+- 上线差距分析：`docs/roadmap-v7.md`
+- 上线判定基准：`docs/launch-readiness-standard.md`
+- P0-P4 演进路线图：`docs/roadmap-v5.md`
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
 - 仓库整理报告：`docs/repository-cleanup-report.md`
