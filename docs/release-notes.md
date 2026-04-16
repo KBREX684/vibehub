@@ -12,6 +12,17 @@ Updated: 2026-04-16
 
 ## Recent notable changes
 
+### 2026-04-16 — Roadmap v7.0 Step 2: 差距分析补全
+
+补全了 `docs/roadmap-v7.md` Step 2 的完整差距分析审计记录：
+
+- 逐项对照 `launch-readiness-standard.md` §1–§3 全部条目
+- 审计基线：commit f0e5033（P0-P4 安全加固合并后）
+- 按 §2.1–§2.7 七大类 P0 Gate 逐条记录通过/差距状态与证据
+- 按 §3 上线判定清单 28 项逐条预判 + 阻塞差距映射
+- 按一票否决项逐条检查风险
+- 最终识别出 4 个 P0 硬阻塞 + 6 个 P1 增强项 + 2 个 S4 补充差距
+
 ### 2026-04-16 — Roadmap v7.0 Step 4: Go-Live Readiness Audit
 
 Executed full go-live readiness verification against `docs/launch-readiness-standard.md`:
