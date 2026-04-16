@@ -16,18 +16,18 @@ export async function GET(request: Request) {
     const unreadOnly = url.searchParams.get("unread") === "1" || url.searchParams.get("unread") === "true";
     const limitRaw = url.searchParams.get("limit");
     const limit = limitRaw ? Number(limitRaw) : undefined;
+    const safeLimit = Number.isFinite(limit as number) ? Math.min(Math.max(limit as number, 1), 500) : undefined;
     const items = await listInAppNotifications({
       userId: session.userId,
       unreadOnly,
-      limit: Number.isFinite(limit as number) ? (limit as number) : undefined,
+      limit: safeLimit,
     });
     return apiSuccess({ notifications: items });
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-    const msg = error instanceof Error ? error.message : String(error);
     requestLogger.error({ err: serializeError(error) }, "Failed to list notifications");
-    return apiError({ code: "NOTIFICATIONS_LIST_FAILED", message: "Failed to list notifications", details: msg }, 500);
+    return apiError({ code: "NOTIFICATIONS_LIST_FAILED", message: "Failed to list notifications" }, 500);
   }
 }
 
@@ -60,9 +60,8 @@ export async function PATCH(request: Request) {
     if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: error.flatten() }, 400);
     }
-    const msg = error instanceof Error ? error.message : String(error);
     requestLogger.error({ err: serializeError(error) }, "Failed to update notifications");
-    return apiError({ code: "NOTIFICATIONS_UPDATE_FAILED", message: "Failed to update notifications", details: msg }, 500);
+    return apiError({ code: "NOTIFICATIONS_UPDATE_FAILED", message: "Failed to update notifications" }, 500);
   }
 }
 

@@ -68,7 +68,6 @@ export async function GET() {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-const message = error instanceof Error ? error.message : String(error);
     return apiError(
       {
         code: "ENTERPRISE_VERIFICATION_FETCH_FAILED",

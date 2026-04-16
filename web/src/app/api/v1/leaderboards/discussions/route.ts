@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const rows = await getDiscussionLeaderboard(limit);
+  const safeLimit = Math.min(limit, 100);
+  const rows = await getDiscussionLeaderboard(safeLimit);
   return apiSuccess({ kind: "discussions_by_comment_count", rows });
 }

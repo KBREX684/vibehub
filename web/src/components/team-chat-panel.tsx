@@ -67,7 +67,10 @@ function formatTime(iso: string) {
 }
 
 function nanoid() {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const buf = new Uint8Array(8);
+  crypto.getRandomValues(buf);
+  const suffix = Array.from(buf, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 8);
+  return `msg_${Date.now()}_${suffix}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

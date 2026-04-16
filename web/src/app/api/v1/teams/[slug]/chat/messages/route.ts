@@ -71,7 +71,8 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     const url = new URL(req.url);
-    const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10), 200);
+    const rawLimit = parseInt(url.searchParams.get("limit") ?? "50", 10);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 50;
 
     // Background prune (fire-and-forget, non-blocking)
     pruneOldTeamChatMessages().catch(() => {});
@@ -186,7 +187,6 @@ const msg = err instanceof Error ? err.message : String(err);
       {
         code: "CHAT_POST_FAILED",
         message: "Failed to post chat message",
-        details: msg,
       },
       400
     );

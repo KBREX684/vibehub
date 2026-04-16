@@ -39,7 +39,7 @@ const msg = error instanceof Error ? error.message : String(error);
       return apiError({ code: "FORBIDDEN", message: "Only the comment author can edit" }, 403);
     }
     return apiError(
-      { code: "COMMENT_UPDATE_FAILED", message: "Failed to update comment", details: msg },
+      { code: "COMMENT_UPDATE_FAILED", message: "Failed to update comment" },
       400
     );
   }

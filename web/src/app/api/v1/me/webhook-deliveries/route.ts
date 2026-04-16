@@ -6,10 +6,12 @@ export async function GET(request: Request) {
   const session = await getSessionUserFromCookie();
   if (!session) return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
   const url = new URL(request.url);
-  const limit = url.searchParams.get("limit");
+  const limitRaw = url.searchParams.get("limit");
+  const parsed = limitRaw ? Number.parseInt(limitRaw, 10) : 50;
+  const safeLimit = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 500) : 50;
   const items = await listWebhookDeliveries({
     userId: session.userId,
-    limit: limit ? Number.parseInt(limit, 10) : 50,
+    limit: safeLimit,
   });
   return apiSuccess({ deliveries: items });
 }

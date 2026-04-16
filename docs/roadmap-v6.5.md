@@ -36,43 +36,42 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 
 > 定义：当前代码中可被直接利用或造成数据泄露的安全问题。
 
-### P0-SEC-1：替换 Math.random() ID 生成为加密安全随机数 ⚡ 普通
+### P0-SEC-1：替换 Math.random() ID 生成为加密安全随机数 ⚡ 普通 ✅ 已完成
 
-**现状：** 14 处使用 `Math.random().toString(36).slice(2, 8)` 生成实体 ID（通知、API Key、评论等），约 2.1 亿种可能性，可被暴力枚举。
+**现状：** ~~14 处使用 `Math.random().toString(36).slice(2, 8)` 生成实体 ID（通知、API Key、评论等），约 2.1 亿种可能性，可被暴力枚举。~~
 
-**目标：**
-- 使用 `crypto.randomUUID()` 或 `crypto.getRandomValues()` 替换所有 `Math.random()` ID 生成
-- 影响文件：`repository.ts`（~10 处）、`repositories/team.repository.ts`（2 处）、`repositories/project.repository.ts`（1 处）、`team-chat-panel.tsx`（1 处）
-
-**复杂度：** 普通（逐一替换，无逻辑变更）
-
----
-
-### P0-SEC-2：为所有 parseInt/Number() 调用添加有限性校验 ⚡ 普通
-
-**现状：** 4 个 API 端点的 `parseInt()` / `Number()` 未校验返回值，NaN 传入下游逻辑导致未定义行为或绕过分页限制。
-
-**目标：**
-- `chat/messages/route.ts` — 添加 `Number.isFinite()` 检查 + 上限 cap
-- `webhook-deliveries/route.ts` — 添加 `Math.min(limit, 500)` 上限
-- `notifications/route.ts` — 添加 `Math.min(limit, 500)` 上限
-- `admin/webhook-deliveries/route.ts` — 添加 `Math.min(limit, 500)` 上限
-
-**复杂度：** 普通（4 个文件，每处 1-2 行修改）
+**已完成：**
+- 新增 `lib/crypto-id.ts` 工具模块，提供 `cryptoRandomSuffix(length)` 和 `cryptoId(prefix, length)` 函数
+- 使用 `crypto.randomBytes` (Node.js) 替换后端 13 处 `Math.random()` ID 生成
+- 使用 `crypto.getRandomValues` (Web Crypto API) 替换前端 `team-chat-panel.tsx` 1 处
+- 影响文件：`repository.ts`（10 处）、`team.repository.ts`（2 处）、`project.repository.ts`（1 处）、`team-chat-panel.tsx`（1 处）
 
 ---
 
-### P0-SEC-3：消除 API 响应中的原始错误信息泄露 ⚡ 普通
+### P0-SEC-2：为所有 parseInt/Number() 调用添加有限性校验 ⚡ 普通 ✅ 已完成
 
-**现状：** 至少 3 个 API 路由在 catch 块中直接返回 `error.message`，可能泄露 Prisma 内部错误、数据库结构或堆栈信息。
+**现状：** ~~4 个 API 端点的 `parseInt()` / `Number()` 未校验返回值，NaN 传入下游逻辑导致未定义行为或绕过分页限制。~~
 
-**目标：**
-- `me/profile/route.ts` — 替换为 `safeServerErrorDetails(error)` + 泛化消息
-- `mcp/v2/invoke/route.ts` — 替换为泛化消息
-- `me/api-keys/route.ts` — 替换字符串匹配为类型化错误枚举
-- 建立规范：所有 catch 块必须使用 `apiErrorFromRepositoryCatch` 或 `safeServerErrorDetails`
+**已完成：**
+- `chat/messages/route.ts` — 添加 `Number.isFinite()` 检查 + `Math.min(Math.max(...), 200)` 上限
+- `me/webhook-deliveries/route.ts` — 添加 NaN 防护 + `Math.min(limit, 500)` 上限
+- `admin/webhook-deliveries/route.ts` — 添加 NaN 防护 + `Math.min(limit, 500)` 上限
+- `me/notifications/route.ts` — 添加 `Math.min(limit, 500)` 上限
+- 4 个 leaderboard 路由 — 添加 `Math.min(limit, 100)` 上限 cap
 
-**复杂度：** 普通（5-6 个文件修改）
+---
+
+### P0-SEC-3：消除 API 响应中的原始错误信息泄露 ⚡ 普通 ✅ 已完成
+
+**现状：** ~~至少 3 个 API 路由在 catch 块中直接返回 `error.message`，可能泄露 Prisma 内部错误、数据库结构或堆栈信息。~~
+
+**已完成：**
+- 移除 28+ 处 catch 块 fallback 中的 `details: msg`/`details: message` 字段
+- `me/profile/route.ts` GET — 替换 `error.message` 为泛化消息
+- `mcp/v2/invoke/route.ts` — 生产环境不再返回 `err.message`（仅开发模式保留）
+- `me/api-keys/route.ts` POST — 添加 `apiErrorFromRepositoryMessage` 处理已知错误码
+- 清理所有未使用的 `msg` 变量以保持 lint 清洁
+- 保留 `safeServerErrorDetails()` 调用（生产环境返回 `undefined`，安全）
 
 ---
 
@@ -302,9 +301,9 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 
 | 编号 | 任务 | 优先级 | 领域 | 难度 | 依赖 |
 |------|------|--------|------|------|------|
-| P0-SEC-1 | 替换 Math.random() ID 生成 | 🔴 P0 | 安全 | 普通 | — |
-| P0-SEC-2 | parseInt 有限性校验 | 🔴 P0 | 安全 | 普通 | — |
-| P0-SEC-3 | 消除错误信息泄露 | 🔴 P0 | 安全 | 普通 | — |
+| P0-SEC-1 | 替换 Math.random() ID 生成 | 🔴 P0 | 安全 | 普通 | ✅ 已完成 |
+| P0-SEC-2 | parseInt 有限性校验 | 🔴 P0 | 安全 | 普通 | ✅ 已完成 |
+| P0-SEC-3 | 消除错误信息泄露 | 🔴 P0 | 安全 | 普通 | ✅ 已完成 |
 | P1-ROBUST-1 | 剩余路由 Zod 验证补全 | 🟠 P1 | 健壮性 | 复杂 | — |
 | P1-ROBUST-2 | 类型化错误枚举替换字符串匹配 | 🟠 P1 | 健壮性 | 普通 | — |
 | P1-ROBUST-3 | SSE 流异常保护 | 🟠 P1 | 健壮性 | 普通 | — |

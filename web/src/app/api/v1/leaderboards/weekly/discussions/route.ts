@@ -32,10 +32,11 @@ export async function GET(request: Request) {
     );
   }
 
+  const safeLimit = Math.min(limit, 100);
   const payload = await getWeeklyLeaderboardPublicPayload({
     weekStart,
     kind: "discussions_by_weekly_comment_count",
-    limit,
+    limit: safeLimit,
   });
 
   return apiSuccess(payload);

@@ -49,7 +49,6 @@ const message = error instanceof Error ? error.message : String(error);
       {
         code: "ADMIN_REVIEW_POST_FAILED",
         message: "Failed to review post",
-        details: message,
       },
       400
     );

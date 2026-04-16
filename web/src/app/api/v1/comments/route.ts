@@ -75,7 +75,6 @@ const message = error instanceof Error ? error.message : String(error);
       {
         code: "COMMENT_CREATE_FAILED",
         message: "Failed to create comment",
-        details: message,
       },
       400
     );

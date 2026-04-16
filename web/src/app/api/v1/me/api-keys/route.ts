@@ -96,7 +96,6 @@ if (error instanceof z.ZodError) {
       {
         code: "API_KEY_CREATE_FAILED",
         message: "Failed to create API key",
-        details: msg,
       },
       500
     );

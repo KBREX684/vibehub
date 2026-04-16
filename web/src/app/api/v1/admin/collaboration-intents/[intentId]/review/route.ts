@@ -70,7 +70,6 @@ const message = error instanceof Error ? error.message : String(error);
       {
         code: "ADMIN_REVIEW_COLLABORATION_INTENT_FAILED",
         message: "Failed to review collaboration intent",
-        details: message,
       },
       400
     );

@@ -9,16 +9,18 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   try {
     const url = new URL(request.url);
-    const limit = url.searchParams.get("limit");
+    const limitRaw = url.searchParams.get("limit");
     const userId = url.searchParams.get("userId")?.trim() || undefined;
+    const parsed = limitRaw ? Number.parseInt(limitRaw, 10) : 100;
+    const safeLimit = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 500) : 100;
     const items = await listWebhookDeliveries({
       userId,
-      limit: limit ? Number.parseInt(limit, 10) : 100,
+      limit: safeLimit,
     });
     return apiSuccess({ deliveries: items });
   } catch (error) {
     const r = apiErrorFromRepositoryCatch(error);
     if (r) return r;
-    return apiError({ code: "ADMIN_WEBHOOK_DELIVERIES_FAILED", message: String(error) }, 500);
+    return apiError({ code: "ADMIN_WEBHOOK_DELIVERIES_FAILED", message: "Failed to list webhook deliveries" }, 500);
   }
 }
