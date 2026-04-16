@@ -4,6 +4,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { deleteUserWebhook, updateUserWebhook } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const patchSchema = z.object({
@@ -41,16 +42,8 @@ if (e instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: e.flatten() }, 400);
     }
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg === "WEBHOOK_NOT_FOUND") return apiError({ code: "WEBHOOK_NOT_FOUND", message: msg }, 404);
-    if (msg === "INVALID_WEBHOOK_URL" || msg === "INVALID_WEBHOOK_EVENT") {
-      return apiError({ code: msg === "INVALID_WEBHOOK_URL" ? "INVALID_WEBHOOK_URL" : "INVALID_WEBHOOK_EVENT", message: msg }, 400);
-    }
-    if (msg === "WEBHOOK_URL_BLOCKED") {
-      return apiError(
-        { code: "WEBHOOK_URL_BLOCKED", message: "Webhook URL must be a public HTTPS endpoint (private IPs and localhost are not allowed)." },
-        400
-      );
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       { code: "WEBHOOK_UPDATE_FAILED", message: "Failed to update webhook", details: safeServerErrorDetails(e) },
       500
@@ -69,7 +62,8 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(e);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = e instanceof Error ? e.message : String(e);
-    if (msg === "WEBHOOK_NOT_FOUND") return apiError({ code: "WEBHOOK_NOT_FOUND", message: msg }, 404);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       { code: "WEBHOOK_DELETE_FAILED", message: "Failed to delete webhook", details: safeServerErrorDetails(e) },
       500

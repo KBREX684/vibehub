@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import {
   getEnterpriseProfileByUserId,
   submitEnterpriseVerification,
@@ -14,37 +15,6 @@ const verificationSchema = z.object({
   workEmail: z.string().email().max(200),
   useCase: z.string().max(2000).optional(),
 });
-
-function mapVerificationError(message: string) {
-  switch (message) {
-    case "INVALID_ORGANIZATION_NAME":
-    case "INVALID_ORGANIZATION_WEBSITE":
-    case "INVALID_WORK_EMAIL":
-      return apiError(
-        {
-          code: message,
-          message: "Invalid enterprise verification payload",
-        },
-        400
-      );
-    case "ENTERPRISE_ALREADY_APPROVED":
-      return apiError(
-        {
-          code: "ENTERPRISE_ALREADY_APPROVED",
-          message: "Enterprise access already approved",
-        },
-        409
-      );
-    default:
-      return apiError(
-        {
-          code: "ENTERPRISE_VERIFICATION_FAILED",
-          message: "Failed to process enterprise verification request",
-        },
-        500
-      );
-  }
-}
 
 export async function GET() {
   const session = await getSessionUserFromCookie();
@@ -109,6 +79,14 @@ if (error instanceof z.ZodError) {
       );
     }
     const message = error instanceof Error ? error.message : String(error);
-    return mapVerificationError(message);
+    const mapped = apiErrorFromRepositoryMessage(message);
+    if (mapped) return mapped;
+    return apiError(
+      {
+        code: "ENTERPRISE_VERIFICATION_FAILED",
+        message: "Failed to process enterprise verification request",
+      },
+      500
+    );
   }
 }

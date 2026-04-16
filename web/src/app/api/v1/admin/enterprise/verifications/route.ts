@@ -6,6 +6,7 @@ import {
 } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 import type { EnterpriseVerificationStatus } from "@/lib/types";
@@ -95,15 +96,8 @@ if (error instanceof z.ZodError) {
       );
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "ENTERPRISE_PROFILE_NOT_FOUND" || msg === "APPLICATION_NOT_FOUND") {
-      return apiError({ code: "APPLICATION_NOT_FOUND", message: "Enterprise profile not found" }, 404);
-    }
-    if (msg === "ENTERPRISE_PROFILE_NOT_PENDING" || msg === "APPLICATION_NOT_PENDING") {
-      return apiError(
-        { code: "APPLICATION_NOT_PENDING", message: "Profile is not pending review" },
-        409
-      );
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "ADMIN_ENTERPRISE_VERIFICATION_REVIEW_FAILED",

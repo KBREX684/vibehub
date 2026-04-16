@@ -110,6 +110,8 @@ export function apiErrorFromRepositoryMessage(msg: string): NextResponse | null 
     case "ENTERPRISE_PROFILE_NOT_PENDING":
     case "APPLICATION_NOT_PENDING":
       return apiError({ code: "APPLICATION_NOT_PENDING", message: "Profile is not pending review" }, 409);
+    case "ENTERPRISE_ALREADY_APPROVED":
+      return apiError({ code: "ENTERPRISE_ALREADY_APPROVED", message: "Enterprise access already approved" }, 409);
 
     // ── Bad Request (400) ────────────────────────────────────────────────────
     case "POST_NOT_APPROVED":
@@ -168,6 +170,10 @@ export function apiErrorFromRepositoryMessage(msg: string): NextResponse | null 
       return apiError({ code: "TEAM_TASK_REORDER_EDGE", message: "Cannot move further in that direction" }, 400);
     case "TEAM_OWNER_NO_REQUEST":
       return apiError({ code: "TEAM_OWNER_NO_REQUEST", message: "Team owner does not need to request to join" }, 400);
+    case "INVALID_ORGANIZATION_NAME":
+    case "INVALID_ORGANIZATION_WEBSITE":
+    case "INVALID_WORK_EMAIL":
+      return apiError({ code: msg, message: "Invalid enterprise verification payload" }, 400);
 
     // ── Service Unavailable (503) ────────────────────────────────────────────
     case "STRIPE_NOT_CONFIGURED":

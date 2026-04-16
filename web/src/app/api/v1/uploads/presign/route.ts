@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { createPresignedPutUrl } from "@/lib/uploads-presign";
 
 const bodySchema = z.object({
@@ -34,9 +35,8 @@ export async function POST(request: Request) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: e.flatten() }, 400);
     }
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg === "UNSUPPORTED_CONTENT_TYPE") {
-      return apiError({ code: "UNSUPPORTED_CONTENT_TYPE", message: msg }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError({ code: "PRESIGN_FAILED", message: msg }, 500);
   }
 }

@@ -4,6 +4,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { createUserWebhook, listUserWebhooks } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const createSchema = z.object({
@@ -53,14 +54,8 @@ if (e instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: e.flatten() }, 400);
     }
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg === "INVALID_WEBHOOK_URL") return apiError({ code: "INVALID_WEBHOOK_URL", message: msg }, 400);
-    if (msg === "WEBHOOK_URL_BLOCKED") {
-      return apiError(
-        { code: "WEBHOOK_URL_BLOCKED", message: "Webhook URL must be a public HTTPS endpoint (private IPs and localhost are not allowed)." },
-        400
-      );
-    }
-    if (msg === "INVALID_WEBHOOK_EVENT") return apiError({ code: "INVALID_WEBHOOK_EVENT", message: msg }, 400);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       { code: "WEBHOOK_CREATE_FAILED", message: "Failed to create webhook", details: safeServerErrorDetails(e) },
       500
