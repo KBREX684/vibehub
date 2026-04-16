@@ -42,6 +42,7 @@
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "stripe": "^22.0.1",
+    "swr": "^2.4.1",
     "ws": "^8.20.0",
     "zod": "^3.24.2"
   },
@@ -49,6 +50,7 @@
     "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.0.15",
     "@types/node": "^22.13.10",
+    "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@types/ws": "^8.18.1",

@@ -149,13 +149,15 @@ function observeINP() {
   }
 }
 
+// Module-scoped guard to ensure observers register at most once per page load.
+let webVitalsInit = false;
+
 /** Call once from the root client component to start collecting Web Vitals. */
 export function useWebVitalsReporter() {
   if (typeof window === "undefined") return;
 
-  // Ensure observers are only registered once per page load
-  if ((window as Record<string, unknown>).__WEB_VITALS_INIT__) return;
-  (window as Record<string, unknown>).__WEB_VITALS_INIT__ = true;
+  if (webVitalsInit) return;
+  webVitalsInit = true;
 
   observeLCP();
   observeCLS();

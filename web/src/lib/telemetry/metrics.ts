@@ -86,9 +86,8 @@ export function recordRequest(
 /** Record a business event. `meta` is reserved for future enrichment (e.g. structured logging). */
 export function recordBusinessEvent(
   event: string,
-  meta?: Record<string, unknown>,
+  _meta?: Record<string, unknown>,
 ): void {
-  void meta;
   businessEventCounts.set(event, (businessEventCounts.get(event) ?? 0) + 1);
 }
 
