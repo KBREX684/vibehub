@@ -247,56 +247,53 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 
 > 定义：保障持续集成与生产运维能力。
 
-### P3-INFRA-1：建立 GitHub Actions CI/CD 流水线 🔧 复杂
+### P3-INFRA-1：建立 GitHub Actions CI/CD 流水线 🔧 复杂 ✅ 已完成
 
-**现状：** 当前分支无可用的 `.github/workflows/` CI 配置（仅历史 `p1-gate.yml` 存在于 main）。
+**现状：** ~~当前分支无可用的 `.github/workflows/` CI 配置（仅历史 `p1-gate.yml` 存在于 main）。~~
 
-**目标：**
-- `ci.yml`：lint + type-check + vitest + build（每次 push/PR 触发）
-- `e2e.yml`：Playwright E2E（使用 Postgres service container）
-- `security.yml`：`npm audit` + CodeQL 扫描
-- `bundle-size.yml`：`next build` 输出 size 对比，PR comment 报告
-
-**复杂度：** 复杂
-
----
-
-### P3-INFRA-2：完善环境变量校验 ⚡ 普通
-
-**现状：** `env-check.ts` 仅校验 3 个变量（`SESSION_SECRET`、`DATABASE_URL`、`ENFORCE_REQUIRED_ENV`），生产关键变量（Stripe、GitHub OAuth、S3 等）未校验。
-
-**目标：**
-- 使用 Zod 定义完整的环境变量 schema
-- 区分必需 / 可选 / 带默认值三类
-- 启动时校验，缺失必需变量立即报错退出
-- 更新 `.env.example`、`.env.production.example`、`.env.staging.example` 保持同步
-
-**复杂度：** 普通
+**已完成：**
+- `ci.yml` — lint + vitest + validate:openapi + generate:types + build（push/PR → main 触发，Postgres service container）
+- `e2e.yml` — Playwright E2E（独立 workflow，Postgres 实例，失败时上传 report artifact）
+- `security.yml` — npm audit + CodeQL + gitleaks（push/PR + 每周一 04:00 UTC 定期扫描）
+- `bundle-size.yml` — next build 输出解析 + sticky PR comment 报告
+- 所有 workflow 配置 `concurrency` 取消旧运行，减少 CI 资源浪费
 
 ---
 
-### P3-INFRA-3：Prisma 查询超时配置 ⚡ 普通
+### P3-INFRA-2：完善环境变量校验 ⚡ 普通 ✅ 已完成
 
-**现状：** `db.ts` 中 PrismaClient 无查询超时设置，长时间查询可无限挂起。
+**现状：** ~~`env-check.ts` 仅校验 3 个变量（`SESSION_SECRET`、`DATABASE_URL`、`ENFORCE_REQUIRED_ENV`），生产关键变量未校验。~~
 
-**目标：**
-- 配置 Prisma `connection_limit` 和连接超时
-- 通过 `DATABASE_URL` 参数设置 `connect_timeout` 和 `pool_timeout`
-- 为应用层添加默认查询超时（10s）
-
-**复杂度：** 普通
+**已完成：**
+- 创建 `lib/env-schema.ts` — Zod schema 定义 50+ 环境变量（`boolStr`、`positiveInt`、`optStr` 三种转换器）
+- 三级校验策略：必需 / 条件必需 / 可选带默认值
+- `superRefine` 实现条件依赖校验（Stripe 全套、S3 凭证、SMTP 认证等）
+- 重写 `env-check.ts`：enforcement mode 硬失败 + dev mode 软警告
+- 幂等 guard（`_validated` flag）防止重复调用
 
 ---
 
-### P3-INFRA-4：更新 .env 模板文件 ⚡ 普通
+### P3-INFRA-3：Prisma 查询超时配置 ⚡ 普通 ✅ 已完成
 
-**现状：** `.env.production.example` 仅 3 个变量，`.env.staging.example` 仅 2 个变量，与实际运行所需严重不符。
+**现状：** ~~`db.ts` 中 PrismaClient 无查询超时设置，长时间查询可无限挂起。~~
 
-**目标：**
-- 将所有环境变量（含注释说明）同步到三个 .env 模板
-- 标注每个变量的必需性、默认值、用途
+**已完成：**
+- 添加 `PRISMA_QUERY_TIMEOUT_MS` 环境变量（默认 10,000ms）
+- 通过 `Promise.race` 实现应用层 per-query 超时（timeout timer 使用 `unref()` 避免阻止进程退出）
+- 超时与慢查询日志合并到统一的 `$extends` 回调，无多层 middleware 嵌套
+- 文档注释说明 Postgres-level 超时（`connect_timeout`、`pool_timeout`、`statement_timeout`）应通过 DATABASE_URL 参数配置
 
-**复杂度：** 普通
+---
+
+### P3-INFRA-4：更新 .env 模板文件 ⚡ 普通 ✅ 已完成
+
+**现状：** ~~`.env.production.example` 仅 6 个变量，`.env.staging.example` 仅 6 个变量。~~
+
+**已完成：**
+- `.env.production.example` — 完整 50+ 变量模板，按功能分区（Core/Database/Auth/Rate Limit/Redis/WS/Notifications/Stripe/S3/SMTP/Queues/Misc）
+- `.env.staging.example` — staging 专用模板（启用 PRISMA_LOG_QUERIES、放宽 PRISMA_SLOW_QUERY_MS 至 100ms）
+- 每个变量标注必需性级别（🔴 REQUIRED / 🟡 RECOMMENDED / ⚪ OPTIONAL）
+- 注释说明用途、默认值、关联依赖
 
 ---
 
@@ -319,10 +316,10 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 | P2-UX-3 | fetch 超时与中止 | 🟡 P2 | 前端体验 | 普通 | ✅ 已完成 |
 | P2-UX-4 | 无障碍属性补全 | 🟡 P2 | 前端体验 | 普通 | ✅ 已完成 |
 | P2-UX-5 | AuthContext 拆分 | 🟡 P2 | 前端架构 | 复杂 | ✅ 已完成 |
-| P3-INFRA-1 | CI/CD 流水线 | 🟢 P3 | 基建 | 复杂 | — |
-| P3-INFRA-2 | 环境变量校验完善 | 🟢 P3 | 基建 | 普通 | — |
-| P3-INFRA-3 | Prisma 查询超时 | 🟢 P3 | 基建 | 普通 | — |
-| P3-INFRA-4 | .env 模板更新 | 🟢 P3 | 基建 | 普通 | P3-INFRA-2 |
+| P3-INFRA-1 | CI/CD 流水线 | 🟢 P3 | 基建 | 复杂 | ✅ 已完成 |
+| P3-INFRA-2 | 环境变量校验完善 | 🟢 P3 | 基建 | 普通 | ✅ 已完成 |
+| P3-INFRA-3 | Prisma 查询超时 | 🟢 P3 | 基建 | 普通 | ✅ 已完成 |
+| P3-INFRA-4 | .env 模板更新 | 🟢 P3 | 基建 | 普通 | ✅ 已完成 |
 
 ---
 
