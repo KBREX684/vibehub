@@ -136,8 +136,10 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS "Post_searchVector_idx" ON "Post" USING GIN ("searchVector");
 
--- Immutable wrapper for array_to_string (the built-in is STABLE, which blocks
--- GENERATED ALWAYS columns).
+-- Immutable wrapper for array_to_string.  The built-in is classified STABLE
+-- (it accepts any element type, so PG can't guarantee immutability in general),
+-- but for text[] with a text separator the result is fully deterministic.
+-- Declaring IMMUTABLE here is safe and required for GENERATED ALWAYS columns.
 CREATE OR REPLACE FUNCTION immutable_array_to_string(arr text[], sep text)
   RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
   $fn$ SELECT array_to_string(arr, sep) $fn$;
@@ -151,7 +153,7 @@ DO $$ BEGIN
       GENERATED ALWAYS AS (
         to_tsvector(
           'english'::regconfig,
-          coalesce(slug, '') || ' ' || coalesce(headline, '') || ' ' || coalesce(bio, '') || ' ' || coalesce(immutable_array_to_string(skills, ' '), '')
+          coalesce(slug, '') || ' ' || coalesce(headline, '') || ' ' || coalesce(bio, '') || ' ' || immutable_array_to_string(skills, ' ')
         )
       ) STORED;
   END IF;
