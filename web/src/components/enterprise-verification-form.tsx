@@ -110,8 +110,7 @@ export function EnterpriseVerificationForm({
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {
-        const message =
-          payload?.error?.message || payload?.error?.code || "Failed to submit enterprise workspace request";
+        const message = payload?.error?.message || payload?.error?.code || "Failed to submit enterprise verification request";
         throw new Error(message);
       }
       const next = payload.data as EnterpriseVerificationSummary;
@@ -124,7 +123,7 @@ export function EnterpriseVerificationForm({
       });
       setOkMessage(
         next.status === "approved"
-          ? "Approved. You can access the observer workspace now."
+          ? "Approved. Your enterprise badge is now active."
           : "Submitted successfully. Your request is pending review."
       );
     } catch (submitError) {

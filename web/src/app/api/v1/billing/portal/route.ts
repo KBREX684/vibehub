@@ -7,7 +7,8 @@ import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { getRequestLogger, serializeError } from "@/lib/logger";
-import { getDefaultStripeProvider } from "@/lib/billing/payment-provider";
+import { getPaymentProvider } from "@/lib/billing/payment-provider";
+import { getUserSubscription } from "@/lib/repositories/billing.repository";
 
 const useMockData = isMockDataEnabled();
 
@@ -21,17 +22,6 @@ export async function POST(request: NextRequest) {
   if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
 
-  const provider = getDefaultStripeProvider();
-  if (!provider) {
-    if (useMockData) {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-      return apiSuccess({
-        url: `${baseUrl}/settings/subscription?portal=mock`,
-      });
-    }
-    return apiError({ code: "STRIPE_NOT_CONFIGURED", message: "Stripe is not configured" }, 503);
-  }
-
   try {
     const parsed = await readJsonObjectBodyOrEmpty(request);
     if (!parsed.ok) return parsed.response;
@@ -40,10 +30,23 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
     const returnUrl = zod.data.returnUrl ?? `${baseUrl}/settings/subscription`;
+    const subscription = await getUserSubscription(auth.user.userId);
+    const provider = getPaymentProvider(subscription.paymentProvider ?? "stripe");
+
+    if (subscription.paymentProvider !== "stripe") {
+      const session = await provider.createPortalSession("manual", returnUrl);
+      return apiSuccess({ url: session.url, paymentProvider: subscription.paymentProvider ?? "stripe" });
+    }
 
     const { prisma } = await import("@/lib/db");
     const user = await prisma.user.findUnique({ where: { id: auth.user.userId }, select: { stripeCustomerId: true } });
     if (!user?.stripeCustomerId) {
+      if (useMockData) {
+        return apiSuccess({
+          url: `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}portal=mock`,
+          paymentProvider: "stripe",
+        });
+      }
       return apiError({ code: "NO_STRIPE_CUSTOMER", message: "No billing account found. Please subscribe first." }, 404);
     }
 

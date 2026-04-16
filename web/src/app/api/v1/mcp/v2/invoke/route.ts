@@ -4,6 +4,7 @@ import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { hasEnterpriseWorkspaceAccess } from "@/lib/enterprise-access";
 import { clientIp } from "@/lib/api-key-rate-limit";
+import { checkAgentActionRateLimit } from "@/lib/agent-action-rate-limit";
 import { assertContentSafeText } from "@/lib/content-safety";
 import { checkMcpUserToolRateLimit } from "@/lib/mcp-user-write-rate-limit";
 import { checkQuota } from "@/lib/quota";
@@ -21,6 +22,7 @@ import {
   createPost,
   createProject,
   createTeamTask,
+  agentCompleteTeamTask,
   getEnterpriseWorkspaceSummary,
   getPostBySlug,
   getProjectBySlug,
@@ -31,13 +33,18 @@ import {
   listCreators,
   listPosts,
   listProjects,
+  listTeamMilestones,
+  listTeamTasks,
   listTeams,
   logMcpInvoke,
+  requestAgentTaskDelete,
+  requestAgentTaskReview,
+  requestAgentTeamMemberRoleChange,
   requestTeamJoin,
   submitCollaborationIntent,
   tryRegisterMcpInvokeIdempotency,
 } from "@/lib/repository";
-import type { CollaborationIntentType, ProjectStatus } from "@/lib/types";
+import type { CollaborationIntentType, ProjectStatus, TeamRole } from "@/lib/types";
 
 const bodySchema = z.object({
   tool: z.enum(MCP_V2_TOOL_NAMES),
@@ -99,6 +106,7 @@ httpStatus = 400;
   const session = gate.user!;
   userId = session.userId;
   const apiKeyId = session.apiKeyId;
+  const agentBindingId = session.agentBindingId;
 
   const rlUser = checkMcpUserToolRateLimit(userId, tool);
   if (!rlUser.ok) {
@@ -108,6 +116,7 @@ httpStatus = 400;
       tool,
       userId,
       apiKeyId,
+      agentBindingId,
       httpStatus,
       clientIp: ip,
       userAgent: ua,
@@ -125,6 +134,34 @@ httpStatus = 400;
     );
   }
 
+  if (agentBindingId && isMcpWriteTool(tool as McpV2ToolName)) {
+    const agentRl = checkAgentActionRateLimit(agentBindingId, tool);
+    if (!agentRl.ok) {
+      httpStatus = 429;
+      errorCode = "AGENT_ACTION_RATE_LIMITED";
+      await logMcpInvoke({
+        tool,
+        userId,
+        apiKeyId,
+        agentBindingId,
+        httpStatus,
+        clientIp: ip,
+        userAgent: ua,
+        errorCode,
+        durationMs: Date.now() - started,
+      });
+      return apiError(
+        {
+          code: "AGENT_ACTION_RATE_LIMITED",
+          message: "This agent is issuing too many write actions; slow down.",
+          details: { retryAfterSeconds: agentRl.retryAfter },
+        },
+        429,
+        { "Retry-After": String(agentRl.retryAfter) }
+      );
+    }
+  }
+
   if (idempotencyKey && isMcpWriteTool(tool as McpV2ToolName)) {
     const first = await tryRegisterMcpInvokeIdempotency({ userId, tool, key: idempotencyKey });
     if (!first) {
@@ -134,6 +171,7 @@ httpStatus = 400;
         tool,
         userId,
         apiKeyId,
+        agentBindingId,
         httpStatus,
         clientIp: ip,
         userAgent: ua,
@@ -156,7 +194,7 @@ httpStatus = 400;
   ) {
     httpStatus = 403;
     errorCode = "ENTERPRISE_ACCESS_DENIED";
-    await logMcpInvoke({ tool, userId, apiKeyId, httpStatus, clientIp: ip, userAgent: ua, errorCode, durationMs: Date.now() - started });
+    await logMcpInvoke({ tool, userId, apiKeyId, agentBindingId, httpStatus, clientIp: ip, userAgent: ua, errorCode, durationMs: Date.now() - started });
     return apiError(
       {
         code: "ENTERPRISE_ACCESS_DENIED",
@@ -171,7 +209,7 @@ httpStatus = 400;
     if (!allowApiKeyScope(session, required)) {
       httpStatus = 403;
       errorCode = "SCOPE_DENIED";
-      await logMcpInvoke({ tool, userId, apiKeyId, httpStatus, clientIp: ip, userAgent: ua, errorCode, durationMs: Date.now() - started });
+      await logMcpInvoke({ tool, userId, apiKeyId, agentBindingId, httpStatus, clientIp: ip, userAgent: ua, errorCode, durationMs: Date.now() - started });
       return apiError({ code: "SCOPE_DENIED", message: `API key missing required scope: ${required}` }, 403);
     }
   }
@@ -179,7 +217,7 @@ httpStatus = 400;
   async function log(status: number, err?: string) {
     httpStatus = status;
     if (err) errorCode = err;
-    await logMcpInvoke({ tool, userId, apiKeyId, httpStatus, clientIp: ip, userAgent: ua, errorCode: err ?? null, durationMs: Date.now() - started });
+    await logMcpInvoke({ tool, userId, apiKeyId, agentBindingId, httpStatus, clientIp: ip, userAgent: ua, errorCode: err ?? null, durationMs: Date.now() - started });
   }
 
   try {
@@ -453,6 +491,126 @@ const msg = e instanceof Error ? e.message : String(e);
         }
       }
 
+      case "list_team_tasks": {
+        const teamSlug = str(input.teamSlug) ?? "";
+        if (!teamSlug) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug required" }, 400);
+        }
+        const tasks = await listTeamTasks({ teamSlug, viewerUserId: session.userId });
+        await log(200);
+        return apiSuccess({ tool, input, output: { tasks } });
+      }
+
+      case "list_team_milestones": {
+        const teamSlug = str(input.teamSlug) ?? "";
+        if (!teamSlug) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug required" }, 400);
+        }
+        const milestones = await listTeamMilestones({ teamSlug, viewerUserId: session.userId });
+        await log(200);
+        return apiSuccess({ tool, input, output: { milestones } });
+      }
+
+      case "agent_complete_team_task": {
+        if (!agentBindingId) {
+          await log(403, "AGENT_BINDING_REQUIRED");
+          return apiError({ code: "AGENT_BINDING_REQUIRED", message: "This tool requires an API key linked to an active agent binding." }, 403);
+        }
+        const teamSlug = str(input.teamSlug) ?? "";
+        const taskId = str(input.taskId) ?? "";
+        if (!teamSlug || !taskId) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug and taskId required" }, 400);
+        }
+        const task = await agentCompleteTeamTask({
+          teamSlug,
+          taskId,
+          actorUserId: session.userId,
+          agentBindingId,
+          apiKeyId,
+        });
+        await log(200);
+        return apiSuccess({ tool, input, output: task });
+      }
+
+      case "agent_submit_task_review": {
+        if (!agentBindingId) {
+          await log(403, "AGENT_BINDING_REQUIRED");
+          return apiError({ code: "AGENT_BINDING_REQUIRED", message: "This tool requires an API key linked to an active agent binding." }, 403);
+        }
+        const teamSlug = str(input.teamSlug) ?? "";
+        const taskId = str(input.taskId) ?? "";
+        const decision = str(input.decision);
+        const reviewNote = str(input.reviewNote);
+        if (!teamSlug || !taskId || (decision !== "approve" && decision !== "reject")) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug, taskId, decision=approve|reject required" }, 400);
+        }
+        const requestItem = await requestAgentTaskReview({
+          teamSlug,
+          taskId,
+          actorUserId: session.userId,
+          agentBindingId,
+          apiKeyId,
+          approved: decision === "approve",
+          reviewNote,
+        });
+        await log(202);
+        return apiSuccess({ tool, input, output: { confirmationRequired: true, request: requestItem } }, 202);
+      }
+
+      case "request_team_task_delete": {
+        if (!agentBindingId) {
+          await log(403, "AGENT_BINDING_REQUIRED");
+          return apiError({ code: "AGENT_BINDING_REQUIRED", message: "This tool requires an API key linked to an active agent binding." }, 403);
+        }
+        const teamSlug = str(input.teamSlug) ?? "";
+        const taskId = str(input.taskId) ?? "";
+        const reason = str(input.reason);
+        if (!teamSlug || !taskId) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug and taskId required" }, 400);
+        }
+        const requestItem = await requestAgentTaskDelete({
+          teamSlug,
+          taskId,
+          actorUserId: session.userId,
+          agentBindingId,
+          apiKeyId,
+          reason,
+        });
+        await log(202);
+        return apiSuccess({ tool, input, output: { confirmationRequired: true, request: requestItem } }, 202);
+      }
+
+      case "request_team_member_role_change": {
+        if (!agentBindingId) {
+          await log(403, "AGENT_BINDING_REQUIRED");
+          return apiError({ code: "AGENT_BINDING_REQUIRED", message: "This tool requires an API key linked to an active agent binding." }, 403);
+        }
+        const teamSlug = str(input.teamSlug) ?? "";
+        const memberUserId = str(input.memberUserId) ?? "";
+        const role = str(input.role);
+        const reason = str(input.reason);
+        if (!teamSlug || !memberUserId || (role !== "admin" && role !== "member" && role !== "reviewer")) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug, memberUserId, role=admin|member|reviewer required" }, 400);
+        }
+        const requestItem = await requestAgentTeamMemberRoleChange({
+          teamSlug,
+          memberUserId,
+          nextRole: role as TeamRole,
+          actorUserId: session.userId,
+          agentBindingId,
+          apiKeyId,
+          reason,
+        });
+        await log(202);
+        return apiSuccess({ tool, input, output: { confirmationRequired: true, request: requestItem } }, 202);
+      }
+
       default: {
         await log(400, "UNKNOWN_TOOL");
         return assertNeverTool(tool);
@@ -461,6 +619,26 @@ const msg = e instanceof Error ? e.message : String(e);
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg === "TEAM_NOT_FOUND" || msg === "TEAM_TASK_NOT_FOUND") {
+      await log(404, msg);
+      return apiError({ code: msg, message: msg === "TEAM_NOT_FOUND" ? "Team not found" : "Team task not found" }, 404);
+    }
+    if (
+      msg === "AGENT_BINDING_INACTIVE" ||
+      msg === "FORBIDDEN_TASK_REVIEW" ||
+      msg === "FORBIDDEN_TASK_DELETE" ||
+      msg === "FORBIDDEN_NOT_OWNER" ||
+      msg === "FORBIDDEN_AGENT_CONFIRMATION" ||
+      msg === "FORBIDDEN_NOT_TEAM_MEMBER"
+    ) {
+      await log(403, msg);
+      return apiError({ code: "FORBIDDEN", message: msg }, 403);
+    }
+    if (msg === "TEAM_TASK_NOT_IN_REVIEW" || msg === "AGENT_CONFIRMATION_NOT_PENDING") {
+      await log(409, msg);
+      return apiError({ code: msg, message: msg }, 409);
+    }
 await log(500, "MCP_V2_INVOKE_FAILED");
     const err = error instanceof Error ? error : new Error(String(error));
     const details =

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { TIER_LIMITS, TIER_PRICING } from "@/lib/subscription";
 import type { SubscriptionTier } from "@/lib/subscription";
+import type { PaymentProviderKind } from "@/lib/types";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
 
@@ -31,13 +32,13 @@ const FEATURE_ROWS: FeatureRow[] = [
 ];
 
 export function PricingCards() {
-  async function startCheckout(tier: SubscriptionTier) {
-    const toastId = toast.loading("Preparing checkout…");
+  async function startCheckout(tier: SubscriptionTier, paymentProvider: PaymentProviderKind = "stripe") {
+    const toastId = toast.loading(`Preparing ${paymentProvider} checkout...`);
     try {
       const res = await apiFetch("/api/v1/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, paymentProvider }),
       });
       const json = (await res.json()) as { data?: { url?: string }; error?: { message?: string } };
       if (json.data?.url) {
@@ -104,18 +105,34 @@ export function PricingCards() {
 
                 {tier === "free" ? (
                   <Link
-                    href="/api/v1/auth/github?redirect=/"
+                    href="/signup"
                     className="w-full py-3 border border-[var(--color-border-strong)] text-center font-mono text-sm uppercase tracking-wider hover:bg-[var(--color-bg-surface-hover)] transition-colors mt-auto"
                   >
                     Get Started Free
                   </Link>
                 ) : (
-                  <button
-                    className="w-full py-3 bg-[var(--color-text-inverse)] text-[var(--color-primary)] border border-[var(--color-text-inverse)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity mt-auto"
-                    onClick={() => void startCheckout(tier)}
-                  >
-                    Upgrade to Pro
-                  </button>
+                  <div className="mt-auto space-y-3">
+                    <button
+                      className="w-full py-3 bg-[var(--color-text-inverse)] text-[var(--color-primary)] border border-[var(--color-text-inverse)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity"
+                      onClick={() => void startCheckout(tier, "stripe")}
+                    >
+                      Upgrade with Stripe
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-white/10 transition-colors"
+                        onClick={() => void startCheckout(tier, "alipay")}
+                      >
+                        Alipay sandbox
+                      </button>
+                      <button
+                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-white/10 transition-colors"
+                        onClick={() => void startCheckout(tier, "wechatpay")}
+                      >
+                        WeChat sandbox
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

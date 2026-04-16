@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/repository";
+import { listBillingRecordsForUser } from "@/lib/repositories/billing.repository";
 import { getLimits, TIER_PRICING } from "@/lib/subscription";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
@@ -13,10 +14,13 @@ export async function GET(request: NextRequest) {
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
 
   try {
-    const subscription = await getUserSubscription(auth.user.userId);
+    const [subscription, billingRecords] = await Promise.all([
+      getUserSubscription(auth.user.userId),
+      listBillingRecordsForUser(auth.user.userId, 20),
+    ]);
     const limits = getLimits(subscription.tier);
     const pricing = TIER_PRICING[subscription.tier];
-    return apiSuccess({ subscription, limits, pricing });
+    return apiSuccess({ subscription, billingRecords, limits, pricing });
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;

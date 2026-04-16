@@ -64,9 +64,13 @@ describe("updateProject", () => {
       actorUserId: "u1",
       title: "Updated Title",
       status: "building",
+      repoUrl: "https://github.com/example/updatable-project",
+      websiteUrl: "https://updatable-project.example.com",
     });
     expect(updated.title).toBe("Updated Title");
     expect(updated.status).toBe("building");
+    expect(updated.repoUrl).toBe("https://github.com/example/updatable-project");
+    expect(updated.websiteUrl).toBe("https://updatable-project.example.com");
   });
 
   it("non-creator cannot update", async () => {

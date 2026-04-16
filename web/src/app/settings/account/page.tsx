@@ -15,17 +15,20 @@ export default async function AccountSettingsPage() {
 
   let email: string | null = null;
   let githubLinked = false;
+  let hasPassword = false;
   if (isMockDataEnabled()) {
     const u = mockUsers.find((x) => x.id === session.userId);
     email = u?.email ?? null;
     githubLinked = u?.githubId != null;
+    hasPassword = Boolean(u?.passwordHash);
   } else {
     const row = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { email: true, githubId: true },
+      select: { email: true, githubId: true, passwordHash: true },
     });
     email = row?.email ?? null;
     githubLinked = row?.githubId != null;
+    hasPassword = Boolean(row?.passwordHash);
   }
 
   return (
@@ -43,7 +46,7 @@ export default async function AccountSettingsPage() {
         </p>
       </div>
       <div className="card p-6">
-        <SettingsAccountPanel email={email} githubLinked={githubLinked} />
+        <SettingsAccountPanel email={email} githubLinked={githubLinked} hasPassword={hasPassword} />
       </div>
     </main>
   );

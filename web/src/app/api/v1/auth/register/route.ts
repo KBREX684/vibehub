@@ -3,8 +3,9 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { readJsonObjectBody } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { registerUserWithEmailPassword } from "@/lib/repository";
-import { sendTransactionalEmail } from "@/lib/mail";
+import { isTransactionalEmailConfigured, sendTransactionalEmail } from "@/lib/mail";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { isProductionLikeEnv } from "@/lib/env-check";
 
 const bodySchema = z
   .object({
@@ -17,6 +18,12 @@ const bodySchema = z
 
 export async function POST(request: Request) {
   const log = getRequestLogger(request, { route: "/api/v1/auth/register" });
+  if (isProductionLikeEnv() && !isTransactionalEmailConfigured()) {
+    return apiError(
+      { code: "EMAIL_NOT_CONFIGURED", message: "Email delivery is not configured on this server" },
+      503
+    );
+  }
   const parsed = await readJsonObjectBody(request);
   if (!parsed.ok) return parsed.response;
   const zod = bodySchema.safeParse(parsed.body);
@@ -27,11 +34,17 @@ export async function POST(request: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || new URL(request.url).origin;
     const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`;
 
-    await sendTransactionalEmail({
+    const emailResult = await sendTransactionalEmail({
       to: zod.data.email,
       subject: "Verify your VibeHub account",
       text: `Welcome to VibeHub!\n\nPlease verify your email by opening this link:\n${verifyUrl}\n\nIf you did not sign up, you can ignore this message.`,
     });
+    if (isProductionLikeEnv() && !emailResult.sent) {
+      return apiError(
+        { code: "EMAIL_NOT_CONFIGURED", message: "Email delivery is not configured on this server" },
+        503
+      );
+    }
 
     const devFallback =
       process.env.NODE_ENV === "development" ? { verifyUrl } : {};

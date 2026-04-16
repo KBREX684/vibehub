@@ -9,7 +9,7 @@ import type { TeamTaskStatus } from "@/lib/types";
 const createSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
-  status: z.enum(["todo", "doing", "done"]).optional(),
+  status: z.enum(["todo", "doing", "review", "done", "rejected"]).optional(),
   assigneeUserId: z.string().min(1).optional(),
   sortOrder: z.number().int().optional(),
   milestoneId: z.union([z.string().min(1), z.null()]).optional(),

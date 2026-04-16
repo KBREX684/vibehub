@@ -71,8 +71,10 @@ function mockTeamMemberRows(teamId: string): TeamMember[] {
       };
     })
     .sort((a, b) => {
-      if (a.role === "owner") return -1;
-      if (b.role === "owner") return 1;
+      const rank = (role: TeamMember["role"]) =>
+        role === "owner" ? 0 : role === "admin" ? 1 : role === "reviewer" ? 2 : 3;
+      const diff = rank(a.role) - rank(b.role);
+      if (diff !== 0) return diff;
       return a.joinedAt.localeCompare(b.joinedAt);
     });
 }
@@ -213,14 +215,16 @@ export async function getTeamBySlug(
       teamProjects,
     };
     if (viewerUserId) {
-      const isMember = members.some((m) => m.userId === viewerUserId);
+      const viewerMembership = members.find((m) => m.userId === viewerUserId);
+      const isMember = Boolean(viewerMembership);
+      if (viewerMembership) detail.viewerRole = viewerMembership.role;
       if (!isMember) {
         const pend = mockTeamJoinRequests.find(
           (r) => r.teamId === team.id && r.applicantId === viewerUserId && r.status === "pending"
         );
         if (pend) detail.viewerPendingJoinRequest = true;
       }
-      if (team.ownerUserId === viewerUserId) {
+      if (viewerMembership?.role === "owner" || viewerMembership?.role === "admin") {
         detail.pendingJoinRequests = mockTeamJoinRequests
           .filter((r) => r.teamId === team.id && r.status === "pending")
           .map(toTeamJoinRequestRowMock);
@@ -252,12 +256,14 @@ export async function getTeamBySlug(
       userId: m.user.id,
       name: m.user.name,
       email: m.user.email,
-      role: (m.role === "owner" ? "owner" : "member") as "owner" | "member",
+      role: m.role as TeamMember["role"],
       joinedAt: m.joinedAt.toISOString(),
     }))
     .sort((a, b) => {
-      if (a.role === "owner") return -1;
-      if (b.role === "owner") return 1;
+      const rank = (role: TeamMember["role"]) =>
+        role === "owner" ? 0 : role === "admin" ? 1 : role === "reviewer" ? 2 : 3;
+      const diff = rank(a.role) - rank(b.role);
+      if (diff !== 0) return diff;
       return a.joinedAt.localeCompare(b.joinedAt);
     });
 
@@ -268,14 +274,16 @@ export async function getTeamBySlug(
   };
 
   if (viewerUserId) {
-    const isMember = members.some((m) => m.userId === viewerUserId);
+    const viewerMembership = members.find((m) => m.userId === viewerUserId);
+    const isMember = Boolean(viewerMembership);
+    if (viewerMembership) detail.viewerRole = viewerMembership.role;
     if (!isMember) {
       const pend = await prisma.teamJoinRequest.findFirst({
         where: { teamId: team.id, applicantId: viewerUserId, status: "pending" },
       });
       if (pend) detail.viewerPendingJoinRequest = true;
     }
-    if (team.ownerUserId === viewerUserId) {
+    if (viewerMembership?.role === "owner" || viewerMembership?.role === "admin") {
       const rows = await prisma.teamJoinRequest.findMany({
         where: { teamId: team.id, status: "pending" },
         include: { applicant: { select: { id: true, name: true, email: true } } },

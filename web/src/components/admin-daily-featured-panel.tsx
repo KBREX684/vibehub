@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { Project } from "@/lib/types";
+import type { AdminAiInsight, Project } from "@/lib/types";
 import { Sparkles, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
 
 interface Props {
-  candidates: Project[];
+  candidates: Array<Project & { adminAi?: AdminAiInsight }>;
   featured: Project[];
 }
 
@@ -121,17 +121,32 @@ export function AdminDailyFeaturedPanel({ candidates, featured }: Props) {
 
       <div>
         <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">Quick pick</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-2">
           {candidates.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className="btn btn-secondary text-xs px-2 py-1"
-              disabled={busy}
-              onClick={() => setSlug(p.slug)}
-            >
-              {p.slug}
-            </button>
+            <div key={p.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{p.title}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] m-0 mt-1">/{p.slug}</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary text-xs px-2 py-1"
+                  disabled={busy}
+                  onClick={() => setSlug(p.slug)}
+                >
+                  Pick
+                </button>
+              </div>
+              {p.adminAi ? (
+                <div className="mt-3 text-xs text-[var(--color-text-secondary)] space-y-1">
+                  <p className="m-0">{p.adminAi.suggestion}</p>
+                  <p className="m-0">
+                    Queue: {p.adminAi.queue ?? "featured-curation"} · Priority: {p.adminAi.priority ?? "normal"} · Risk: {p.adminAi.riskLevel}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           ))}
         </div>
       </div>

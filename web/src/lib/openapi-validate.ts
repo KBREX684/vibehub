@@ -40,6 +40,8 @@ export const REQUIRED_OPENAPI_PATHS = [
   "/api/v1/enterprise/talent-radar",
   "/api/v1/enterprise/due-diligence/{slug}",
   "/api/v1/reports/ecosystem",
+  "/api/v1/reports",
+  "/api/v1/admin/reports/{reportId}/resolve",
 ] as const;
 
 /**

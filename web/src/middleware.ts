@@ -11,6 +11,10 @@ function isAdminPath(pathname: string): boolean {
   return pathname.startsWith("/admin");
 }
 
+function isLoginProtectedPage(pathname: string): boolean {
+  return pathname === "/notifications" || pathname.startsWith("/notifications/");
+}
+
 // ─── CSRF protection ─────────────────────────────────────────────────────────
 // Routes exempt from CSRF checks: the CSRF token endpoint itself, auth
 // callbacks (server-to-server redirects), Stripe webhook (verified by
@@ -118,6 +122,16 @@ export async function middleware(request: NextRequest) {
     }
     if (session.role !== "admin") {
       return withRequestId(NextResponse.redirect(new URL("/", request.url)));
+    }
+  }
+
+  if (isLoginProtectedPage(nextUrl.pathname)) {
+    const raw = request.cookies.get("vibehub_session")?.value;
+    const session = raw ? await decodeSessionEdge(raw) : null;
+    if (!session) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", nextUrl.pathname);
+      return withRequestId(NextResponse.redirect(loginUrl));
     }
   }
 
@@ -231,5 +245,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/admin/:path*", "/admin"],
+  matcher: ["/api/:path*", "/admin/:path*", "/admin", "/notifications", "/notifications/:path*"],
 };

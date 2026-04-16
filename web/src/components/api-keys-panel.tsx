@@ -9,10 +9,10 @@ import {
   API_KEY_SCOPES,
   DEFAULT_API_KEY_SCOPES,
 } from "@/lib/api-key-scopes";
-import type { ApiKeyCreated, ApiKeySummary } from "@/lib/types";
+import type { AgentBindingSummary, ApiKeyCreated, ApiKeySummary } from "@/lib/types";
 import type { UpgradeReason } from "@/lib/subscription";
 import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
-import { Key, Plus, Trash2, Copy, CheckCircle2, AlertCircle, Clock, Shield, Sparkles } from "lucide-react";
+import { Key, Plus, Trash2, Copy, CheckCircle2, AlertCircle, Clock, Shield, Sparkles, Bot } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
 
 const OPTIONAL_SCOPES = API_KEY_SCOPES.filter((s) => s !== API_KEY_SCOPE_READ_PUBLIC);
@@ -23,10 +23,12 @@ interface Props {
 
 export function ApiKeysPanel({ currentUserId }: Props) {
   const [keys, setKeys] = useState<ApiKeySummary[]>([]);
+  const [agentBindings, setAgentBindings] = useState<AgentBindingSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | undefined>(undefined);
   const [newLabel, setNewLabel] = useState("");
+  const [selectedAgentBindingId, setSelectedAgentBindingId] = useState("");
   const [lastSecret, setLastSecret] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(() => {
@@ -43,14 +45,24 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     setLoading(true);
     setMsg(null);
     try {
-      const res = await apiFetch("/api/v1/me/api-keys", { credentials: "include" });
-      const json = (await res.json()) as { data?: { keys?: ApiKeySummary[] }; error?: { message?: string } };
-      if (!res.ok) {
-        setMsg(json.error?.message ?? "Failed to load keys");
+      const [keysRes, bindingsRes] = await Promise.all([
+        apiFetch("/api/v1/me/api-keys", { credentials: "include" }),
+        apiFetch("/api/v1/me/agent-bindings", { credentials: "include" }),
+      ]);
+      const keysJson = (await keysRes.json()) as { data?: { keys?: ApiKeySummary[] }; error?: { message?: string } };
+      const bindingsJson = (await bindingsRes.json()) as { data?: { bindings?: AgentBindingSummary[] }; error?: { message?: string } };
+      if (!keysRes.ok) {
+        setMsg(keysJson.error?.message ?? "Failed to load keys");
         setKeys([]);
         return;
       }
-      setKeys(json.data?.keys ?? []);
+      if (!bindingsRes.ok) {
+        setMsg(bindingsJson.error?.message ?? "Failed to load agents");
+        setAgentBindings([]);
+      } else {
+        setAgentBindings(bindingsJson.data?.bindings ?? []);
+      }
+      setKeys(keysJson.data?.keys ?? []);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e));
     } finally {
@@ -78,6 +90,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         body: JSON.stringify({
           label: newLabel.trim(),
           scopes: [API_KEY_SCOPE_READ_PUBLIC, ...Array.from(selectedScopes)],
+          agentBindingId: selectedAgentBindingId || undefined,
         }),
       });
       const json = (await res.json()) as {
@@ -94,6 +107,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         setLastSecret(k.secret);
       }
       setNewLabel("");
+      setSelectedAgentBindingId("");
       await load();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : String(err));
@@ -193,6 +207,32 @@ export function ApiKeysPanel({ currentUserId }: Props) {
               placeholder="e.g., Production Agent, CI/CD Pipeline"
               className={inputClasses}
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)] flex items-center gap-2">
+              <Bot className="w-4 h-4" /> Linked Agent
+            </label>
+            <select
+              value={selectedAgentBindingId}
+              onChange={(event) => setSelectedAgentBindingId(event.target.value)}
+              className={inputClasses}
+            >
+              <option value="">No linked agent</option>
+              {agentBindings.map((binding) => (
+                <option key={binding.id} value={binding.id}>
+                  {binding.label} · {binding.agentType}
+                  {!binding.active ? " (paused)" : ""}
+                </option>
+              ))}
+            </select>
+            <p className="text-[0.8rem] text-[var(--color-text-secondary)] m-0">
+              Link the key to a named agent so MCP and API audits stay attributable. Manage agents in{" "}
+              <Link href="/settings/agents" className="underline hover:text-[var(--color-text-primary)]">
+                Settings
+              </Link>
+              .
+            </p>
           </div>
           
           <div className="flex flex-col gap-3">
@@ -350,6 +390,9 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                 
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.85rem] text-white/50 mb-4">
                   <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Created: {new Date(k.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                  {k.agentBinding ? (
+                    <span className="flex items-center gap-1.5"><Bot className="w-3.5 h-3.5" /> Agent: {k.agentBinding.label}</span>
+                  ) : null}
                   {k.lastUsedAt && !k.revokedAt && (
                     <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Last used: {new Date(k.lastUsedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                   )}

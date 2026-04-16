@@ -84,11 +84,11 @@ export async function GET(request: Request) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   if (error) {
-    return NextResponse.redirect(new URL(`/?error=oauth_${error}`, baseUrl));
+    return NextResponse.redirect(new URL(`/login?error=oauth_${error}`, baseUrl));
   }
 
   if (!code || !state || state !== savedState) {
-    return NextResponse.redirect(new URL("/?error=oauth_state_mismatch", baseUrl));
+    return NextResponse.redirect(new URL("/login?error=state_mismatch", baseUrl));
   }
 
   try {
@@ -118,8 +118,11 @@ export async function GET(request: Request) {
 
     return response;
   } catch (err) {
+    if (err instanceof Error && err.message === "EMAIL_SIGNUP_REQUIRED") {
+      return NextResponse.redirect(new URL("/signup?error=github_email_signup_required", baseUrl));
+    }
     requestLogger.error({ err: serializeError(err) }, "GitHub OAuth callback failed");
-    return NextResponse.redirect(new URL("/?error=oauth_failed", baseUrl));
+    return NextResponse.redirect(new URL("/login?error=oauth_failed", baseUrl));
   }
 }
 

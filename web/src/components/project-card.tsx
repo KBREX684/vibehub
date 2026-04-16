@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Star, GitFork, Zap, Users } from "lucide-react";
+import { Star, GitFork, Zap, Users, Flame } from "lucide-react";
 import type { Project } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -110,6 +110,22 @@ export function ProjectCard({
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] shrink-0">
+            {typeof project.activityScore === "number" && project.activityScore > 0 && (
+              <span className="flex items-center gap-1">
+                <Flame className="w-3 h-3" />
+                {Math.round(project.activityScore)}
+              </span>
+            )}
+            {typeof project.bookmarkCount === "number" && (
+              <span className="flex items-center gap-1">
+                <Star className="w-3 h-3" />
+                {project.bookmarkCount}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              {project.collaborationIntentCount ?? 0}
+            </span>
             <span className="flex items-center gap-1">
               <Star className="w-3 h-3" />
               {project.techStack?.length ?? 0}

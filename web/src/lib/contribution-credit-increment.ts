@@ -27,6 +27,9 @@ function bumpMockScore(userId: string, deltaScore: number, field: MockCreditBump
       commentsAuthored: 0,
       projectsCreated: 0,
       intentsApproved: 0,
+      postLikesReceived: 0,
+      projectBookmarksReceived: 0,
+      followerCount: 0,
       updatedAt: new Date().toISOString(),
     };
     mockContributionCredits.push(row);
@@ -68,6 +71,9 @@ async function prismaBump(
       commentsAuthored: field === "commentsAuthored" ? 1 : 0,
       projectsCreated: field === "projectsCreated" ? 1 : 0,
       intentsApproved: field === "intentsApproved" ? 1 : 0,
+      postLikesReceived: 0,
+      projectBookmarksReceived: 0,
+      followerCount: 0,
     },
     update: {
       score: { increment: deltaScore },

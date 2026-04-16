@@ -12,6 +12,19 @@ interface Props {
   viewerHasBookmarked?: boolean;
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 6000) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await apiFetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export function PostSocialActions({
   postSlug,
   likeCount: initialLikeCount,
@@ -23,19 +36,20 @@ export function PostSocialActions({
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const [bookmarkCount, setBookmarkCount] = useState(initialBookmarkCount);
-  const [loading, setLoading] = useState<"like" | "bookmark" | null>(null);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   async function toggleLike() {
-    if (loading) return;
+    if (likeLoading) return;
     const prevLiked = liked;
     const prevCount = likeCount;
     const nextLiked = !prevLiked;
     setLiked(nextLiked);
     setLikeCount((c) => (nextLiked ? c + 1 : Math.max(0, c - 1)));
-    setLoading("like");
+    setLikeLoading(true);
     try {
-      const res = await apiFetch(`/api/v1/posts/${postSlug}/like`, { method: "POST" });
+      const res = await fetchWithTimeout(`/api/v1/posts/${postSlug}/like`, { method: "POST" });
       if (!res.ok) {
         setLiked(prevLiked);
         setLikeCount(prevCount);
@@ -50,20 +64,20 @@ export function PostSocialActions({
       setLiked(prevLiked);
       setLikeCount(prevCount);
     } finally {
-      setLoading(null);
+      setLikeLoading(false);
     }
   }
 
   async function toggleBookmark() {
-    if (loading) return;
+    if (bookmarkLoading) return;
     const prevBookmarked = bookmarked;
     const prevCount = bookmarkCount;
     const nextBookmarked = !prevBookmarked;
     setBookmarked(nextBookmarked);
     setBookmarkCount((c) => (nextBookmarked ? c + 1 : Math.max(0, c - 1)));
-    setLoading("bookmark");
+    setBookmarkLoading(true);
     try {
-      const res = await apiFetch(`/api/v1/posts/${postSlug}/bookmark`, { method: "POST" });
+      const res = await fetchWithTimeout(`/api/v1/posts/${postSlug}/bookmark`, { method: "POST" });
       if (!res.ok) {
         setBookmarked(prevBookmarked);
         setBookmarkCount(prevCount);
@@ -78,7 +92,7 @@ export function PostSocialActions({
       setBookmarked(prevBookmarked);
       setBookmarkCount(prevCount);
     } finally {
-      setLoading(null);
+      setBookmarkLoading(false);
     }
   }
 
@@ -97,7 +111,6 @@ export function PostSocialActions({
       <button
         type="button"
         onClick={toggleLike}
-        disabled={loading === "like"}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all border ${
           liked
             ? "bg-[var(--color-warning-subtle)] text-[var(--color-warning)] border-[rgba(245,158,11,0.3)]"
@@ -105,6 +118,7 @@ export function PostSocialActions({
         } disabled:opacity-50`}
         aria-label={liked ? "Unlike" : "Like"}
         aria-pressed={liked}
+        aria-busy={likeLoading}
       >
         <Heart className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
         {likeCount > 0 && <span aria-hidden>{likeCount}</span>}
@@ -114,7 +128,6 @@ export function PostSocialActions({
       <button
         type="button"
         onClick={toggleBookmark}
-        disabled={loading === "bookmark"}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all border ${
           bookmarked
             ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-hover)] border-[rgba(99,102,241,0.3)]"
@@ -122,6 +135,7 @@ export function PostSocialActions({
         } disabled:opacity-50`}
         aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
         aria-pressed={bookmarked}
+        aria-busy={bookmarkLoading}
       >
         <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? "fill-current" : ""}`} />
         {bookmarkCount > 0 && <span aria-hidden>{bookmarkCount}</span>}

@@ -102,6 +102,8 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       { name: "reports", description: "Ecosystem reports" },
       { name: "subscription", description: "Subscription plans and billing-adjacent endpoints" },
       { name: "reputation", description: "Contribution credit and leaderboards" },
+      { name: "oauth", description: "OAuth application registration and authorization code flow" },
+      { name: "automation", description: "Event-driven workflow automation and external integrations" },
       { name: "admin", description: "Admin-only endpoints" },
       { name: "uploads", description: "Presigned object storage uploads" },
     ],
@@ -201,6 +203,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             { name: "tech", in: "query", schema: { type: "string" } },
             { name: "team", in: "query", schema: { type: "string" } },
             { name: "status", in: "query", schema: { type: "string", enum: ["idea", "building", "launched", "paused"] } },
+            { name: "sort", in: "query", schema: { type: "string", enum: ["latest", "hot", "featured", "recommended"] } },
             { name: "page", in: "query", schema: { type: "integer", default: 1 } },
             { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
           ],
@@ -240,6 +243,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           summary: "List creators (public mirror)",
           parameters: [
             { name: "query", in: "query", schema: { type: "string" } },
+            { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "recommended"] } },
             { name: "page", in: "query", schema: { type: "integer" } },
             { name: "limit", in: "query", schema: { type: "integer" } },
           ],
@@ -386,7 +390,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         get: {
           tags: ["enterprise"],
           summary:
-            "Project radar — trending projects (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
+            "Enterprise compatibility read: trending projects (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
           responses: {
@@ -402,7 +406,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         get: {
           tags: ["enterprise"],
           summary:
-            "Talent radar — top creators (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
+            "Enterprise compatibility read: top creators (session cookie, or Bearer key with read:public or read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "limit", in: "query", schema: { type: "integer", default: 20, maximum: 100 } }],
           responses: {
@@ -418,7 +422,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         get: {
           tags: ["enterprise"],
           summary:
-            "Project due diligence — team, intents, comment stats (session or Bearer read:public / read:enterprise:workspace)",
+            "Enterprise compatibility read: project due diligence summary (session or Bearer read:public / read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
           responses: {
@@ -434,13 +438,43 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/reports/ecosystem": {
         get: {
           tags: ["reports"],
-          summary: "Ecosystem report — aggregate metrics (session or Bearer read:public / read:enterprise:workspace)",
+          summary: "Ecosystem report — aggregate metrics (session or Bearer read:public / read:enterprise:workspace compatibility)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "period", in: "query", schema: { type: "string", default: "current" } }],
           responses: {
             "200": responses["200"],
             "401": responses["401"],
             "403": responses["403"],
+            "429": responses["429"],
+            "500": responses["500"],
+          },
+        },
+      },
+      "/api/v1/reports": {
+        post: {
+          tags: ["reports"],
+          summary: "Submit a content report for a discussion post (session cookie)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["postSlug", "reason"],
+                  properties: {
+                    postSlug: { type: "string", minLength: 1 },
+                    reason: { type: "string", minLength: 8, maxLength: 1000 },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "404": responses["404"],
             "429": responses["429"],
             "500": responses["500"],
           },
@@ -493,13 +527,15 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/me/subscription": {
         get: {
           tags: ["me"],
-          summary: "Get current user's active subscription (session cookie)",
+          summary: "Get current user's subscription, limits, pricing, and recent billing records (session cookie)",
           security: [{ SessionCookie: [] }],
           responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
         },
+      },
+      "/api/v1/billing/checkout": {
         post: {
-          tags: ["me"],
-          summary: "Subscribe to a plan (session cookie)",
+          tags: ["subscription"],
+          summary: "Create a checkout session for Stripe or China payment sandbox (session cookie)",
           security: [{ SessionCookie: [] }],
           requestBody: {
             required: true,
@@ -507,21 +543,62 @@ export function buildOpenApiDocument(): Record<string, unknown> {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["planTier"],
+                  required: ["tier"],
                   properties: {
-                    planTier: { type: "string", enum: ["free", "pro"] },
+                    tier: { type: "string", enum: ["pro"] },
+                    paymentProvider: { type: "string", enum: ["stripe", "alipay", "wechatpay"], default: "stripe" },
+                    successUrl: { type: "string", format: "uri" },
+                    cancelUrl: { type: "string", format: "uri" },
                   },
                 },
               },
             },
           },
-          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "503": responses["500"], "500": responses["500"] },
         },
-        delete: {
-          tags: ["me"],
-          summary: "Cancel active subscription (session cookie)",
+      },
+      "/api/v1/billing/portal": {
+        post: {
+          tags: ["subscription"],
+          summary: "Open Stripe billing portal or China payment manual management entry (session cookie)",
           security: [{ SessionCookie: [] }],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    returnUrl: { type: "string", format: "uri" },
+                  },
+                },
+              },
+            },
+          },
           responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/billing/sandbox/records/{recordId}": {
+        post: {
+          tags: ["subscription"],
+          summary: "Advance or refund a China payment sandbox billing record (session cookie, staging only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "recordId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["action"],
+                  properties: {
+                    action: { type: "string", enum: ["succeed", "fail", "cancel", "refund"] },
+                    failureReason: { type: "string", maxLength: 200 },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "409": responses["409"], "500": responses["500"] },
         },
       },
       "/api/v1/admin/posts/{postId}/feature": {
@@ -543,12 +620,12 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/posts": {
         get: {
           tags: ["posts"],
-          summary: "List discussion posts (public; sort=recent|hot|featured)",
+          summary: "List discussion posts (public; sort=recent|hot|featured|following|recommended)",
           parameters: [
             { name: "query", in: "query", schema: { type: "string" } },
             { name: "tag", in: "query", schema: { type: "string" } },
             { name: "authorId", in: "query", schema: { type: "string", description: "Filter by post author user id" } },
-            { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot", "featured"] } },
+            { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "hot", "featured", "following", "recommended"] } },
             { name: "page", in: "query", schema: { type: "integer", default: 1 } },
             { name: "limit", in: "query", schema: { type: "integer", default: 10 } },
             {
@@ -696,7 +773,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/projects": {
         get: {
           tags: ["projects"],
-          summary: "List projects (canonical; anonymous or session or scoped Bearer)",
+          summary: "List projects (canonical; anonymous or session or scoped Bearer; supports latest|hot|featured|recommended sort)",
           parameters: [
             { name: "query", in: "query", schema: { type: "string" } },
             { name: "tag", in: "query", schema: { type: "string" } },
@@ -704,6 +781,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             { name: "team", in: "query", schema: { type: "string" } },
             { name: "creatorId", in: "query", schema: { type: "string" } },
             { name: "status", in: "query", schema: { type: "string" } },
+            { name: "sort", in: "query", schema: { type: "string", enum: ["latest", "hot", "featured", "recommended"] } },
             { name: "page", in: "query", schema: { type: "integer" } },
             { name: "limit", in: "query", schema: { type: "integer" } },
             {
@@ -903,7 +981,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/teams/{slug}/links": {
         patch: {
           tags: ["teams"],
-          summary: "Update team external links (owner only; session cookie)",
+          summary: "Update team external links (owner/admin; session cookie)",
           security: [{ SessionCookie: [] }],
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
           requestBody: {
@@ -1007,6 +1085,101 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/teams/{slug}/discussions": {
+        get: {
+          tags: ["teams"],
+          summary: "List team discussions (member: session or Bearer read:team:detail)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "429": responses["429"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["teams"],
+          summary: "Create a structured team discussion (session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["title", "body"],
+                  properties: {
+                    title: { type: "string", minLength: 1, maxLength: 120 },
+                    body: { type: "string", minLength: 1, maxLength: 4000 },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/teams/{slug}/members": {
+        post: {
+          tags: ["teams"],
+          summary: "Add an existing user to the team by email with role member|reviewer|admin (owner/admin only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["email"],
+                  properties: {
+                    email: { type: "string", format: "email" },
+                    role: { type: "string", enum: ["member", "reviewer", "admin"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "409": responses["409"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/teams/{slug}/members/{userId}": {
+        patch: {
+          tags: ["teams"],
+          summary: "Update team member role to member|reviewer|admin (owner/admin only; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "userId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["role"],
+                  properties: {
+                    role: { type: "string", enum: ["member", "reviewer", "admin"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["teams"],
+          summary: "Remove a team member or leave the team (owner/admin or self; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "userId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
       "/api/v1/teams/{slug}/tasks": {
         get: {
           tags: ["teams"],
@@ -1038,7 +1211,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/teams/{slug}/tasks/batch": {
         patch: {
           tags: ["teams"],
-          summary: "Batch update task status (team owner only; session or Bearer write:team:tasks)",
+          summary: "Batch update task status (owner/admin/reviewer; session or Bearer write:team:tasks; agent-bound keys blocked)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
           requestBody: {
@@ -1050,7 +1223,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                   required: ["taskIds", "status"],
                   properties: {
                     taskIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 100 },
-                    status: { type: "string", enum: ["todo", "doing", "done"] },
+                    status: { type: "string", enum: ["todo", "doing", "review", "done", "rejected"] },
                   },
                 },
               },
@@ -1065,6 +1238,76 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "429": responses["429"],
             "500": responses["500"],
           },
+        },
+      },
+      "/api/v1/teams/{slug}/tasks/{taskId}": {
+        patch: {
+          tags: ["teams"],
+          summary: "Update task fields (creator/assignee/reviewer/admin/owner; agent-bound keys route task completion into review flow)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "429": responses["429"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["teams"],
+          summary: "Delete task (creator/admin/owner; agent-bound keys receive confirmation_required instead of direct deletion)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/teams/{slug}/tasks/{taskId}/comments": {
+        get: {
+          tags: ["teams"],
+          summary: "List task comments (member: session or Bearer read:team:tasks)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "429": responses["429"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["teams"],
+          summary: "Create task comment (team member; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["body"],
+                  properties: {
+                    body: { type: "string", minLength: 1, maxLength: 2000 },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/teams/{slug}/tasks/{taskId}/activity": {
+        get: {
+          tags: ["teams"],
+          summary: "List task-scoped activity entries (member: session or Bearer read:team:tasks)",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          parameters: [
+            { name: "slug", in: "path", required: true, schema: { type: "string" } },
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "429": responses["429"], "500": responses["500"] },
         },
       },
       "/api/v1/teams/{slug}/milestones": {
@@ -1167,7 +1410,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/me/enterprise/workspace": {
         get: {
           tags: ["me"],
-          summary: "Enterprise workspace summary (session or Bearer read:enterprise:workspace)",
+          summary: "Enterprise verification compatibility summary (session or Bearer read:enterprise:workspace)",
           security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
           responses: {
             "200": responses["200"],
@@ -1279,6 +1522,23 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/admin/reports/{reportId}/resolve": {
+        post: {
+          tags: ["admin"],
+          summary: "Close a report ticket (admin only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "reportId", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": responses["200"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "500": responses["500"],
+          },
+        },
+      },
       "/api/v1/me/api-keys": {
         get: {
           tags: ["me"],
@@ -1300,12 +1560,222 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                   properties: {
                     label: { type: "string", maxLength: 80 },
                     scopes: { type: "array", items: { type: "string" } },
+                    agentBindingId: { type: "string", description: "Optional named agent binding to attribute API/MCP usage" },
                   },
                 },
               },
             },
           },
           responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/agent-bindings": {
+        get: {
+          tags: ["me"],
+          summary: "List agent bindings for the current user (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["me"],
+          summary: "Create a named agent binding (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["label", "agentType"],
+                  properties: {
+                    label: { type: "string", maxLength: 80 },
+                    agentType: { type: "string", maxLength: 40, description: "Provider or runtime name, e.g. openai, cursor, claude-code" },
+                    description: { type: "string", maxLength: 280 },
+                    active: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/oauth-apps": {
+        get: {
+          tags: ["oauth"],
+          summary: "List OAuth apps registered by the current user (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["oauth"],
+          summary: "Create an OAuth app (session cookie; returns client secret once)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "redirectUris"],
+                  properties: {
+                    name: { type: "string", minLength: 2, maxLength: 80 },
+                    description: { type: "string", maxLength: 500 },
+                    redirectUris: { type: "array", items: { type: "string", format: "uri" } },
+                    scopes: { type: "array", items: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/oauth-apps/{appId}": {
+        patch: {
+          tags: ["oauth"],
+          summary: "Update an OAuth app (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "appId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["oauth"],
+          summary: "Delete an OAuth app (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "appId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/automations": {
+        get: {
+          tags: ["automation"],
+          summary: "List event-driven automations for the current user (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        post: {
+          tags: ["automation"],
+          summary: "Create an automation workflow (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          responses: { "201": responses["200"], "400": responses["400"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/automations/{workflowId}": {
+        patch: {
+          tags: ["automation"],
+          summary: "Update an automation workflow (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "workflowId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["automation"],
+          summary: "Delete an automation workflow (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "workflowId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/automation-runs": {
+        get: {
+          tags: ["automation"],
+          summary: "List recent automation runs for the current user (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/oauth/token": {
+        post: {
+          tags: ["oauth"],
+          summary: "Exchange authorization code for OAuth Bearer token",
+          responses: { "200": responses["200"], "400": responses["400"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/oauth/userinfo": {
+        get: {
+          tags: ["oauth"],
+          summary: "Return the user profile for a valid OAuth Bearer token",
+          security: [{ BearerApiKey: [] }, { SessionCookie: [] }],
+          responses: { "200": responses["200"], "401": responses["401"], "429": responses["429"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/agent-confirmations": {
+        get: {
+          tags: ["me"],
+          summary: "List pending or historical agent confirmation requests visible to the current user (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "status", in: "query", schema: { type: "string", enum: ["pending", "approved", "rejected", "canceled"] } },
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+        patch: {
+          tags: ["me"],
+          summary: "Approve or reject an agent confirmation request (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["requestId", "decision"],
+                  properties: {
+                    requestId: { type: "string" },
+                    decision: { type: "string", enum: ["approved", "rejected"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "409": responses["409"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/agent-audits": {
+        get: {
+          tags: ["me"],
+          summary: "List agent action audits for the current user (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/me/agent-bindings/{bindingId}": {
+        patch: {
+          tags: ["me"],
+          summary: "Update an existing agent binding (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "bindingId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    label: { type: "string", maxLength: 80 },
+                    agentType: { type: "string", maxLength: 40 },
+                    description: { type: "string", maxLength: 280, nullable: true },
+                    active: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+        delete: {
+          tags: ["me"],
+          summary: "Delete an agent binding and detach linked API keys (session cookie only)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "bindingId", in: "path", required: true, schema: { type: "string" } }],
+          responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
         },
       },
       "/api/v1/me/api-keys/{keyId}": {

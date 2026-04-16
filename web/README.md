@@ -1,8 +1,8 @@
 # VibeHub Web
 
 Next.js full-stack implementation for VibeHub's current product strategy:
-developer-first, small-team-first, Free + Pro, with enterprise capabilities
-kept as a secondary observer layer instead of the primary product narrative.
+developer-first, small-team-first, Free + Pro, with enterprise verification
+kept as a badge-only secondary capability instead of a separate workspace line.
 
 ## Current Product Scope
 
@@ -11,7 +11,7 @@ kept as a secondary observer layer instead of the primary product narrative.
 - Small-team collaboration: join requests, milestones, tasks, chat
 - Developer tooling: API keys, OpenAPI, MCP v2, public API mirrors
 - Pro subscription: quotas, billing checkout/portal, plan gating
-- Secondary radar workspace for approved enterprise observers
+- Enterprise verification badge and admin review workflow
 
 ## Quality Gate
 
@@ -186,7 +186,7 @@ Runs `lint + test + validate:openapi + build`.
 ## 7. PostgreSQL / Prisma
 
 Real database mode is the preferred verification path. Runtime selection uses
-the following order:
+the following order in local development:
 
 1. `USE_MOCK_DATA=true` → force mock mode
 2. `DATABASE_URL` present → use Prisma/PostgreSQL
@@ -216,7 +216,9 @@ USE_MOCK_DATA=true npm run dev
 
 Apply all pending migrations in `prisma/migrations/` (P2 adds collaboration intents, weekly snapshot tables, and prior admin schema).
 
-**Production / staging:** after setting `DATABASE_URL`, run `npx prisma migrate deploy` (same command CI uses) before starting the app; avoid `migrate dev` on shared databases.
+**Production / staging:** mock data is not allowed. Set `DATABASE_URL` and
+`SESSION_SECRET`, run `npx prisma migrate deploy` (same command CI uses), then
+start the app. Avoid `migrate dev` on shared databases.
 
 ## 8. Self-Hosted Deployment
 

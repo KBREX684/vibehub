@@ -6,6 +6,7 @@ import { addTeamMemberByEmail } from "@/lib/repository";
 
 const bodySchema = z.object({
   email: z.string().email(),
+  role: z.enum(["admin", "member", "reviewer"]).optional(),
 });
 
 interface Params {
@@ -26,6 +27,7 @@ export async function POST(request: Request, { params }: Params) {
       teamSlug: slug,
       actorUserId: session.userId,
       email: parsed.email,
+      role: parsed.role,
     });
     return apiSuccess(member, 201);
   } catch (error) {
@@ -46,7 +48,7 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }
     if (msg === "FORBIDDEN_NOT_OWNER") {
-      return apiError({ code: "FORBIDDEN", message: "Only the team owner can add members by email" }, 403);
+      return apiError({ code: "FORBIDDEN", message: "Only team owners or admins can add members by email" }, 403);
     }
     if (msg === "USER_NOT_FOUND") {
       return apiError({ code: "USER_NOT_FOUND", message: "No user with that email" }, 404);

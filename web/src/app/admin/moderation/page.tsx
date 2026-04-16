@@ -1,6 +1,7 @@
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listPostsForModeration } from "@/lib/repository";
 import { AdminReviewActions } from "@/components/admin-review-actions";
+import { getOrCreatePostReviewAi } from "@/lib/admin-ai";
 import { FileText } from "lucide-react";
 
 export default async function AdminModerationPage() {
@@ -8,7 +9,19 @@ export default async function AdminModerationPage() {
   if (!session) return null;
 
   const { items } = await listPostsForModeration({ status: "all", page: 1, limit: 50 });
-  const pending  = items.filter((p) => p.reviewStatus === "pending");
+  const pending = await Promise.all(
+    items
+      .filter((p) => p.reviewStatus === "pending")
+      .map(async (post) => ({
+        ...post,
+        adminAi: await getOrCreatePostReviewAi({
+          postId: post.id,
+          title: post.title,
+          body: post.body,
+          tags: post.tags,
+        }),
+      }))
+  );
   const reviewed = items.filter((p) => p.reviewStatus !== "pending");
 
   return (
@@ -42,6 +55,25 @@ export default async function AdminModerationPage() {
                     #{t}
                   </span>
                 ))}
+              </div>
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+                <p className="text-[11px] font-semibold text-[var(--color-text-primary)] m-0">AI suggestion</p>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">{post.adminAi.suggestion}</p>
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-2 mb-0">
+                  Risk: {post.adminAi.riskLevel} · Confidence: {post.adminAi.confidence?.toFixed(2) ?? "n/a"}
+                </p>
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-1 mb-0">
+                  Queue: {post.adminAi.queue ?? "moderation-standard"} · Priority: {post.adminAi.priority ?? "normal"}
+                </p>
+                {post.adminAi.labels?.length ? (
+                  <div className="tag-row mt-2">
+                    {post.adminAi.labels.map((label) => (
+                      <span key={label} className="tag">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <p className="text-xs text-[var(--color-text-muted)]">Author: {post.authorId}</p>
               <AdminReviewActions postId={post.id} />

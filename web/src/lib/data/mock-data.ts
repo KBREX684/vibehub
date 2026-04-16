@@ -1,4 +1,6 @@
 import type {
+  AgentActionAuditRow,
+  AgentConfirmationRequest,
   AuditLog,
   Challenge,
   ChallengeStatus,
@@ -14,7 +16,9 @@ import type {
   SubscriptionPlanInfo,
   SubscriptionTier,
   TeamJoinRequestStatus,
+  TeamDiscussion,
   TeamRole,
+  TeamTaskComment,
   TeamTaskStatus,
   User,
 } from "@/lib/types";
@@ -109,6 +113,10 @@ export interface MockTeamTask {
   milestoneId?: string;
   createdByUserId: string;
   assigneeUserId?: string;
+  reviewRequestedAt?: string;
+  reviewedAt?: string;
+  reviewedByUserId?: string;
+  reviewNote?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -123,6 +131,10 @@ export interface MockTeamJoinRequest {
   createdAt: string;
 }
 
+export type MockTeamDiscussion = TeamDiscussion;
+
+export type MockTeamTaskComment = TeamTaskComment;
+
 export interface MockInAppNotification {
   id: string;
   userId: string;
@@ -135,8 +147,34 @@ export interface MockInAppNotification {
 }
 
 export const mockInAppNotifications: MockInAppNotification[] = [];
+export const mockAgentActionAudits: AgentActionAuditRow[] = [];
+export const mockAgentConfirmationRequests: AgentConfirmationRequest[] = [];
 export const mockEnterpriseProfiles: MockEnterpriseProfile[] = [];
 export const mockEnterpriseVerificationApplications: MockEnterpriseVerificationApplication[] = [];
+export const mockTeamDiscussions: MockTeamDiscussion[] = [
+  {
+    id: "td1",
+    teamId: "team1",
+    authorId: "u1",
+    authorName: "Alice",
+    title: "Weekly delivery thread",
+    body: "Use this thread to summarize what shipped this week, blockers, and what needs review before Friday.",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+export const mockTeamTaskComments: MockTeamTaskComment[] = [
+  {
+    id: "ttc1",
+    teamId: "team1",
+    taskId: "tt1",
+    authorId: "u2",
+    authorName: "Bob",
+    body: "Cron draft is working locally. Need one more pass on retry handling before merge.",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
 export const mockUsers: User[] = [
   { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin", githubId: 1001, githubUsername: "alice-ai", avatarUrl: "https://avatars.githubusercontent.com/u/1001" },
@@ -438,6 +476,19 @@ export const mockTeamTasks: MockTeamTask[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "tt3",
+    teamId: "team1",
+    title: "Review onboarding copy",
+    description: "Reviewer should confirm the final onboarding flow wording before publish.",
+    status: "review",
+    sortOrder: 2,
+    createdByUserId: "u1",
+    assigneeUserId: "u2",
+    reviewRequestedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 export const mockTeamMemberships: MockTeamMembership[] = [
@@ -511,6 +562,26 @@ export const mockSubscriptions: Array<{
   { id: "sub_u1_pro", userId: "u1", tier: "pro", status: "active", paymentProvider: "stripe", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
+export const mockBillingRecords: Array<{
+  id: string;
+  userId: string;
+  subscriptionId?: string;
+  paymentProvider: "stripe" | "alipay" | "wechatpay";
+  tier: "free" | "pro";
+  status: "pending" | "succeeded" | "failed" | "canceled" | "refunded";
+  amountCents: number;
+  currency: string;
+  externalSessionId?: string;
+  externalPaymentId?: string;
+  description?: string;
+  failureReason?: string;
+  metadata?: Record<string, unknown>;
+  settledAt?: string;
+  refundedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
+
 // C-1: in-memory social interaction stores
 export const mockPostLikes: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
 export const mockPostBookmarks: Array<{ id: string; userId: string; postId: string; createdAt: string }> = [];
@@ -534,6 +605,81 @@ export const mockWebhookEndpoints: Array<{
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}> = [];
+
+export const mockOAuthApps: Array<{
+  id: string;
+  userId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  clientId: string;
+  clientSecretHash: string;
+  redirectUris: string[];
+  scopes: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
+
+export const mockOAuthAuthorizationCodes: Array<{
+  id: string;
+  appId: string;
+  userId: string;
+  codeHash: string;
+  redirectUri: string;
+  scopes: string[];
+  expiresAt: string;
+  usedAt?: string;
+  createdAt: string;
+}> = [];
+
+export const mockOAuthAccessTokens: Array<{
+  id: string;
+  appId: string;
+  userId: string;
+  tokenHash: string;
+  prefix: string;
+  scopes: string[];
+  expiresAt: string;
+  revokedAt?: string;
+  lastUsedAt?: string;
+  createdAt: string;
+}> = [];
+
+export const mockAutomationWorkflows: Array<{
+  id: string;
+  userId: string;
+  agentBindingId?: string;
+  name: string;
+  description?: string;
+  triggerEvent: string;
+  filterJson?: Record<string, unknown>;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
+
+export const mockAutomationWorkflowSteps: Array<{
+  id: string;
+  workflowId: string;
+  sortOrder: number;
+  actionType: string;
+  config: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
+
+export const mockAutomationWorkflowRuns: Array<{
+  id: string;
+  workflowId: string;
+  userId: string;
+  event: string;
+  status: "pending" | "running" | "succeeded" | "failed" | "skipped";
+  triggerPayload?: Record<string, unknown>;
+  resultSummary?: string;
+  createdAt: string;
+  completedAt?: string;
 }> = [];
 
 // P2: Challenges
@@ -569,8 +715,36 @@ export const mockChallenges: Challenge[] = [
 
 // P3: Contribution credits
 export const mockContributionCredits: ContributionCreditProfile[] = [
-  { userId: "u1", score: 420, tasksCompleted: 12, milestonesHit: 3, joinRequestsMade: 1, postsAuthored: 2, commentsAuthored: 5, projectsCreated: 3, intentsApproved: 2, updatedAt: new Date().toISOString() },
-  { userId: "u2", score: 180, tasksCompleted: 5, milestonesHit: 1, joinRequestsMade: 2, postsAuthored: 1, commentsAuthored: 3, projectsCreated: 1, intentsApproved: 0, updatedAt: new Date().toISOString() },
+  {
+    userId: "u1",
+    score: 420,
+    tasksCompleted: 12,
+    milestonesHit: 3,
+    joinRequestsMade: 1,
+    postsAuthored: 2,
+    commentsAuthored: 5,
+    projectsCreated: 3,
+    intentsApproved: 2,
+    postLikesReceived: 6,
+    projectBookmarksReceived: 4,
+    followerCount: 3,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    userId: "u2",
+    score: 180,
+    tasksCompleted: 5,
+    milestonesHit: 1,
+    joinRequestsMade: 2,
+    postsAuthored: 1,
+    commentsAuthored: 3,
+    projectsCreated: 1,
+    intentsApproved: 0,
+    postLikesReceived: 2,
+    projectBookmarksReceived: 1,
+    followerCount: 1,
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 // P3: Subscription plans (display/reference data)

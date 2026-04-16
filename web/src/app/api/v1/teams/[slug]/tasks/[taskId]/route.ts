@@ -3,13 +3,13 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
-import { deleteTeamTask, updateTeamTask } from "@/lib/repository";
+import { agentCompleteTeamTask, deleteTeamTask, requestAgentTaskDelete, updateTeamTask } from "@/lib/repository";
 import type { TeamTaskStatus } from "@/lib/types";
 
 const patchSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.union([z.string().max(2000), z.null()]).optional(),
-  status: z.enum(["todo", "doing", "done"]).optional(),
+  status: z.enum(["todo", "doing", "review", "done", "rejected"]).optional(),
   assigneeUserId: z.union([z.string().min(1), z.null()]).optional(),
   sortOrder: z.number().int().optional(),
   milestoneId: z.union([z.string().min(1), z.null()]).optional(),
@@ -34,6 +34,25 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { slug, taskId } = await params;
     const json = await request.json();
     const parsed = patchSchema.parse(json);
+    if (session.agentBindingId && parsed.status === "done") {
+      const task = await agentCompleteTeamTask({
+        teamSlug: slug,
+        taskId,
+        actorUserId: session.userId,
+        agentBindingId: session.agentBindingId,
+        apiKeyId: session.apiKeyId,
+      });
+      return apiSuccess(task);
+    }
+    if (session.agentBindingId && (parsed.status === "review" || parsed.status === "rejected")) {
+      return apiError(
+        {
+          code: "FORBIDDEN",
+          message: "Agent-bound keys must use the dedicated review tool for review/rejected transitions",
+        },
+        403
+      );
+    }
     const task = await updateTeamTask({
       teamSlug: slug,
       taskId,
@@ -61,7 +80,7 @@ if (error instanceof z.ZodError) {
     }
     if (msg === "FORBIDDEN_TASK_UPDATE") {
       return apiError(
-        { code: "FORBIDDEN", message: "Only task creator, assignee, or team owner may update this task" },
+        { code: "FORBIDDEN", message: "Only task creator, assignee, reviewers, admins, or owners may update this task" },
         403
       );
     }
@@ -72,7 +91,7 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_TASK_TITLE", message: "Title cannot be empty" }, 400);
     }
     if (msg === "INVALID_TASK_STATUS") {
-      return apiError({ code: "INVALID_TASK_STATUS", message: "status must be todo, doing, or done" }, 400);
+      return apiError({ code: "INVALID_TASK_STATUS", message: "status must be todo, doing, review, done, or rejected" }, 400);
     }
     if (msg === "ASSIGNEE_NOT_TEAM_MEMBER") {
       return apiError({ code: "ASSIGNEE_NOT_TEAM_MEMBER", message: "Assignee must be a team member" }, 400);
@@ -104,6 +123,16 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   try {
     const { slug, taskId } = await params;
+    if (session.agentBindingId) {
+      const requestItem = await requestAgentTaskDelete({
+        teamSlug: slug,
+        taskId,
+        actorUserId: session.userId,
+        agentBindingId: session.agentBindingId,
+        apiKeyId: session.apiKeyId,
+      });
+      return apiSuccess({ confirmationRequired: true, request: requestItem }, 202);
+    }
     await deleteTeamTask({ teamSlug: slug, taskId, actorUserId: session.userId });
     return apiSuccess({ ok: true });
   } catch (error) {
@@ -117,7 +146,7 @@ const msg = error instanceof Error ? error.message : String(error);
       return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
     }
     if (msg === "FORBIDDEN_TASK_DELETE") {
-      return apiError({ code: "FORBIDDEN", message: "Only task creator or team owner may delete this task" }, 403);
+      return apiError({ code: "FORBIDDEN", message: "Only task creator, team admins, or owners may delete this task" }, 403);
     }
     if (msg === "TEAM_TASK_NOT_FOUND") {
       return apiError({ code: "TEAM_TASK_NOT_FOUND", message: "Task not found" }, 404);

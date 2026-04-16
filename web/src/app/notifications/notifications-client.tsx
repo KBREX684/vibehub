@@ -13,6 +13,9 @@ const KIND_ICONS: Record<string, string> = {
   team_join_approved:      "✅",
   team_join_rejected:      "❌",
   team_task_assigned:      "📋",
+  team_task_ready_for_review: "🕵️",
+  team_task_reviewed: "✅",
+  agent_confirmation_required: "⚠️",
   post_commented:          "💬",
   comment_replied:         "↩️",
   post_liked:              "❤️",
@@ -112,6 +115,8 @@ export function NotificationsClient({
           });
           const teamSlug = typeof row.metadata?.teamSlug === "string" ? row.metadata.teamSlug : null;
           const postSlug = typeof row.metadata?.postSlug === "string" ? row.metadata.postSlug : null;
+          const confirmationRequestId =
+            typeof row.metadata?.confirmationRequestId === "string" ? row.metadata.confirmationRequestId : null;
 
           return (
             <div
@@ -167,6 +172,17 @@ export function NotificationsClient({
                     onClick={() => isUnread && markOne(row.ids)}
                   >
                     {t("notifications.open_team")}
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                )}
+
+                {confirmationRequestId && (
+                  <Link
+                    href={`/settings/agents?confirmation=${encodeURIComponent(confirmationRequestId)}`}
+                    className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1 mt-1"
+                    onClick={() => isUnread && markOne(row.ids)}
+                  >
+                    Open confirmation queue
                     <ArrowRight className="w-3 h-3" />
                   </Link>
                 )}

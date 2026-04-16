@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { upsertUserSubscription, upsertStripeCustomer } from "@/lib/repository";
+import { createBillingRecord } from "@/lib/repositories/billing.repository";
 import { getRequestLogger, serializeError } from "@/lib/logger";
 import type { SubscriptionTier } from "@/lib/types";
 
@@ -69,8 +70,21 @@ export async function POST(request: NextRequest) {
         const userId = obj.metadata && typeof obj.metadata === "object" ? (obj.metadata as Record<string, string>).vibehubUserId : undefined;
         const customerId = typeof obj.customer === "string" ? obj.customer : undefined;
         const subscriptionId = typeof obj.subscription === "string" ? obj.subscription : undefined;
+        const sessionId = typeof obj.id === "string" ? obj.id : undefined;
         if (userId && customerId) {
           await upsertStripeCustomer(userId, customerId);
+        }
+        if (sessionId) {
+          const { prisma } = await import("@/lib/db");
+          await prisma.billingRecord.updateMany({
+            where: { externalSessionId: sessionId, paymentProvider: "stripe" },
+            data: {
+              status: "succeeded",
+              externalPaymentId: subscriptionId ?? undefined,
+              settledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
         }
         // Subscription details will come via customer.subscription.created event
         requestLogger.info(
@@ -164,6 +178,8 @@ export async function POST(request: NextRequest) {
       case "invoice.payment_failed": {
         const customerId = typeof obj.customer === "string" ? obj.customer : undefined;
         const subscriptionId = typeof obj.subscription === "string" ? obj.subscription : undefined;
+        const amountDue = typeof obj.amount_due === "number" ? obj.amount_due : 0;
+        const currency = typeof obj.currency === "string" ? obj.currency.toUpperCase() : "USD";
         if (!customerId) break;
         const { prisma } = await import("@/lib/db");
         const user = await prisma.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true } });
@@ -179,6 +195,18 @@ export async function POST(request: NextRequest) {
             void dispatchWebhookEvent(user.id, "subscription.past_due", {
               stripeSubscriptionId: subscriptionId,
               tier: sub.tier,
+            });
+            await createBillingRecord({
+              userId: user.id,
+              subscriptionId: sub.id,
+              paymentProvider: "stripe",
+              tier: sub.tier as SubscriptionTier,
+              amountCents: amountDue,
+              currency,
+              status: "failed",
+              externalPaymentId: subscriptionId,
+              description: "Stripe invoice payment failed",
+              metadata: { eventType: event.type },
             });
           }
         }

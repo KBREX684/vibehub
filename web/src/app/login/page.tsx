@@ -30,6 +30,7 @@ export default async function LoginPage({ searchParams }: Props) {
     state_mismatch: t("auth.error.state_mismatch"),
     config_missing: t("auth.error.config_missing"),
     callback_error: t("auth.error.callback_error"),
+    github_email_signup_required: "Create your account with email first, then use GitHub as a linked sign-in method.",
     verify_failed: "Email verification failed or link expired.",
   };
   const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? t("auth.error.default")) : null;

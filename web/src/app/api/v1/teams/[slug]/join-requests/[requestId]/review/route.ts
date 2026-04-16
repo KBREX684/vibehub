@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: Params) {
     const row = await reviewTeamJoinRequest({
       teamSlug: slug,
       requestId,
-      ownerUserId: session.userId,
+      reviewerUserId: session.userId,
       action: parsed.action,
     });
     return apiSuccess(row);
@@ -47,7 +47,7 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }
     if (msg === "FORBIDDEN_NOT_OWNER") {
-      return apiError({ code: "FORBIDDEN", message: "Only the team owner can review join requests" }, 403);
+      return apiError({ code: "FORBIDDEN", message: "Only team owners or admins can review join requests" }, 403);
     }
     if (msg === "JOIN_REQUEST_NOT_FOUND") {
       return apiError({ code: "JOIN_REQUEST_NOT_FOUND", message: "Join request not found" }, 404);

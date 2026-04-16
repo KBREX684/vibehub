@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProjectStatus } from "@/lib/types";
 import type { UpgradeReason } from "@/lib/subscription";
@@ -34,9 +34,13 @@ export function CreateProjectForm() {
   const [formStatus, setFormStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | undefined>(undefined);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  async function submitProject() {
     setFormStatus("loading");
     setMessage(null);
     setUpgradeReason(undefined);
@@ -72,13 +76,19 @@ export function CreateProjectForm() {
         setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
-      router.push(`/projects/${encodeURIComponent(json.data.slug)}`);
-      router.refresh();
+      window.location.assign(`/projects/${encodeURIComponent(json.data.slug)}`);
     } catch (err) {
       setFormStatus("error");
       setMessage(err instanceof Error ? err.message : String(err));
     }
   }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    void submitProject();
+  }
+
+  const formDisabled = !isHydrated || formStatus === "loading";
 
   return (
     <form onSubmit={onSubmit} className="card p-6 space-y-5">
@@ -91,6 +101,7 @@ export function CreateProjectForm() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="input-base"
+          disabled={formDisabled}
           required
           minLength={3}
           maxLength={120}
@@ -107,6 +118,7 @@ export function CreateProjectForm() {
           value={oneLiner}
           onChange={(e) => setOneLiner(e.target.value)}
           className="input-base"
+          disabled={formDisabled}
           required
           minLength={5}
           maxLength={200}
@@ -123,6 +135,7 @@ export function CreateProjectForm() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className="input-base resize-y min-h-[140px]"
+          disabled={formDisabled}
           required
           minLength={20}
           rows={6}
@@ -140,6 +153,7 @@ export function CreateProjectForm() {
           value={readmeMarkdown}
           onChange={(e) => setReadmeMarkdown(e.target.value)}
           className="input-base resize-y min-h-[120px] font-mono text-xs"
+          disabled={formDisabled}
           rows={5}
           placeholder={"## Getting started\n```bash\nnpm install\n```"}
         />
@@ -152,6 +166,7 @@ export function CreateProjectForm() {
             value={status}
             onChange={(e) => setStatus(e.target.value as ProjectStatus)}
             className="input-base appearance-none cursor-pointer"
+            disabled={formDisabled}
           >
             {STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -167,6 +182,7 @@ export function CreateProjectForm() {
             onChange={(e) => setDemoUrl(e.target.value)}
             className="input-base"
             type="url"
+            disabled={formDisabled}
             placeholder="https://"
           />
         </div>
@@ -178,6 +194,7 @@ export function CreateProjectForm() {
           value={techStackInput}
           onChange={(e) => setTechStackInput(e.target.value)}
           className="input-base resize-none"
+          disabled={formDisabled}
           rows={2}
           placeholder="Comma or newline separated, e.g. Next.js, PostgreSQL"
         />
@@ -189,13 +206,19 @@ export function CreateProjectForm() {
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
           className="input-base resize-none"
+          disabled={formDisabled}
           rows={2}
           placeholder="Comma or newline separated, e.g. agent, open-source"
         />
       </div>
 
       <div className="flex flex-wrap gap-3 pt-2">
-        <button type="submit" className="btn btn-primary text-sm px-5 py-2" disabled={formStatus === "loading"}>
+        <button
+          type="button"
+          className="btn btn-primary text-sm px-5 py-2"
+          disabled={formDisabled}
+          onClick={() => void submitProject()}
+        >
           {formStatus === "loading" ? "Creating…" : "Create project"}
         </button>
         <button type="button" className="btn btn-secondary text-sm px-5 py-2" onClick={() => router.back()}>

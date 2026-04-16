@@ -17,8 +17,8 @@ export default async function TeamSettingsPage({ params }: Props) {
   const team = await getTeamBySlug(slug, session.userId);
   if (!team) notFound();
 
-  const isOwner = team.ownerUserId === session.userId;
-  if (!isOwner) {
+  const canManage = team.viewerRole === "owner" || team.viewerRole === "admin";
+  if (!canManage) {
     return (
       <main className="container max-w-xl pb-24 pt-8 space-y-6">
         <Link href={`/teams/${encodeURIComponent(slug)}`} className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)]">
@@ -27,7 +27,7 @@ export default async function TeamSettingsPage({ params }: Props) {
         </Link>
         <div className="card p-8">
           <h1 className="text-xl font-bold text-[var(--color-text-primary)] m-0">Forbidden</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-2 mb-0">Only the team owner can change external links.</p>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2 mb-0">Only team owners and admins can change external links.</p>
         </div>
       </main>
     );
@@ -49,7 +49,7 @@ export default async function TeamSettingsPage({ params }: Props) {
         <div>
           <h1 className="text-xl font-bold text-[var(--color-text-primary)] m-0">Team settings</h1>
           <p className="text-xs text-[var(--color-text-secondary)] m-0">
-            External links for <span className="font-semibold">{team.name}</span> (Discord, Telegram, Slack, GitHub).
+            External links for <span className="font-semibold">{team.name}</span> (Discord, Telegram, Slack, GitHub). Owners and admins can edit them.
           </p>
         </div>
       </div>

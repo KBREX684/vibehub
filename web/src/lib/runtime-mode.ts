@@ -10,14 +10,24 @@ export function isNextProductionPhase(): boolean {
 }
 
 /**
+ * True only for production runtime processes, not for `next build`.
+ * We still allow mock-backed static generation in local/CI builds when no
+ * database is configured, but production servers must never use mock data.
+ */
+export function isProductionRuntimeProcess(): boolean {
+  return isNextProductionPhase() && process.env.NEXT_PHASE !== "phase-production-build";
+}
+
+/**
  * Runtime data strategy (v7 P0-3):
- * - In **production** (`NODE_ENV=production`), mock data is **never** used — all paths use PostgreSQL.
+ * - In **production runtime** (`next start`, ws-server, mcp-server), mock data is **never** used.
+ * - In local/CI `next build`, mock-backed static generation is still allowed when no DB is configured.
  * - `USE_MOCK_DATA=true`  -> force mock mode (development/test only)
  * - `USE_MOCK_DATA=false` -> force database mode
  * - unset                 -> prefer database when configured, otherwise fall back to mock (local dev without Postgres)
  */
 export function isMockDataEnabled(): boolean {
-  if (isNextProductionPhase()) {
+  if (isProductionRuntimeProcess()) {
     return false;
   }
   if (process.env.USE_MOCK_DATA === "true") {

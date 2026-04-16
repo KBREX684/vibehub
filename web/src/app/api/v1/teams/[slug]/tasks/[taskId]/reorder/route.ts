@@ -50,7 +50,7 @@ if (error instanceof z.ZodError) {
     }
     if (msg === "FORBIDDEN_TASK_UPDATE") {
       return apiError(
-        { code: "FORBIDDEN", message: "Only task creator, assignee, or team owner may reorder this task" },
+        { code: "FORBIDDEN", message: "Only task creator, assignee, reviewers, admins, or owners may reorder this task" },
         403
       );
     }

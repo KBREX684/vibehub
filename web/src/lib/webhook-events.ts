@@ -7,6 +7,9 @@ export const WEBHOOK_EVENT_NAMES = [
   "team.join_requested",
   "team.join_approved",
   "team.member_joined",
+  "team.task_ready_for_review",
+  "team.task_reviewed",
+  "agent.confirmation_required",
   "subscription.past_due",
 ] as const;
 

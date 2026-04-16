@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { TeamTaskCommentsPanel } from "@/components/team-task-comments-panel";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug, getTeamTaskByIdForSlug } from "@/lib/repository";
 import { ArrowLeft, Calendar, Target, User } from "lucide-react";
@@ -12,7 +13,7 @@ export default async function TeamTaskDetailPage({ params }: Props) {
   const { slug, taskId } = await params;
   const session = await getSessionUserFromCookie();
   if (!session) {
-    redirect(`/api/v1/auth/github?redirect=${encodeURIComponent(`/teams/${slug}/tasks/${taskId}`)}`);
+    redirect(`/login?redirect=${encodeURIComponent(`/teams/${slug}/tasks/${taskId}`)}`);
   }
 
   const team = await getTeamBySlug(slug, session.userId);
@@ -84,6 +85,8 @@ export default async function TeamTaskDetailPage({ params }: Props) {
           </div>
         </dl>
       </article>
+
+      <TeamTaskCommentsPanel teamSlug={team.slug} taskId={task.id} />
     </main>
   );
 }

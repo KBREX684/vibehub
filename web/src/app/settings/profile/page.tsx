@@ -10,7 +10,7 @@ export default async function SettingsProfilePage() {
   const session = await getSessionUserFromCookie();
   const { t } = await getServerTranslator();
   if (!session) {
-    redirect("/api/v1/auth/github?redirect=/settings/profile");
+    redirect("/login?redirect=/settings/profile");
   }
 
   const profile = await getCreatorProfileByUserId(session.userId);

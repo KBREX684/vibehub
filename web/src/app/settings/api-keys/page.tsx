@@ -21,10 +21,10 @@ export default async function ApiKeysSettingsPage() {
             Sign in to manage your API keys, scopes, and MCP integrations.
           </p>
           <a
-            href="/api/v1/auth/github?redirect=/settings/api-keys"
+            href="/login?redirect=/settings/api-keys"
             className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
           >
-            Sign in with GitHub
+            Sign in
             <ArrowRight className="w-4 h-4" />
           </a>
         </div>
@@ -71,6 +71,7 @@ export default async function ApiKeysSettingsPage() {
             <div className="space-y-2">
               {[
                 { href: "/developers", label: "Developers hub" },
+                { href: "/settings/agents", label: "Agent bindings" },
                 { href: "/api/v1/openapi.json", label: "OpenAPI Spec", external: true },
                 { href: "/api/v1/mcp/v2/manifest", label: "MCP v2 Manifest", external: true },
                 { href: "/leaderboards", label: "Contribution Leaderboard" },

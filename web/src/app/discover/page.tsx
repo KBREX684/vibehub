@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ProjectCard } from "@/components/project-card";
 import { DiscoverProjectFeed } from "@/components/discover-project-feed";
+import { getSessionUserFromCookie } from "@/lib/auth";
 import { parsePagination } from "@/lib/pagination";
-import { getProjectFilterFacets, listFeaturedProjects, listProjects, listTeams } from "@/lib/repository";
-import type { ProjectStatus } from "@/lib/types";
-import { Search, Compass, X, SlidersHorizontal, Sparkles } from "lucide-react";
+import { getProjectFilterFacets, listFeaturedProjects, listProjectFeed, listTeams } from "@/lib/repository";
+import type { ProjectSortOrder, ProjectStatus } from "@/lib/types";
+import { Search, Compass, X, SlidersHorizontal, Sparkles, Flame, Clock3, BrainCircuit } from "lucide-react";
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "idea",     label: "Idea" },
@@ -43,6 +44,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   const tech       = get("tech")?.trim();
   const team       = get("team")?.trim();
   const statusRaw  = get("status")?.trim();
+  const sortRaw    = get("sort")?.trim();
   const pageRaw    = get("page");
   const limitRaw   = get("limit");
   const classicPagination = get("pagination") === "1";
@@ -62,9 +64,12 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
     statusRaw && ["idea", "building", "launched", "paused"].includes(statusRaw)
       ? (statusRaw as ProjectStatus)
       : undefined;
+  const sort: ProjectSortOrder =
+    sortRaw === "hot" || sortRaw === "featured" || sortRaw === "recommended" ? (sortRaw as ProjectSortOrder) : "latest";
+  const session = await getSessionUserFromCookie();
 
   const [{ items, pagination }, facets, teamsPage, featuredToday] = await Promise.all([
-    listProjects({ query, tag, tech, status, team, page, limit }),
+    listProjectFeed({ query, tag, tech, status, team, viewerUserId: session?.userId, sort, page, limit }),
     getProjectFilterFacets(),
     listTeams({ page: 1, limit: 100 }),
     listFeaturedProjects(),
@@ -73,8 +78,16 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   const baseFilters: Record<string, string | undefined> = {
     query, tag, tech, team,
     status: statusRaw,
+    sort,
     limit: String(limit),
   };
+
+  const TABS: Array<{ sort: ProjectSortOrder; label: string; icon: typeof Clock3 }> = [
+    { sort: "latest", label: "Latest", icon: Clock3 },
+    { sort: "hot", label: "Weekly Hot", icon: Flame },
+    { sort: "featured", label: "Editorial Picks", icon: Sparkles },
+    { sort: "recommended", label: "Recommended", icon: BrainCircuit },
+  ];
 
   const selectCls =
     "input-base appearance-none cursor-pointer";
@@ -125,6 +138,29 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             ))}
           </div>
         </section>
+      )}
+
+      <section className="flex flex-wrap items-center gap-2">
+        {TABS.map(({ sort: value, label, icon: Icon }) => (
+          <Link
+            key={value}
+            href={buildHref(baseFilters, { sort: value, page: undefined }, classicPagination)}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-pill)] text-xs border transition-colors ${
+              sort === value
+                ? "bg-[var(--color-bg-elevated)] border-[var(--color-border-strong)] text-[var(--color-text-primary)]"
+                : "bg-[var(--color-bg-canvas)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </Link>
+        ))}
+      </section>
+
+      {sort === "recommended" && !session && (
+        <div className="card p-4 text-sm text-[var(--color-text-secondary)]">
+          Recommended ranking becomes personalized after sign-in. Anonymous access falls back to a generic relevance order.
+        </div>
       )}
 
       {/* Filter bar */}
@@ -293,6 +329,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             tech,
             team,
             status: statusRaw,
+            sort,
             limit,
           }}
           initialItems={items}

@@ -2,7 +2,13 @@ import Link from "next/link";
 import { isDevDemoAuth } from "@/lib/dev-demo";
 import { AdminWeeklyMaterializeForm } from "@/components/admin-weekly-materialize-form";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
-import { getAdminOverview, listFeaturedProjects, listProjects } from "@/lib/repository";
+import { getAdminOverview, listFeaturedProjects, listModerationCases, listProjects, listReportTickets } from "@/lib/repository";
+import {
+  heuristicContentPatrolReport,
+  heuristicProjectCurationSummary,
+  heuristicReportBatchSuggestions,
+  heuristicUserBehaviorPatterns,
+} from "@/lib/admin-ai";
 import { AdminDailyFeaturedPanel } from "@/components/admin-daily-featured-panel";
 import {
   Users,
@@ -54,11 +60,33 @@ export default async function AdminPage() {
     );
   }
 
-  const [overview, featuredProjects, projectPickList] = await Promise.all([
+  const [overview, featuredProjects, projectPickList, reportTickets, moderationCases] = await Promise.all([
     getAdminOverview(),
     listFeaturedProjects(),
     listProjects({ page: 1, limit: 12 }),
+    listReportTickets({ status: "all", page: 1, limit: 60, forAdmin: true }),
+    listModerationCases({ status: "all", page: 1, limit: 60 }),
   ]);
+  const projectCandidates = projectPickList.items.map((project) => ({
+    ...project,
+    adminAi: heuristicProjectCurationSummary({
+      projectId: project.id,
+      title: project.title,
+      oneLiner: project.oneLiner,
+      hasDemoUrl: Boolean(project.demoUrl || project.websiteUrl),
+      hasRepoUrl: Boolean(project.repoUrl),
+      bookmarkCount: project.bookmarkCount,
+      collaborationIntentCount: project.collaborationIntentCount,
+      screenshots: project.screenshots.length,
+    }),
+  }));
+  const batchSuggestions = heuristicReportBatchSuggestions(reportTickets.items);
+  const behaviorPatterns = heuristicUserBehaviorPatterns(reportTickets.items);
+  const patrolReport = heuristicContentPatrolReport({
+    pendingModerationCount: moderationCases.items.filter((item) => item.status === "pending").length,
+    openReportsCount: reportTickets.items.filter((item) => item.status === "open").length,
+    highRiskReportCount: reportTickets.items.filter((item) => item.adminAi?.riskLevel === "high").length,
+  });
 
   const STAT_CARDS = [
     {
@@ -78,12 +106,12 @@ export default async function AdminPage() {
       badge: "Queue",
     },
     {
-      href: "/api/v1/admin/reports",
+      href: "/admin/reports",
       icon: Flag,
       color: "var(--color-error)",
       value: overview.openReports,
       label: "Open Reports",
-      badge: "API",
+      badge: "Queue",
     },
     {
       href: "/admin/collaboration",
@@ -94,20 +122,20 @@ export default async function AdminPage() {
       badge: "Queue",
     },
     {
-      href: "/api/v1/admin/audit-logs",
+      href: "/admin/audit-logs",
       icon: Activity,
       color: "var(--color-accent-cyan)",
       value: overview.auditLogs,
       label: "Audit Logs",
-      badge: "API",
+      badge: "Ops",
     },
     {
-      href: "/api/v1/admin/mcp-invoke-audits",
+      href: "/admin/mcp-audits",
       icon: Cpu,
       color: "var(--color-accent-violet)",
       value: "MCP v2",
       label: "Invocation Audits",
-      badge: "API",
+      badge: "Ops",
     },
   ];
 
@@ -194,7 +222,84 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <AdminDailyFeaturedPanel candidates={projectPickList.items} featured={featuredProjects} />
+      <AdminDailyFeaturedPanel candidates={projectCandidates} featured={featuredProjects} />
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="card p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-4 h-4 text-[var(--color-accent-violet)]" />
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">AI Batch Suggestions</h2>
+          </div>
+          <div className="space-y-3">
+            {batchSuggestions.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-secondary)] m-0">No report clusters detected.</p>
+            ) : (
+              batchSuggestions.map((item) => (
+                <article key={item.label} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 bg-[var(--color-bg-elevated)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.label}</p>
+                    <span className="badge badge-neutral">{item.count}</span>
+                  </div>
+                  <p className="text-sm text-[var(--color-text-secondary)] mt-2 mb-0">{item.suggestion}</p>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="card p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-[var(--color-accent-cyan)]" />
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">Behavior Patterns</h2>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Frequent reporters</p>
+              <div className="space-y-2">
+                {behaviorPatterns.highFrequencyReporters.length === 0 ? (
+                  <p className="text-sm text-[var(--color-text-secondary)] m-0">No elevated reporter patterns.</p>
+                ) : (
+                  behaviorPatterns.highFrequencyReporters.map((row) => (
+                    <div key={`reporter-${row.userId}`} className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 bg-[var(--color-bg-elevated)]">
+                      <span className="text-sm text-[var(--color-text-primary)]">{row.userId}</span>
+                      <span className="badge badge-yellow">{row.count} reports</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Frequently reported targets</p>
+              <div className="space-y-2">
+                {behaviorPatterns.highFrequencyTargets.length === 0 ? (
+                  <p className="text-sm text-[var(--color-text-secondary)] m-0">No elevated target patterns.</p>
+                ) : (
+                  behaviorPatterns.highFrequencyTargets.map((row) => (
+                    <div key={`target-${row.userId}`} className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 bg-[var(--color-bg-elevated)]">
+                      <span className="text-sm text-[var(--color-text-primary)]">{row.userId}</span>
+                      <span className="badge badge-red">{row.count} reports</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="card p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Cpu className="w-4 h-4 text-[var(--color-primary-hover)]" />
+          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">Content Patrol Report</h2>
+        </div>
+        <div className="space-y-3">
+          {patrolReport.map((line) => (
+            <div key={line} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4 text-sm text-[var(--color-text-secondary)]">
+              {line}
+            </div>
+          ))}
+        </div>
+      </section>
 
       <AdminWeeklyMaterializeForm />
     </main>

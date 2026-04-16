@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  addTeamMemberByEmail,
+  createTeam,
   createTeamMilestone,
   createTeamTask,
   deleteTeamMilestone,
@@ -107,5 +109,30 @@ describe("team milestones (P3-5, mock)", () => {
     const row = tasks.find((x) => x.id === task.id);
     expect(row?.milestoneId).toBeUndefined();
     await deleteTeamTask({ teamSlug: "vibehub-core", taskId: task.id, actorUserId: "u1" });
+  });
+
+  it("admin may edit milestone structure while reviewer/member may not", async () => {
+    const team = await createTeam({ ownerUserId: "u1", name: "Admin Milestone Team" });
+    await addTeamMemberByEmail({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      email: "chen@vibehub.dev",
+      role: "admin",
+    });
+    const milestone = await createTeamMilestone({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      title: "Admin-editable milestone",
+      targetDate: new Date(Date.UTC(2026, 10, 20)).toISOString(),
+    });
+    const updated = await updateTeamMilestone({
+      teamSlug: team.slug,
+      milestoneId: milestone.id,
+      actorUserId: "u3",
+      title: "Admin renamed milestone",
+      description: "Updated by admin role",
+    });
+    expect(updated.title).toBe("Admin renamed milestone");
+    expect(updated.description).toBe("Updated by admin role");
   });
 });

@@ -1,27 +1,36 @@
+function shouldEnforceRuntimeEnv(): boolean {
+  return process.env.NODE_ENV === "production" || process.env.ENFORCE_REQUIRED_ENV === "true";
+}
+
+export function isProductionLikeEnv(): boolean {
+  return shouldEnforceRuntimeEnv();
+}
+
 /**
- * P4-BE-4: fail fast when `ENFORCE_REQUIRED_ENV=true` (e.g. staging/prod) and secrets are missing.
+ * v7 P0-3/P0-12: every production-like process must fail fast when secrets are
+ * missing or mock data is still forced on.
  */
-export function assertProductionEnv(): void {
-  if (process.env.ENFORCE_REQUIRED_ENV !== "true") return;
+export function assertProductionEnv(service = "runtime"): void {
+  if (!shouldEnforceRuntimeEnv()) return;
+
   const missing: string[] = [];
+  if (!process.env.DATABASE_URL?.trim()) missing.push("DATABASE_URL");
   if (!process.env.SESSION_SECRET?.trim()) missing.push("SESSION_SECRET");
-  if (process.env.USE_MOCK_DATA === "false" && !process.env.DATABASE_URL?.trim()) {
-    missing.push("DATABASE_URL");
+
+  if (process.env.USE_MOCK_DATA === "true") {
+    throw new Error(`[${service}] USE_MOCK_DATA=true is not allowed in production-like environments`);
   }
+
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+    throw new Error(`[${service}] Missing required environment variables: ${missing.join(", ")}`);
   }
 }
 
 /**
- * v7 P0-3: any production Node process must have a real database URL (mock is disabled when NODE_ENV=production).
+ * Kept as a compatibility helper for existing call sites that only care about
+ * the production database/session requirement.
  */
-export function assertProductionDatabaseConfigured(): void {
+export function assertProductionDatabaseConfigured(service = "runtime"): void {
   if (process.env.NODE_ENV !== "production") return;
-  if (!process.env.DATABASE_URL?.trim()) {
-    throw new Error("DATABASE_URL is required when NODE_ENV=production (mock data is disabled in production)");
-  }
-  if (!process.env.SESSION_SECRET?.trim()) {
-    throw new Error("SESSION_SECRET is required when NODE_ENV=production");
-  }
+  assertProductionEnv(service);
 }

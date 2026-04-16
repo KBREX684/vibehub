@@ -22,9 +22,10 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Information we collect</h2>
           <p>
-            We may collect account information you provide (such as name and email when you sign in with
-            GitHub), usage data necessary to operate the service, and technical data such as IP address and
-            browser type for security and reliability.
+            We may collect account information you provide, including display name, email address, encrypted
+            password credentials, linked GitHub identity data, project and discussion content, and technical
+            signals such as IP address, browser type, request identifiers, and moderation metadata needed to
+            keep the service reliable and safe.
           </p>
         </section>
         <section>
@@ -35,10 +36,35 @@ export default function PrivacyPage() {
           </p>
         </section>
         <section>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Governance and reports</h2>
+          <p>
+            We keep moderation, report ticket, enterprise verification, and security audit records when needed
+            to investigate abuse, enforce platform rules, and protect users and the service. These records may
+            be reviewed by authorized administrators and AI-assisted review tooling that provides suggestions
+            only and does not make final enforcement decisions on its own.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Account deletion</h2>
+          <p>
+            You can request deletion from account settings. When you delete your account, we remove or detach
+            user-owned content and access credentials from the active service, subject to any records we must
+            retain for security, fraud prevention, dispute handling, or legal compliance.
+          </p>
+        </section>
+        <section>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Cookies and sessions</h2>
           <p>
             We use cookies and similar technologies to keep you signed in and to protect the platform (for
             example, session and security tokens). You can control cookies through your browser settings.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Cross-border services and subprocessors</h2>
+          <p>
+            Some infrastructure and integrations may process data outside mainland China, including code hosting,
+            email delivery, billing, and model providers. The exact production configuration is tracked in the
+            P0 compliance checklist and must be reviewed before formal launch.
           </p>
         </section>
         <section>

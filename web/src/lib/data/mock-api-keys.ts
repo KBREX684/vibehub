@@ -1,6 +1,7 @@
 export interface MockApiKey {
   id: string;
   userId: string;
+  agentBindingId?: string;
   label: string;
   keyHash: string;
   prefix: string;

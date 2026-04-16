@@ -5,6 +5,7 @@ import { enqueueWebhookDeliver, isWebhookQueueEnabled } from "@/lib/queue/boss";
 import { deliverWebhookHttp } from "@/lib/webhook-deliver-http";
 import { logger } from "@/lib/logger";
 import { assertPublicHttpsUrl } from "@/lib/private-network-url";
+import { dispatchAutomationWorkflows } from "@/lib/workflow-automation";
 
 /**
  * P3-BE-1: enqueue outbound webhooks (pg-boss when DB + queue enabled), else inline delivery.
@@ -79,6 +80,10 @@ export async function dispatchWebhookEvent(
   } catch (e) {
     logger.error({ err: e }, "dispatchWebhookEvent failed");
   }
+
+  void dispatchAutomationWorkflows(userId, event, payload).catch((e) =>
+    logger.error({ err: e, userId, event }, "dispatch automation workflows failed")
+  );
 }
 
 export { verifyWebhookSignature } from "@/lib/webhook-signature";

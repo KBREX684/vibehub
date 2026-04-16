@@ -6,8 +6,8 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   try {
     const { assertProductionDatabaseConfigured, assertProductionEnv } = await import("@/lib/env-check");
-    assertProductionDatabaseConfigured();
-    assertProductionEnv();
+    assertProductionDatabaseConfigured("next-app");
+    assertProductionEnv("next-app");
     const { startWebhookWorkers } = await import("@/lib/queue/boss");
     await startWebhookWorkers();
     const { startCreditWorkers } = await import("@/lib/queue/credit-queue");

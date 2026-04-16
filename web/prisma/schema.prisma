@@ -38,7 +38,9 @@ enum WeeklyLeaderboardKind {
 
 enum TeamRole {
   owner
+  admin
   member
+  reviewer
 }
 
 enum TeamJoinRequestStatus {
@@ -50,7 +52,9 @@ enum TeamJoinRequestStatus {
 enum TeamTaskStatus {
   todo
   doing
+  review
   done
+  rejected
 }
 
 enum InAppNotificationKind {
@@ -58,6 +62,9 @@ enum InAppNotificationKind {
   team_join_approved
   team_join_rejected
   team_task_assigned
+  team_task_ready_for_review
+  team_task_reviewed
+  agent_confirmation_required
   /// C-3 social events
   post_commented
   comment_replied
@@ -95,6 +102,48 @@ enum PaymentProvider {
   stripe
   alipay
   wechatpay
+}
+
+enum BillingRecordStatus {
+  pending
+  succeeded
+  failed
+  canceled
+  refunded
+}
+
+enum AgentActionStatus {
+  succeeded
+  confirmation_required
+  rejected
+}
+
+enum AgentConfirmationStatus {
+  pending
+  approved
+  rejected
+  canceled
+}
+
+enum AutomationWorkflowRunStatus {
+  pending
+  running
+  succeeded
+  failed
+  skipped
+}
+
+enum AutomationWorkflowActionType {
+  create_team_task
+  create_team_discussion
+  agent_complete_team_task
+  agent_submit_task_review
+  request_team_task_delete
+  request_team_member_role_change
+  send_slack_message
+  send_discord_message
+  send_feishu_message
+  trigger_github_repository_dispatch
 }
 
 model User {
@@ -137,11 +186,19 @@ model User {
   teamJoinRequests          TeamJoinRequest[]     @relation("TeamJoinApplicant")
   teamTasksCreated          TeamTask[]            @relation("TeamTaskCreator")
   teamTasksAssigned         TeamTask[]            @relation("TeamTaskAssignee")
+  teamTasksReviewed         TeamTask[]            @relation("TeamTaskReviewer")
   teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
+  teamDiscussions           TeamDiscussion[]
+  teamTaskComments          TeamTaskComment[]
   apiKeys                   ApiKey[]
+  agentBindings             AgentBinding[]
+  agentActionAudits         AgentActionAudit[]
+  agentConfirmationRequests AgentConfirmationRequest[] @relation("AgentConfirmationRequester")
+  agentConfirmationDecisions AgentConfirmationRequest[] @relation("AgentConfirmationDecider")
   notifications             InAppNotification[]
   challengesCreated         Challenge[]           @relation("ChallengeCreator")
   subscription              UserSubscription?
+  billingRecords            BillingRecord[]
   teamChatMessages          TeamChatMessage[]
   /// C-1: social graph
   following                 UserFollow[]          @relation("Follower")
@@ -157,6 +214,11 @@ model User {
   notificationPreference    NotificationPreference?
   /// P3-BE-1 / P3-BE-4: outbound webhook delivery audit trail
   webhookDeliveries         WebhookDelivery[]
+  oauthApps                 OAuthApp[]
+  oauthAuthorizationCodes   OAuthAuthorizationCode[]
+  oauthAccessTokens         OAuthAccessToken[]
+  automationWorkflows       AutomationWorkflow[]
+  automationWorkflowRuns    AutomationWorkflowRun[]
 }
 
 enum EnterpriseVerificationStatus {
@@ -262,6 +324,114 @@ model WebhookDelivery {
   @@index([webhookEndpointId])
 }
 
+model OAuthApp {
+  id                  String                   @id @default(cuid())
+  userId              String
+  name                String
+  slug                String
+  description         String?
+  clientId            String                   @unique
+  clientSecretHash    String
+  redirectUris        String[]
+  scopes              String[]
+  active              Boolean                  @default(true)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorizationCodes  OAuthAuthorizationCode[]
+  accessTokens        OAuthAccessToken[]
+
+  @@unique([userId, slug])
+  @@index([userId, active])
+}
+
+model OAuthAuthorizationCode {
+  id           String   @id @default(cuid())
+  appId        String
+  userId       String
+  codeHash     String   @unique
+  redirectUri  String
+  scopes       String[]
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime @default(now())
+  app          OAuthApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appId, userId])
+  @@index([expiresAt])
+}
+
+model OAuthAccessToken {
+  id         String   @id @default(cuid())
+  appId      String
+  userId     String
+  tokenHash  String   @unique
+  prefix     String
+  scopes     String[]
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime @default(now())
+  app        OAuthApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appId, revokedAt])
+  @@index([userId, createdAt])
+}
+
+model AutomationWorkflow {
+  id             String   @id @default(cuid())
+  userId         String
+  agentBindingId String?
+  name           String
+  description    String?
+  triggerEvent   String
+  filterJson     Json?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentBinding   AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
+  steps          AutomationWorkflowStep[]
+  runs           AutomationWorkflowRun[]
+
+  @@index([userId, active])
+  @@index([triggerEvent, active])
+  @@index([agentBindingId])
+}
+
+model AutomationWorkflowStep {
+  id         String                       @id @default(cuid())
+  workflowId String
+  sortOrder  Int                          @default(0)
+  actionType AutomationWorkflowActionType
+  config     Json
+  createdAt  DateTime                     @default(now())
+  updatedAt  DateTime                     @updatedAt
+  workflow   AutomationWorkflow           @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, sortOrder])
+  @@index([workflowId])
+}
+
+model AutomationWorkflowRun {
+  id            String                      @id @default(cuid())
+  workflowId    String
+  userId        String
+  event         String
+  status        AutomationWorkflowRunStatus @default(pending)
+  triggerPayload Json?
+  resultSummary String?
+  createdAt     DateTime                    @default(now())
+  completedAt   DateTime?
+  workflow      AutomationWorkflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user          User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId, createdAt])
+  @@index([userId, createdAt])
+}
+
 /// P3-FE-4: notification category opt-in (defaults all enabled)
 model NotificationPreference {
   userId                   String  @id
@@ -294,16 +464,19 @@ model McpInvokeAudit {
   tool         String
   userId       String
   apiKeyId     String?
+  agentBindingId String?
   httpStatus   Int
   clientIp     String?
   userAgent    String?
   errorCode    String?
   durationMs   Int?
   createdAt    DateTime @default(now())
+  agentBinding AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([userId, createdAt])
   @@index([tool, createdAt])
+  @@index([agentBindingId, createdAt])
 }
 
 /// P2-2: reserved for future MCP write tools — dedupe key per user + tool.
@@ -321,6 +494,7 @@ model McpInvokeIdempotency {
 model ApiKey {
   id         String    @id @default(cuid())
   userId     String
+  agentBindingId String?
   label      String
   keyHash    String    @unique
   prefix     String
@@ -332,8 +506,81 @@ model ApiKey {
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentBinding AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([agentBindingId])
+}
+
+model AgentBinding {
+  id          String   @id @default(cuid())
+  userId      String
+  label       String
+  agentType   String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKeys     ApiKey[]
+  auditLogs   AuditLog[]
+  mcpInvokes  McpInvokeAudit[]
+  actionAudits AgentActionAudit[]
+  confirmationRequests AgentConfirmationRequest[]
+  automationWorkflows AutomationWorkflow[]
+
+  @@index([userId, active])
+}
+
+model AgentActionAudit {
+  id             String            @id @default(cuid())
+  actorUserId    String
+  agentBindingId String
+  apiKeyId       String?
+  teamId         String?
+  taskId         String?
+  action         String
+  outcome        AgentActionStatus
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  actor          User              @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+  agentBinding   AgentBinding      @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
+  team           Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  task           TeamTask?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([agentBindingId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([taskId, createdAt])
+}
+
+model AgentConfirmationRequest {
+  id             String                  @id @default(cuid())
+  requesterUserId String
+  agentBindingId String
+  apiKeyId       String?
+  teamId         String?
+  taskId         String?
+  targetType     String
+  targetId       String
+  action         String
+  reason         String?
+  payload        Json
+  status         AgentConfirmationStatus @default(pending)
+  decidedByUserId String?
+  decidedAt      DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime                @default(now())
+  requester      User                    @relation("AgentConfirmationRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  decider        User?                   @relation("AgentConfirmationDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  agentBinding   AgentBinding            @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
+  team           Team?                   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  task           TeamTask?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([requesterUserId, status, createdAt])
+  @@index([agentBindingId, status, createdAt])
+  @@index([teamId, status, createdAt])
+  @@index([taskId, status, createdAt])
 }
 
 model CreatorProfile {
@@ -493,15 +740,18 @@ model ReportTicket {
 model AuditLog {
   id         String   @id @default(cuid())
   actorId    String
+  agentBindingId String?
   action     String
   entityType String
   entityId   String
   metadata   Json?
   createdAt  DateTime @default(now())
   actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  agentBinding AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
 
   @@index([actorId])
   @@index([entityType, entityId])
+  @@index([agentBindingId, createdAt])
 }
 
 enum AdminAiSuggestionTarget {
@@ -615,6 +865,10 @@ model Team {
   tasks         TeamTask[]
   milestones    TeamMilestone[]
   chatMessages  TeamChatMessage[]
+  discussions   TeamDiscussion[]
+  taskComments  TeamTaskComment[]
+  agentActionAudits AgentActionAudit[]
+  agentConfirmationRequests AgentConfirmationRequest[]
 
   @@index([ownerUserId])
 }
@@ -660,17 +914,58 @@ model TeamTask {
   milestoneId       String?
   createdByUserId   String
   assigneeUserId    String?
+  reviewRequestedAt DateTime?
+  reviewedAt        DateTime?
+  reviewedByUserId  String?
+  reviewNote        String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   team              Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   milestone         TeamMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   createdBy         User           @relation("TeamTaskCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
   assignee          User?          @relation("TeamTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  reviewedBy        User?          @relation("TeamTaskReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  comments          TeamTaskComment[]
+  agentActionAudits AgentActionAudit[]
+  agentConfirmationRequests AgentConfirmationRequest[]
 
   @@index([teamId])
   @@index([teamId, status])
   @@index([teamId, sortOrder])
   @@index([teamId, milestoneId])
+  @@index([reviewedByUserId])
+}
+
+model TeamDiscussion {
+  id         String   @id @default(cuid())
+  teamId     String
+  authorId   String
+  title      String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model TeamTaskComment {
+  id         String   @id @default(cuid())
+  teamId     String
+  taskId     String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  task       TeamTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([authorId, createdAt])
 }
 
 model TeamMilestone {
@@ -733,6 +1028,9 @@ model ContributionCredit {
   commentsAuthored   Int      @default(0)
   projectsCreated    Int      @default(0)
   intentsApproved    Int      @default(0)
+  postLikesReceived  Int      @default(0)
+  projectBookmarksReceived Int @default(0)
+  followerCount      Int      @default(0)
   updatedAt          DateTime @updatedAt
   createdAt          DateTime @default(now())
 
@@ -747,7 +1045,7 @@ model UserSubscription {
   userId               String             @unique
   tier                 SubscriptionTier   @default(free)
   status               SubscriptionStatus @default(active)
-  paymentProvider    PaymentProvider    @default(stripe)
+  paymentProvider      PaymentProvider    @default(stripe)
   /// M-2: Stripe subscription ID
   stripeSubscriptionId String?            @unique
   /// M-2: Stripe price ID
@@ -757,8 +1055,36 @@ model UserSubscription {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingRecords       BillingRecord[]
 
   @@index([stripeSubscriptionId])
+}
+
+model BillingRecord {
+  id                String             @id @default(cuid())
+  userId            String
+  subscriptionId    String?
+  paymentProvider   PaymentProvider
+  tier              SubscriptionTier
+  status            BillingRecordStatus @default(pending)
+  amountCents       Int
+  currency          String             @default("USD")
+  externalSessionId String?
+  externalPaymentId String?
+  description       String?
+  failureReason     String?
+  metadata          Json?
+  settledAt         DateTime?
+  refundedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription      UserSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([subscriptionId, createdAt])
+  @@index([paymentProvider, status, createdAt])
+  @@index([externalSessionId])
 }
 
 // ─── C-1: Social interactions ────────────────────────────────────────────────

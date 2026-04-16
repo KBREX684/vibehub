@@ -75,15 +75,21 @@ interface CommentInputProps {
   onSubmit: (body: string) => Promise<void>;
   onCancel?: () => void;
   autoFocus?: boolean;
+  submitTestId?: string;
 }
 
-function CommentInput({ placeholder = "Write a comment…", onSubmit, onCancel, autoFocus }: CommentInputProps) {
+function CommentInput({
+  placeholder = "Write a comment…",
+  onSubmit,
+  onCancel,
+  autoFocus,
+  submitTestId,
+}: CommentInputProps) {
   const [body, setBody]         = useState("");
   const [error, setError]       = useState<string | null>(null);
   const [isPending, start]      = useTransition();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function submitBody() {
     const text = body.trim();
     if (!text) return;
     setError(null);
@@ -95,6 +101,11 @@ function CommentInput({ placeholder = "Write a comment…", onSubmit, onCancel, 
         setError(err instanceof Error ? err.message : "Failed to submit");
       }
     });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    submitBody();
   }
 
   return (
@@ -112,8 +123,10 @@ function CommentInput({ placeholder = "Write a comment…", onSubmit, onCancel, 
       {error && <p className="text-xs text-[var(--color-error)]">{error}</p>}
       <div className="flex items-center gap-2">
         <button
-          type="submit"
+          type="button"
           disabled={isPending || !body.trim()}
+          data-testid={submitTestId}
+          onClick={submitBody}
           className="btn btn-primary text-xs px-4 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
         >
           <Send className="w-3 h-3" />
@@ -331,6 +344,7 @@ function CommentCard({
             onSubmit={handleReply}
             onCancel={() => setShowReply(false)}
             autoFocus
+            submitTestId={`comment-submit-reply-${comment.id}`}
           />
         </div>
       )}
@@ -450,6 +464,7 @@ export function CommentThread({
               <CommentInput
                 placeholder="Add a comment…"
                 onSubmit={addRoot}
+                submitTestId="comment-submit-root"
               />
             </div>
           </div>

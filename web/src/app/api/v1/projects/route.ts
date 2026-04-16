@@ -1,21 +1,27 @@
 import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
-import { listProjects, createProject, countUserProjects, getUserTier } from "@/lib/repository";
+import { listProjectFeed, createProject, countUserProjects, getUserTier } from "@/lib/repository";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { checkQuota } from "@/lib/quota";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
-import type { ProjectStatus } from "@/lib/types";
+import type { ProjectSortOrder, ProjectStatus } from "@/lib/types";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
 const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
+const PROJECT_SORT_ORDERS: readonly ProjectSortOrder[] = ["latest", "hot", "featured", "recommended"];
 
 function parseStatus(raw: string | null): ProjectStatus | undefined {
   if (!raw) {
     return undefined;
   }
   return PROJECT_STATUSES.includes(raw as ProjectStatus) ? (raw as ProjectStatus) : undefined;
+}
+
+function parseSort(raw: string | null): ProjectSortOrder {
+  if (!raw) return "latest";
+  return PROJECT_SORT_ORDERS.includes(raw as ProjectSortOrder) ? (raw as ProjectSortOrder) : "latest";
 }
 
 const createProjectSchema = z.object({
@@ -51,6 +57,7 @@ export async function GET(request: NextRequest) {
     const tech = url.searchParams.get("tech")?.trim() || undefined;
     const team = url.searchParams.get("team")?.trim() || undefined;
     const creatorId = url.searchParams.get("creatorId")?.trim() || undefined;
+    const sort = parseSort(url.searchParams.get("sort"));
     const rawStatus = url.searchParams.get("status");
     const status = parseStatus(rawStatus);
     if (rawStatus && !status) {
@@ -63,7 +70,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await listProjects({ query, tag, tech, status, team, creatorId, page, limit, cursor });
+    if (cursor) {
+      return apiError({ code: "CURSOR_NOT_SUPPORTED", message: "cursor is not supported on the P1 project feed" }, 400);
+    }
+    const result = await listProjectFeed({ query, tag, tech, status, team, creatorId, viewerUserId: gate.user?.userId, sort, page, limit });
     return apiSuccess(result);
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);

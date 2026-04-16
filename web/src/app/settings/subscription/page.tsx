@@ -1,22 +1,26 @@
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/repository";
+import { listBillingRecordsForUser } from "@/lib/repositories/billing.repository";
 import { getLimits, TIER_PRICING } from "@/lib/subscription";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CreditCard, Sparkles, Shield, ArrowRight } from "lucide-react";
 
 interface Props {
-  searchParams: Promise<{ success?: string }>;
+  searchParams: Promise<{ success?: string; portal?: string }>;
 }
 
 export default async function SubscriptionPage({ searchParams }: Props) {
   const session = await getSessionUserFromCookie();
   if (!session) {
-    redirect("/api/v1/auth/github?redirect=/settings/subscription");
+    redirect("/login?redirect=/settings/subscription");
   }
 
-  const { success } = await searchParams;
-  const subscription = await getUserSubscription(session.userId);
+  const { success, portal } = await searchParams;
+  const [subscription, billingRecords] = await Promise.all([
+    getUserSubscription(session.userId),
+    listBillingRecordsForUser(session.userId, 10),
+  ]);
   const limits = getLimits(subscription.tier);
   const pricing = TIER_PRICING[subscription.tier];
 
@@ -47,6 +51,15 @@ export default async function SubscriptionPage({ searchParams }: Props) {
           <p className="text-sm font-semibold text-[var(--color-success)]">Plan upgraded successfully</p>
           <p className="text-xs text-[var(--color-text-secondary)] mt-1">
             Your account now has access to the new subscription capabilities.
+          </p>
+        </div>
+      ) : null}
+
+      {portal === "manual" ? (
+        <div className="card p-4 border-[rgba(59,130,246,0.35)] bg-[var(--color-primary-subtle)]">
+          <p className="text-sm font-semibold text-[var(--color-primary-hover)]">Manual billing management</p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+            China payment staging records are managed from the sandbox flow until live merchant portals are wired.
           </p>
         </div>
       ) : null}
@@ -117,6 +130,38 @@ export default async function SubscriptionPage({ searchParams }: Props) {
             Compare plans
           </Link>
         </div>
+      </section>
+
+      <section className="card p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Billing history</h3>
+        {billingRecords.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-secondary)] m-0">No billing records yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {billingRecords.map((record) => (
+              <div key={record.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0 capitalize">
+                      {record.paymentProvider} · {record.status}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)] m-0 mt-1">
+                      {(record.amountCents / 100).toFixed(2)} {record.currency} · {new Date(record.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  {record.paymentProvider !== "stripe" ? (
+                    <Link href={`/checkout/sandbox?record=${encodeURIComponent(record.id)}`} className="btn btn-ghost text-xs px-3 py-1.5">
+                      Open sandbox
+                    </Link>
+                  ) : null}
+                </div>
+                {record.failureReason ? (
+                  <p className="text-xs text-[var(--color-danger)] mt-2 mb-0">{record.failureReason}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );

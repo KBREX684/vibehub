@@ -6,6 +6,7 @@ import type { ApiKeyScope } from "@/lib/api-key-scopes";
 import { allowApiKeyScope } from "@/lib/api-key-scopes";
 import { apiError } from "@/lib/response";
 import { getSessionUserFromApiKeyToken } from "@/lib/repository";
+import { getSessionUserFromOAuthAccessToken } from "@/lib/repositories/oauth-app.repository";
 import { resolveSessionSigningSecret } from "@/lib/session-secret-resolver";
 import { verifySessionVersionMatches } from "@/lib/session-version";
 import type { EnterpriseVerificationStatus, Role, SessionUser, SubscriptionTier } from "@/lib/types";
@@ -120,7 +121,16 @@ export function decodeSession(raw?: string): SessionUser | null {
     if (typeof parsed.apiKeyId === "string" && parsed.apiKeyId) {
       user.apiKeyId = parsed.apiKeyId;
     }
-    return user;
+  if (typeof parsed.agentBindingId === "string" && parsed.agentBindingId) {
+    user.agentBindingId = parsed.agentBindingId;
+  }
+  if (typeof parsed.oauthAppId === "string" && parsed.oauthAppId) {
+    user.oauthAppId = parsed.oauthAppId;
+  }
+  if (typeof parsed.oauthAppClientId === "string" && parsed.oauthAppClientId) {
+    user.oauthAppClientId = parsed.oauthAppClientId;
+  }
+  return user;
   } catch {
     return null;
   }
@@ -277,7 +287,9 @@ export async function authenticateRequest(
   }
 
   try {
-    const user = await getSessionUserFromApiKeyToken(token);
+    const user =
+      (await getSessionUserFromApiKeyToken(token)) ??
+      (await getSessionUserFromOAuthAccessToken(token));
     if (!user) {
       return { kind: "unauthorized" };
     }

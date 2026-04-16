@@ -1,4 +1,5 @@
 import type { SubscriptionTier } from "@/lib/types";
+import { TIER_PRICING } from "@/lib/subscription";
 
 export type PaymentProviderId = "stripe" | "alipay" | "wechatpay";
 
@@ -7,6 +8,7 @@ export interface CheckoutParams {
   tier: SubscriptionTier;
   successUrl: string;
   cancelUrl: string;
+  baseUrl: string;
   stripePriceId?: string;
 }
 
@@ -73,6 +75,21 @@ export class StripePaymentProvider implements PaymentProvider {
       },
     });
     if (!session.url) throw new Error("STRIPE_NO_CHECKOUT_URL");
+    const { createBillingRecord, getUserSubscription } = await import("@/lib/repositories/billing.repository");
+    const subscription = await getUserSubscription(params.userId);
+    const pricing = TIER_PRICING[params.tier];
+    await createBillingRecord({
+      userId: params.userId,
+      subscriptionId: subscription.id,
+      paymentProvider: "stripe",
+      tier: params.tier,
+      amountCents: Math.round(pricing.priceMonthly * 100),
+      currency: pricing.currency,
+      status: "pending",
+      externalSessionId: session.id,
+      description: `${pricing.label} subscription checkout`,
+      metadata: { successUrl: params.successUrl, cancelUrl: params.cancelUrl },
+    });
     return { url: session.url, sessionId: session.id };
   }
 
@@ -86,16 +103,35 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 }
 
-/** P1 placeholder — returns 501 until merchant integration */
+/**
+ * P1 sandbox provider — closes the full checkout/callback/subscription loop without claiming
+ * production merchant readiness. This is the staging path for Alipay/WeChat before live keys.
+ */
 export class StubChinaPaymentProvider implements PaymentProvider {
   constructor(readonly id: "alipay" | "wechatpay") {}
 
-  async createCheckoutSession(): Promise<CheckoutSessionResult> {
-    throw new Error("PAYMENT_PROVIDER_NOT_AVAILABLE");
+  async createCheckoutSession(params: CheckoutParams): Promise<CheckoutSessionResult> {
+    const { createBillingRecord, getUserSubscription } = await import("@/lib/repositories/billing.repository");
+    const subscription = await getUserSubscription(params.userId);
+    const pricing = TIER_PRICING[params.tier];
+    const record = await createBillingRecord({
+      userId: params.userId,
+      subscriptionId: subscription.id,
+      paymentProvider: this.id,
+      tier: params.tier,
+      amountCents: Math.round(pricing.priceMonthly * 100),
+      currency: this.id === "alipay" || this.id === "wechatpay" ? "CNY" : pricing.currency,
+      status: "pending",
+      externalSessionId: `${this.id}_sandbox_${Date.now()}`,
+      description: `${pricing.label} sandbox checkout via ${this.id}`,
+      metadata: { successUrl: params.successUrl, cancelUrl: params.cancelUrl, sandbox: true },
+    });
+    const url = `${params.baseUrl}/checkout/sandbox?record=${encodeURIComponent(record.id)}`;
+    return { url, sessionId: record.id };
   }
 
-  async createPortalSession(): Promise<PortalSessionResult> {
-    throw new Error("PAYMENT_PROVIDER_NOT_AVAILABLE");
+  async createPortalSession(_customerId: string, returnUrl: string): Promise<PortalSessionResult> {
+    return { url: `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}portal=manual` };
   }
 }
 

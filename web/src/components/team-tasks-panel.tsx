@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { isDevDemoAuth } from "@/lib/dev-demo";
 import { motion, AnimatePresence } from "framer-motion";
-import type { TeamMember, TeamMilestone, TeamTask, TeamTaskStatus } from "@/lib/types";
+import type { TeamMember, TeamMilestone, TeamRole, TeamTask, TeamTaskStatus } from "@/lib/types";
 import { KanbanSquare, Plus, User, Trash2, ArrowUp, ArrowDown, ChevronDown, Target } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
 
@@ -14,30 +14,34 @@ interface Props {
   members: TeamMember[];
   milestones: TeamMilestone[];
   currentUserId: string | null;
-  /** Team owner can batch-change task status */
-  isOwner?: boolean;
+  viewerRole?: TeamRole;
 }
 
 const STATUSES: { value: TeamTaskStatus; label: string; color: string; bg: string }[] = [
   { value: "todo", label: "To Do", color: "text-[var(--color-text-secondary)]", bg: "bg-black/5" },
   { value: "doing", label: "In Progress", color: "text-[#0d9488]", bg: "bg-[#81e6d9]/20" },
+  { value: "review", label: "In Review", color: "text-[#9a6700]", bg: "bg-[#fef3c7]" },
   { value: "done", label: "Done", color: "text-[#248a3d]", bg: "bg-[#34c759]/10" },
+  { value: "rejected", label: "Rejected", color: "text-[#b42318]", bg: "bg-[#fee4e2]" },
 ];
 
 const BOARD_COLUMNS: { status: TeamTaskStatus; title: string }[] = [
   { status: "todo", title: "To Do" },
   { status: "doing", title: "In Progress" },
+  { status: "review", title: "In Review" },
   { status: "done", title: "Done" },
+  { status: "rejected", title: "Rejected" },
 ];
 
 function sortTasksForColumn(rows: TeamTask[]): TeamTask[] {
   return [...rows].sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, isOwner }: Props) {
+export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, viewerRole }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TeamTask[]>([]);
   const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
@@ -46,9 +50,16 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
   const [newAssignee, setNewAssignee] = useState("");
   const [newMilestoneId, setNewMilestoneId] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const canReview = viewerRole === "owner" || viewerRole === "admin" || viewerRole === "reviewer";
+  const currentMember = members.find((member) => member.userId === currentUserId) ?? null;
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const tasksByStatus = useMemo(() => {
-    const map: Record<TeamTaskStatus, TeamTask[]> = { todo: [], doing: [], done: [] };
+    const map: Record<TeamTaskStatus, TeamTask[]> = { todo: [], doing: [], review: [], done: [], rejected: [] };
     for (const t of tasks) {
       map[t.status].push(t);
     }
@@ -85,9 +96,32 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
     }
   }, [currentUserId, load]);
 
-  async function createTask(e: FormEvent) {
-    e.preventDefault();
+  async function submitCreateTask() {
+    if (!newTitle.trim() || creating) return;
+    setCreating(true);
     setMsg(null);
+    const optimisticId = `tmp-task-${Date.now()}`;
+    const assignee = members.find((member) => member.userId === newAssignee) ?? null;
+    const milestone = milestones.find((item) => item.id === newMilestoneId) ?? null;
+    const now = new Date().toISOString();
+    const optimisticTask: TeamTask = {
+      id: optimisticId,
+      teamId: teamSlug,
+      title: newTitle.trim(),
+      description: newDesc.trim() || undefined,
+      status: "todo",
+      sortOrder: tasksByStatus.todo.length ? Math.max(...tasksByStatus.todo.map((task) => task.sortOrder)) + 1 : 0,
+      milestoneId: milestone?.id,
+      milestoneTitle: milestone?.title,
+      createdByUserId: currentUserId ?? "unknown",
+      createdByName: currentMember?.name ?? "You",
+      assigneeUserId: assignee?.userId,
+      assigneeName: assignee?.name,
+      assigneeEmail: assignee?.email,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setTasks((prev) => sortTasksForColumn([...prev, optimisticTask]));
     try {
       const body: Record<string, unknown> = { title: newTitle.trim() };
       if (newDesc.trim()) {
@@ -105,21 +139,34 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = (await res.json()) as { error?: { message?: string } };
+      const json = (await res.json()) as { data?: TeamTask; error?: { message?: string } };
       if (!res.ok) {
+        setTasks((prev) => prev.filter((task) => task.id !== optimisticId));
         setMsg(json.error?.message ?? "Create failed");
         return;
       }
+      const createdTask = json.data;
       setNewTitle("");
       setNewDesc("");
       setNewAssignee("");
       setNewMilestoneId("");
       setIsFormOpen(false);
-      await load();
-      router.refresh();
+      if (createdTask) {
+        setTasks((prev) => sortTasksForColumn(prev.map((task) => (task.id === optimisticId ? createdTask : task))));
+      } else {
+        await load();
+      }
     } catch (err) {
+      setTasks((prev) => prev.filter((task) => task.id !== optimisticId));
       setMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCreating(false);
     }
+  }
+
+  function createTask(e: FormEvent) {
+    e.preventDefault();
+    void submitCreateTask();
   }
 
   async function patchTask(taskId: string, patch: Record<string, unknown>) {
@@ -283,6 +330,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
           </div>
         </div>
         <motion.button 
+          type="button"
           onClick={() => setIsFormOpen(!isFormOpen)}
           className="flex items-center gap-2 px-4 py-2 rounded-[980px] bg-[var(--color-text-primary)] text-white text-sm font-medium hover:bg-black transition-colors shadow-[0_8px_24px_rgba(0,0,0,0.15)] self-start md:self-auto"
           whileTap={{ scale: 0.95 }}
@@ -308,12 +356,13 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
                 </label>
                 <input
                   id="team-task-title"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  required
-                  maxLength={200}
-                  className={inputClasses}
-                  placeholder="e.g., Design new landing page"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    required
+                    maxLength={200}
+                    disabled={!isHydrated}
+                    className={inputClasses}
+                    placeholder="e.g., Design new landing page"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -322,12 +371,13 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
                 </label>
                 <textarea
                   id="team-task-description"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  rows={2}
-                  maxLength={2000}
-                  className={`${inputClasses} resize-none`}
-                  placeholder="Add more details..."
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    rows={2}
+                    maxLength={2000}
+                    disabled={!isHydrated}
+                    className={`${inputClasses} resize-none`}
+                    placeholder="Add more details..."
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -339,6 +389,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
                     id="team-task-assignee"
                     value={newAssignee}
                     onChange={(e) => setNewAssignee(e.target.value)}
+                    disabled={!isHydrated}
                     className={`${inputClasses} appearance-none pr-10`}
                   >
                     <option value="">Unassigned</option>
@@ -356,6 +407,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
                     id="team-task-milestone"
                     value={newMilestoneId}
                     onChange={(e) => setNewMilestoneId(e.target.value)}
+                    disabled={!isHydrated}
                     className={`${inputClasses} appearance-none pr-10`}
                   >
                     <option value="">No Milestone</option>
@@ -368,11 +420,14 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
               </div>
               <div className="pt-2 flex justify-end">
                 <motion.button 
-                  type="submit" 
+                  type="button"
+                  data-testid="team-task-create-submit"
+                  disabled={!isHydrated || creating || !newTitle.trim()}
+                  onClick={() => void submitCreateTask()}
                   className="px-6 py-2.5 rounded-[12px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-colors shadow-sm"
                   whileTap={{ scale: 0.97 }}
                 >
-                  Create Task
+                  {creating ? "Creating…" : "Create Task"}
                 </motion.button>
               </div>
             </div>
@@ -403,7 +458,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
                       </span>
                     </h3>
                   </div>
-                  {isOwner && col.some((t) => selectedIds.has(t.id)) ? (
+                  {canReview && col.some((t) => selectedIds.has(t.id)) ? (
                     <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem]">
                       <span className="text-[var(--color-text-muted)] mr-1">Selected:</span>
                       {STATUSES.filter((s) => s.value !== status).map((s) => (
@@ -441,7 +496,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, i
                       >
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <div className="flex items-start gap-2 min-w-0 flex-1">
-                            {isOwner ? (
+                            {canReview ? (
                               <input
                                 type="checkbox"
                                 checked={selectedIds.has(t.id)}

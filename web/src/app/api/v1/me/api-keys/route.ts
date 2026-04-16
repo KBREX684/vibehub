@@ -9,6 +9,7 @@ import { safeServerErrorDetails } from "@/lib/safe-error-details";
 const createSchema = z.object({
   label: z.string().min(1).max(80),
   scopes: z.array(z.string().min(1)).optional(),
+  agentBindingId: z.string().min(1).optional(),
   /** Optional key lifetime in days (1–3650) */
   expiresInDays: z.number().int().min(1).max(3650).optional(),
 });
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
       userId: session.userId,
       label: parsed.label,
       scopes: parsed.scopes,
+      agentBindingId: parsed.agentBindingId,
       expiresInDays: parsed.expiresInDays,
     });
     return apiSuccess({ key: created }, 201);
@@ -82,6 +84,9 @@ if (error instanceof z.ZodError) {
     }
     if (msg === "INVALID_API_KEY_SCOPE") {
       return apiError({ code: "INVALID_API_KEY_SCOPE", message: "One or more scopes are invalid" }, 400);
+    }
+    if (msg === "AGENT_BINDING_NOT_FOUND") {
+      return apiError({ code: "AGENT_BINDING_NOT_FOUND", message: "Linked agent binding not found" }, 404);
     }
     if (msg === "API_KEY_SCOPE_READ_PUBLIC_REQUIRED") {
       return apiError(

@@ -13,6 +13,7 @@ export interface DiscoverProjectFeedProps {
     tech?: string;
     team?: string;
     status?: string;
+    sort?: string;
     limit: number;
   };
   initialItems: Project[];
@@ -38,6 +39,7 @@ export function DiscoverProjectFeed({
     if (filters.tech) sp.set("tech", filters.tech);
     if (filters.team) sp.set("team", filters.team);
     if (filters.status) sp.set("status", filters.status);
+    if (filters.sort) sp.set("sort", filters.sort);
     sp.set("limit", String(filters.limit));
     return sp;
   }, [filters]);

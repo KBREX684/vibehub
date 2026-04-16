@@ -4,6 +4,7 @@ import { getPostBySlug, listCommentsForPost, listPosts } from "@/lib/repository"
 import { Clock, ArrowLeft, Star, MessageSquare, Hash, TrendingUp, BookOpen } from "lucide-react";
 import { CommentThread } from "@/components/comment-thread";
 import { PostSocialActions } from "@/components/post-social-actions";
+import { PostReportButton } from "@/components/post-report-button";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -124,6 +125,9 @@ export default async function DiscussionDetailPage({ params }: Props) {
                   viewerHasLiked={post.viewerHasLiked}
                   viewerHasBookmarked={post.viewerHasBookmarked}
                 />
+                <div className="mt-3">
+                  <PostReportButton postSlug={post.slug} />
+                </div>
               </div>
             </div>
           </article>

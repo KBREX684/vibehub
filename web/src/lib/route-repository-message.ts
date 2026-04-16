@@ -24,13 +24,17 @@ export function apiErrorFromRepositoryMessage(msg: string): NextResponse | null 
     case "TEAM_NOT_FOUND":
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     case "FORBIDDEN_NOT_OWNER":
-      return apiError({ code: "FORBIDDEN", message: "Only the team owner can update links" }, 403);
+      return apiError({ code: "FORBIDDEN", message: "Only team owners or admins can perform this action" }, 403);
     case "FORBIDDEN":
       return apiError({ code: "FORBIDDEN", message: "Not allowed" }, 403);
     case "MEMBERSHIP_NOT_FOUND":
       return apiError({ code: "MEMBERSHIP_NOT_FOUND", message: "Membership not found" }, 404);
     case "CANNOT_REMOVE_OWNER":
       return apiError({ code: "CANNOT_REMOVE_OWNER", message: "Cannot remove the team owner" }, 400);
+    case "CANNOT_EDIT_OWNER":
+      return apiError({ code: "CANNOT_EDIT_OWNER", message: "Cannot change the team owner's role" }, 400);
+    case "INVALID_TEAM_ROLE":
+      return apiError({ code: "INVALID_TEAM_ROLE", message: "Invalid team role" }, 400);
     case "API_KEY_NOT_FOUND":
       return apiError({ code: "API_KEY_NOT_FOUND", message: "API key not found" }, 404);
     case "WEBHOOK_NOT_FOUND":

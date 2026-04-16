@@ -4,6 +4,8 @@ import { TeamDetailActions } from "@/components/team-detail-actions";
 import { TeamMilestonesPanel } from "@/components/team-milestones-panel";
 import { TeamTasksPanel } from "@/components/team-tasks-panel";
 import { TeamChatPanel } from "@/components/team-chat-panel";
+import { TeamDiscussionsPanel } from "@/components/team-discussions-panel";
+import { TeamActivityTimeline } from "@/components/team-activity-timeline";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug, listTeamMilestones, getGitHubRepoStats } from "@/lib/repository";
 import {
@@ -30,7 +32,8 @@ export default async function TeamDetailPage({ params }: Props) {
 
   const viewerId = session?.userId ?? null;
   const isMember = viewerId != null && team.members.some((m) => m.userId === viewerId);
-  const isOwner = viewerId != null && team.ownerUserId === viewerId;
+  const viewerRole = team.viewerRole;
+  const canManageTeam = viewerRole === "owner" || viewerRole === "admin";
 
   const [taskMilestones, githubStats] = await Promise.all([
     isMember
@@ -124,7 +127,7 @@ export default async function TeamDetailPage({ params }: Props) {
               )}
             </div>
           )}
-          {isOwner && (
+          {canManageTeam && (
             <div className="mt-5 pt-5 border-t border-[var(--color-border-subtle)]">
               <Link
                 href={`/teams/${encodeURIComponent(team.slug)}/settings`}
@@ -217,10 +220,12 @@ export default async function TeamDetailPage({ params }: Props) {
             members={team.members}
             milestones={taskMilestones}
             currentUserId={session?.userId ?? null}
-            isOwner={isOwner}
+            viewerRole={viewerRole}
           />
 
           <TeamMilestonesPanel teamSlug={team.slug} currentUserId={session?.userId ?? null} />
+
+          <TeamDiscussionsPanel teamSlug={team.slug} currentUserId={session?.userId ?? null} />
 
           {/* Team Chat — in-app real-time chat (replaces external links) */}
           <TeamChatPanel
@@ -240,6 +245,7 @@ export default async function TeamDetailPage({ params }: Props) {
         {/* Sidebar */}
         <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-20">
           <TeamDetailActions team={team} currentUserId={session?.userId ?? null} />
+          <TeamActivityTimeline teamSlug={team.slug} currentUserId={session?.userId ?? null} />
         </div>
       </div>
     </main>

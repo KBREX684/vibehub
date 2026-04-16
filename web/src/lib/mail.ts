@@ -3,6 +3,10 @@ import { logger } from "@/lib/logger";
 
 export type SendMailResult = { sent: true } | { sent: false; reason: "smtp_not_configured" };
 
+export function isTransactionalEmailConfigured(): boolean {
+  return Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_FROM?.trim());
+}
+
 export async function sendTransactionalEmail(params: {
   to: string;
   subject: string;
@@ -10,7 +14,8 @@ export async function sendTransactionalEmail(params: {
   html?: string;
 }): Promise<SendMailResult> {
   const host = process.env.SMTP_HOST?.trim();
-  if (!host) {
+  const from = process.env.SMTP_FROM?.trim();
+  if (!host || !from) {
     logger.warn({ to: params.to, subject: params.subject }, "SMTP not configured; email not sent");
     return { sent: false, reason: "smtp_not_configured" };
   }
@@ -19,11 +24,6 @@ export async function sendTransactionalEmail(params: {
   const secure = process.env.SMTP_SECURE === "true";
   const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASS?.trim();
-  const from = process.env.SMTP_FROM?.trim();
-  if (!from) {
-    logger.error("SMTP_FROM is required when SMTP_HOST is set");
-    return { sent: false, reason: "smtp_not_configured" };
-  }
 
   const transporter = nodemailer.createTransport({
     host,

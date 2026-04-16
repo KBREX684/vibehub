@@ -482,6 +482,8 @@ export async function updateProject(params: {
   tags?: string[];
   status?: Project["status"];
   demoUrl?: string | null;
+  repoUrl?: string | null;
+  websiteUrl?: string | null;
 }): Promise<Project> {
   if (useMockData) {
     const project = mockProjects.find((p) => p.slug === params.projectSlug);
@@ -496,6 +498,8 @@ export async function updateProject(params: {
     if (params.tags !== undefined) project.tags = params.tags;
     if (params.status !== undefined) project.status = params.status;
     if (params.demoUrl !== undefined) project.demoUrl = params.demoUrl ?? undefined;
+    if (params.repoUrl !== undefined) project.repoUrl = params.repoUrl ?? undefined;
+    if (params.websiteUrl !== undefined) project.websiteUrl = params.websiteUrl ?? undefined;
     project.updatedAt = new Date().toISOString();
     if (creator) {
       void dispatchWebhookEvent(creator.userId, "project.updated", {
@@ -524,6 +528,8 @@ export async function updateProject(params: {
   if (params.tags !== undefined) data.tags = params.tags;
   if (params.status !== undefined) data.status = params.status;
   if (params.demoUrl !== undefined) data.demoUrl = params.demoUrl;
+  if (params.repoUrl !== undefined) data.repoUrl = params.repoUrl;
+  if (params.websiteUrl !== undefined) data.websiteUrl = params.websiteUrl;
 
   const updated = await prisma.project.update({
     where: { slug: params.projectSlug },

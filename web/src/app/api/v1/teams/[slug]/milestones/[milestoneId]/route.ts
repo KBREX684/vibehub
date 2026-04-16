@@ -56,7 +56,7 @@ if (error instanceof z.ZodError) {
     }
     if (msg === "FORBIDDEN_MILESTONE_MEMBER_EDIT") {
       return apiError(
-        { code: "FORBIDDEN", message: "Only team owners can edit milestone details; members may update progress only" },
+        { code: "FORBIDDEN", message: "Only team owners or admins can edit milestone details; members and reviewers may update progress only" },
         403
       );
     }
@@ -99,6 +99,9 @@ const msg = error instanceof Error ? error.message : String(error);
     }
     if (msg === "FORBIDDEN_NOT_TEAM_MEMBER") {
       return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
+    }
+    if (msg === "FORBIDDEN_NOT_OWNER") {
+      return apiError({ code: "FORBIDDEN", message: "Only team owners or admins can delete milestones" }, 403);
     }
     if (msg === "TEAM_MILESTONE_NOT_FOUND") {
       return apiError({ code: "TEAM_MILESTONE_NOT_FOUND", message: "Milestone not found" }, 404);

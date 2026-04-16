@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
-import { Key, CreditCard, Building2, ChevronRight, Settings2, Bell, Webhook, User } from "lucide-react";
+import { Key, CreditCard, Building2, ChevronRight, Settings2, Bell, Webhook, User, Bot, AppWindow, Workflow } from "lucide-react";
 
 export default async function SettingsIndexPage() {
   const session = await getSessionUserFromCookie();
@@ -19,6 +19,24 @@ export default async function SettingsIndexPage() {
       title: t("settings.api_keys_title", "API keys"),
       description: t("settings.api_keys_desc", "Developer keys, scopes, and MCP tooling."),
       icon: Key,
+    },
+    {
+      href: "/settings/oauth-apps",
+      title: "OAuth apps",
+      description: "Register third-party apps that use scoped Bearer access instead of long-lived API keys.",
+      icon: AppWindow,
+    },
+    {
+      href: "/settings/agents",
+      title: "Agents",
+      description: "Named agent identities linked to API keys and MCP audit trails.",
+      icon: Bot,
+    },
+    {
+      href: "/settings/automations",
+      title: "Automations",
+      description: "Event-driven workflows that chain agent actions and external integrations.",
+      icon: Workflow,
     },
     {
       href: "/settings/profile",

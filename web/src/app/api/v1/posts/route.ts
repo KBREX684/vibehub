@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createPost, listPosts } from "@/lib/repository";
+import { createPost, getFollowFeed, getRecommendedPostFeed, listPosts } from "@/lib/repository";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import type { PostSortOrder } from "@/lib/types";
 import { parsePagination } from "@/lib/pagination";
@@ -7,7 +7,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
-const VALID_SORT_ORDERS: readonly PostSortOrder[] = ["recent", "hot", "featured"];
+const VALID_SORT_ORDERS: readonly PostSortOrder[] = ["recent", "hot", "featured", "following", "recommended"];
 
 const createPostSchema = z.object({
   title: z.string().min(3).max(120),
@@ -37,16 +37,21 @@ export async function GET(request: Request) {
       sort = rawSort as PostSortOrder;
     }
 
-    const result = await listPosts({
-      query,
-      tag,
-      authorId,
-      sort,
-      page,
-      limit,
-      cursor,
-      includeAuthorId: mine && sessionUser ? sessionUser.userId : undefined,
-    });
+    const result =
+      sort === "following"
+        ? await getFollowFeed(sessionUser?.userId ?? "", { page, limit })
+        : sort === "recommended"
+          ? await getRecommendedPostFeed(sessionUser?.userId ?? null, { page, limit })
+          : await listPosts({
+              query,
+              tag,
+              authorId,
+              sort,
+              page,
+              limit,
+              cursor,
+              includeAuthorId: mine && sessionUser ? sessionUser.userId : undefined,
+            });
     return apiSuccess(result);
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);

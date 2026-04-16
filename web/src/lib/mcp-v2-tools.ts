@@ -16,6 +16,12 @@ export const MCP_V2_TOOL_NAMES = [
   "submit_collaboration_intent",
   "request_team_join",
   "create_team_task",
+  "list_team_tasks",
+  "list_team_milestones",
+  "agent_complete_team_task",
+  "agent_submit_task_review",
+  "request_team_task_delete",
+  "request_team_member_role_change",
 ] as const;
 
 export type McpV2ToolName = (typeof MCP_V2_TOOL_NAMES)[number];
@@ -26,6 +32,10 @@ export const MCP_V2_WRITE_TOOLS: McpV2ToolName[] = [
   "submit_collaboration_intent",
   "request_team_join",
   "create_team_task",
+  "agent_complete_team_task",
+  "agent_submit_task_review",
+  "request_team_task_delete",
+  "request_team_member_role_change",
 ];
 
 export function isMcpWriteTool(tool: McpV2ToolName): boolean {
@@ -48,6 +58,12 @@ export const MCP_V2_TOOL_SCOPES: Record<McpV2ToolName, ApiKeyScope> = {
   submit_collaboration_intent: "write:intents",
   request_team_join: "write:teams",
   create_team_task: "write:team:tasks",
+  list_team_tasks: "read:team:tasks",
+  list_team_milestones: "read:team:milestones",
+  agent_complete_team_task: "write:team:tasks",
+  agent_submit_task_review: "write:team:tasks",
+  request_team_task_delete: "write:team:tasks",
+  request_team_member_role_change: "write:teams",
 };
 
 export const MCP_V2_TOOL_DEFINITIONS: Array<{
@@ -236,6 +252,87 @@ export const MCP_V2_TOOL_DEFINITIONS: Array<{
         status: { type: "string", enum: ["todo", "doing", "done"] },
         assigneeUserId: { type: "string" },
         milestoneId: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "list_team_tasks",
+    description: "List tasks for a team you belong to. Requires read:team:tasks.",
+    requiredScope: MCP_V2_TOOL_SCOPES.list_team_tasks,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug"],
+      properties: {
+        teamSlug: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "list_team_milestones",
+    description: "List milestones for a team you belong to. Requires read:team:milestones.",
+    requiredScope: MCP_V2_TOOL_SCOPES.list_team_milestones,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug"],
+      properties: {
+        teamSlug: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "agent_complete_team_task",
+    description: "Mark an assigned team task as ready for review. Requires write:team:tasks on an agent-bound key.",
+    requiredScope: MCP_V2_TOOL_SCOPES.agent_complete_team_task,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug", "taskId"],
+      properties: {
+        teamSlug: { type: "string" },
+        taskId: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "agent_submit_task_review",
+    description: "Submit an agent review opinion for a task in review. Final approval or rejection still requires human confirmation.",
+    requiredScope: MCP_V2_TOOL_SCOPES.agent_submit_task_review,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug", "taskId", "decision"],
+      properties: {
+        teamSlug: { type: "string" },
+        taskId: { type: "string" },
+        decision: { type: "string", enum: ["approve", "reject"] },
+        reviewNote: { type: "string", maxLength: 1000 },
+      },
+    },
+  },
+  {
+    name: "request_team_task_delete",
+    description: "Request deletion of a team task. This always creates a human confirmation request.",
+    requiredScope: MCP_V2_TOOL_SCOPES.request_team_task_delete,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug", "taskId"],
+      properties: {
+        teamSlug: { type: "string" },
+        taskId: { type: "string" },
+        reason: { type: "string", maxLength: 500 },
+      },
+    },
+  },
+  {
+    name: "request_team_member_role_change",
+    description: "Request a team member role change. This always creates a human confirmation request.",
+    requiredScope: MCP_V2_TOOL_SCOPES.request_team_member_role_change,
+    inputSchema: {
+      type: "object",
+      required: ["teamSlug", "memberUserId", "role"],
+      properties: {
+        teamSlug: { type: "string" },
+        memberUserId: { type: "string" },
+        role: { type: "string", enum: ["admin", "member", "reviewer"] },
+        reason: { type: "string", maxLength: 500 },
       },
     },
   },

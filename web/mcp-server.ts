@@ -19,6 +19,7 @@
  * Refuses to start in production against a real DATABASE_URL unless explicitly allowed.
  */
 
+import { assertProductionEnv } from "./src/lib/env-check";
 import * as readline from "readline";
 
 // ─── MCP Protocol Types ───────────────────────────────────────────────────────
@@ -292,6 +293,8 @@ async function handleRequest(req: McpRequest): Promise<McpResponse> {
 }
 
 // ─── Main loop ────────────────────────────────────────────────────────────────
+
+assertProductionEnv("mcp-server");
 
 if (
   process.env.NODE_ENV === "production" &&

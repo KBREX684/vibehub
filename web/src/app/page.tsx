@@ -176,13 +176,10 @@ export default async function HomePage() {
           <p className="text-sm text-[var(--color-text-secondary)] mb-6 max-w-md mx-auto">
             {t("home.cta.description")}
           </p>
-          <a
-            href="/api/v1/auth/github?redirect=/"
-            className="btn btn-primary px-8 py-3 text-sm font-semibold"
-          >
+          <Link href="/signup" className="btn btn-primary px-8 py-3 text-sm font-semibold">
             {t("home.cta.button")}
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </Link>
         </div>
       </section>
 

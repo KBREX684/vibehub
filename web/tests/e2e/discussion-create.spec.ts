@@ -1,7 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-test.use({ baseURL: "http://localhost:3100" });
-
 test.describe("Discussion creation flow", () => {
   test("user can submit a new discussion for moderation", async ({ page }) => {
     await page.goto("/login?redirect=/discussions/new");

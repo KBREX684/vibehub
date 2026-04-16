@@ -8,7 +8,7 @@ import type { TeamTaskStatus } from "@/lib/types";
 
 const patchSchema = z.object({
   taskIds: z.array(z.string().min(1)).min(1).max(100),
-  status: z.enum(["todo", "doing", "done"]),
+  status: z.enum(["todo", "doing", "review", "done", "rejected"]),
 });
 
 interface Params {
@@ -30,6 +30,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { slug } = await params;
     const json = await request.json();
     const parsed = patchSchema.parse(json);
+    if (session.agentBindingId) {
+      return apiError(
+        {
+          code: "FORBIDDEN",
+          message: "Agent-bound keys cannot batch-update tasks. Use dedicated task completion or review tools.",
+        },
+        403
+      );
+    }
     const tasks = await batchUpdateTeamTasks({
       teamSlug: slug,
       actorUserId: session.userId,
@@ -51,10 +60,10 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
     }
     if (msg === "FORBIDDEN_BATCH_TASK_UPDATE") {
-      return apiError({ code: "FORBIDDEN", message: "Only the team owner can run batch status updates" }, 403);
+      return apiError({ code: "FORBIDDEN", message: "Only team owners, admins, or reviewers can run batch status updates" }, 403);
     }
     if (msg === "INVALID_TASK_STATUS") {
-      return apiError({ code: "INVALID_TASK_STATUS", message: "status must be todo, doing, or done" }, 400);
+      return apiError({ code: "INVALID_TASK_STATUS", message: "status must be todo, doing, review, done, or rejected" }, 400);
     }
     return apiError(
       {

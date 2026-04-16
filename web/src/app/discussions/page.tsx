@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { PostCard } from "@/components/post-card";
 import { DiscussionsPostFeed } from "@/components/discussions-post-feed";
-import { listPosts } from "@/lib/repository";
+import { getFollowFeed, getRecommendedPostFeed, listPosts } from "@/lib/repository";
+import { getSessionUserFromCookie } from "@/lib/auth";
 import type { PostSortOrder } from "@/lib/types";
 import {
   MessageSquare,
   Flame,
-  Star,
   Clock,
   Plus,
+  Users,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 
 interface Props {
@@ -32,19 +35,27 @@ function buildDiscussionsHref(opts: {
 export default async function DiscussionsPage({ searchParams }: Props) {
   const params = await searchParams;
   const sort = (
-    ["recent", "hot", "featured"].includes(params.sort || "")
+    ["recent", "hot", "following", "recommended", "featured"].includes(params.sort || "")
       ? params.sort
       : "recent"
   ) as PostSortOrder;
   const page = parseInt(params.page || "1", 10) || 1;
   const authorId = typeof params.author === "string" && params.author.trim() ? params.author.trim() : undefined;
   const classicPagination = params.pagination === "1";
-  const { items, pagination } = await listPosts({ sort, page, limit: 12, authorId });
+  const session = await getSessionUserFromCookie();
+  const personalizedFeed = sort === "following" || sort === "recommended";
+  const feedResult = sort === "following"
+    ? await getFollowFeed(session?.userId ?? "", { page, limit: 12 })
+    : sort === "recommended"
+      ? await getRecommendedPostFeed(session?.userId ?? null, { page, limit: 12 })
+      : await listPosts({ sort, page, limit: 12, authorId });
+  const { items, pagination } = feedResult;
 
   const TABS = [
     { sort: "recent" as const, icon: Clock, label: "Recent" },
     { sort: "hot" as const, icon: Flame, label: "Hot" },
-    { sort: "featured" as const, icon: Star, label: "Featured" },
+    { sort: "following" as const, icon: Users, label: "Following" },
+    { sort: "recommended" as const, icon: Sparkles, label: "Recommended" },
   ];
 
   return (
@@ -62,7 +73,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
               {pagination.total} active threads
-              {authorId ? " · Filtered by author" : " · Share knowledge, ask questions"}
+              {authorId ? " · Filtered by author" : personalizedFeed ? " · Personalized view" : " · Share knowledge, ask questions"}
             </p>
           </div>
         </div>
@@ -95,6 +106,21 @@ export default async function DiscussionsPage({ searchParams }: Props) {
           </Link>
         </div>
       </section>
+
+      {personalizedFeed && !session ? (
+        <div className="card p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Sign in to unlock personalized feeds</h2>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">
+              Following shows creators you follow. Recommended uses your own activity and saved interests.
+            </p>
+          </div>
+          <Link href={`/login?redirect=${encodeURIComponent(`/discussions?sort=${sort}`)}`} className="btn btn-primary text-sm px-4 py-2 inline-flex items-center gap-1.5">
+            Sign in
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      ) : null}
 
       {/* Results */}
       {items.length === 0 ? (

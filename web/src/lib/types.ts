@@ -3,13 +3,27 @@
 export type Role = "guest" | "user" | "admin";
 export type EnterpriseVerificationStatus = "none" | "pending" | "approved" | "rejected";
 /** P2: Post sort order */
-export type PostSortOrder = "recent" | "hot" | "featured";
+export type PostSortOrder = "recent" | "hot" | "featured" | "following" | "recommended";
+export type ProjectSortOrder = "latest" | "hot" | "featured" | "recommended";
 export type ProjectStatus = "idea" | "building" | "launched" | "paused";
 export type ReviewStatus = "pending" | "approved" | "rejected";
 export type CollaborationIntentType = "join" | "recruit";
 export type ChallengeStatus = "draft" | "active" | "closed";
 export type SubscriptionTier = "free" | "pro";
 export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
+export type OAuthAppTokenScope = string;
+export type AutomationWorkflowRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped";
+export type AutomationWorkflowActionType =
+  | "create_team_task"
+  | "create_team_discussion"
+  | "agent_complete_team_task"
+  | "agent_submit_task_review"
+  | "request_team_task_delete"
+  | "request_team_member_role_change"
+  | "send_slack_message"
+  | "send_discord_message"
+  | "send_feishu_message"
+  | "trigger_github_repository_dispatch";
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 
@@ -90,6 +104,9 @@ export interface Project {
   /** Admin daily featured slot (C-5) */
   featuredAt?: string;
   featuredRank?: number;
+  bookmarkCount?: number;
+  collaborationIntentCount?: number;
+  activityScore?: number;
 }
 
 // ─── Post / Comment ───────────────────────────────────────────────────────────
@@ -194,6 +211,11 @@ export interface SessionUser {
   apiKeyScopes?: string[];
   /** Present when authenticated via API key (DB path); used for MCP audit. */
   apiKeyId?: string;
+  /** Present when an API key is linked to a named agent binding. */
+  agentBindingId?: string;
+  /** Present when authenticated via OAuth app access token. */
+  oauthAppId?: string;
+  oauthAppClientId?: string;
 }
 
 // ─── Moderation ───────────────────────────────────────────────────────────────
@@ -221,11 +243,7 @@ export interface ReportTicket {
   resolvedAt?: string;
   resolvedBy?: string;
   /** Admin API only — heuristic AI triage (v7 P0-11) */
-  adminAi?: {
-    suggestion: string;
-    riskLevel: "low" | "medium" | "high";
-    confidence?: number;
-  };
+  adminAi?: AdminAiInsight;
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -235,6 +253,9 @@ export type InAppNotificationKind =
   | "team_join_approved"
   | "team_join_rejected"
   | "team_task_assigned"
+  | "team_task_ready_for_review"
+  | "team_task_reviewed"
+  | "agent_confirmation_required"
   // C-3 social events
   | "post_commented"
   | "comment_replied"
@@ -262,6 +283,7 @@ export interface McpInvokeAuditRow {
   tool: string;
   userId: string;
   apiKeyId?: string;
+  agentBindingId?: string;
   httpStatus: number;
   clientIp?: string;
   userAgent?: string;
@@ -273,6 +295,7 @@ export interface McpInvokeAuditRow {
 export interface AuditLog {
   id: string;
   actorId: string;
+  agentBindingId?: string;
   action: string;
   entityType:
     | "post"
@@ -283,6 +306,8 @@ export interface AuditLog {
     | "system"
     | "team"
     | "team_join_request"
+    | "team_discussion"
+    | "team_task_comment"
     | "team_task"
     | "team_milestone"
     | "api_key"
@@ -294,12 +319,117 @@ export interface AuditLog {
   createdAt: string;
 }
 
+export interface AgentBindingSummary {
+  id: string;
+  label: string;
+  agentType: string;
+  description?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OAuthAppSummary {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  clientId: string;
+  redirectUris: string[];
+  scopes: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OAuthAppCreated extends OAuthAppSummary {
+  clientSecret: string;
+}
+
+export interface AutomationWorkflowStepSummary {
+  id: string;
+  sortOrder: number;
+  actionType: AutomationWorkflowActionType;
+  config: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutomationWorkflowSummary {
+  id: string;
+  userId: string;
+  agentBindingId?: string;
+  agentBindingLabel?: string;
+  name: string;
+  description?: string;
+  triggerEvent: string;
+  filterJson?: Record<string, unknown>;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  steps: AutomationWorkflowStepSummary[];
+}
+
+export interface AutomationWorkflowRunSummary {
+  id: string;
+  workflowId: string;
+  workflowName?: string;
+  userId: string;
+  event: string;
+  status: AutomationWorkflowRunStatus;
+  triggerPayload?: Record<string, unknown>;
+  resultSummary?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export type AgentActionStatus = "succeeded" | "confirmation_required" | "rejected";
+
+export interface AgentActionAuditRow {
+  id: string;
+  actorUserId: string;
+  agentBindingId: string;
+  apiKeyId?: string;
+  teamId?: string;
+  taskId?: string;
+  action: string;
+  outcome: AgentActionStatus;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export type AgentConfirmationStatus = "pending" | "approved" | "rejected" | "canceled";
+
+export interface AgentConfirmationRequest {
+  id: string;
+  requesterUserId: string;
+  agentBindingId: string;
+  apiKeyId?: string;
+  teamId?: string;
+  teamSlug?: string;
+  taskId?: string;
+  taskTitle?: string;
+  targetType: string;
+  targetId: string;
+  action: string;
+  reason?: string;
+  payload: Record<string, unknown>;
+  status: AgentConfirmationStatus;
+  decidedByUserId?: string;
+  decidedByName?: string;
+  decidedAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+}
+
 /** User API key metadata (secret never stored; prefix for display). */
 export interface ApiKeySummary {
   id: string;
   label: string;
   prefix: string;
   scopes: string[];
+  agentBindingId?: string;
+  agentBinding?: AgentBindingSummary;
   createdAt: string;
   lastUsedAt?: string;
   revokedAt?: string;
@@ -366,7 +496,7 @@ export interface WeeklyLeaderboardPublicPayload {
 
 // ─── Teams ────────────────────────────────────────────────────────────────────
 
-export type TeamRole = "owner" | "member";
+export type TeamRole = "owner" | "admin" | "member" | "reviewer";
 
 export interface TeamSummary {
   id: string;
@@ -414,7 +544,7 @@ export interface TeamProjectCard {
   oneLiner: string;
 }
 
-export type TeamTaskStatus = "todo" | "doing" | "done";
+export type TeamTaskStatus = "todo" | "doing" | "review" | "done" | "rejected";
 
 export interface TeamTask {
   id: string;
@@ -430,6 +560,11 @@ export interface TeamTask {
   assigneeUserId?: string;
   assigneeName?: string;
   assigneeEmail?: string;
+  reviewRequestedAt?: string;
+  reviewedAt?: string;
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  reviewNote?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -456,7 +591,30 @@ export interface TeamDetail extends TeamSummary {
   members: TeamMember[];
   teamProjects?: TeamProjectCard[];
   viewerPendingJoinRequest?: boolean;
+  viewerRole?: TeamRole;
   pendingJoinRequests?: TeamJoinRequestRow[];
+}
+
+export interface TeamDiscussion {
+  id: string;
+  teamId: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamTaskComment {
+  id: string;
+  teamId: string;
+  taskId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CollaborationIntentConversionMetrics {
@@ -493,6 +651,9 @@ export interface ContributionCreditProfile {
   commentsAuthored: number;
   projectsCreated: number;
   intentsApproved: number;
+  postLikesReceived: number;
+  projectBookmarksReceived: number;
+  followerCount: number;
   updatedAt: string;
 }
 
@@ -522,6 +683,7 @@ export interface SubscriptionPlanInfo {
 
 /** M-1: Per-user subscription record (Stripe-backed). */
 export type PaymentProviderKind = "stripe" | "alipay" | "wechatpay";
+export type BillingRecordStatus = "pending" | "succeeded" | "failed" | "canceled" | "refunded";
 
 export interface UserSubscription {
   id: string;
@@ -546,6 +708,35 @@ export interface UserSubscription {
   updatedAt: string;
 }
 
+export interface BillingRecord {
+  id: string;
+  userId: string;
+  subscriptionId?: string;
+  paymentProvider: PaymentProviderKind;
+  tier: SubscriptionTier;
+  status: BillingRecordStatus;
+  amountCents: number;
+  currency: string;
+  externalSessionId?: string;
+  externalPaymentId?: string;
+  description?: string;
+  failureReason?: string;
+  metadata?: Record<string, unknown>;
+  settledAt?: string;
+  refundedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminAiInsight {
+  suggestion: string;
+  riskLevel: "low" | "medium" | "high";
+  confidence?: number;
+  priority?: "low" | "normal" | "high" | "urgent";
+  queue?: string;
+  labels?: string[];
+}
+
 // ─── P4: Enterprise / Embed ───────────────────────────────────────────────────
 
 export interface EnterpriseProfile {
@@ -560,11 +751,7 @@ export interface EnterpriseProfile {
   createdAt: string;
   updatedAt: string;
   /** Admin API only — heuristic AI triage (v7 P0-11) */
-  adminAi?: {
-    suggestion: string;
-    riskLevel: "low" | "medium" | "high";
-    confidence?: number;
-  };
+  adminAi?: AdminAiInsight;
 }
 
 export interface EnterpriseVerificationApplication {

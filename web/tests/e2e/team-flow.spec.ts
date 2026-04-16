@@ -26,7 +26,7 @@ test("team task board: create task on seeded team", async ({ page }) => {
 
   const title = `E2E task ${Date.now()}`;
   await page.getByRole("button", { name: /new task|cancel/i }).click();
-  await page.getByLabel(/^task title$/i).fill(title);
-  await page.getByRole("button", { name: /^create task$/i }).click();
+  await page.locator("#team-task-title").fill(title);
+  await page.getByTestId("team-task-create-submit").click();
   await expect(page.getByText(title)).toBeVisible();
 });

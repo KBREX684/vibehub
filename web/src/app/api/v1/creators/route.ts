@@ -20,8 +20,9 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
     const query = url.searchParams.get("query") ?? undefined;
+    const sort = url.searchParams.get("sort") === "recommended" ? "recommended" : "recent";
 
-    const result = await listCreators({ query, page, limit });
+    const result = await listCreators({ query, sort, viewerUserId: gate.user?.userId, page, limit });
     return apiSuccess(result);
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);

@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = () => {
     const current = typeof window !== "undefined" ? window.location.pathname : "/";
-    window.location.href = `/api/v1/auth/github?redirect=${encodeURIComponent(current)}`;
+    window.location.href = `/login?redirect=${encodeURIComponent(current)}`;
   };
 
   const logout = async () => {

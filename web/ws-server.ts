@@ -33,6 +33,7 @@ import { IncomingMessage } from "http";
 import { createServer } from "http";
 import { verifyChatToken, type ChatTokenErrorCode } from "./src/lib/chat-token";
 import { assertUrlCountAtMost, escapeHtmlAngleBrackets } from "./src/lib/content-safety";
+import { assertProductionEnv } from "./src/lib/env-check";
 import { logger, serializeError } from "./src/lib/logger";
 import Redis from "ioredis";
 
@@ -53,6 +54,8 @@ const NEXT_BASE_URL     = process.env.NEXT_BASE_URL ?? "http://localhost:3000";
 const INTERNAL_SERVICE_SECRET = process.env.INTERNAL_SERVICE_SECRET ?? "";
 const REDIS_URL = process.env.REDIS_URL?.trim() || "";
 const IS_PRODUCTION     = process.env.NODE_ENV === "production";
+
+assertProductionEnv("ws-server");
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

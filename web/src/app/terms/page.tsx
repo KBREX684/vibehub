@@ -28,10 +28,26 @@ export default function TermsPage() {
           </p>
         </section>
         <section>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Platform rules</h2>
+          <p>
+            You must follow the VibeHub platform rules available at{" "}
+            <a href="/rules" className="text-[var(--color-text-primary)] underline">/rules</a>, including
+            restrictions on harassment, illegal content, impersonation, credential abuse, spam, and malicious
+            automation. We may limit or remove content, access, integrations, or accounts that violate these rules.
+          </p>
+        </section>
+        <section>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Content</h2>
           <p>
             You retain rights to content you submit. By posting on VibeHub, you grant us a limited license to
             host, display, and distribute that content as needed to operate the service.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Accounts and linked providers</h2>
+          <p>
+            Email sign-in is the primary account method. GitHub may be linked as an auxiliary sign-in method for
+            existing accounts. You are responsible for keeping your email inbox and linked provider access secure.
           </p>
         </section>
         <section>

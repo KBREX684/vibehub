@@ -130,12 +130,12 @@ async function ensureUnreadNotificationForAdmin(page: Page) {
 test.describe("Core acceptance flows", () => {
   test("unauthenticated user is redirected from notifications to login", async ({ page }) => {
     await page.goto("/notifications");
-    await expect(page).toHaveURL(/\/login\?redirect=\/notifications/);
+    await expect(page).toHaveURL(/\/login\?redirect=(%2F|\/)notifications/);
   });
 
-  test("unauthenticated user is redirected from enterprise workspace to login", async ({ page }) => {
+  test("enterprise workspace redirects to enterprise verification", async ({ page }) => {
     await page.goto("/workspace/enterprise");
-    await expect(page).toHaveURL(/\/login\?redirect=\/workspace\/enterprise/);
+    await expect(page).toHaveURL(/\/enterprise\/verify/);
   });
 
   test("unauthenticated user is redirected from admin to login", async ({ page }) => {
@@ -171,17 +171,14 @@ test.describe("Core acceptance flows", () => {
     await expect(page.getByText(/admin dashboard/i)).toHaveCount(0);
   });
 
-  test("enterprise workspace stays gated for both regular users and admins without approval", async ({ page }) => {
+  test("enterprise workspace stays deprecated for regular users and admins", async ({ page }) => {
     await setSession(page, "user");
     await page.goto("/workspace/enterprise");
-    await expect(page).toHaveURL(/\/workspace\/enterprise/);
-    await expect(page.getByRole("heading", { name: "Radar workspace access" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Request access/i }).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/enterprise\/verify/);
 
     await setSession(page, "admin");
     await page.goto("/workspace/enterprise");
-    await expect(page.getByRole("heading", { name: "Radar workspace access" })).toBeVisible();
-    await expect(page.getByText(/Admins use the governance console/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/enterprise\/verify/);
   });
 
   test("discussion comment CRUD: add reply edit delete", async ({ page }) => {
@@ -191,10 +188,9 @@ test.describe("Core acceptance flows", () => {
 
     const unique = `e2e-comment-${Date.now()}`;
     await page.getByPlaceholder("Add a comment…").fill(unique);
-    await page.getByRole("button", { name: "Post" }).first().click();
-    await expect(page.getByText(unique)).toBeVisible();
+    await page.getByTestId("comment-submit-root").click();
 
-    const rootComment = page.locator(".card").filter({ hasText: unique }).first();
+    const rootComment = page.locator('[data-testid^="comment-card-"]').filter({ hasText: unique }).first();
     await expect(rootComment).toBeVisible();
     const rootCommentId = await rootComment
       .locator('button[data-testid^="comment-reply-"]')
@@ -205,8 +201,9 @@ test.describe("Core acceptance flows", () => {
     await page.getByTestId(`comment-reply-${rootCommentId}`).click();
     const reply = `${unique}-reply`;
     await page.getByPlaceholder("Write a reply…").fill(reply);
-    await page.getByRole("button", { name: "Post" }).first().click();
-    await expect(page.getByText(reply)).toBeVisible();
+    await page.getByTestId(`comment-submit-reply-${rootCommentId}`).click();
+    const replyComment = page.locator('[data-testid^="comment-card-"]').filter({ hasText: reply }).first();
+    await expect(replyComment).toBeVisible();
 
     await rootComment.hover();
     await page.getByTestId(`comment-edit-${rootCommentId}`).click();
@@ -215,8 +212,6 @@ test.describe("Core acceptance flows", () => {
     await page.getByTestId(`comment-save-${rootCommentId}`).click();
     await expect(page.getByText(edited)).toBeVisible();
 
-    const replyComment = page.locator(".card").filter({ hasText: reply }).first();
-    await expect(replyComment).toBeVisible();
     const replyCommentId = await replyComment
       .locator('button[data-testid^="comment-delete-"]')
       .first()

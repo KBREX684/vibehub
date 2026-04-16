@@ -6,10 +6,42 @@ import { apiFetch, resetCsrfToken } from "@/lib/api-fetch";
 export function SettingsAccountPanel(props: {
   email: string | null;
   githubLinked: boolean;
+  hasPassword: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  async function sendPasswordLink() {
+    if (!props.email) return;
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      const res = await apiFetch("/api/v1/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: props.email }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) {
+        setErr(j?.error?.message ?? "Could not send password link");
+        return;
+      }
+      const resetUrl = typeof j?.data?.resetUrl === "string" ? j.data.resetUrl : null;
+      setMsg(
+        resetUrl
+          ? `Password link created. Dev link: ${resetUrl}`
+          : props.hasPassword
+            ? "Password reset instructions sent if email delivery is configured."
+            : "Password setup instructions sent if email delivery is configured."
+      );
+    } catch {
+      setErr("Request failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function unlinkGitHub() {
     if (!confirm("Unlink GitHub from this account?")) return;
@@ -62,6 +94,27 @@ export function SettingsAccountPanel(props: {
         <p className="text-sm text-[var(--color-text-primary)] m-0">{props.email ?? "—"}</p>
       </div>
 
+      {props.email && (
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 space-y-2">
+          <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
+            {props.hasPassword ? "Password login" : "Set password"}
+          </p>
+          <p className="text-xs text-[var(--color-text-secondary)] m-0">
+            {props.hasPassword
+              ? "Send a reset link to rotate your email password."
+              : "GitHub-linked accounts need an email password before GitHub can be removed safely."}
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={sendPasswordLink}
+            className="btn btn-secondary text-xs py-1.5"
+          >
+            {props.hasPassword ? "Send reset link" : "Send setup link"}
+          </button>
+        </div>
+      )}
+
       {props.githubLinked && (
         <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 space-y-2">
           <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">GitHub</p>
@@ -76,6 +129,18 @@ export function SettingsAccountPanel(props: {
           >
             Unlink GitHub
           </button>
+        </div>
+      )}
+
+      {!props.githubLinked && (
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 space-y-2">
+          <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">GitHub</p>
+          <p className="text-xs text-[var(--color-text-secondary)] m-0">
+            Link GitHub as an auxiliary sign-in method for this account.
+          </p>
+          <a href="/api/v1/auth/github?redirect=/settings/account" className="btn btn-secondary text-xs py-1.5 inline-flex">
+            Link GitHub
+          </a>
         </div>
       )}
 

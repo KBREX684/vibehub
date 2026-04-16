@@ -20,6 +20,8 @@ const patchSchema = z.object({
   tags: z.array(z.string().min(1)).optional(),
   status: z.enum(["idea", "building", "launched", "paused"]).optional(),
   demoUrl: z.union([z.string().url(), z.null()]).optional(),
+  repoUrl: z.union([z.string().url(), z.null()]).optional(),
+  websiteUrl: z.union([z.string().url(), z.null()]).optional(),
 });
 
 interface Params {

@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
+  addTeamMemberByEmail,
+  agentCompleteTeamTask,
+  batchUpdateTeamTasks,
+  createTeam,
   createTeamTask,
+  createAgentBindingForUser,
   deleteTeamTask,
+  decideAgentConfirmationRequest,
   listTeamTasks,
+  listAgentActionAuditsForUser,
+  listAgentConfirmationRequestsForUser,
   reorderTeamTask,
+  requestAgentTaskDelete,
+  requestAgentTaskReview,
+  requestAgentTeamMemberRoleChange,
+  updateTeamMemberRole,
   updateTeamTask,
 } from "../src/lib/repository";
 import type { TeamTask } from "../src/lib/types";
@@ -152,5 +164,177 @@ describe("team tasks (P3-4 + P3-7, mock)", () => {
     await deleteTeamTask({ teamSlug: "vibehub-core", taskId: "tt2", actorUserId: "u1" });
     const tasks = await listTeamTasks({ teamSlug: "vibehub-core", viewerUserId: "u1" });
     expect(tasks.some((t) => t.id === "tt2")).toBe(false);
+  });
+
+  it("reviewer may update and batch-review tasks without owner privileges", async () => {
+    const team = await createTeam({ ownerUserId: "u1", name: "Reviewer Flow Team" });
+    await addTeamMemberByEmail({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      email: "chen@vibehub.dev",
+      role: "reviewer",
+    });
+    const task = await createTeamTask({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      title: "Reviewer can triage this",
+    });
+    const updated = await updateTeamTask({
+      teamSlug: team.slug,
+      taskId: task.id,
+      actorUserId: "u3",
+      status: "doing",
+    });
+    expect(updated.status).toBe("doing");
+    const batch = await batchUpdateTeamTasks({
+      teamSlug: team.slug,
+      actorUserId: "u3",
+      taskIds: [task.id],
+      status: "done",
+    });
+    expect(batch[0]?.status).toBe("done");
+  });
+
+  it("agent completion moves task into review and records independent audit", async () => {
+    const binding = await createAgentBindingForUser({
+      userId: "u2",
+      label: "Member agent",
+      agentType: "openai",
+    });
+    const created = await createTeamTask({
+      teamSlug: "vibehub-core",
+      actorUserId: "u1",
+      title: "Agent-completed task",
+      assigneeUserId: "u2",
+    });
+    const reviewed = await agentCompleteTeamTask({
+      teamSlug: "vibehub-core",
+      taskId: created.id,
+      actorUserId: "u2",
+      agentBindingId: binding.id,
+    });
+    expect(reviewed.status).toBe("review");
+    expect(reviewed.reviewRequestedAt).toBeTruthy();
+    const audits = await listAgentActionAuditsForUser({ userId: "u2", page: 1, limit: 20 });
+    expect(audits.items.some((item) => item.action === "team_task_complete" && item.taskId === created.id)).toBe(true);
+  });
+
+  it("reviewer agent review requires human confirmation, then marks task done", async () => {
+    const team = await createTeam({ ownerUserId: "u1", name: "Agent Review Flow Team" });
+    await addTeamMemberByEmail({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      email: "bob@vibehub.dev",
+      role: "member",
+    });
+    await addTeamMemberByEmail({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      email: "chen@vibehub.dev",
+      role: "reviewer",
+    });
+    const task = await createTeamTask({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      title: "Needs reviewer confirmation",
+      assigneeUserId: "u2",
+    });
+    const memberBinding = await createAgentBindingForUser({
+      userId: "u2",
+      label: "Member finisher",
+      agentType: "openai",
+    });
+    const reviewerBinding = await createAgentBindingForUser({
+      userId: "u3",
+      label: "Reviewer agent",
+      agentType: "openai",
+    });
+    await agentCompleteTeamTask({
+      teamSlug: team.slug,
+      taskId: task.id,
+      actorUserId: "u2",
+      agentBindingId: memberBinding.id,
+    });
+    const confirmation = await requestAgentTaskReview({
+      teamSlug: team.slug,
+      taskId: task.id,
+      actorUserId: "u3",
+      agentBindingId: reviewerBinding.id,
+      approved: true,
+      reviewNote: "Looks good. Ship it.",
+    });
+    expect(confirmation.status).toBe("pending");
+    const pending = await listAgentConfirmationRequestsForUser({
+      userId: "u1",
+      page: 1,
+      limit: 20,
+      status: "pending",
+    });
+    expect(pending.items.some((item) => item.id === confirmation.id)).toBe(true);
+    const decided = await decideAgentConfirmationRequest({
+      requestId: confirmation.id,
+      deciderUserId: "u1",
+      decision: "approved",
+    });
+    expect(decided.status).toBe("approved");
+    const tasks = await listTeamTasks({ teamSlug: team.slug, viewerUserId: "u1" });
+    const updated = tasks.find((item) => item.id === task.id);
+    expect(updated?.status).toBe("done");
+    expect(updated?.reviewedByUserId).toBe("u1");
+  });
+
+  it("agent high-risk delete and role change require confirmation before applying", async () => {
+    const team = await createTeam({ ownerUserId: "u1", name: "Agent High Risk Team" });
+    await addTeamMemberByEmail({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      email: "bob@vibehub.dev",
+      role: "member",
+    });
+    const ownerAgent = await createAgentBindingForUser({
+      userId: "u1",
+      label: "Owner ops agent",
+      agentType: "openai",
+    });
+    const task = await createTeamTask({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      title: "Delete me after confirmation",
+    });
+    const deleteRequest = await requestAgentTaskDelete({
+      teamSlug: team.slug,
+      taskId: task.id,
+      actorUserId: "u1",
+      agentBindingId: ownerAgent.id,
+      reason: "obsolete task",
+    });
+    await decideAgentConfirmationRequest({
+      requestId: deleteRequest.id,
+      deciderUserId: "u1",
+      decision: "approved",
+    });
+    const remaining = await listTeamTasks({ teamSlug: team.slug, viewerUserId: "u1" });
+    expect(remaining.some((item) => item.id === task.id)).toBe(false);
+
+    const roleRequest = await requestAgentTeamMemberRoleChange({
+      teamSlug: team.slug,
+      memberUserId: "u2",
+      nextRole: "reviewer",
+      actorUserId: "u1",
+      agentBindingId: ownerAgent.id,
+      reason: "shift to review duty",
+    });
+    await decideAgentConfirmationRequest({
+      requestId: roleRequest.id,
+      deciderUserId: "u1",
+      decision: "approved",
+    });
+    const noop = await updateTeamMemberRole({
+      teamSlug: team.slug,
+      actorUserId: "u1",
+      memberUserId: "u2",
+      role: "reviewer",
+    });
+    expect(noop.role).toBe("reviewer");
   });
 });
