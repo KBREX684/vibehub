@@ -10,6 +10,8 @@ import {
   Cpu,
   Settings,
   Home,
+  Building2,
+  HeartPulse,
 } from "lucide-react";
 
 export default async function AdminLayout({
@@ -28,6 +30,10 @@ export default async function AdminLayout({
     { href: "/admin/users",          label: "Users",         icon: Users      },
     { href: "/admin/moderation",     label: "Moderation",    icon: FileText   },
     { href: "/admin/collaboration",  label: "Intents",       icon: Link2      },
+    { href: "/api/v1/admin/enterprise/verifications", label: "Enterprise", icon: Building2 },
+    { href: "/api/v1/admin/reports", label: "Reports", icon: FileText },
+    { href: "/api/v1/admin/health", label: "Health", icon: HeartPulse },
+    { href: "/api/v1/admin/ai-suggestions", label: "AI suggestions", icon: Cpu },
     { href: "/api/v1/admin/audit-logs",   label: "Audit Logs",    icon: Settings },
     { href: "/api/v1/admin/mcp-invoke-audits", label: "MCP Audits", icon: Cpu },
   ];

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
-import { Key, CreditCard, Building2, ChevronRight, Settings2, Bell, Webhook } from "lucide-react";
+import { Key, CreditCard, Building2, ChevronRight, Settings2, Bell, Webhook, User } from "lucide-react";
 
 export default async function SettingsIndexPage() {
   const session = await getSessionUserFromCookie();
@@ -39,9 +39,15 @@ export default async function SettingsIndexPage() {
       icon: Webhook,
     },
     {
+      href: "/settings/account",
+      title: t("settings.account_title", "Account"),
+      description: t("settings.account_desc", "Email login, linked providers, and delete account."),
+      icon: User,
+    },
+    {
       href: "/enterprise/verify",
-      title: t("settings.enterprise_title", "Enterprise workspace"),
-      description: t("settings.enterprise_desc", "Apply for observer workspace access (optional)."),
+      title: t("settings.enterprise_verify_title", "Enterprise verification"),
+      description: t("settings.enterprise_verify_desc", "Apply for enterprise certification (badge only)."),
       icon: Building2,
     },
   ] as const;

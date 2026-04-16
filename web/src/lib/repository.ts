@@ -10,6 +10,7 @@ import { randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
 import { mapPrismaToRepositoryError, RepositoryError } from "@/lib/repository-errors";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
+import { generateSecureToken, hashPassword, verifyPassword } from "@/lib/auth-password";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
 import {
   enterpriseProfileSelect,
@@ -4223,17 +4224,28 @@ export async function listReportTickets(params: {
   status?: "open" | "closed" | "all";
   page: number;
   limit: number;
+  /** v7 P0-11: attach heuristic AI triage for admin lists */
+  forAdmin?: boolean;
 }): Promise<Paginated<ReportTicket>> {
   if (useMockData) {
     const filtered = mockReportTickets.filter((item) => {
       return !params.status || params.status === "all" || item.status === params.status;
     });
-    return paginateArray(filtered, params.page, params.limit);
+    const pageItems = paginateArray(filtered, params.page, params.limit);
+    if (!params.forAdmin) return pageItems;
+    const { getOrCreateReportTicketAi } = await import("@/lib/admin-ai");
+    const items = await Promise.all(
+      pageItems.items.map(async (t) => {
+        const ai = await getOrCreateReportTicketAi(t.targetId, t.reason);
+        return { ...t, adminAi: { suggestion: ai.suggestion, riskLevel: ai.riskLevel, confidence: ai.confidence } };
+      })
+    );
+    return { ...pageItems, items };
   }
 
   const prisma = await getPrisma();
   const where = params.status && params.status !== "all" ? { status: params.status } : {};
-  const [items, total] = await Promise.all([
+  const [rows, total] = await Promise.all([
     prisma.reportTicket.findMany({
       where,
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
@@ -4243,8 +4255,20 @@ export async function listReportTickets(params: {
     prisma.reportTicket.count({ where }),
   ]);
 
+  const base = rows.map(toReportTicketDto);
+  let items = base;
+  if (params.forAdmin) {
+    const { getOrCreateReportTicketAi } = await import("@/lib/admin-ai");
+    items = await Promise.all(
+      base.map(async (t) => {
+        const ai = await getOrCreateReportTicketAi(t.targetId, t.reason);
+        return { ...t, adminAi: { suggestion: ai.suggestion, riskLevel: ai.riskLevel, confidence: ai.confidence } };
+      })
+    );
+  }
+
   return {
-    items: items.map(toReportTicketDto),
+    items,
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -6395,7 +6419,12 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
   }
 
   const prisma = await getPrisma();
-  const existing = await prisma.user.findUnique({ where: { githubId: input.githubId } });
+  const existingByGh = await prisma.user.findUnique({ where: { githubId: input.githubId } });
+  const existing =
+    existingByGh ??
+    (await prisma.user.findUnique({
+      where: { email: input.email },
+    }));
   if (existing) {
     const updated = await prisma.user.update({
       where: { id: existing.id },
@@ -6403,6 +6432,7 @@ export async function findOrCreateGitHubUser(input: GitHubUserInput): Promise<Us
         name: input.name,
         avatarUrl: input.avatarUrl,
         githubUsername: input.githubUsername,
+        githubId: existing.githubId ?? input.githubId,
       },
       select: {
         id: true,
@@ -6491,6 +6521,242 @@ export function getDemoUser(role: DemoRole = "user") {
     enterpriseWebsite: user.enterpriseWebsite,
   };
 }
+
+const EMAIL_SIGNUP_CODE_TTL_MS = 15 * 60 * 1000;
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export async function registerUserWithEmailPassword(params: {
+  email: string;
+  password: string;
+  name: string;
+  acceptTerms: boolean;
+}): Promise<{ userId: string; verificationToken: string }> {
+  if (!params.acceptTerms) {
+    throw new Error("TERMS_NOT_ACCEPTED");
+  }
+  if (useMockData) {
+    const email = normalizeEmail(params.email);
+    if (mockUsers.some((u) => u.email.toLowerCase() === email)) {
+      throw new Error("EMAIL_IN_USE");
+    }
+    const token = generateSecureToken();
+    const id = `u-email-${mockUsers.length + 1}`;
+    mockUsers.push({
+      id,
+      email,
+      name: params.name.trim(),
+      role: "user",
+      sessionVersion: 0,
+      passwordHash: await hashPassword(params.password),
+      emailVerifiedAt: undefined,
+      emailVerificationToken: token,
+    });
+    return { userId: id, verificationToken: token };
+  }
+
+  const prisma = await getPrisma();
+  const email = normalizeEmail(params.email);
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new Error("EMAIL_IN_USE");
+  }
+  const passwordHash = await hashPassword(params.password);
+  const verificationToken = generateSecureToken();
+  const created = await prisma.user.create({
+    data: {
+      email,
+      name: params.name.trim(),
+      role: "user",
+      passwordHash,
+      emailVerificationToken: verificationToken,
+      termsAcceptedAt: new Date(),
+      enterpriseProfile: { create: { status: "none" } },
+    },
+    select: { id: true },
+  });
+  return { userId: created.id, verificationToken };
+}
+
+export async function verifyEmailSignupToken(token: string): Promise<{ ok: true; email: string } | { ok: false }> {
+  const trimmed = token.trim();
+  if (!trimmed) return { ok: false };
+
+  if (useMockData) {
+    const u = mockUsers.find((x) => x.emailVerificationToken === trimmed);
+    if (!u) return { ok: false };
+    u.emailVerifiedAt = new Date().toISOString();
+    u.emailVerificationToken = undefined;
+    return { ok: true, email: u.email };
+  }
+
+  const prisma = await getPrisma();
+  const user = await prisma.user.findUnique({
+    where: { emailVerificationToken: trimmed },
+    select: { id: true, email: true },
+  });
+  if (!user) return { ok: false };
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerifiedAt: new Date(),
+      emailVerificationToken: null,
+    },
+  });
+  return { ok: true, email: user.email };
+}
+
+export async function authenticateEmailPassword(
+  email: string,
+  password: string
+): Promise<User | null> {
+  const normalized = normalizeEmail(email);
+  if (useMockData) {
+    const u = mockUsers.find((x) => x.email.toLowerCase() === normalized);
+    if (!u || !u.passwordHash) return null;
+    if (!u.emailVerifiedAt) return null;
+    const ok = await verifyPassword(password, u.passwordHash);
+    if (!ok) return null;
+    return {
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      sessionVersion: u.sessionVersion ?? 0,
+      githubId: u.githubId,
+      githubUsername: u.githubUsername,
+      avatarUrl: u.avatarUrl,
+      enterpriseStatus: u.enterpriseStatus ?? "none",
+      enterpriseOrganization: u.enterpriseOrganization,
+      enterpriseWebsite: u.enterpriseWebsite,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const row = await prisma.user.findUnique({
+    where: { email: normalized },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      sessionVersion: true,
+      passwordHash: true,
+      emailVerifiedAt: true,
+      githubId: true,
+      githubUsername: true,
+      avatarUrl: true,
+      enterpriseProfile: { select: enterpriseProfileSelect },
+    },
+  });
+  if (!row?.passwordHash || !row.emailVerifiedAt) return null;
+  const valid = await verifyPassword(password, row.passwordHash);
+  if (!valid) return null;
+  const ent = sessionEnterpriseFromProfile(row.enterpriseProfile ?? undefined);
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role: row.role as Role,
+    sessionVersion: row.sessionVersion,
+    githubId: row.githubId ?? undefined,
+    githubUsername: row.githubUsername ?? undefined,
+    avatarUrl: row.avatarUrl ?? undefined,
+    enterpriseStatus: ent.enterpriseStatus,
+    enterpriseOrganization: ent.enterpriseOrganization,
+    enterpriseWebsite: ent.enterpriseWebsite,
+  };
+}
+
+export async function createPasswordResetToken(email: string): Promise<string | null> {
+  const normalized = normalizeEmail(email);
+  const token = generateSecureToken();
+  const expires = new Date(Date.now() + EMAIL_SIGNUP_CODE_TTL_MS * 4);
+
+  if (useMockData) {
+    const u = mockUsers.find((x) => x.email.toLowerCase() === normalized);
+    if (!u || !u.passwordHash) return null;
+    u.passwordResetToken = token;
+    u.passwordResetExpires = expires.toISOString();
+    return token;
+  }
+
+  const prisma = await getPrisma();
+  const row = await prisma.user.updateMany({
+    where: { email: normalized, passwordHash: { not: null } },
+    data: {
+      passwordResetToken: token,
+      passwordResetExpires: expires,
+    },
+  });
+  if (row.count === 0) return null;
+  return token;
+}
+
+export async function resetPasswordWithToken(token: string, newPassword: string): Promise<boolean> {
+  const trimmed = token.trim();
+  if (!trimmed) return false;
+  const hash = await hashPassword(newPassword);
+
+  if (useMockData) {
+    const u = mockUsers.find((x) => x.passwordResetToken === trimmed);
+    if (!u || !u.passwordResetExpires) return false;
+    if (new Date(u.passwordResetExpires).getTime() < Date.now()) return false;
+    u.passwordHash = hash;
+    u.passwordResetToken = undefined;
+    u.passwordResetExpires = undefined;
+    u.sessionVersion = (u.sessionVersion ?? 0) + 1;
+    return true;
+  }
+
+  const prisma = await getPrisma();
+  const user = await prisma.user.findUnique({
+    where: { passwordResetToken: trimmed },
+    select: { id: true, passwordResetExpires: true },
+  });
+  if (!user?.passwordResetExpires || user.passwordResetExpires.getTime() < Date.now()) {
+    return false;
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: hash,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+      sessionVersion: { increment: 1 },
+    },
+  });
+  return true;
+}
+
+export async function deleteUserAccount(userId: string): Promise<void> {
+  if (useMockData) {
+    const idx = mockUsers.findIndex((u) => u.id === userId);
+    if (idx >= 0) mockUsers.splice(idx, 1);
+    return;
+  }
+  const prisma = await getPrisma();
+  await prisma.user.delete({ where: { id: userId } });
+}
+
+export async function unlinkGitHubAccount(userId: string): Promise<void> {
+  if (useMockData) {
+    const u = mockUsers.find((x) => x.id === userId);
+    if (u) {
+      u.githubId = undefined;
+      u.githubUsername = undefined;
+    }
+    return;
+  }
+  const prisma = await getPrisma();
+  await prisma.user.update({
+    where: { id: userId },
+    data: { githubId: null, githubUsername: null },
+  });
+}
+
 export async function updateComment(params: {
   commentId: string;
   actorUserId: string;

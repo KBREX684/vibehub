@@ -20,6 +20,12 @@ export interface User {
   role: Role;
   /** P0: bump to revoke existing browser sessions */
   sessionVersion?: number;
+  /** P0-1: email auth (optional; mock store uses ISO strings for dates) */
+  passwordHash?: string;
+  emailVerifiedAt?: string;
+  emailVerificationToken?: string;
+  passwordResetToken?: string;
+  passwordResetExpires?: string;
   /** F-1: GitHub OAuth */
   githubId?: number;
   githubUsername?: string;
@@ -214,6 +220,12 @@ export interface ReportTicket {
   createdAt: string;
   resolvedAt?: string;
   resolvedBy?: string;
+  /** Admin API only — heuristic AI triage (v7 P0-11) */
+  adminAi?: {
+    suggestion: string;
+    riskLevel: "low" | "medium" | "high";
+    confidence?: number;
+  };
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -509,11 +521,14 @@ export interface SubscriptionPlanInfo {
 }
 
 /** M-1: Per-user subscription record (Stripe-backed). */
+export type PaymentProviderKind = "stripe" | "alipay" | "wechatpay";
+
 export interface UserSubscription {
   id: string;
   userId: string;
   tier: SubscriptionTier;
   status: SubscriptionStatus;
+  paymentProvider?: PaymentProviderKind;
   stripeSubscriptionId?: string;
   stripePriceId?: string;
   currentPeriodEnd?: string;
@@ -544,6 +559,12 @@ export interface EnterpriseProfile {
   reviewNote?: string;
   createdAt: string;
   updatedAt: string;
+  /** Admin API only — heuristic AI triage (v7 P0-11) */
+  adminAi?: {
+    suggestion: string;
+    riskLevel: "low" | "medium" | "high";
+    confidence?: number;
+  };
 }
 
 export interface EnterpriseVerificationApplication {

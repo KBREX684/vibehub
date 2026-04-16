@@ -37,6 +37,7 @@
     "workspace": "雷达工作台",
     "apiKeys": "API 密钥",
     "notifications": "通知",
+    "account": "账号",
     "admin": "管理后台",
     "signOut": "退出登录",
     "signIn": "登录",

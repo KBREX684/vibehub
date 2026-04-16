@@ -7,6 +7,7 @@ import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { readJsonObjectBodyOrEmpty } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { getDefaultStripeProvider } from "@/lib/billing/payment-provider";
 
 const useMockData = isMockDataEnabled();
 
@@ -20,8 +21,8 @@ export async function POST(request: NextRequest) {
   if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
 
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) {
+  const provider = getDefaultStripeProvider();
+  if (!provider) {
     if (useMockData) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
       return apiSuccess({
@@ -46,14 +47,9 @@ export async function POST(request: NextRequest) {
       return apiError({ code: "NO_STRIPE_CUSTOMER", message: "No billing account found. Please subscribe first." }, 404);
     }
 
-    const { default: Stripe } = await import("stripe");
-    const stripe = new Stripe(secretKey, { apiVersion: "2026-03-25.dahlia" });
-    const session = await stripe.billingPortal.sessions.create({
-      customer: user.stripeCustomerId,
-      return_url: returnUrl,
-    });
+    const session = await provider.createPortalSession(user.stripeCustomerId, returnUrl);
 
-    return apiSuccess({ url: session.url });
+    return apiSuccess({ url: session.url, paymentProvider: "stripe" });
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;

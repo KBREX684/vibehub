@@ -15,6 +15,7 @@ function toSubscriptionDto(row: {
   userId: string;
   tier: string;
   status: string;
+  paymentProvider?: string;
   stripeSubscriptionId: string | null;
   stripePriceId: string | null;
   currentPeriodEnd: Date | null;
@@ -36,6 +37,7 @@ function toSubscriptionDto(row: {
     userId: row.userId,
     tier: (row.tier as UserSubscription["tier"]) ?? "free",
     status: (row.status as UserSubscription["status"]) ?? "active",
+    paymentProvider: (row.paymentProvider as UserSubscription["paymentProvider"]) ?? "stripe",
     stripeSubscriptionId: row.stripeSubscriptionId ?? undefined,
     stripePriceId: row.stripePriceId ?? undefined,
     currentPeriodEnd: row.currentPeriodEnd?.toISOString(),
@@ -71,6 +73,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       userId,
       tier: "free",
       status: "active",
+      paymentProvider: "stripe",
       cancelAtPeriodEnd: false,
       enterpriseStatus: "none",
       createdAt: new Date().toISOString(),
@@ -85,6 +88,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       userId,
       tier: "free",
       status: "active",
+      paymentProvider: "stripe",
       cancelAtPeriodEnd: false,
       enterpriseStatus: "none",
       createdAt: new Date().toISOString(),
@@ -111,6 +115,7 @@ export async function upsertUserSubscription(params: {
   stripePriceId?: string;
   currentPeriodEnd?: Date;
   cancelAtPeriodEnd?: boolean;
+  paymentProvider?: UserSubscription["paymentProvider"];
 }): Promise<UserSubscription> {
   if (useMockData) {
     const idx = mockSubscriptions.findIndex((s) => s.userId === params.userId);
@@ -120,6 +125,7 @@ export async function upsertUserSubscription(params: {
       userId: params.userId,
       tier: params.tier,
       status: params.status,
+      paymentProvider: params.paymentProvider ?? "stripe",
       stripeSubscriptionId: params.stripeSubscriptionId,
       stripePriceId: params.stripePriceId,
       currentPeriodEnd: params.currentPeriodEnd?.toISOString(),
@@ -151,6 +157,7 @@ export async function upsertUserSubscription(params: {
   const data = {
     tier: params.tier as "free" | "pro",
     status: params.status as "active" | "past_due" | "canceled" | "trialing",
+    paymentProvider: (params.paymentProvider ?? "stripe") as "stripe" | "alipay" | "wechatpay",
     stripeSubscriptionId: params.stripeSubscriptionId ?? null,
     stripePriceId: params.stripePriceId ?? null,
     currentPeriodEnd: params.currentPeriodEnd ?? null,

@@ -32,7 +32,6 @@ export function Footer() {
         { kind: "link", href: "/settings/api-keys", labelKey: "footer.apiKeys" },
         { kind: "link", href: "/api/v1/openapi.json", labelKey: "footer.openapi" },
         { kind: "link", href: "/pricing", labelKey: "footer.pricing" },
-        { kind: "link", href: "/workspace/enterprise", labelKey: "footer.radarWorkspace" },
       ],
     },
     {

@@ -490,6 +490,7 @@ export const mockSubscriptions: Array<{
   userId: string;
   tier: "free" | "pro";
   status: "active" | "past_due" | "canceled" | "trialing";
+  paymentProvider?: "stripe" | "alipay" | "wechatpay";
   stripeSubscriptionId?: string;
   stripePriceId?: string;
   currentPeriodEnd?: string;
@@ -507,7 +508,7 @@ export const mockSubscriptions: Array<{
   updatedAt: string;
 }> = [
   // Admin user u1 gets pro so team-limit E2E tests pass
-  { id: "sub_u1_pro", userId: "u1", tier: "pro", status: "active", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: "sub_u1_pro", userId: "u1", tier: "pro", status: "active", paymentProvider: "stripe", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
 // C-1: in-memory social interaction stores

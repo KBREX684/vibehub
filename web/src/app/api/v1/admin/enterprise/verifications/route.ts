@@ -8,6 +8,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
+import { getOrCreateEnterpriseAi } from "@/lib/admin-ai";
 import type { EnterpriseVerificationStatus } from "@/lib/types";
 
 const ALLOWED_STATUS = new Set<EnterpriseVerificationStatus | "all">([
@@ -47,12 +48,21 @@ export async function GET(request: Request) {
     const status = rawStatus as EnterpriseVerificationStatus | "all";
     // Use the profile-based listing (backed by mockEnterpriseProfiles / User table)
     const result = await listEnterpriseProfiles({ status, page, limit });
-    // Normalize shape: expose id=userId so callers can pass it back to POST
-    const normalized = {
-      ...result,
-      items: result.items.map((p) => ({ ...p, id: p.userId })),
-    };
-    return apiSuccess(normalized);
+    const items = await Promise.all(
+      result.items.map(async (p) => {
+        const ai = await getOrCreateEnterpriseAi({
+          userId: p.userId,
+          organizationName: p.organizationName,
+          organizationWebsite: p.organizationWebsite,
+        });
+        return {
+          ...p,
+          id: p.userId,
+          adminAi: { suggestion: ai.suggestion, riskLevel: ai.riskLevel, confidence: ai.confidence },
+        };
+      })
+    );
+    return apiSuccess({ ...result, items });
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;

@@ -5,9 +5,10 @@ import { isDevDemoAuth } from "@/lib/dev-demo";
 import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 import { getServerTranslator } from "@/lib/i18n";
+import { EmailAuthForms } from "@/components/email-auth-forms";
 
 interface Props {
-  searchParams: Promise<{ redirect?: string; required?: string; error?: string }>;
+  searchParams: Promise<{ redirect?: string; required?: string; error?: string; verified?: string }>;
 }
 
 export default async function LoginPage({ searchParams }: Props) {
@@ -29,8 +30,10 @@ export default async function LoginPage({ searchParams }: Props) {
     state_mismatch: t("auth.error.state_mismatch"),
     config_missing: t("auth.error.config_missing"),
     callback_error: t("auth.error.callback_error"),
+    verify_failed: "Email verification failed or link expired.",
   };
   const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? t("auth.error.default")) : null;
+  const verifiedOk = sp.verified === "1";
 
   const oauthHref = `/api/v1/auth/github?redirect=${encodeURIComponent(redirectTo)}`;
 
@@ -75,11 +78,26 @@ export default async function LoginPage({ searchParams }: Props) {
               <p className="text-xs text-[var(--color-error)]">{errorMsg}</p>
             </div>
           )}
+          {verifiedOk && (
+            <div className="p-3 text-xs rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-[var(--color-text-secondary)]">
+              Email verified. You can sign in below.
+            </div>
+          )}
+
+          <EmailAuthForms redirectTo={redirectTo} initialMode="login" />
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--color-border)]" />
+            </div>
+            <div className="relative flex justify-center text-[10px]">
+              <span className="px-2 bg-[var(--color-bg-canvas)] text-[var(--color-text-muted)]">or</span>
+            </div>
+          </div>
 
           {/* GitHub OAuth */}
           <a
             href={oauthHref}
-            className="btn btn-primary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
+            className="btn btn-secondary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
           >
             <GitBranch className="w-4 h-4" />
             {t("auth.continue_with_github")}

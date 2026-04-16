@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
-import { upsertStripeCustomer } from "@/lib/repository";
+import { getDefaultStripeProvider } from "@/lib/billing/payment-provider";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
@@ -22,13 +22,6 @@ const checkoutBodySchema = z.object({
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
 });
-
-async function getStripe() {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) throw new Error("STRIPE_NOT_CONFIGURED");
-  const { default: Stripe } = await import("stripe");
-  return new Stripe(secretKey, { apiVersion: "2026-03-25.dahlia" });
-}
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -59,41 +52,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const stripe = await getStripe();
-
-    // Look up or create Stripe customer
-    let customerId: string | undefined;
-    try {
-      const { prisma } = await import("@/lib/db");
-      const user = await prisma.user.findUnique({ where: { id: auth.user.userId }, select: { stripeCustomerId: true, email: true, name: true } });
-      if (user?.stripeCustomerId) {
-        customerId = user.stripeCustomerId;
-      } else if (user) {
-        const customer = await stripe.customers.create({
-          email: user.email,
-          name: user.name,
-          metadata: { vibehubUserId: auth.user.userId },
-        });
-        customerId = customer.id;
-        await upsertStripeCustomer(auth.user.userId, customer.id);
-      }
-    } catch {
-      // non-fatal — proceed without customer ID (mock or missing DB)
+    const provider = getDefaultStripeProvider();
+    if (!provider) {
+      return apiError({ code: "STRIPE_NOT_CONFIGURED", message: "Stripe billing is not configured" }, 503);
     }
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: { vibehubUserId: auth.user.userId, tier },
-      subscription_data: {
-        metadata: { vibehubUserId: auth.user.userId, tier },
-      },
+    const session = await provider.createCheckoutSession({
+      userId: auth.user.userId,
+      tier,
+      successUrl,
+      cancelUrl,
+      stripePriceId: priceId,
     });
 
-    return apiSuccess({ url: session.url, sessionId: session.id });
+    return apiSuccess({ url: session.url, sessionId: session.sessionId, paymentProvider: "stripe" });
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;

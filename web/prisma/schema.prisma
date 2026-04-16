@@ -90,6 +90,13 @@ enum SubscriptionStatus {
   trialing
 }
 
+/// v7 P0-9: which payment backend backs this subscription row
+enum PaymentProvider {
+  stripe
+  alipay
+  wechatpay
+}
+
 model User {
   id                        String           @id @default(cuid())
   email                     String           @unique
@@ -97,6 +104,14 @@ model User {
   role                      Role             @default(user)
   /// P0: incremented to invalidate browser sessions without storing server-side sessions
   sessionVersion            Int              @default(0)
+  /// P0: email + password auth (nullable for GitHub-only accounts)
+  passwordHash              String?
+  emailVerifiedAt           DateTime?
+  emailVerificationToken  String?          @unique
+  passwordResetToken        String?          @unique
+  passwordResetExpires      DateTime?
+  /// P0-4: user accepted terms / privacy at registration (required for email signup)
+  termsAcceptedAt           DateTime?
   /// F-1: GitHub OAuth
   githubId                  Int?             @unique
   githubUsername            String?          @unique
@@ -114,6 +129,7 @@ model User {
   reportTickets             ReportTicket[]   @relation("ReportReporter")
   resolvedReportTickets     ReportTicket[]   @relation("ReportResolvedBy")
   auditLogs                 AuditLog[]
+  adminAiSuggestions        AdminAiSuggestion[]
   collaborationIntents      CollaborationIntent[] @relation("CollaborationApplicant")
   reviewedCollabIntents     CollaborationIntent[] @relation("CollaborationReviewer")
   ownedTeams                Team[]                @relation("TeamOwner")
@@ -488,6 +504,43 @@ model AuditLog {
   @@index([entityType, entityId])
 }
 
+enum AdminAiSuggestionTarget {
+  report_ticket
+  enterprise_verification
+  post_review
+  other
+}
+
+enum AdminAiRiskLevel {
+  low
+  medium
+  high
+}
+
+enum AdminAiDecision {
+  pending
+  accepted
+  rejected
+  modified
+}
+
+/// v7 P0-11: AI governance assistant suggestions (human must confirm actions)
+model AdminAiSuggestion {
+  id              String                   @id @default(cuid())
+  targetType      AdminAiSuggestionTarget
+  targetId        String
+  suggestion      String
+  riskLevel       AdminAiRiskLevel         @default(low)
+  confidence      Float?
+  adminDecision   AdminAiDecision          @default(pending)
+  adminUserId     String?
+  decidedAt       DateTime?
+  createdAt       DateTime                 @default(now())
+  adminUser       User?                    @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+}
+
 model CollaborationIntent {
   id                        String                  @id @default(cuid())
   projectId                 String
@@ -694,6 +747,7 @@ model UserSubscription {
   userId               String             @unique
   tier                 SubscriptionTier   @default(free)
   status               SubscriptionStatus @default(active)
+  paymentProvider    PaymentProvider    @default(stripe)
   /// M-2: Stripe subscription ID
   stripeSubscriptionId String?            @unique
   /// M-2: Stripe price ID

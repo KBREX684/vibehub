@@ -73,7 +73,6 @@ export default async function ApiKeysSettingsPage() {
                 { href: "/developers", label: "Developers hub" },
                 { href: "/api/v1/openapi.json", label: "OpenAPI Spec", external: true },
                 { href: "/api/v1/mcp/v2/manifest", label: "MCP v2 Manifest", external: true },
-                { href: "/workspace/enterprise", label: "Radar workspace (secondary)" },
                 { href: "/leaderboards", label: "Contribution Leaderboard" },
               ].map(({ href, label, external }) => (
                 <a

@@ -85,9 +85,10 @@ jobs:
 
       - name: Build
         env:
-          USE_MOCK_DATA: "true"
+          USE_MOCK_DATA: "false"
           NODE_ENV: "production"
           SESSION_SECRET: "ci-session-secret"
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vibehub?schema=public
         run: npm run build
 
       - name: Install Playwright Chromium

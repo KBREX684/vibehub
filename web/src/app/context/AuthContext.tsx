@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const json = await res.json();
       const session = json?.data?.session;
+      const emailFromApi = json?.data?.email as string | undefined;
       if (session && session.userId) {
         setUser({
           id:        session.userId,
@@ -100,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role:      session.role,
           enterpriseStatus: session.enterpriseStatus,
           subscriptionTier: session.subscriptionTier,
-          email:     session.email,
+          email:     emailFromApi ?? session.email,
           avatarUrl: session.avatarUrl,
         });
       } else {

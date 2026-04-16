@@ -15,7 +15,7 @@ import {
   LogOut,
   Shield,
   Key,
-  Briefcase,
+  User,
   Sun,
   Moon,
   Monitor,
@@ -208,21 +208,12 @@ export function TopNav() {
                       </div>
                       <div className="py-1">
                         {[
-                          {
-                            href: "/workspace/enterprise",
-                            icon: Briefcase,
-                            key: "nav.radar_workspace",
-                            requiresEnterprise: true,
-                          },
+                          { href: "/settings/account", icon: User, key: "nav.account" },
                           { href: "/settings/api-keys", icon: Key, key: "nav.api_keys" },
                           { href: "/notifications", icon: Bell, key: "nav.notifications" },
                           { href: "/admin", icon: Shield, key: "nav.admin", adminOnly: true },
                         ]
-                          .filter(
-                            (item) =>
-                              (!item.adminOnly || user.role === "admin") &&
-                              (!item.requiresEnterprise || user.enterpriseStatus === "approved")
-                          )
+                          .filter((item) => !item.adminOnly || user.role === "admin")
                           .map((item) => (
                             <Link
                               key={item.href}

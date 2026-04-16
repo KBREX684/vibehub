@@ -4413,7 +4413,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Embeddable team card JSON (CORS enabled, public) */
+        /** Embeddable team card JSON (Origin allowlist via EMBED_CORS_ORIGINS, public) */
         get: {
             parameters: {
                 query?: never;

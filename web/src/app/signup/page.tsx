@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { Zap, GitBranch, Users, Building2, Code2, ArrowLeft } from "lucide-react";
+import { EmailAuthForms } from "@/components/email-auth-forms";
 
 interface Props {
   searchParams: Promise<{ intent?: string }>;
@@ -56,8 +57,19 @@ export default async function SignupPage({ searchParams: _sp }: Props) {
           <div className="text-center">
             <h1 className="text-lg font-bold text-[var(--color-text-primary)]">Join VibeHub</h1>
             <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-              Choose your path to get started
+              Register with email or continue with GitHub
             </p>
+          </div>
+
+          <EmailAuthForms redirectTo="/" initialMode="register" />
+
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--color-border)]" />
+            </div>
+            <div className="relative flex justify-center text-[10px]">
+              <span className="px-2 bg-[var(--color-bg-canvas)] text-[var(--color-text-muted)]">or choose a path</span>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -85,7 +97,7 @@ export default async function SignupPage({ searchParams: _sp }: Props) {
           </div>
 
           <p className="text-[10px] text-center text-[var(--color-text-muted)]">
-            All paths use GitHub OAuth. No separate password needed.
+            GitHub paths use OAuth. Email registration requires verifying your inbox.
           </p>
         </div>
 

@@ -1,0 +1,56 @@
+import { z } from "zod";
+import { apiError, apiSuccess } from "@/lib/response";
+import { readJsonObjectBody } from "@/lib/api-json-body";
+import { apiErrorFromZod } from "@/lib/zod-api-error";
+import { registerUserWithEmailPassword } from "@/lib/repository";
+import { sendTransactionalEmail } from "@/lib/mail";
+import { getRequestLogger, serializeError } from "@/lib/logger";
+
+const bodySchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8).max(128),
+    name: z.string().min(1).max(80),
+    acceptTerms: z.literal(true),
+  })
+  .strict();
+
+export async function POST(request: Request) {
+  const log = getRequestLogger(request, { route: "/api/v1/auth/register" });
+  const parsed = await readJsonObjectBody(request);
+  if (!parsed.ok) return parsed.response;
+  const zod = bodySchema.safeParse(parsed.body);
+  if (!zod.success) return apiErrorFromZod(zod.error);
+
+  try {
+    const { userId, verificationToken } = await registerUserWithEmailPassword(zod.data);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || new URL(request.url).origin;
+    const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`;
+
+    await sendTransactionalEmail({
+      to: zod.data.email,
+      subject: "Verify your VibeHub account",
+      text: `Welcome to VibeHub!\n\nPlease verify your email by opening this link:\n${verifyUrl}\n\nIf you did not sign up, you can ignore this message.`,
+    });
+
+    const devFallback =
+      process.env.NODE_ENV === "development" ? { verifyUrl } : {};
+
+    return apiSuccess({
+      userId,
+      ...devFallback,
+      message: "Check your inbox for a verification link.",
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      if (e.message === "TERMS_NOT_ACCEPTED") {
+        return apiError({ code: "TERMS_REQUIRED", message: "You must accept the terms and privacy policy" }, 400);
+      }
+      if (e.message === "EMAIL_IN_USE") {
+        return apiError({ code: "EMAIL_IN_USE", message: "An account with this email already exists" }, 409);
+      }
+    }
+    log.error({ err: serializeError(e) }, "register failed");
+    return apiError({ code: "REGISTER_FAILED", message: "Registration failed" }, 500);
+  }
+}

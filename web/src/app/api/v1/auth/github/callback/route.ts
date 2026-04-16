@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { AuthConstants, encodeSession } from "@/lib/auth";
-import { findOrCreateGitHubUser, getUserTier } from "@/lib/repository";
+import { findOrCreateGitHubUser } from "@/lib/repository";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { setSessionCookieOnResponse } from "@/lib/auth-session-cookie";
 
 interface GitHubTokenResponse {
   access_token: string;
@@ -111,27 +111,8 @@ export async function GET(request: Request) {
       avatarUrl: ghUser.avatar_url,
     });
 
-    const subscriptionTier = await getUserTier(user.id);
-
-    const session = encodeSession({
-      userId: user.id,
-      role: user.role,
-      name: user.name,
-      sessionVersion: user.sessionVersion ?? 0,
-      enterpriseStatus: user.enterpriseStatus ?? "none",
-      enterpriseOrganization: user.enterpriseOrganization,
-      enterpriseWebsite: user.enterpriseWebsite,
-      subscriptionTier,
-    });
-
     const response = NextResponse.redirect(new URL(redirectPath, baseUrl));
-    response.cookies.set(AuthConstants.SESSION_COOKIE_KEY, session, {
-      httpOnly: true,
-      path: "/",
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    await setSessionCookieOnResponse(response, request, user);
     response.cookies.delete("github_oauth_state");
     response.cookies.delete("github_oauth_redirect");
 

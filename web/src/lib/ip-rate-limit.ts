@@ -35,7 +35,8 @@ export function getClientIp(request: NextRequest): string {
       "unknown"
     );
   }
-  return request.ip?.trim() || "unknown";
+  const socketIp = (request as NextRequest & { ip?: string }).ip;
+  return socketIp?.trim() || "unknown";
 }
 
 export function checkWriteRateLimit(request: NextRequest): { ok: true } | { ok: false; retryAfterSeconds: number } {

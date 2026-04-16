@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
     const status = parseStatus(url.searchParams.get("status"));
-    const result = await listReportTickets({ status, page, limit });
+    const result = await listReportTickets({ status, page, limit, forAdmin: true });
     return apiSuccess(result);
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
