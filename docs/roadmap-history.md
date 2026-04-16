@@ -6,7 +6,7 @@ This file separates historical planning material from the current execution line
 
 - `docs/01_实现计划图.md` — detailed implementation chronology and stage-by-stage history
 - `docs/03_项目日志.md` — long-form execution log
-- `VibeHub_项目计划书_v3.0.md` — earlier strategic planning document (actually v4.0)
+- `VibeHub_项目计划书_v3.0.md` — strategic planning document (content is v4.0; filename retained for link stability)
 - `docs/roadmap-v5.md` — v5.0 full-stack evolution roadmap (superseded by v7.0)
 - `docs/08_backend_optimization_roadmap.md` — backend optimization roadmap v1.0
 
