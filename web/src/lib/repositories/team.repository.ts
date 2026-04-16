@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { paginateArray } from "@/lib/pagination";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
+import { cryptoRandomSuffix } from "@/lib/crypto-id";
 import {
   mockAuditLogs,
   mockProjects,
@@ -317,7 +318,7 @@ export async function createTeam(input: {
       n += 1;
       slug = buildTeamSlugCandidate(baseSlug, n);
     }
-    const id = `team_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const id = `team_${Date.now()}_${cryptoRandomSuffix(9)}`;
     const createdAt = new Date().toISOString();
     const team = {
       id,
@@ -329,7 +330,7 @@ export async function createTeam(input: {
     };
     mockTeams.unshift(team);
     mockTeamMemberships.unshift({
-      id: `tm_${id}_${input.ownerUserId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `tm_${id}_${input.ownerUserId}_${Date.now()}_${cryptoRandomSuffix(8)}`,
       teamId: id,
       userId: input.ownerUserId,
       role: "owner",

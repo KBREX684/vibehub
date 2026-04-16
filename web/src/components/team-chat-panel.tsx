@@ -66,8 +66,19 @@ function formatTime(iso: string) {
   }
 }
 
+/**
+ * Generate a temporary optimistic-update message ID using the Web Crypto API.
+ *
+ * This is a browser-side implementation that uses `crypto.getRandomValues` (Web Crypto)
+ * instead of the server-side `crypto.randomBytes` (Node.js `crypto-id.ts`). The ID format
+ * (`msg_<timestamp>_<random>`) is identical; only the random-byte source differs by runtime.
+ * These IDs are replaced by server-assigned IDs once the message is persisted.
+ */
 function nanoid() {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const buf = new Uint8Array(8);
+  crypto.getRandomValues(buf);
+  const suffix = Array.from(buf, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 8);
+  return `msg_${Date.now()}_${suffix}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

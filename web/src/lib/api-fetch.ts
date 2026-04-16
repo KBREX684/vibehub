@@ -40,6 +40,9 @@ async function loadCsrfToken(): Promise<string | null> {
 
 const WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
+/** Default request timeout in milliseconds (15 s). */
+const DEFAULT_TIMEOUT_MS = 15_000;
+
 export async function apiFetch(
   input: RequestInfo | URL,
   init: RequestInit = {}
@@ -62,6 +65,11 @@ export async function apiFetch(
   // Always send cookies for same-origin API calls
   if (init.credentials === undefined) {
     init = { ...init, credentials: "include" };
+  }
+
+  // P2-UX-3: Attach default timeout unless caller already provides a signal
+  if (!init.signal) {
+    init = { ...init, signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS) };
   }
 
   return fetch(input, init);

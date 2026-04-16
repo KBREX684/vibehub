@@ -34,7 +34,6 @@ export async function DELETE(_request: Request, { params }: Params) {
       {
         code: "API_KEY_REVOKE_FAILED",
         message: "Failed to revoke API key",
-        details: msg,
       },
       500
     );

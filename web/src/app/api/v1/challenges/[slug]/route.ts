@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getChallengeBySlug, updateChallenge, deleteChallenge } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
@@ -61,10 +62,9 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid payload", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "CHALLENGE_NOT_FOUND") {
-      return apiError({ code: "CHALLENGE_NOT_FOUND", message: "Challenge not found" }, 404);
-    }
-    return apiError({ code: "CHALLENGE_UPDATE_FAILED", message: "Failed to update challenge", details: msg }, 500);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
+    return apiError({ code: "CHALLENGE_UPDATE_FAILED", message: "Failed to update challenge" }, 500);
   }
 }
 
@@ -80,9 +80,8 @@ export async function DELETE(_request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "CHALLENGE_NOT_FOUND") {
-      return apiError({ code: "CHALLENGE_NOT_FOUND", message: "Challenge not found" }, 404);
-    }
-    return apiError({ code: "CHALLENGE_DELETE_FAILED", message: "Failed to delete challenge", details: msg }, 500);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
+    return apiError({ code: "CHALLENGE_DELETE_FAILED", message: "Failed to delete challenge" }, 500);
   }
 }

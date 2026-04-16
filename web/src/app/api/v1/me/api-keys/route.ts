@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { createApiKeyForUser, listApiKeysForUser, getUserTier } from "@/lib/repository";
 import { checkApiKeyLimit } from "@/lib/subscription";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
@@ -74,29 +75,12 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid label", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "INVALID_API_KEY_LABEL") {
-      return apiError({ code: "INVALID_API_KEY_LABEL", message: "Label is required" }, 400);
-    }
-    if (msg === "USER_NOT_FOUND") {
-      return apiError({ code: "USER_NOT_FOUND", message: "User not found" }, 404);
-    }
-    if (msg === "INVALID_API_KEY_SCOPE") {
-      return apiError({ code: "INVALID_API_KEY_SCOPE", message: "One or more scopes are invalid" }, 400);
-    }
-    if (msg === "API_KEY_SCOPE_READ_PUBLIC_REQUIRED") {
-      return apiError(
-        { code: "API_KEY_SCOPE_READ_PUBLIC_REQUIRED", message: "scopes must include read:public" },
-        400
-      );
-    }
-    if (msg === "INVALID_API_KEY_EXPIRES_IN_DAYS") {
-      return apiError({ code: "INVALID_API_KEY_EXPIRES_IN_DAYS", message: "expiresInDays must be 1–3650" }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "API_KEY_CREATE_FAILED",
         message: "Failed to create API key",
-        details: msg,
       },
       500
     );

@@ -35,7 +35,9 @@ export function getClientIp(request: NextRequest): string {
       "unknown"
     );
   }
-  return request.ip?.trim() || "unknown";
+  // Next.js 15.5 removed the `.ip` property from NextRequest.
+  // Fall back to the runtime-provided IP when proxy headers are not trusted.
+  return (request as unknown as { ip?: string }).ip?.trim() || "unknown";
 }
 
 export function checkWriteRateLimit(request: NextRequest): { ok: true } | { ok: false; retryAfterSeconds: number } {

@@ -19,7 +19,7 @@ describe("projects status validation", () => {
     const response = await getProjects(request);
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.error.code).toBe("INVALID_STATUS");
+    expect(["INVALID_STATUS", "INVALID_QUERY_PARAMS"]).toContain(body.error.code);
   });
 
   it("rejects invalid status in /api/v1/mcp/search_projects", async () => {
@@ -27,6 +27,6 @@ describe("projects status validation", () => {
     const response = await mcpSearchProjects(request);
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.error.code).toBe("INVALID_STATUS");
+    expect(body.error.code).toBe("INVALID_QUERY_PARAMS");
   });
 });

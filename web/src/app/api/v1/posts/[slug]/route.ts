@@ -5,6 +5,7 @@ import { getPostBySlug, listCommentsForPost, updatePost, deletePost } from "@/li
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -52,8 +53,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "POST_NOT_FOUND")      return apiError({ code: "POST_NOT_FOUND", message: "Post not found" }, 404);
-    if (msg === "FORBIDDEN_NOT_AUTHOR") return apiError({ code: "FORBIDDEN", message: "Only author or admin can edit" }, 403);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     if (err instanceof z.ZodError)     return apiError({ code: "INVALID_BODY", message: "Validation failed", details: err.flatten() }, 400);
     return apiError({ code: "POST_UPDATE_FAILED", message: msg }, 500);
   }
@@ -72,8 +73,8 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "POST_NOT_FOUND")      return apiError({ code: "POST_NOT_FOUND", message: "Post not found" }, 404);
-    if (msg === "FORBIDDEN_NOT_AUTHOR") return apiError({ code: "FORBIDDEN", message: "Only author or admin can delete" }, 403);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError({ code: "POST_DELETE_FAILED", message: msg }, 500);
   }
 }

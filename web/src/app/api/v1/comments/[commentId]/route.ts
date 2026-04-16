@@ -2,6 +2,7 @@ import { z } from "zod";
 import { updateComment, deleteComment } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getSessionUserFromCookie } from "@/lib/auth";
 
 const patchSchema = z.object({
@@ -32,14 +33,10 @@ export async function PATCH(request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "COMMENT_NOT_FOUND") {
-      return apiError({ code: "COMMENT_NOT_FOUND", message: "Comment not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_AUTHOR") {
-      return apiError({ code: "FORBIDDEN", message: "Only the comment author can edit" }, 403);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
-      { code: "COMMENT_UPDATE_FAILED", message: "Failed to update comment", details: msg },
+      { code: "COMMENT_UPDATE_FAILED", message: "Failed to update comment" },
       400
     );
   }
@@ -63,14 +60,10 @@ export async function DELETE(_request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "COMMENT_NOT_FOUND") {
-      return apiError({ code: "COMMENT_NOT_FOUND", message: "Comment not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_AUTHOR") {
-      return apiError({ code: "FORBIDDEN", message: "Only the author or admin can delete" }, 403);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
-      { code: "COMMENT_DELETE_FAILED", message: "Failed to delete comment", details: msg },
+      { code: "COMMENT_DELETE_FAILED", message: "Failed to delete comment" },
       500
     );
   }

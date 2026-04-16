@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { reorderTeamTask } from "@/lib/repository";
 
 const bodySchema = z.object({
@@ -42,29 +43,12 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "direction must be up or down", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "TEAM_NOT_FOUND") {
-      return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_TEAM_MEMBER") {
-      return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
-    }
-    if (msg === "FORBIDDEN_TASK_UPDATE") {
-      return apiError(
-        { code: "FORBIDDEN", message: "Only task creator, assignee, or team owner may reorder this task" },
-        403
-      );
-    }
-    if (msg === "TEAM_TASK_NOT_FOUND") {
-      return apiError({ code: "TEAM_TASK_NOT_FOUND", message: "Task not found" }, 404);
-    }
-    if (msg === "TEAM_TASK_REORDER_EDGE") {
-      return apiError({ code: "TEAM_TASK_REORDER_EDGE", message: "Cannot move further in that direction" }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "TEAM_TASK_REORDER_FAILED",
         message: "Failed to reorder task",
-        details: msg,
       },
       500
     );

@@ -1,6 +1,6 @@
 # VibeHub Roadmap (Current)
 
-更新日期：2026-04-14
+更新日期：2026-04-16
 
 ## 当前战略
 
@@ -71,6 +71,34 @@ VibeHub 当前只聚焦三条主线：
 ## 配套文档
 
 - 当前主线：`docs/roadmap-current.md`
+- 完整规划（v5.0）：`docs/roadmap-v5.md`
+- 查漏补缺（v6.5）：`docs/roadmap-v6.5.md` ← **最新**
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
 - 仓库整理报告：`docs/repository-cleanup-report.md`
+
+## 当前迭代焦点（v6.5 路线图）
+
+v5.0 规划的 P0–P4 已在 v6.0 全部收尾，当前根据全量代码审计结果聚焦查漏补缺：
+
+### 🔴 P0 紧急安全（3 项，均为普通难度）
+- 替换 Math.random() ID 生成为加密安全随机数
+- 为 parseInt/Number() 调用添加有限性校验与上限
+- 消除 API 响应中的原始错误信息泄露
+
+### 🟠 P1 健壮性与质量工程（7 项：5 普通 + 2 复杂）
+- 剩余 ~61 个路由 Zod 验证补全
+- 类型化错误枚举替换字符串匹配
+- SSE 流异常保护 + webhook-deliveries 路由异常处理
+- Vitest 覆盖率配置 + 组件/Hook 单元测试
+
+### 🟡 P2 前端体验细节（5 项：4 普通 + 1 复杂）
+- Feed 组件空状态与重试、i18n 遗漏补充
+- fetch 超时与中止控制、无障碍属性补全
+- AuthContext 拆分减少重渲染
+
+### 🟢 P3 基建运维（4 项：3 普通 + 1 复杂）
+- GitHub Actions CI/CD 流水线
+- 环境变量校验完善、Prisma 查询超时、.env 模板更新
+
+详见 `docs/roadmap-v6.5.md`。

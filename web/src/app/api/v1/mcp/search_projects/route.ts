@@ -1,20 +1,20 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { listProjects } from "@/lib/repository";
-import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
-import type { ProjectStatus } from "@/lib/types";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
-const PROJECT_STATUSES: readonly ProjectStatus[] = ["idea", "building", "launched", "paused"];
-
-function parseStatus(raw: string | null): ProjectStatus | undefined {
-  if (!raw) {
-    return undefined;
-  }
-  return PROJECT_STATUSES.includes(raw as ProjectStatus) ? (raw as ProjectStatus) : undefined;
-}
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  query: z.string().trim().max(200).optional(),
+  tag: z.string().trim().max(100).optional(),
+  tech: z.string().trim().max(100).optional(),
+  team: z.string().trim().max(100).optional(),
+  status: z.enum(["idea", "building", "launched", "paused"]).optional(),
+});
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request, "read:projects:list");
@@ -28,23 +28,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const url = new URL(request.url);
-    const { page, limit } = parsePagination(url.searchParams);
-    const query = url.searchParams.get("query")?.trim() || undefined;
-    const tag = url.searchParams.get("tag")?.trim() || undefined;
-    const tech = url.searchParams.get("tech")?.trim() || undefined;
-    const team = url.searchParams.get("team")?.trim() || undefined;
-    const rawStatus = url.searchParams.get("status");
-    const status = parseStatus(rawStatus);
-    if (rawStatus && !status) {
+    const params: Record<string, string> = {};
+    for (const [k, v] of url.searchParams.entries()) params[k] = v;
+    const parsed = querySchema.safeParse(params);
+    if (!parsed.success) {
       return apiError(
-        {
-          code: "INVALID_STATUS",
-          message: `status must be one of: ${PROJECT_STATUSES.join(", ")}`,
-        },
-        400
+        { code: "INVALID_QUERY_PARAMS", message: "Invalid query parameters", details: parsed.error.flatten().fieldErrors },
+        400,
       );
     }
-
+    const { page, limit, query, tag, tech, team, status } = parsed.data;
     const result = await listProjects({ query, tag, tech, status, team, page, limit });
 
     return apiSuccess({

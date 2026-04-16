@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { createTeamMilestone, listTeamMilestones } from "@/lib/repository";
 
 const createSchema = z.object({
@@ -35,17 +36,12 @@ export async function GET(request: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "TEAM_NOT_FOUND") {
-      return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_TEAM_MEMBER") {
-      return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "TEAM_MILESTONES_LIST_FAILED",
         message: "Failed to list milestones",
-        details: msg,
       },
       500
     );
@@ -78,23 +74,12 @@ if (error instanceof z.ZodError) {
       return apiError({ code: "INVALID_BODY", message: "Invalid milestone payload", details: error.flatten() }, 400);
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "TEAM_NOT_FOUND") {
-      return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_TEAM_MEMBER") {
-      return apiError({ code: "FORBIDDEN", message: "Team members only" }, 403);
-    }
-    if (msg === "INVALID_MILESTONE_TITLE") {
-      return apiError({ code: "INVALID_MILESTONE_TITLE", message: "Title is required" }, 400);
-    }
-    if (msg === "INVALID_MILESTONE_DATE") {
-      return apiError({ code: "INVALID_MILESTONE_DATE", message: "targetDate must be a valid ISO date" }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "TEAM_MILESTONE_CREATE_FAILED",
         message: "Failed to create milestone",
-        details: msg,
       },
       500
     );

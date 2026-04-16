@@ -1,0 +1,90 @@
+# P3-INFRA-1: Primary CI pipeline — lint, type-check, test, build.
+# Runs on every push and pull-request targeting main.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint → Test → Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vibehub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d vibehub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vibehub?schema=public
+      USE_MOCK_DATA: "false"
+      SESSION_SECRET: ci-session-secret
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Prisma migrate (validates SQL)
+        run: npx prisma migrate deploy
+
+      - name: Prisma seed (validates seed script)
+        run: npm run prisma:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit & integration tests
+        run: npm run test
+
+      - name: Validate OpenAPI spec
+        run: npm run validate:openapi
+
+      - name: Live-data smoke (validates real DB path)
+        run: npm run smoke:live-data
+
+      - name: Check generated types in sync
+        run: |
+          npm run generate:types
+          git diff --exit-code
+
+      - name: Build (production)
+        env:
+          USE_MOCK_DATA: "true"
+          NODE_ENV: production
+        run: npm run build

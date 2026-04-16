@@ -1,14 +1,38 @@
 /**
- * P4-BE-4: fail fast when `ENFORCE_REQUIRED_ENV=true` (e.g. staging/prod) and secrets are missing.
+ * P3-INFRA-2: Zod-based environment variable validation.
+ *
+ * Called once from `instrumentation.ts` at server startup.
+ * In enforcement mode (`ENFORCE_REQUIRED_ENV=true`) missing required variables
+ * cause an immediate hard failure with structured error output.
+ *
+ * In development / test the check is permissive — it only warns to stderr.
  */
+import { envSchema } from "@/lib/env-schema";
+
+let _validated = false;
+
 export function assertProductionEnv(): void {
-  if (process.env.ENFORCE_REQUIRED_ENV !== "true") return;
-  const missing: string[] = [];
-  if (!process.env.SESSION_SECRET?.trim()) missing.push("SESSION_SECRET");
-  if (process.env.USE_MOCK_DATA === "false" && !process.env.DATABASE_URL?.trim()) {
-    missing.push("DATABASE_URL");
+  if (_validated) return;
+  _validated = true;
+
+  const result = envSchema.safeParse(process.env);
+
+  if (result.success) return;
+
+  const enforcing = process.env.ENFORCE_REQUIRED_ENV === "true";
+  const formatted = result.error.issues
+    .map((i) => `  • ${i.path.join(".")}: ${i.message}`)
+    .join("\n");
+
+  if (enforcing) {
+    throw new Error(
+      `Environment validation failed (ENFORCE_REQUIRED_ENV=true):\n${formatted}`
+    );
   }
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
-  }
+
+  // Non-enforcing: log a warning but don't crash.
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[env-check] Validation issues (non-fatal in dev):\n${formatted}`
+  );
 }

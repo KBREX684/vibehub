@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { reviewTeamJoinRequest } from "@/lib/repository";
 
 const bodySchema = z.object({
@@ -43,26 +44,12 @@ if (error instanceof z.ZodError) {
       );
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "TEAM_NOT_FOUND") {
-      return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_OWNER") {
-      return apiError({ code: "FORBIDDEN", message: "Only the team owner can review join requests" }, 403);
-    }
-    if (msg === "JOIN_REQUEST_NOT_FOUND") {
-      return apiError({ code: "JOIN_REQUEST_NOT_FOUND", message: "Join request not found" }, 404);
-    }
-    if (msg === "JOIN_REQUEST_NOT_PENDING") {
-      return apiError({ code: "JOIN_REQUEST_NOT_PENDING", message: "Join request is not pending" }, 409);
-    }
-    if (msg === "TEAM_ALREADY_MEMBER") {
-      return apiError({ code: "TEAM_ALREADY_MEMBER", message: "User is already a member" }, 409);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "TEAM_JOIN_REVIEW_FAILED",
         message: "Failed to review join request",
-        details: msg,
       },
       500
     );

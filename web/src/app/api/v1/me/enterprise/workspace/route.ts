@@ -33,9 +33,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-const msg = error instanceof Error ? error.message : String(error);
     return apiError(
-      { code: "ENTERPRISE_WORKSPACE_FAILED", message: "Failed to load workspace summary", details: msg },
+      { code: "ENTERPRISE_WORKSPACE_FAILED", message: "Failed to load workspace summary" },
       500
     );
   }

@@ -6,6 +6,7 @@ import { RepositoryError, mapPrismaToRepositoryError } from "@/lib/repository-er
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { incrementContributionCreditField, contributionWeights } from "@/lib/contribution-credit-increment";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
+import { cryptoRandomSuffix } from "@/lib/crypto-id";
 import { mockCreators, mockProjects, mockTeams, mockTeamMemberships, mockAuditLogs } from "@/lib/data/mock-data";
 import type { Project } from "@/lib/types";
 
@@ -376,7 +377,7 @@ export async function createProject(input: {
       );
     }
     const project: Project = {
-      id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      id: `proj_${Date.now()}_${cryptoRandomSuffix(6)}`,
       slug: `${slug}-${Date.now()}`,
       creatorId: creator.id,
       title: input.title,

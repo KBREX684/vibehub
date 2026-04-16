@@ -16,6 +16,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const rows = await getProjectCollaborationLeaderboard(limit);
+  const MAX_LEADERBOARD_LIMIT = 100;
+  const safeLimit = Math.min(limit, MAX_LEADERBOARD_LIMIT);
+  const rows = await getProjectCollaborationLeaderboard(safeLimit);
   return apiSuccess({ kind: "projects_by_collaboration_intent_count", rows });
 }

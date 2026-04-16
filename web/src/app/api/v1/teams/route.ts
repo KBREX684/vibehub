@@ -9,6 +9,7 @@ import {
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { createTeam, listTeams, getUserTier, countUserTeams } from "@/lib/repository";
 import { checkQuota } from "@/lib/quota";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
@@ -101,17 +102,12 @@ if (error instanceof z.ZodError) {
       );
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "USER_NOT_FOUND") {
-      return apiError({ code: "USER_NOT_FOUND", message: "User not found" }, 404);
-    }
-    if (msg === "INVALID_TEAM_NAME") {
-      return apiError({ code: "INVALID_TEAM_NAME", message: "Team name is required" }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "TEAM_CREATE_FAILED",
         message: "Failed to create team",
-        details: msg,
       },
       500
     );

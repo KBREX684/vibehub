@@ -2,6 +2,7 @@ import { z } from "zod";
 import { reviewPost } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { requireAdminSession } from "@/lib/admin-auth";
 
 const reviewSchema = z.object({
@@ -35,21 +36,12 @@ export async function POST(request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const message = error instanceof Error ? error.message : String(error);
-    if (message === "POST_NOT_FOUND") {
-      return apiError(
-        {
-          code: "POST_NOT_FOUND",
-          message: "Post not found",
-        },
-        404
-      );
-    }
-
+    const mapped = apiErrorFromRepositoryMessage(message);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "ADMIN_REVIEW_POST_FAILED",
         message: "Failed to review post",
-        details: message,
       },
       400
     );

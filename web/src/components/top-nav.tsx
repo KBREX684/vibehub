@@ -23,6 +23,7 @@ import {
 import { useTheme } from "@/app/context/ThemeContext";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
+import { useNotifications } from "@/app/context/NotificationContext";
 import { openCommandPalette } from "@/components/command-palette";
 
 const NAV_LINKS = [
@@ -39,7 +40,8 @@ export function TopNav() {
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
-  const { user, loading, logout, unreadCount } = useAuth();
+  const { user, loading, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -102,6 +104,7 @@ export function TopNav() {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className="relative px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-pill)] transition-colors outline-none"
                 style={{ color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}
               >
@@ -290,6 +293,7 @@ export function TopNav() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
+                  aria-current={isActive(link.href) ? "page" : undefined}
                   className={`px-3 py-2.5 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
                     isActive(link.href)
                       ? "bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] border border-[var(--color-border)]"

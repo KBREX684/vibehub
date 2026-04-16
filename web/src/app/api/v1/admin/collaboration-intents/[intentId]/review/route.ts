@@ -2,6 +2,7 @@
 import { reviewCollaborationIntent } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { requireAdminSession } from "@/lib/admin-auth";
 
@@ -47,30 +48,12 @@ export async function POST(request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const message = error instanceof Error ? error.message : String(error);
-    if (message === "COLLABORATION_INTENT_NOT_FOUND") {
-      return apiError(
-        {
-          code: "COLLABORATION_INTENT_NOT_FOUND",
-          message: "Collaboration intent not found",
-        },
-        404
-      );
-    }
-    if (message === "FORBIDDEN_NOT_PROJECT_OWNER") {
-      return apiError(
-        {
-          code: "FORBIDDEN",
-          message: "Only admins or the project owner can review this intent from the moderation queue",
-        },
-        403
-      );
-    }
-
+    const mapped = apiErrorFromRepositoryMessage(message);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "ADMIN_REVIEW_COLLABORATION_INTENT_FAILED",
         message: "Failed to review collaboration intent",
-        details: message,
       },
       400
     );

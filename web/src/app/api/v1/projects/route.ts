@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, resolveReadAuth } from "@/lib/auth";
 import { listProjects, createProject, countUserProjects, getUserTier } from "@/lib/repository";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { checkQuota } from "@/lib/quota";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
@@ -125,8 +126,10 @@ export async function POST(request: Request) {
       );
     }
     const msg = error instanceof Error ? error.message : String(error);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
-      { code: "PROJECT_CREATE_FAILED", message: "Failed to create project", details: msg },
+      { code: "PROJECT_CREATE_FAILED", message: "Failed to create project" },
       500
     );
   }

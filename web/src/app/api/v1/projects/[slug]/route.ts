@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getProjectBySlug, updateProjectTeamLink, updateProject, deleteProject } from "@/lib/repository";
 
 const patchSchema = z.object({
@@ -101,26 +102,12 @@ if (error instanceof z.ZodError) {
       );
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "PROJECT_NOT_FOUND") {
-      return apiError({ code: "PROJECT_NOT_FOUND", message: "Project not found" }, 404);
-    }
-    if (msg === "TEAM_NOT_FOUND") {
-      return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_CREATOR") {
-      return apiError({ code: "FORBIDDEN", message: "Only the project creator can update this project" }, 403);
-    }
-    if (msg === "FORBIDDEN_NOT_TEAM_MEMBER") {
-      return apiError(
-        { code: "FORBIDDEN", message: "You must be a member of the team to link it to your project" },
-        403
-      );
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "PROJECT_UPDATE_FAILED",
         message: "Failed to update project",
-        details: msg,
       },
       500
     );
@@ -145,14 +132,10 @@ export async function DELETE(_request: Request, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "PROJECT_NOT_FOUND") {
-      return apiError({ code: "PROJECT_NOT_FOUND", message: "Project not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_CREATOR") {
-      return apiError({ code: "FORBIDDEN", message: "Only the creator or admin can delete" }, 403);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
-      { code: "PROJECT_DELETE_FAILED", message: "Failed to delete project", details: msg },
+      { code: "PROJECT_DELETE_FAILED", message: "Failed to delete project" },
       500
     );
   }

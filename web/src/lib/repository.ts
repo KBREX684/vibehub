@@ -7,6 +7,7 @@ import { WEBHOOK_EVENT_NAMES, isWebhookEventName } from "@/lib/webhook-events";
 import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { randomBytes } from "crypto";
+import { cryptoRandomSuffix } from "@/lib/crypto-id";
 import { Prisma } from "@prisma/client";
 import { mapPrismaToRepositoryError, RepositoryError } from "@/lib/repository-errors";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
@@ -846,7 +847,7 @@ function pushMockNotification(params: {
   metadata?: Record<string, unknown>;
 }): void {
   const now = new Date().toISOString();
-  const id = `n_${params.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `n_${params.userId}_${Date.now()}_${cryptoRandomSuffix(8)}`;
   mockInAppNotifications.unshift({
     id,
     userId: params.userId,
@@ -1316,7 +1317,7 @@ export async function createTeamTask(params: {
         ? Math.floor(params.sortOrder)
         : nextTeamTaskSortOrderMock(teamId);
     const row = {
-      id: `tt_${teamId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: `tt_${teamId}_${Date.now()}_${cryptoRandomSuffix(7)}`,
       teamId,
       title,
       description: desc,
@@ -1961,7 +1962,7 @@ export async function createTeamMilestone(params: {
         ? Math.floor(params.sortOrder)
         : nextMilestoneSortOrder(teamId);
     const row = {
-      id: `ms_${teamId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: `ms_${teamId}_${Date.now()}_${cryptoRandomSuffix(7)}`,
       teamId,
       title,
       description: desc,
@@ -4993,7 +4994,7 @@ export async function createTeamChatMessage(input: {
     if (!team) throw new Error("TEAM_NOT_FOUND");
     const author = mockUsers.find((u) => u.id === input.authorId);
     const msg = {
-      id: `tcm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `tcm_${Date.now()}_${cryptoRandomSuffix(8)}`,
       teamId: team.id,
       authorId: input.authorId,
       body,
@@ -5347,7 +5348,7 @@ export async function requestTeamJoin(params: {
     return toTeamJoinRequestRowMock(mockTeamJoinRequests[rejectedIdx]);
     }
     const row = {
-      id: `tjr_${team.id}_${params.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      id: `tjr_${team.id}_${params.userId}_${Date.now()}_${cryptoRandomSuffix(9)}`,
       teamId: team.id,
       applicantId: params.userId,
       message,
@@ -5535,7 +5536,7 @@ export async function reviewTeamJoinRequest(params: {
     }
     mockTeamJoinRequests[idx] = { ...req, status: "approved", reviewedAt };
     mockTeamMemberships.push({
-      id: `tm_${team.id}_${req.applicantId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `tm_${team.id}_${req.applicantId}_${Date.now()}_${cryptoRandomSuffix(8)}`,
       teamId: team.id,
       userId: req.applicantId,
       role: "member",
@@ -5703,7 +5704,7 @@ export async function addTeamMemberByEmail(params: {
     }
     const joinedAt = new Date().toISOString();
     mockTeamMemberships.push({
-      id: `tm_${team.id}_${target.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `tm_${team.id}_${target.id}_${Date.now()}_${cryptoRandomSuffix(8)}`,
       teamId: team.id,
       userId: target.id,
       role: "member",
@@ -5943,7 +5944,7 @@ export async function createApiKeyForUser(params: {
     if (mockApiKeys.some((k) => k.keyHash === keyHash)) {
       throw new Error("API_KEY_HASH_COLLISION");
     }
-    const id = `apk_${params.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `apk_${params.userId}_${Date.now()}_${cryptoRandomSuffix(8)}`;
     mockApiKeys.unshift({
       id,
       userId: params.userId,
@@ -6787,7 +6788,7 @@ export async function createChallenge(input: {
 
   if (useMockData) {
     const ch: Challenge = {
-      id: `ch_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      id: `ch_${Date.now()}_${cryptoRandomSuffix(6)}`,
       slug: `${slug}-${Date.now()}`,
       title: input.title,
       description: input.description,
@@ -7227,7 +7228,7 @@ export async function createUserSubscription(params: {
     }
 
     const sub = {
-      id: `sub_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      id: `sub_${Date.now()}_${cryptoRandomSuffix(6)}`,
       userId: params.userId,
       plan,
       status: "active" as const,

@@ -3,6 +3,7 @@ import "./globals.css";
 import { CommandPalette } from "@/components/command-palette";
 import { TopNav } from "@/components/top-nav";
 import { Footer } from "@/components/footer";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "sonner";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/i18n";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ThemeScript } from "@/components/theme-script";
+import { SWRProvider } from "@/lib/swr-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslator();
@@ -35,6 +37,8 @@ export default async function RootLayout({
     <html lang={language} className={htmlClassForThemePreference(themePref)} suppressHydrationWarning>
       <body className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col">
         <ThemeScript />
+        <WebVitalsReporter />
+        <SWRProvider>
         <AuthProvider>
           <LanguageProvider initialLanguage={language}>
             <ThemeProvider initialTheme={themePref}>
@@ -53,6 +57,7 @@ export default async function RootLayout({
             </ThemeProvider>
           </LanguageProvider>
         </AuthProvider>
+        </SWRProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

@@ -16,7 +16,9 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getSessionUserFromCookie, authenticateRequest, resolveReadAuth } from "@/lib/auth";
+import { safeParseIntParam } from "@/lib/safe-parse-int-param";
 import {
   getTeamBySlug,
   listTeamChatMessages,
@@ -71,7 +73,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     const url = new URL(req.url);
-    const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10), 200);
+    const limit = safeParseIntParam(url.searchParams.get("limit"), 50, 1, 200);
 
     // Background prune (fire-and-forget, non-blocking)
     pruneOldTeamChatMessages().catch(() => {});
@@ -179,14 +181,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "INVALID_BODY") {
-      return apiError({ code: "INVALID_BODY", message: "Message body is empty or too long" }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "CHAT_POST_FAILED",
         message: "Failed to post chat message",
-        details: msg,
       },
       400
     );
