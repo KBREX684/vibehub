@@ -32,7 +32,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const safeLimit = Math.min(limit, 100);
+  const MAX_LEADERBOARD_LIMIT = 100;
+  const safeLimit = Math.min(limit, MAX_LEADERBOARD_LIMIT);
   const payload = await getWeeklyLeaderboardPublicPayload({
     weekStart,
     kind: "discussions_by_weekly_comment_count",
