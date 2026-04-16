@@ -276,7 +276,10 @@ export interface AuditLog {
     | "api_key"
     | "in_app_notification"
     | "enterprise_profile"
-    | "enterprise_verification_application";
+    | "enterprise_verification_application"
+    | "session"
+    | "user"
+    | "admin";
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -288,6 +291,8 @@ export interface ApiKeySummary {
   label: string;
   prefix: string;
   scopes: string[];
+  /** G-05: optional agent binding label */
+  agentLabel?: string;
   createdAt: string;
   lastUsedAt?: string;
   revokedAt?: string;

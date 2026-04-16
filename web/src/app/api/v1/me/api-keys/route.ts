@@ -5,6 +5,7 @@ import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createApiKeyForUser, listApiKeysForUser, getUserTier } from "@/lib/repository";
 import { checkApiKeyLimit } from "@/lib/subscription";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
+import { writeAuditLog } from "@/lib/audit";
 
 const createSchema = z.object({
   label: z.string().min(1).max(80),
@@ -65,6 +66,14 @@ export async function POST(request: Request) {
       label: parsed.label,
       scopes: parsed.scopes,
       expiresInDays: parsed.expiresInDays,
+    });
+    // G-06: audit log for API key creation
+    void writeAuditLog({
+      actorId: session.userId,
+      action: "api_key.created",
+      entityType: "api_key",
+      entityId: created.id,
+      metadata: { label: parsed.label, scopes: parsed.scopes },
     });
     return apiSuccess({ key: created }, 201);
   } catch (error) {

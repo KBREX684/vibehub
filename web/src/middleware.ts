@@ -18,6 +18,7 @@ function isAdminPath(pathname: string): boolean {
 const CSRF_EXEMPT_PREFIXES = [
   "/api/v1/auth/csrf-token",
   "/api/v1/auth/github",
+  "/api/v1/auth/magic-link",
   "/api/v1/billing/webhook",
   "/api/v1/embed/",
 ];

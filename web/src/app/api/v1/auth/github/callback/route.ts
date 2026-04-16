@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AuthConstants, encodeSession } from "@/lib/auth";
 import { findOrCreateGitHubUser, getUserTier } from "@/lib/repository";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { writeAuditLog } from "@/lib/audit";
 
 interface GitHubTokenResponse {
   access_token: string;
@@ -134,6 +135,15 @@ export async function GET(request: Request) {
     });
     response.cookies.delete("github_oauth_state");
     response.cookies.delete("github_oauth_redirect");
+
+    // G-06: audit log for login
+    void writeAuditLog({
+      actorId: user.id,
+      action: "session.login",
+      entityType: "session",
+      entityId: user.id,
+      metadata: { method: "github_oauth", githubUsername: ghUser.login },
+    });
 
     return response;
   } catch (err) {

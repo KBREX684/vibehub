@@ -141,6 +141,24 @@ model User {
   notificationPreference    NotificationPreference?
   /// P3-BE-1 / P3-BE-4: outbound webhook delivery audit trail
   webhookDeliveries         WebhookDelivery[]
+  /// G-01: magic link tokens for email authentication
+  magicLinkTokens           MagicLinkToken[]
+}
+
+/// G-01: Magic Link token for passwordless email authentication
+model MagicLinkToken {
+  id        String    @id @default(cuid())
+  email     String
+  /// SHA-256 hash of the token (never store plaintext)
+  tokenHash String    @unique
+  userId    String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([expiresAt])
 }
 
 enum EnterpriseVerificationStatus {
@@ -310,6 +328,8 @@ model ApiKey {
   prefix     String
   /// JSON string[] of scope tokens (e.g. read:public, read:projects:list)
   scopes     Json
+  /// G-05: Optional label identifying the agent/integration bound to this key
+  agentLabel String?
   lastUsedAt DateTime?
   revokedAt  DateTime?
   /// When set, Bearer auth rejects the key after this instant (P1).

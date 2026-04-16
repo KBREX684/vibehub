@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
-import { Zap, GitBranch, Users, Building2, Code2, ArrowLeft } from "lucide-react";
+import { Zap, GitBranch, Users, Building2, Code2, ArrowLeft, Mail } from "lucide-react";
+import { MagicLinkForm } from "../login/magic-link-form";
 
 interface Props {
   searchParams: Promise<{ intent?: string }>;
@@ -60,6 +61,18 @@ export default async function SignupPage({ searchParams: _sp }: Props) {
             </p>
           </div>
 
+          {/* G-01: Email sign-up via magic link */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-[var(--color-text-secondary)]">Sign up with email</p>
+            <MagicLinkForm />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-[var(--color-border)]" />
+            <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">or continue with GitHub</span>
+            <div className="flex-1 h-px bg-[var(--color-border)]" />
+          </div>
+
           <div className="space-y-3">
             {PATHS.map((path) => (
               <a
@@ -83,10 +96,6 @@ export default async function SignupPage({ searchParams: _sp }: Props) {
               </a>
             ))}
           </div>
-
-          <p className="text-[10px] text-center text-[var(--color-text-muted)]">
-            All paths use GitHub OAuth. No separate password needed.
-          </p>
         </div>
 
         <p className="text-center text-xs text-[var(--color-text-muted)] mt-5">

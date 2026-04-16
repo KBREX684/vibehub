@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { isDevDemoAuth } from "@/lib/dev-demo";
 import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
-import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
+import { Zap, GitBranch, Shield, ArrowRight, AlertCircle, Mail } from "lucide-react";
 import { getServerTranslator } from "@/lib/i18n";
+import { MagicLinkForm } from "./magic-link-form";
 
 interface Props {
   searchParams: Promise<{ redirect?: string; required?: string; error?: string }>;
@@ -29,6 +30,10 @@ export default async function LoginPage({ searchParams }: Props) {
     state_mismatch: t("auth.error.state_mismatch"),
     config_missing: t("auth.error.config_missing"),
     callback_error: t("auth.error.callback_error"),
+    invalid_token: "Invalid or expired sign-in link.",
+    token_used: "This sign-in link has already been used.",
+    token_expired: "This sign-in link has expired. Please request a new one.",
+    mock_mode_no_verify: "Magic link verification is not available in demo mode.",
   };
   const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? t("auth.error.default")) : null;
 
@@ -76,10 +81,19 @@ export default async function LoginPage({ searchParams }: Props) {
             </div>
           )}
 
+          {/* G-01: Magic Link email sign-in */}
+          <MagicLinkForm />
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-[var(--color-border)]" />
+            <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">or</span>
+            <div className="flex-1 h-px bg-[var(--color-border)]" />
+          </div>
+
           {/* GitHub OAuth */}
           <a
             href={oauthHref}
-            className="btn btn-primary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
+            className="btn btn-secondary w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
           >
             <GitBranch className="w-4 h-4" />
             {t("auth.continue_with_github")}

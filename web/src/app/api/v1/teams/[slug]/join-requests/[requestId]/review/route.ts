@@ -3,6 +3,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { reviewTeamJoinRequest } from "@/lib/repository";
+import { writeAuditLog } from "@/lib/audit";
 
 const bodySchema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -27,6 +28,14 @@ export async function POST(request: Request, { params }: Params) {
       requestId,
       ownerUserId: session.userId,
       action: parsed.action,
+    });
+    // G-06: audit log for team join request review
+    void writeAuditLog({
+      actorId: session.userId,
+      action: parsed.action === "approve" ? "team.join_request_approved" : "team.join_request_rejected",
+      entityType: "team_join_request",
+      entityId: requestId,
+      metadata: { teamSlug: slug, action: parsed.action },
     });
     return apiSuccess(row);
   } catch (error) {
