@@ -1,5 +1,9 @@
--- CreateEnum
-CREATE TYPE "InAppNotificationKind" AS ENUM ('team_join_request', 'team_join_approved', 'team_join_rejected', 'team_task_assigned');
+-- CreateEnum (may already exist from init_foundation)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'InAppNotificationKind') THEN
+    CREATE TYPE "InAppNotificationKind" AS ENUM ('team_join_request', 'team_join_approved', 'team_join_rejected', 'team_task_assigned');
+  END IF;
+END $$;
 
 -- CreateTable
 CREATE TABLE "InAppNotification" (

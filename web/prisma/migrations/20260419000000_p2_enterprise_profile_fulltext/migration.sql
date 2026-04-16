@@ -104,29 +104,51 @@ ALTER TABLE "User" DROP COLUMN "enterpriseReviewNote";
 ALTER TABLE "User" DROP COLUMN "enterpriseRole";
 
 -- P2-1: Full-text search vectors + GIN indexes
-ALTER TABLE "Project" ADD COLUMN "searchVector" tsvector
-  GENERATED ALWAYS AS (
-    to_tsvector(
-      'english',
-      coalesce(title, '') || ' ' || coalesce("oneLiner", '') || ' ' || coalesce(description, '')
-    )
-  ) STORED;
+-- Project and Post searchVector may already exist from community_c1_c7; guard with DO blocks.
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'Project' AND column_name = 'searchVector'
+  ) THEN
+    ALTER TABLE "Project" ADD COLUMN "searchVector" tsvector
+      GENERATED ALWAYS AS (
+        to_tsvector(
+          'english',
+          coalesce(title, '') || ' ' || coalesce("oneLiner", '') || ' ' || coalesce(description, '')
+        )
+      ) STORED;
+  END IF;
+END $$;
 
-CREATE INDEX "Project_searchVector_idx" ON "Project" USING GIN ("searchVector");
+CREATE INDEX IF NOT EXISTS "Project_searchVector_idx" ON "Project" USING GIN ("searchVector");
 
-ALTER TABLE "Post" ADD COLUMN "searchVector" tsvector
-  GENERATED ALWAYS AS (
-    to_tsvector('english', coalesce(title, '') || ' ' || coalesce(body, ''))
-  ) STORED;
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'Post' AND column_name = 'searchVector'
+  ) THEN
+    ALTER TABLE "Post" ADD COLUMN "searchVector" tsvector
+      GENERATED ALWAYS AS (
+        to_tsvector('english', coalesce(title, '') || ' ' || coalesce(body, ''))
+      ) STORED;
+  END IF;
+END $$;
 
-CREATE INDEX "Post_searchVector_idx" ON "Post" USING GIN ("searchVector");
+CREATE INDEX IF NOT EXISTS "Post_searchVector_idx" ON "Post" USING GIN ("searchVector");
 
-ALTER TABLE "CreatorProfile" ADD COLUMN "searchVector" tsvector
-  GENERATED ALWAYS AS (
-    to_tsvector(
-      'english',
-      coalesce(slug, '') || ' ' || coalesce(headline, '') || ' ' || coalesce(bio, '') || ' ' || coalesce(array_to_string(skills, ' '), '')
-    )
-  ) STORED;
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'CreatorProfile' AND column_name = 'searchVector'
+  ) THEN
+    ALTER TABLE "CreatorProfile" ADD COLUMN "searchVector" tsvector
+      GENERATED ALWAYS AS (
+        to_tsvector(
+          'english',
+          coalesce(slug, '') || ' ' || coalesce(headline, '') || ' ' || coalesce(bio, '') || ' ' || coalesce(array_to_string(skills, ' '), '')
+        )
+      ) STORED;
+  END IF;
+END $$;
 
-CREATE INDEX "CreatorProfile_searchVector_idx" ON "CreatorProfile" USING GIN ("searchVector");
+CREATE INDEX IF NOT EXISTS "CreatorProfile_searchVector_idx" ON "CreatorProfile" USING GIN ("searchVector");

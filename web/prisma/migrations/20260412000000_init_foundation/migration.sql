@@ -18,6 +18,11 @@ CREATE TYPE "EnterpriseVerificationStatus" AS ENUM ('none', 'pending', 'approved
 
 CREATE TYPE "EnterpriseRole" AS ENUM ('member', 'admin');
 
+-- InAppNotificationKind is formally created by 20260414000000, but
+-- 20260413100000_community_c1_c7 ALTER TYPEs it first.  Seed the base values
+-- here so the ALTER succeeds; 20260414000000 is patched to skip if it exists.
+CREATE TYPE "InAppNotificationKind" AS ENUM ('team_join_request', 'team_join_approved', 'team_join_rejected', 'team_task_assigned');
+
 -- ──────────────────────────────── Tables ───────────────────────────────────────
 -- Column sets here reflect the state *before* any subsequent ALTER TABLE.  Later
 -- migrations add githubId, avatarUrl, stripeCustomerId, sessionVersion, etc.

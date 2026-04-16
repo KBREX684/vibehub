@@ -1,9 +1,9 @@
--- P2: Add featured fields to Post
-ALTER TABLE "Post" ADD COLUMN "featuredAt" TIMESTAMP(3);
-ALTER TABLE "Post" ADD COLUMN "featuredBy" TEXT;
+-- P2: Add featured fields to Post (featuredAt may already exist from community_c1_c7)
+ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "featuredAt" TIMESTAMP(3);
+ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "featuredBy" TEXT;
 
--- P2: Index for featured posts
-CREATE INDEX "Post_featuredAt_idx" ON "Post"("featuredAt");
+-- P2: Index for featured posts (may already exist from community_c1_c7)
+CREATE INDEX IF NOT EXISTS "Post_featuredAt_idx" ON "Post"("featuredAt");
 
 -- P2: FK from Post.featuredBy → User.id
 ALTER TABLE "Post" ADD CONSTRAINT "Post_featuredBy_fkey" FOREIGN KEY ("featuredBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
