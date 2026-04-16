@@ -3,16 +3,15 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { listWebhookDeliveries } from "@/lib/repository";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { safeParseIntParam } from "@/lib/safe-parse-int-param";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdminSession();
   if (!auth.ok) return auth.response;
   try {
     const url = new URL(request.url);
-    const limitRaw = url.searchParams.get("limit");
     const userId = url.searchParams.get("userId")?.trim() || undefined;
-    const parsed = limitRaw ? Number.parseInt(limitRaw, 10) : 100;
-    const safeLimit = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 500) : 100;
+    const safeLimit = safeParseIntParam(url.searchParams.get("limit"), 100, 1, 500);
     const items = await listWebhookDeliveries({
       userId,
       limit: safeLimit,

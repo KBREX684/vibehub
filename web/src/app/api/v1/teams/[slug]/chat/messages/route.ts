@@ -17,6 +17,7 @@ import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getSessionUserFromCookie, authenticateRequest, resolveReadAuth } from "@/lib/auth";
+import { safeParseIntParam } from "@/lib/safe-parse-int-param";
 import {
   getTeamBySlug,
   listTeamChatMessages,
@@ -71,8 +72,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     const url = new URL(req.url);
-    const rawLimit = parseInt(url.searchParams.get("limit") ?? "50", 10);
-    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 50;
+    const limit = safeParseIntParam(url.searchParams.get("limit"), 50, 1, 200);
 
     // Background prune (fire-and-forget, non-blocking)
     pruneOldTeamChatMessages().catch(() => {});

@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { listInAppNotifications, markInAppNotificationsRead } from "@/lib/repository";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { safeParseIntParam } from "@/lib/safe-parse-int-param";
 
 export async function GET(request: Request) {
   const requestLogger = getRequestLogger(request, { route: "/api/v1/me/notifications" });
@@ -15,8 +16,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const unreadOnly = url.searchParams.get("unread") === "1" || url.searchParams.get("unread") === "true";
     const limitRaw = url.searchParams.get("limit");
-    const limit = limitRaw ? Number(limitRaw) : undefined;
-    const safeLimit = Number.isFinite(limit as number) ? Math.min(Math.max(limit as number, 1), 500) : undefined;
+    const safeLimit = limitRaw != null ? safeParseIntParam(limitRaw, 50, 1, 500) : undefined;
     const items = await listInAppNotifications({
       userId: session.userId,
       unreadOnly,

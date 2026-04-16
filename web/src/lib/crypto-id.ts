@@ -11,10 +11,11 @@ import { randomBytes } from "node:crypto";
  * @returns       A lower-case alphanumeric string of the requested length.
  */
 export function cryptoRandomSuffix(length = 12): string {
-  // Each byte → 2 hex chars; we generate enough bytes then convert to base-36
-  // and truncate to the requested length.
+  // We need `length` base-36 characters. Each character carries ~5.17 bits of entropy
+  // (log2(36) ≈ 5.17). We approximate with 6 bits/char → need ceil(length * 6 / 8)
+  // bytes from crypto.randomBytes, plus 2 safety bytes to handle BigInt→base36
+  // conversion boundary effects (the leading digits may be shorter).
   const bytes = randomBytes(Math.ceil((length * 6) / 8) + 2);
-  // Convert to base-36 (0-9a-z) and take the first `length` characters.
   return BigInt(`0x${bytes.toString("hex")}`).toString(36).slice(0, length);
 }
 
