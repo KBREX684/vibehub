@@ -1,8 +1,12 @@
 # VibeHub Roadmap (Current)
 
-更新日期：2026-04-14
+更新日期：2026-04-16
 
 ## 当前战略
+
+VibeHub 当前处于 **Go-Live 收敛阶段**，以 `docs/launch-readiness-standard.md` 为唯一上线判定基线。
+
+路线图 v7.0（`docs/roadmap-v7.md`）定义了从当前代码库到正式上线的完整差距审计与分阶段执行计划。
 
 VibeHub 当前只聚焦三条主线：
 
@@ -71,6 +75,8 @@ VibeHub 当前只聚焦三条主线：
 ## 配套文档
 
 - 当前主线：`docs/roadmap-current.md`
+- Go-Live 路线图 v7.0：`docs/roadmap-v7.md`
+- 正式上线标准：`docs/launch-readiness-standard.md`
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
 - 仓库整理报告：`docs/repository-cleanup-report.md`
