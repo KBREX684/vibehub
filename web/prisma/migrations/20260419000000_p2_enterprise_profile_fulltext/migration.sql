@@ -136,6 +136,12 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS "Post_searchVector_idx" ON "Post" USING GIN ("searchVector");
 
+-- Immutable wrapper for array_to_string (the built-in is STABLE, which blocks
+-- GENERATED ALWAYS columns).
+CREATE OR REPLACE FUNCTION immutable_array_to_string(arr text[], sep text)
+  RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
+  $fn$ SELECT array_to_string(arr, sep) $fn$;
+
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -144,8 +150,8 @@ DO $$ BEGIN
     ALTER TABLE "CreatorProfile" ADD COLUMN "searchVector" tsvector
       GENERATED ALWAYS AS (
         to_tsvector(
-          'english',
-          coalesce(slug, '') || ' ' || coalesce(headline, '') || ' ' || coalesce(bio, '') || ' ' || coalesce(array_to_string(skills, ' '), '')
+          'english'::regconfig,
+          coalesce(slug, '') || ' ' || coalesce(headline, '') || ' ' || coalesce(bio, '') || ' ' || coalesce(immutable_array_to_string(skills, ' '), '')
         )
       ) STORED;
   END IF;
