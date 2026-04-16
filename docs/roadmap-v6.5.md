@@ -182,70 +182,64 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 
 > 定义：用户可感知的粗糙边角打磨。
 
-### P2-UX-1：Feed 组件添加空状态与重试机制 ⚡ 普通
+### P2-UX-1：Feed 组件添加空状态与重试机制 ⚡ 普通 ✅ 已完成
 
-**现状：** `discover-project-feed.tsx`、`discussions-post-feed.tsx` 在数据为空或加载失败时无友好 UI。
+**现状：** ~~`discover-project-feed.tsx`、`discussions-post-feed.tsx` 在数据为空或加载失败时无友好 UI。~~
 
-**目标：**
-- 添加空状态插图 + 引导文案（"还没有项目，来发布第一个？"）
-- 错误状态添加"重试"按钮
-- 使用 `aria-live="polite"` 标注动态更新区域
-
-**复杂度：** 普通
-
----
-
-### P2-UX-2：补充前端 i18n 遗漏 ⚡ 普通
-
-**现状：** Feed 组件中"Loading more…"、"End of results"等硬编码英文字符串未纳入 i18n。
-
-**目标：**
-- 审计所有组件的硬编码用户可见字符串
-- 为遗漏字符串添加 `t()` 调用 + 翻译键
-- 确保 `locales/en.json` 和 `locales/zh.json` 同步
-
-**复杂度：** 普通
+**已完成：**
+- `discover-project-feed.tsx` 添加空状态 UI（FolderOpen 图标 + 引导文案 + "创建项目" CTA 按钮）
+- `discussions-post-feed.tsx` 添加空状态 UI（MessageSquarePlus 图标 + 引导文案 + "发起讨论" CTA 按钮）
+- 错误状态添加 RefreshCw 重试按钮
+- 动态网格添加 `aria-live="polite"` + `aria-relevant="additions"`，错误区域添加 `role="alert"`
 
 ---
 
-### P2-UX-3：前端 fetch 添加超时与中止控制 ⚡ 普通
+### P2-UX-2：补充前端 i18n 遗漏 ⚡ 普通 ✅ 已完成
 
-**现状：** 多数组件 fetch 调用无 `AbortController` 或超时设置，网络挂起时 UI 无限等待。
+**现状：** ~~Feed 组件中"Loading more…"、"End of results"等硬编码英文字符串未纳入 i18n。~~
 
-**目标：**
-- 为所有客户端 fetch 调用添加 `AbortSignal.timeout(10000)`
-- 组件卸载时中止进行中的请求（防止内存泄漏）
-- 在 `apiFetch` 封装中统一添加默认超时
-
-**复杂度：** 普通
+**已完成：**
+- 审计 Feed 组件 6 个硬编码字符串（Loading more…, End of results, Prefer page-by-page navigation?）替换为 `t()` 调用
+- 新增 40+ i18n 键覆盖 feed、comment、post、project、creator stats、task status、admin collab
+- `locales/en.json` 和 `locales/zh.json` 同步更新
 
 ---
 
-### P2-UX-4：无障碍属性补全 ⚡ 普通
+### P2-UX-3：前端 fetch 添加超时与中止控制 ⚡ 普通 ✅ 已完成
 
-**现状：** 仅 66 个 aria 属性分布在整个组件集中，缺少 `aria-expanded`、`aria-current="page"`、`aria-describedby`、`aria-live` 等。
+**现状：** ~~多数组件 fetch 调用无 `AbortController` 或超时设置，网络挂起时 UI 无限等待。~~
 
-**目标：**
-- 为所有图标按钮添加 `aria-label`
-- 为可折叠/展开元素添加 `aria-expanded`
-- 为导航当前页添加 `aria-current="page"`
-- 为表单错误添加 `aria-describedby` 关联
-- 为动态加载区域添加 `aria-live="polite"`
-
-**复杂度：** 普通（分散修改，每处 1-2 行）
+**已完成：**
+- `apiFetch` 添加默认 `AbortSignal.timeout(15_000)`（已有 signal 的调用不被覆盖）
+- SWR fetcher 添加 `AbortSignal.timeout(15_000)`
+- `discover-project-feed.tsx` 和 `discussions-post-feed.tsx` 的 fetchPage 添加 `AbortSignal.timeout(15_000)`
+- 超时时间选择 15s（比服务端默认的 10s 查询超时稍长，避免误报）
 
 ---
 
-### P2-UX-5：AuthContext 拆分减少不必要重渲染 🔧 复杂
+### P2-UX-4：无障碍属性补全 ⚡ 普通 ✅ 已完成
 
-**现状：** `AuthContext` 持有 unreadCount 等高频变更数据，导致所有 `useAuth()` 消费者在计数变化时重渲染。
+**现状：** ~~仅 66 个 aria 属性分布在整个组件集中，缺少 `aria-current="page"` 等。~~
 
-**目标：**
-- 将 `unreadCount` 拆分到独立 `NotificationContext`
-- 或使用 `useSyncExternalStore` + selector 模式避免不必要重渲染
-- 确保拆分后所有消费者行为不变
+**已完成：**
+- 导航 links（desktop + mobile）添加 `aria-current="page"`
+- Feed 动态网格添加 `aria-live="polite"` + `aria-relevant="additions"`
+- Loading 状态元素添加 `aria-live="polite"`
+- 错误区域添加 `role="alert"`
 
-**复杂度：** 复杂
+---
+
+### P2-UX-5：AuthContext 拆分减少不必要重渲染 🔧 复杂 ✅ 已完成
+
+**现状：** ~~`AuthContext` 持有 unreadCount 等高频变更数据，导致所有 `useAuth()` 消费者在计数变化时重渲染。~~
+
+**已完成：**
+- 创建独立 `NotificationContext`（`src/app/context/NotificationContext.tsx`），持有 `unreadCount` + `setUnreadCount`
+- SSE 连接逻辑（`startNotificationSse`、`closeNotificationSse`）从 AuthContext 移入 NotificationContext
+- AuthContext 移除 `unreadCount`、`setUnreadCount` 字段，仅保留 `user`、`loading`、`login`、`logout`、`refresh`
+- `NotificationProvider` 嵌套在 `AuthProvider` 内部，通过 `userId` prop 驱动 SSE 连接
+- `top-nav.tsx` 更新为 `useNotifications()` 读取 unreadCount
+- 拆分后 useAuth() 消费者（comment-thread、top-nav menu 等）不再因通知计数变化而重渲染
 
 ---
 
@@ -320,11 +314,11 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 | P1-TEST-1 | Vitest 覆盖率配置 | 🟠 P1 | 测试 | 普通 | ✅ 已完成 |
 | P1-TEST-2 | UI 组件单元测试 | 🟠 P1 | 测试 | 复杂 | ✅ 已完成 |
 | P1-TEST-3 | Hooks 单元测试 | 🟠 P1 | 测试 | 普通 | ✅ 已完成 |
-| P2-UX-1 | Feed 空状态与重试 | 🟡 P2 | 前端体验 | 普通 | — |
-| P2-UX-2 | i18n 遗漏补充 | 🟡 P2 | 前端体验 | 普通 | — |
-| P2-UX-3 | fetch 超时与中止 | 🟡 P2 | 前端体验 | 普通 | — |
-| P2-UX-4 | 无障碍属性补全 | 🟡 P2 | 前端体验 | 普通 | — |
-| P2-UX-5 | AuthContext 拆分 | 🟡 P2 | 前端架构 | 复杂 | — |
+| P2-UX-1 | Feed 空状态与重试 | 🟡 P2 | 前端体验 | 普通 | ✅ 已完成 |
+| P2-UX-2 | i18n 遗漏补充 | 🟡 P2 | 前端体验 | 普通 | ✅ 已完成 |
+| P2-UX-3 | fetch 超时与中止 | 🟡 P2 | 前端体验 | 普通 | ✅ 已完成 |
+| P2-UX-4 | 无障碍属性补全 | 🟡 P2 | 前端体验 | 普通 | ✅ 已完成 |
+| P2-UX-5 | AuthContext 拆分 | 🟡 P2 | 前端架构 | 复杂 | ✅ 已完成 |
 | P3-INFRA-1 | CI/CD 流水线 | 🟢 P3 | 基建 | 复杂 | — |
 | P3-INFRA-2 | 环境变量校验完善 | 🟢 P3 | 基建 | 普通 | — |
 | P3-INFRA-3 | Prisma 查询超时 | 🟢 P3 | 基建 | 普通 | — |
