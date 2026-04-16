@@ -17,7 +17,10 @@ interface FetchError extends Error {
 }
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url, { credentials: "include" });
+  const res = await fetch(url, {
+    credentials: "include",
+    signal: AbortSignal.timeout(15_000),
+  });
   if (!res.ok) {
     const err = new Error("Fetch failed") as FetchError;
     err.status = res.status;
