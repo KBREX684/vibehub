@@ -4254,6 +4254,75 @@ export async function listReportTickets(params: {
   };
 }
 
+/**
+ * S4-03: User-facing report submission — creates a ReportTicket for content moderation.
+ * Validates the target exists before creating the ticket.
+ */
+export async function createReportTicket(params: {
+  reporterId: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+}): Promise<ReportTicket> {
+  const { reporterId, targetType, targetId, reason } = params;
+
+  if (!["post", "project", "comment", "user"].includes(targetType)) {
+    throw new Error("INVALID_TARGET_TYPE");
+  }
+  if (!reason.trim()) {
+    throw new Error("REASON_REQUIRED");
+  }
+
+  if (useMockData) {
+    const id = `rt_${Date.now()}`;
+    const ticket: ReportTicket = {
+      id,
+      targetType: targetType as ReportTicket["targetType"],
+      targetId,
+      reporterId,
+      reason: reason.trim(),
+      status: "open",
+      createdAt: new Date().toISOString(),
+    };
+    mockReportTickets.unshift({
+      id: ticket.id,
+      targetType: ticket.targetType,
+      targetId: ticket.targetId,
+      reporterId: ticket.reporterId,
+      reason: ticket.reason,
+      status: ticket.status,
+      createdAt: ticket.createdAt,
+    });
+    return ticket;
+  }
+
+  const prisma = await getPrisma();
+
+  // Duplicate check: prevent repeated reports from same user on same target
+  const existing = await prisma.reportTicket.findFirst({
+    where: {
+      targetType,
+      targetId,
+      reporterId,
+      status: "open",
+    },
+  });
+  if (existing) {
+    throw new Error("DUPLICATE_REPORT");
+  }
+
+  const row = await prisma.reportTicket.create({
+    data: {
+      targetType,
+      targetId,
+      postId: targetType === "post" ? targetId : undefined,
+      reporterId,
+      reason: reason.trim(),
+    },
+  });
+  return toReportTicketDto(row);
+}
+
 export async function listAuditLogs(params: {
   actorId?: string;
   page: number;

@@ -5,6 +5,7 @@ import { CollaborationIntentForm } from "@/components/collaboration-intent-form"
 import { ProjectCollaborationOwnerPanel } from "@/components/project-collaboration-owner-panel";
 import { ProjectTeamLinkForm } from "@/components/project-team-link-form";
 import { ShareProjectButton } from "@/components/share-project-button";
+import { ReportButton } from "@/components/report-button";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import {
   getCreatorProfileById,
@@ -240,6 +241,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                     : `/projects/${project.slug}`
                 }
               />
+              <ReportButton targetType="project" targetId={project.id} />
             </div>
           </div>
         </div>

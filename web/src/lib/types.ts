@@ -206,7 +206,7 @@ export interface ModerationCase {
 
 export interface ReportTicket {
   id: string;
-  targetType: "post";
+  targetType: "post" | "project" | "comment" | "user";
   targetId: string;
   reporterId: string;
   reason: string;
