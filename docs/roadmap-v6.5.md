@@ -93,41 +93,36 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 
 ---
 
-### P1-ROBUST-2：消除脆弱的字符串匹配错误处理模式 ⚡ 普通
+### P1-ROBUST-2：消除脆弱的字符串匹配错误处理模式 ⚡ 普通 ✅ 已完成
 
-**现状：** 多处 catch 块使用 `if (msg === "SOME_ERROR_STRING")` 判断错误类型，重构时极易失效。
+**现状：** ~~多处 catch 块使用 `if (msg === "SOME_ERROR_STRING")` 判断错误类型，重构时极易失效。~~
 
-**目标：**
-- 为 repository 层定义类型化错误枚举（如 `RepositoryErrorCode.INVALID_API_KEY_LABEL`）
-- 所有路由统一使用 `apiErrorFromRepositoryCatch` + 类型化错误码匹配
-- 消除所有 `error.message === "..."` 字符串比较
-
-**复杂度：** 普通（~10 处修改 + 枚举定义）
+**已完成：**
+- 扩展 `route-repository-message.ts` 中的集中映射表，从 18 个错误码增加到 50+ 个
+- 重构 26 个路由文件，将 ~100 处 `if (msg === "...")` 字符串匹配替换为 `apiErrorFromRepositoryMessage(msg)` 调用
+- 净减约 150 行重复的错误处理代码
 
 ---
 
-### P1-ROBUST-3：SSE 通知流异常保护 ⚡ 普通
+### P1-ROBUST-3：SSE 通知流异常保护 ⚡ 普通 ✅ 已完成
 
-**现状：** `PUT /api/v1/me/notifications?stream=1` 的 SSE 流缺少 try-catch，Prisma 查询失败或 encoder 异常将导致流静默崩溃。
+**现状：** ~~`PUT /api/v1/me/notifications?stream=1` 的 SSE 流缺少最大持续时间限制和心跳机制。~~
 
-**目标：**
-- 在 SSE 轮询循环中添加 try-catch，异常时发送 `event: error` 通知客户端
-- 为 SSE 流添加心跳机制（每 30s 发送 `:keepalive` 注释行）
-- 添加最大流持续时间限制（如 10 分钟后自动关闭，客户端自动重连）
-
-**复杂度：** 普通
+**已完成：**
+- 添加最大流持续时间限制（默认 10 分钟，通过 `NOTIFICATIONS_SSE_MAX_DURATION_MS` 可配置），超时后发送 `event: timeout` 并关闭流
+- 添加 30 秒间隔的 `:keepalive` SSE 注释行心跳，防止代理/负载均衡器超时断开
+- 添加连续错误计数器（MAX_CONSECUTIVE_ERRORS = 5），超过阈值后发送 `event: error` 并关闭流
+- 添加 `safeEnqueue` 包装器防止 enqueue 异常导致流崩溃
 
 ---
 
-### P1-ROBUST-4：webhook-deliveries 路由添加异常处理 ⚡ 普通
+### P1-ROBUST-4：webhook-deliveries 路由添加异常处理 ⚡ 普通 ✅ 已完成
 
-**现状：** `GET /api/v1/me/webhook-deliveries` 无 try-catch，数据库异常将导致 500 且无日志。
+**现状：** ~~`GET /api/v1/me/webhook-deliveries` 无 try-catch，数据库异常将导致 500 且无日志。~~
 
-**目标：**
-- 添加 try-catch + `apiErrorFromRepositoryCatch`
-- 添加结构化日志记录
-
-**复杂度：** 普通
+**已完成：**
+- 添加 try-catch + `apiErrorFromRepositoryCatch` + 结构化日志记录
+- 使用 `getRequestLogger` + `serializeError` 记录异常
 
 ---
 

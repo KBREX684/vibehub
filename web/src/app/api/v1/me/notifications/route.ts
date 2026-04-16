@@ -75,13 +75,27 @@ export async function PUT(request: Request) {
     const requestLogger = getRequestLogger(request, { route: "/api/v1/me/notifications?stream=1" });
     const encoder = new TextEncoder();
     const frame = (payload: unknown) => encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
+    const sseEvent = (event: string, payload: unknown) =>
+      encoder.encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+    const keepalive = () => encoder.encode(`: keepalive\n\n`);
     const pollMsRaw = process.env.NOTIFICATIONS_SSE_POLL_MS?.trim();
     const pollMsParsed = pollMsRaw ? Number.parseInt(pollMsRaw, 10) : 15_000;
     const pollMs = Number.isFinite(pollMsParsed) && pollMsParsed > 1000 ? pollMsParsed : 15_000;
 
+    // Max stream duration: 10 minutes (configurable)
+    const maxDurationMsRaw = process.env.NOTIFICATIONS_SSE_MAX_DURATION_MS?.trim();
+    const maxDurationParsed = maxDurationMsRaw ? Number.parseInt(maxDurationMsRaw, 10) : 600_000;
+    const maxDurationMs = Number.isFinite(maxDurationParsed) && maxDurationParsed > 0 ? maxDurationParsed : 600_000;
+
+    // Max consecutive errors before closing
+    const MAX_CONSECUTIVE_ERRORS = 5;
+
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         let closed = false;
+        let consecutiveErrors = 0;
+        const startTime = Date.now();
+
         const safeClose = () => {
           if (closed) return;
           closed = true;
@@ -92,29 +106,62 @@ export async function PUT(request: Request) {
           }
         };
 
+        const safeEnqueue = (chunk: Uint8Array) => {
+          if (closed) return;
+          try {
+            controller.enqueue(chunk);
+          } catch {
+            safeClose();
+          }
+        };
+
         const pushUnread = async () => {
+          if (closed) return;
+
+          // Check max duration
+          if (Date.now() - startTime >= maxDurationMs) {
+            safeEnqueue(sseEvent("timeout", { message: "Stream duration limit reached, please reconnect", ts: Date.now() }));
+            cleanup();
+            return;
+          }
+
           try {
             const items = await listInAppNotifications({
               userId: session.userId,
               unreadOnly: true,
               limit: 200,
             });
-            controller.enqueue(frame({ unreadCount: items.length, ts: Date.now() }));
+            consecutiveErrors = 0;
+            safeEnqueue(frame({ unreadCount: items.length, ts: Date.now() }));
           } catch (error) {
-            requestLogger.error({ err: serializeError(error) }, "Failed to fetch notification stream snapshot");
-            controller.enqueue(frame({ unreadCount: 0, ts: Date.now() }));
+            consecutiveErrors++;
+            requestLogger.error({ err: serializeError(error), consecutiveErrors }, "Failed to fetch notification stream snapshot");
+            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+              safeEnqueue(sseEvent("error", { message: "Too many consecutive errors, closing stream", ts: Date.now() }));
+              cleanup();
+              return;
+            }
+            safeEnqueue(frame({ unreadCount: 0, ts: Date.now() }));
           }
         };
 
+        // Keepalive: send SSE comment every 30s to prevent proxy/LB timeouts
+        const keepaliveTimer = setInterval(() => {
+          safeEnqueue(keepalive());
+        }, 30_000);
+
         await pushUnread();
-        const timer = setInterval(() => {
+        const pollTimer = setInterval(() => {
           void pushUnread();
         }, pollMs);
 
-        request.signal.addEventListener("abort", () => {
-          clearInterval(timer);
+        const cleanup = () => {
+          clearInterval(pollTimer);
+          clearInterval(keepaliveTimer);
           safeClose();
-        });
+        };
+
+        request.signal.addEventListener("abort", cleanup);
       },
     });
 
