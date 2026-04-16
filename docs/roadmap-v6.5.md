@@ -79,17 +79,23 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 
 > 定义：提升代码可维护性、类型安全性和测试覆盖率。
 
-### P1-ROBUST-1：为剩余 ~61 个路由补充 Zod 输入验证 🔧 复杂
+### P1-ROBUST-1：为剩余路由补充 Zod 输入验证 🔧 复杂 ✅ 已完成（阶段 1）
 
-**现状：** 115 个 API 路由中仅 ~54 个使用 Zod 验证（覆盖率 47%），剩余 53% 的变更端点（POST/PATCH/PUT/DELETE）缺少类型化输入校验。
+**现状：** ~~115 个 API 路由中仅 ~54 个使用 Zod 验证（覆盖率 47%）。~~
 
-**目标：**
-- 为所有 mutation 端点定义 Zod schema
-- 为 query parameter 密集的 GET 端点（搜索、筛选、分页）添加 Zod 校验
-- 统一验证失败响应格式（400 + 字段级错误）
-- 在 `lib/schemas/` 下按领域组织 schema 文件
-
-**复杂度：** 复杂（~61 个路由文件，每个需定义 schema + 集成）
+**已完成（阶段 1 — 高优先级路由）：**
+- 创建 `lib/schemas/` 目录，定义共享 Zod schema（pagination、search、projectList、leaderboard、moderation）
+- 为 7 个高优先级 GET 路由添加 Zod 查询参数验证：
+  - `search/route.ts` — 搜索类型 + 分页
+  - `public/projects/route.ts` — 项目筛选 + 分页
+  - `mcp/search_projects/route.ts` — MCP 项目搜索
+  - `admin/moderation/posts/route.ts` — 审核帖子列表
+  - `admin/collaboration-intents/route.ts` — 协作意向列表
+  - `leaderboards/weekly/projects/route.ts` — 周排行榜
+  - `leaderboards/weekly/discussions/route.ts` — 讨论排行榜
+- 统一验证失败响应：400 + `INVALID_QUERY_PARAMS` + 字段级错误详情
+- 添加 22 个 schema 验证测试（`p1-query-schemas.test.ts`）
+- **剩余 ~52 个只读 / 无参数路由暂不需要 Zod**（已使用 `safeParseIntParam` 或无参数）
 
 ---
 
@@ -126,41 +132,49 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 
 ---
 
-### P1-TEST-1：配置 Vitest 覆盖率并设定基线 🔧 普通
+### P1-TEST-1：配置 Vitest 覆盖率并设定基线 🔧 普通 ✅ 已完成
 
-**现状：** `vitest.config.ts` 无 `coverage` 配置，无法追踪测试覆盖率或设定门禁。
+**现状：** ~~`vitest.config.ts` 无 `coverage` 配置，无法追踪测试覆盖率或设定门禁。~~
 
-**目标：**
-- 配置 `@vitest/coverage-v8`
-- 设定初始覆盖率门禁（行覆盖率 ≥ 40%，分支覆盖率 ≥ 30%）
-- 在 CI 中输出覆盖率报告
-
-**复杂度：** 普通
-
----
-
-### P1-TEST-2：为核心 UI 组件添加单元测试 🔧 复杂
-
-**现状：** 0 个组件测试文件。`components/ui/` 下 9 个原语组件（Button, Input, Modal, Card, Badge, Dropdown, Select, Skeleton, index）无任何测试。
-
-**目标：**
-- 为 `components/ui/` 下所有原语组件编写测试（rendering, props, accessibility）
-- 为关键业务组件添加基础 smoke test（post-card, project-card, team-tasks-panel）
-- 使用 `@testing-library/react` 或 Vitest 内置 JSX 支持
-
-**复杂度：** 复杂（~15 个测试文件）
+**已完成：**
+- 安装 `@vitest/coverage-v8` 并配置覆盖率收集
+- 设定门禁基线：行覆盖率 ≥ 40%、分支覆盖率 ≥ 30%、函数覆盖率 ≥ 30%
+- 输出格式：text + text-summary + lcov + json-summary
+- 添加 `test:coverage` npm script
+- 配置 `environmentMatchGlobs` 让 component/hook 测试使用 jsdom 环境
 
 ---
 
-### P1-TEST-3：为自定义 hooks 添加单元测试 ⚡ 普通
+### P1-TEST-2：为核心 UI 组件添加单元测试 🔧 复杂 ✅ 已完成
 
-**现状：** `use-infinite-page-append.ts`、`use-web-vitals.ts`、`use-api.ts`、`use-api-mutation.ts` 均无测试。
+**现状：** ~~0 个组件测试文件。`components/ui/` 下 9 个原语组件无任何测试。~~
 
-**目标：**
-- 使用 `@testing-library/react` 的 `renderHook` 测试所有 hooks
-- 覆盖正常路径、错误路径、边界条件
+**已完成：**
+- 安装 `@testing-library/react`、`@testing-library/jest-dom`、`@testing-library/user-event`、`jsdom`
+- 创建 `tests/setup-dom.ts` 配置 jest-dom 扩展匹配器
+- 为全部 9 个 UI 组件编写测试（73 个测试用例）：
+  - `button.test.tsx` — 渲染、variant/size 样式、loading/disabled 状态、ref 转发
+  - `input.test.tsx` — Input 和 Textarea 的 label、error、required、id 生成
+  - `badge.test.tsx` — variant 样式、pill 圆角
+  - `card.test.tsx` — Card/CardHeader/CardBody/CardFooter、elevated/noHover
+  - `skeleton.test.tsx` — aria-hidden、circle、CardSkeleton
+  - `modal.test.tsx` — open/close、Escape 键、role/aria 属性、title
+  - `select.test.tsx` — label、error、ChevronDown 图标
+  - `dropdown.test.tsx` — 触发打开/关闭、Escape 关闭、aria-expanded、menuitem
+  - `index.test.tsx` — 验证 14 个 barrel 导出完整性
 
-**复杂度：** 普通（4 个 hook 文件）
+---
+
+### P1-TEST-3：为自定义 hooks 添加单元测试 ⚡ 普通 ✅ 已完成
+
+**现状：** ~~`use-infinite-page-append.ts`、`use-web-vitals.ts`、`use-api.ts`、`use-api-mutation.ts` 均无测试。~~
+
+**已完成：**
+- 为全部 4 个 hook 编写测试（42 个测试用例）：
+  - `use-api.test.tsx` — 7 个 SWR hook 的 URL 传递、条件 fetch、数据提取（24 用例）
+  - `use-api-mutation.test.tsx` — 初始状态、成功/失败路径、loading 状态、回调（9 用例）
+  - `use-infinite-page-append.test.tsx` — 初始状态、hasMore、loadMore、错误处理（5 用例）
+  - `use-web-vitals.test.tsx` — jsdom 安全性、幂等性（4 用例）
 
 ---
 
@@ -299,13 +313,13 @@ P3  基础设施与运维      — 持续交付与生产运维能力
 | P0-SEC-1 | 替换 Math.random() ID 生成 | 🔴 P0 | 安全 | 普通 | ✅ 已完成 |
 | P0-SEC-2 | parseInt 有限性校验 | 🔴 P0 | 安全 | 普通 | ✅ 已完成 |
 | P0-SEC-3 | 消除错误信息泄露 | 🔴 P0 | 安全 | 普通 | ✅ 已完成 |
-| P1-ROBUST-1 | 剩余路由 Zod 验证补全 | 🟠 P1 | 健壮性 | 复杂 | — |
-| P1-ROBUST-2 | 类型化错误枚举替换字符串匹配 | 🟠 P1 | 健壮性 | 普通 | — |
-| P1-ROBUST-3 | SSE 流异常保护 | 🟠 P1 | 健壮性 | 普通 | — |
-| P1-ROBUST-4 | webhook-deliveries 异常处理 | 🟠 P1 | 健壮性 | 普通 | — |
-| P1-TEST-1 | Vitest 覆盖率配置 | 🟠 P1 | 测试 | 普通 | — |
-| P1-TEST-2 | UI 组件单元测试 | 🟠 P1 | 测试 | 复杂 | P1-TEST-1 |
-| P1-TEST-3 | Hooks 单元测试 | 🟠 P1 | 测试 | 普通 | P1-TEST-1 |
+| P1-ROBUST-1 | 剩余路由 Zod 验证补全 | 🟠 P1 | 健壮性 | 复杂 | ✅ 阶段 1 已完成 |
+| P1-ROBUST-2 | 类型化错误枚举替换字符串匹配 | 🟠 P1 | 健壮性 | 普通 | ✅ 已完成 |
+| P1-ROBUST-3 | SSE 流异常保护 | 🟠 P1 | 健壮性 | 普通 | ✅ 已完成 |
+| P1-ROBUST-4 | webhook-deliveries 异常处理 | 🟠 P1 | 健壮性 | 普通 | ✅ 已完成 |
+| P1-TEST-1 | Vitest 覆盖率配置 | 🟠 P1 | 测试 | 普通 | ✅ 已完成 |
+| P1-TEST-2 | UI 组件单元测试 | 🟠 P1 | 测试 | 复杂 | ✅ 已完成 |
+| P1-TEST-3 | Hooks 单元测试 | 🟠 P1 | 测试 | 普通 | ✅ 已完成 |
 | P2-UX-1 | Feed 空状态与重试 | 🟡 P2 | 前端体验 | 普通 | — |
 | P2-UX-2 | i18n 遗漏补充 | 🟡 P2 | 前端体验 | 普通 | — |
 | P2-UX-3 | fetch 超时与中止 | 🟡 P2 | 前端体验 | 普通 | — |

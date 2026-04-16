@@ -1,25 +1,32 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { unifiedSearch, unifiedSearchPaged } from "@/lib/repository";
-import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getRequestLogger, serializeError } from "@/lib/logger";
 import type { SearchResult } from "@/lib/types";
 
-const VALID_TYPES = ["post", "project", "creator"] as const;
-type SearchType = typeof VALID_TYPES[number];
+const searchSchema = z.object({
+  q: z.string().trim().max(200).default(""),
+  type: z.enum(["post", "project", "creator"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
 
 export async function GET(request: NextRequest) {
   const requestLogger = getRequestLogger(request, { route: "/api/v1/search" });
   const url = new URL(request.url);
-  const { page, limit } = parsePagination(url.searchParams);
-  const q = url.searchParams.get("q")?.trim() ?? "";
-  const rawType = url.searchParams.get("type") ?? "";
-  const type: SearchType | undefined = VALID_TYPES.includes(rawType as SearchType) ? (rawType as SearchType) : undefined;
-
-  if (rawType && !type) {
-    return apiError({ code: "INVALID_TYPE", message: `type must be one of: ${VALID_TYPES.join(", ")}` }, 400);
+  const params: Record<string, string> = {};
+  for (const [k, v] of url.searchParams.entries()) params[k] = v;
+  const parsed = searchSchema.safeParse(params);
+  if (!parsed.success) {
+    return apiError(
+      { code: "INVALID_QUERY_PARAMS", message: "Invalid search parameters", details: parsed.error.flatten().fieldErrors },
+      400,
+    );
   }
+  const { q, type, page, limit } = parsed.data;
+
   if (!q || q.length < 2) {
     return apiSuccess({ results: [] as SearchResult[], total: 0, page, limit, query: q });
   }
