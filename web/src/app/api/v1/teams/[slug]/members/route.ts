@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { addTeamMemberByEmail } from "@/lib/repository";
 
 const bodySchema = z.object({
@@ -42,21 +43,8 @@ if (error instanceof z.ZodError) {
       );
     }
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg === "TEAM_NOT_FOUND") {
-      return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
-    }
-    if (msg === "FORBIDDEN_NOT_OWNER") {
-      return apiError({ code: "FORBIDDEN", message: "Only the team owner can add members by email" }, 403);
-    }
-    if (msg === "USER_NOT_FOUND") {
-      return apiError({ code: "USER_NOT_FOUND", message: "No user with that email" }, 404);
-    }
-    if (msg === "TEAM_ALREADY_MEMBER") {
-      return apiError({ code: "TEAM_ALREADY_MEMBER", message: "User is already a member" }, 409);
-    }
-    if (msg === "INVALID_EMAIL") {
-      return apiError({ code: "INVALID_EMAIL", message: "Invalid email" }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "TEAM_MEMBER_ADD_FAILED",
