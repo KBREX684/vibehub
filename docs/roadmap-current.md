@@ -74,3 +74,9 @@ VibeHub 当前只聚焦三条主线：
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
 - 仓库整理报告：`docs/repository-cleanup-report.md`
+- **上线就绪标准：`docs/launch-readiness-standard.md`**
+- **上线差距分析 v7.0：`docs/roadmap-v7.md`**
+- **中国支付方案：`docs/china-payment-plan.md`**
+- **中国合规清单：`docs/china-compliance-checklist.md`**
+- **告警与监控：`docs/alerting-monitoring.md`**
+- **回滚 SOP：`docs/rollback-sop.md`**

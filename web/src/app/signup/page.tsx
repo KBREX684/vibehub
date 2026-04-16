@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
-import { Zap, GitBranch, Users, Building2, Code2, ArrowLeft, Mail } from "lucide-react";
+import { Zap, GitBranch, Users, Building2, Code2, ArrowLeft } from "lucide-react";
 import { MagicLinkForm } from "../login/magic-link-form";
 
 interface Props {

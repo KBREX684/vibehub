@@ -12,6 +12,24 @@ Updated: 2026-04-14
 
 ## Recent notable changes
 
+### 2026-04-16 — Roadmap v7.0 Step 3: Implementation
+
+Implemented all 10 gaps identified in the launch readiness audit (roadmap-v7.md):
+
+**硬阻塞修复 (P0):**
+- G-01: Magic Link 邮箱登录体系 — 完整的无密码邮件认证流程
+- G-03: 生产环境禁止静默 mock 回退 — runtime-mode.ts 硬阻断
+- G-04: Fail-fast 检查完善 — 生产环境自动启用环境变量检查
+- G-08: 中国支付路径方案 — PaymentProvider 抽象层 + 方案文档
+
+**增强项 (P1):**
+- G-02: 中国合规边界清单 — docs/china-compliance-checklist.md
+- G-05: Agent-User Binding — ApiKey.agentLabel 字段 + PATCH API
+- G-06: 审计日志覆盖扩展 — lib/audit.ts + API Key/登录/登出/团队审计
+- G-07: 支付抽象层 — PaymentProvider 接口 + Stripe/China 实现
+- G-09: 最小告警机制 — health-check-cron.sh + 文档
+- G-10: 回滚 SOP — docs/rollback-sop.md
+
 ### 2026-04-14 — maturity convergence pass
 
 - Unified the runtime data-mode guidance so mock mode is opt-in instead of the default truth source.

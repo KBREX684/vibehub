@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { isDevDemoAuth } from "@/lib/dev-demo";
 import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
-import { Zap, GitBranch, Shield, ArrowRight, AlertCircle, Mail } from "lucide-react";
+import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 import { getServerTranslator } from "@/lib/i18n";
 import { MagicLinkForm } from "./magic-link-form";
 
