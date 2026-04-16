@@ -3,6 +3,7 @@ import { createComment, listCommentsForPost } from "@/lib/repository";
 import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
 
@@ -61,16 +62,8 @@ export async function POST(request: Request) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const message = error instanceof Error ? error.message : String(error);
-    if (message === "POST_NOT_FOUND") {
-      return apiError(
-        {
-          code: "POST_NOT_FOUND",
-          message: "Cannot comment on a non-existent post",
-        },
-        404
-      );
-    }
-
+    const mapped = apiErrorFromRepositoryMessage(message);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "COMMENT_CREATE_FAILED",

@@ -4,6 +4,7 @@ import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { reviewCollaborationIntentByOwner } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 
 interface Props { params: Promise<{ slug: string; intentId: string }> }
 
@@ -47,8 +48,8 @@ if (err instanceof z.ZodError) return apiError({ code: "INVALID_BODY", message: 
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "COLLABORATION_INTENT_NOT_FOUND") return apiError({ code: "COLLABORATION_INTENT_NOT_FOUND", message: "Intent not found" }, 404);
-    if (msg === "FORBIDDEN_NOT_PROJECT_OWNER") return apiError({ code: "FORBIDDEN", message: "Only the project owner can review intents" }, 403);
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError({ code: "REVIEW_FAILED", message: msg }, 500);
   }
 }

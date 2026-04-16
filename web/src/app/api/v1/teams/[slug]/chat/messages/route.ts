@@ -16,6 +16,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getSessionUserFromCookie, authenticateRequest, resolveReadAuth } from "@/lib/auth";
 import { safeParseIntParam } from "@/lib/safe-parse-int-param";
 import {
@@ -180,9 +181,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;
 const msg = err instanceof Error ? err.message : String(err);
-    if (msg === "INVALID_BODY") {
-      return apiError({ code: "INVALID_BODY", message: "Message body is empty or too long" }, 400);
-    }
+    const mapped = apiErrorFromRepositoryMessage(msg);
+    if (mapped) return mapped;
     return apiError(
       {
         code: "CHAT_POST_FAILED",
