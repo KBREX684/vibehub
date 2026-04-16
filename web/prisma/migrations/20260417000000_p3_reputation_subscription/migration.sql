@@ -19,45 +19,17 @@ CREATE TABLE "ContributionCredit" (
 CREATE UNIQUE INDEX "ContributionCredit_userId_key" ON "ContributionCredit"("userId");
 CREATE INDEX "ContributionCredit_score_idx" ON "ContributionCredit"("score");
 
--- P3: Subscription enums
-CREATE TYPE "SubscriptionTier" AS ENUM ('free', 'pro', 'team_pro');
-CREATE TYPE "SubscriptionStatus" AS ENUM ('active', 'canceled', 'past_due');
+-- P3: Subscription enums (already created by monetization_m1_m2; skip if present)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'SubscriptionTier') THEN
+    CREATE TYPE "SubscriptionTier" AS ENUM ('free', 'pro', 'team_pro');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'SubscriptionStatus') THEN
+    CREATE TYPE "SubscriptionStatus" AS ENUM ('active', 'canceled', 'past_due');
+  END IF;
+END $$;
 
--- P3: SubscriptionPlan
-CREATE TABLE "SubscriptionPlan" (
-    "id" TEXT NOT NULL,
-    "tier" "SubscriptionTier" NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "priceMonthly" INTEGER NOT NULL DEFAULT 0,
-    "features" TEXT[],
-    "apiQuota" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "SubscriptionPlan_pkey" PRIMARY KEY ("id")
-);
-
-CREATE UNIQUE INDEX "SubscriptionPlan_tier_key" ON "SubscriptionPlan"("tier");
-
--- P3: UserSubscription
-CREATE TABLE "UserSubscription" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "planId" TEXT NOT NULL,
-    "status" "SubscriptionStatus" NOT NULL DEFAULT 'active',
-    "currentPeriodStart" TIMESTAMP(3) NOT NULL,
-    "currentPeriodEnd" TIMESTAMP(3) NOT NULL,
-    "canceledAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "UserSubscription_pkey" PRIMARY KEY ("id")
-);
-
-CREATE UNIQUE INDEX "UserSubscription_userId_planId_key" ON "UserSubscription"("userId", "planId");
-CREATE INDEX "UserSubscription_userId_idx" ON "UserSubscription"("userId");
-CREATE INDEX "UserSubscription_status_idx" ON "UserSubscription"("status");
-
-ALTER TABLE "UserSubscription" ADD CONSTRAINT "UserSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "UserSubscription" ADD CONSTRAINT "UserSubscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- P3: SubscriptionPlan and duplicate UserSubscription are skipped — the
+-- canonical UserSubscription (with Stripe fields) was created by
+-- monetization_m1_m2.  SubscriptionPlan is not in the final schema and would
+-- block the v4_simplify SubscriptionTier enum migration.
