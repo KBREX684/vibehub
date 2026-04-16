@@ -63,6 +63,9 @@ jobs:
       - name: Prisma migrate (validates SQL)
         run: npx prisma migrate deploy
 
+      - name: Prisma seed (validates seed script)
+        run: npm run prisma:seed
+
       - name: Lint
         run: npm run lint
 
@@ -71,6 +74,9 @@ jobs:
 
       - name: Validate OpenAPI spec
         run: npm run validate:openapi
+
+      - name: Live-data smoke (validates real DB path)
+        run: npm run smoke:live-data
 
       - name: Check generated types in sync
         run: |
