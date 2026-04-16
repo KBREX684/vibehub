@@ -126,7 +126,7 @@ export async function POST(request: Request) {
     }
     const msg = error instanceof Error ? error.message : String(error);
     return apiError(
-      { code: "PROJECT_CREATE_FAILED", message: "Failed to create project", details: msg },
+      { code: "PROJECT_CREATE_FAILED", message: "Failed to create project" },
       500
     );
   }

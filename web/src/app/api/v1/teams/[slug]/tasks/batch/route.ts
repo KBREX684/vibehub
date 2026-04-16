@@ -60,7 +60,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_TASKS_BATCH_FAILED",
         message: "Failed to update tasks",
-        details: msg,
       },
       500
     );

@@ -70,7 +70,7 @@ const msg = error instanceof Error ? error.message : String(error);
       return apiError({ code: "FORBIDDEN", message: "Only the author or admin can delete" }, 403);
     }
     return apiError(
-      { code: "COMMENT_DELETE_FAILED", message: "Failed to delete comment", details: msg },
+      { code: "COMMENT_DELETE_FAILED", message: "Failed to delete comment" },
       500
     );
   }

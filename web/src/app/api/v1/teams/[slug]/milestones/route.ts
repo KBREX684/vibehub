@@ -45,7 +45,6 @@ const msg = error instanceof Error ? error.message : String(error);
       {
         code: "TEAM_MILESTONES_LIST_FAILED",
         message: "Failed to list milestones",
-        details: msg,
       },
       500
     );
@@ -94,7 +93,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_MILESTONE_CREATE_FAILED",
         message: "Failed to create milestone",
-        details: msg,
       },
       500
     );

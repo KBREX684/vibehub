@@ -108,7 +108,6 @@ if (error instanceof z.ZodError) {
       {
         code: "ADMIN_ENTERPRISE_VERIFICATION_REVIEW_FAILED",
         message: "Failed to review enterprise verification",
-        details: msg,
       },
       500
     );

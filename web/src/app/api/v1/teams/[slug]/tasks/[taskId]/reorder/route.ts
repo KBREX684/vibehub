@@ -64,7 +64,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_TASK_REORDER_FAILED",
         message: "Failed to reorder task",
-        details: msg,
       },
       500
     );

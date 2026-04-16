@@ -111,7 +111,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_CREATE_FAILED",
         message: "Failed to create team",
-        details: msg,
       },
       500
     );

@@ -64,7 +64,7 @@ if (error instanceof z.ZodError) {
     if (msg === "CHALLENGE_NOT_FOUND") {
       return apiError({ code: "CHALLENGE_NOT_FOUND", message: "Challenge not found" }, 404);
     }
-    return apiError({ code: "CHALLENGE_UPDATE_FAILED", message: "Failed to update challenge", details: msg }, 500);
+    return apiError({ code: "CHALLENGE_UPDATE_FAILED", message: "Failed to update challenge" }, 500);
   }
 }
 
@@ -83,6 +83,6 @@ const msg = error instanceof Error ? error.message : String(error);
     if (msg === "CHALLENGE_NOT_FOUND") {
       return apiError({ code: "CHALLENGE_NOT_FOUND", message: "Challenge not found" }, 404);
     }
-    return apiError({ code: "CHALLENGE_DELETE_FAILED", message: "Failed to delete challenge", details: msg }, 500);
+    return apiError({ code: "CHALLENGE_DELETE_FAILED", message: "Failed to delete challenge" }, 500);
   }
 }

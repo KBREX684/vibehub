@@ -62,7 +62,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_JOIN_REVIEW_FAILED",
         message: "Failed to review join request",
-        details: msg,
       },
       500
     );

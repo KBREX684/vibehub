@@ -61,7 +61,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_MEMBER_ADD_FAILED",
         message: "Failed to add team member",
-        details: msg,
       },
       500
     );

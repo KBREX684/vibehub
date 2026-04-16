@@ -40,7 +40,6 @@ function mapVerificationError(message: string) {
         {
           code: "ENTERPRISE_VERIFICATION_FAILED",
           message: "Failed to process enterprise verification request",
-          details: message,
         },
         500
       );
@@ -74,7 +73,6 @@ const message = error instanceof Error ? error.message : String(error);
       {
         code: "ENTERPRISE_VERIFICATION_FETCH_FAILED",
         message: "Failed to load enterprise verification status",
-        details: message,
       },
       500
     );

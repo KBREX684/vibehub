@@ -73,7 +73,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_MILESTONE_UPDATE_FAILED",
         message: "Failed to update milestone",
-        details: msg,
       },
       500
     );
@@ -107,7 +106,6 @@ const msg = error instanceof Error ? error.message : String(error);
       {
         code: "TEAM_MILESTONE_DELETE_FAILED",
         message: "Failed to delete milestone",
-        details: msg,
       },
       500
     );

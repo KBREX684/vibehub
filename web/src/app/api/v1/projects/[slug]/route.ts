@@ -120,7 +120,6 @@ if (error instanceof z.ZodError) {
       {
         code: "PROJECT_UPDATE_FAILED",
         message: "Failed to update project",
-        details: msg,
       },
       500
     );
@@ -152,7 +151,7 @@ const msg = error instanceof Error ? error.message : String(error);
       return apiError({ code: "FORBIDDEN", message: "Only the creator or admin can delete" }, 403);
     }
     return apiError(
-      { code: "PROJECT_DELETE_FAILED", message: "Failed to delete project", details: msg },
+      { code: "PROJECT_DELETE_FAILED", message: "Failed to delete project" },
       500
     );
   }

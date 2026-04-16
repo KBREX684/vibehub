@@ -66,7 +66,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_JOIN_REQUEST_FAILED",
         message: "Failed to submit join request",
-        details: msg,
       },
       500
     );

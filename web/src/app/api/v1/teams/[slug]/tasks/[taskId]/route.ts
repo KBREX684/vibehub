@@ -84,7 +84,6 @@ if (error instanceof z.ZodError) {
       {
         code: "TEAM_TASK_UPDATE_FAILED",
         message: "Failed to update team task",
-        details: msg,
       },
       500
     );
@@ -126,7 +125,6 @@ const msg = error instanceof Error ? error.message : String(error);
       {
         code: "TEAM_TASK_DELETE_FAILED",
         message: "Failed to delete team task",
-        details: msg,
       },
       500
     );
