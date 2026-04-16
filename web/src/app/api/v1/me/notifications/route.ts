@@ -87,8 +87,10 @@ export async function PUT(request: Request) {
     const maxDurationParsed = maxDurationMsRaw ? Number.parseInt(maxDurationMsRaw, 10) : 600_000;
     const maxDurationMs = Number.isFinite(maxDurationParsed) && maxDurationParsed > 0 ? maxDurationParsed : 600_000;
 
-    // Max consecutive errors before closing
-    const MAX_CONSECUTIVE_ERRORS = 5;
+    // Max consecutive errors before closing (configurable)
+    const maxErrorsRaw = process.env.NOTIFICATIONS_SSE_MAX_ERRORS?.trim();
+    const maxErrorsParsed = maxErrorsRaw ? Number.parseInt(maxErrorsRaw, 10) : 5;
+    const maxConsecutiveErrors = Number.isFinite(maxErrorsParsed) && maxErrorsParsed > 0 ? maxErrorsParsed : 5;
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -136,7 +138,7 @@ export async function PUT(request: Request) {
           } catch (error) {
             consecutiveErrors++;
             requestLogger.error({ err: serializeError(error), consecutiveErrors }, "Failed to fetch notification stream snapshot");
-            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            if (consecutiveErrors >= maxConsecutiveErrors) {
               safeEnqueue(sseEvent("error", { message: "Too many consecutive errors, closing stream", ts: Date.now() }));
               cleanup();
               return;
