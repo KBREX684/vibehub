@@ -48,6 +48,7 @@ All values live in `web/src/app/globals.css` `@theme {}` block.
 | `--color-text-tertiary` | `#71717A` | Captions, help text |
 | `--color-text-muted` | `#52525B` | Placeholders, disabled |
 | `--color-text-inverse` | `#000000` | Text on primary/white fill |
+| `--color-on-accent` | `#FFFFFF` | Text/icon on saturated coloured fill (accent-apple/violet/cyan, gradient chips) |
 
 ### Borders
 

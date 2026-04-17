@@ -22,6 +22,10 @@
   --color-text-tertiary:      #71717A;
   --color-text-inverse:       #000000;
   --color-text-muted:         #52525B;
+  /* Foreground to use on saturated colored fills (accent-apple / accent-violet
+     gradient avatars, notification badge with bg-accent, etc.). Always white
+     in both themes because every accent is mid-to-deep in value. */
+  --color-on-accent:          #FFFFFF;
 
   /* === Borders === */
   --color-border:             rgba(255,255,255,0.1);
@@ -351,6 +355,7 @@ pre, code {
   --color-text-tertiary:      #71717a;
   --color-text-inverse:       #fafafa;
   --color-text-muted:         #a1a1aa;
+  --color-on-accent:          #FFFFFF;
 
   --color-border:             rgba(0,0,0,0.08);
   --color-border-subtle:      rgba(0,0,0,0.04);

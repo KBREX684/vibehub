@@ -67,6 +67,8 @@ for (const raw of process.argv.slice(2)) {
 }
 
 const STRICT = ARGS.has("strict");
+/** `--strict-palette`: fail only on palette violations (post-W2 gate). */
+const STRICT_PALETTE = ARGS.has("strict-palette");
 const LIMIT = parseInt(String(ARGS.get("limit") ?? "0"), 10) || 0;
 const TOKEN_THRESHOLD = parseInt(String(ARGS.get("threshold") ?? "6"), 10) || 6;
 
@@ -190,6 +192,9 @@ function main() {
   }
 
   if (STRICT && findings.length > 0) {
+    process.exit(1);
+  }
+  if (STRICT_PALETTE && palette.length > 0) {
     process.exit(1);
   }
 }
