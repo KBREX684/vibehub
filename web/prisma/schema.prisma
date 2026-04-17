@@ -147,78 +147,80 @@ enum AutomationWorkflowActionType {
 }
 
 model User {
-  id                        String           @id @default(cuid())
-  email                     String           @unique
-  name                      String
-  role                      Role             @default(user)
+  id                         String                     @id @default(cuid())
+  email                      String                     @unique
+  name                       String
+  role                       Role                       @default(user)
   /// P0: incremented to invalidate browser sessions without storing server-side sessions
-  sessionVersion            Int              @default(0)
+  sessionVersion             Int                        @default(0)
   /// P0: email + password auth (nullable for GitHub-only accounts)
-  passwordHash              String?
-  emailVerifiedAt           DateTime?
-  emailVerificationToken  String?          @unique
-  passwordResetToken        String?          @unique
-  passwordResetExpires      DateTime?
+  passwordHash               String?
+  emailVerifiedAt            DateTime?
+  emailVerificationToken     String?                    @unique
+  passwordResetToken         String?                    @unique
+  passwordResetExpires       DateTime?
   /// P0-4: user accepted terms / privacy at registration (required for email signup)
-  termsAcceptedAt           DateTime?
+  termsAcceptedAt            DateTime?
   /// F-1: GitHub OAuth
-  githubId                  Int?             @unique
-  githubUsername            String?          @unique
-  avatarUrl                 String?
+  githubId                   Int?                       @unique
+  githubUsername             String?                    @unique
+  avatarUrl                  String?
   /// M-2: Stripe customer
-  stripeCustomerId          String?          @unique
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
-  creatorProfile            CreatorProfile?
-  posts                     Post[]           @relation("PostAuthor")
-  reviewedPosts             Post[]           @relation("PostReviewer")
-  featuredPosts             Post[]           @relation("PostFeaturedBy")
-  comments                  Comment[]
-  resolvedModerationCases   ModerationCase[] @relation("ModerationResolvedBy")
-  reportTickets             ReportTicket[]   @relation("ReportReporter")
-  resolvedReportTickets     ReportTicket[]   @relation("ReportResolvedBy")
-  auditLogs                 AuditLog[]
-  adminAiSuggestions        AdminAiSuggestion[]
-  collaborationIntents      CollaborationIntent[] @relation("CollaborationApplicant")
-  reviewedCollabIntents     CollaborationIntent[] @relation("CollaborationReviewer")
-  ownedTeams                Team[]                @relation("TeamOwner")
-  teamMemberships           TeamMembership[]
-  teamJoinRequests          TeamJoinRequest[]     @relation("TeamJoinApplicant")
-  teamTasksCreated          TeamTask[]            @relation("TeamTaskCreator")
-  teamTasksAssigned         TeamTask[]            @relation("TeamTaskAssignee")
-  teamTasksReviewed         TeamTask[]            @relation("TeamTaskReviewer")
-  teamMilestonesCreated     TeamMilestone[]       @relation("TeamMilestoneCreator")
-  teamDiscussions           TeamDiscussion[]
-  teamTaskComments          TeamTaskComment[]
-  apiKeys                   ApiKey[]
-  agentBindings             AgentBinding[]
-  agentActionAudits         AgentActionAudit[]
-  agentConfirmationRequests AgentConfirmationRequest[] @relation("AgentConfirmationRequester")
+  stripeCustomerId           String?                    @unique
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  creatorProfile             CreatorProfile?
+  posts                      Post[]                     @relation("PostAuthor")
+  reviewedPosts              Post[]                     @relation("PostReviewer")
+  featuredPosts              Post[]                     @relation("PostFeaturedBy")
+  comments                   Comment[]
+  resolvedModerationCases    ModerationCase[]           @relation("ModerationResolvedBy")
+  reportTickets              ReportTicket[]             @relation("ReportReporter")
+  resolvedReportTickets      ReportTicket[]             @relation("ReportResolvedBy")
+  auditLogs                  AuditLog[]
+  adminAiSuggestions         AdminAiSuggestion[]
+  collaborationIntents       CollaborationIntent[]      @relation("CollaborationApplicant")
+  reviewedCollabIntents      CollaborationIntent[]      @relation("CollaborationReviewer")
+  ownedTeams                 Team[]                     @relation("TeamOwner")
+  teamMemberships            TeamMembership[]
+  teamJoinRequests           TeamJoinRequest[]          @relation("TeamJoinApplicant")
+  teamTasksCreated           TeamTask[]                 @relation("TeamTaskCreator")
+  teamTasksAssigned          TeamTask[]                 @relation("TeamTaskAssignee")
+  teamTasksReviewed          TeamTask[]                 @relation("TeamTaskReviewer")
+  teamMilestonesCreated      TeamMilestone[]            @relation("TeamMilestoneCreator")
+  teamDiscussions            TeamDiscussion[]
+  teamTaskComments           TeamTaskComment[]
+  apiKeys                    ApiKey[]
+  agentBindings              AgentBinding[]
+  agentActionAudits          AgentActionAudit[]
+  agentConfirmationRequests  AgentConfirmationRequest[] @relation("AgentConfirmationRequester")
   agentConfirmationDecisions AgentConfirmationRequest[] @relation("AgentConfirmationDecider")
-  notifications             InAppNotification[]
-  challengesCreated         Challenge[]           @relation("ChallengeCreator")
-  subscription              UserSubscription?
-  billingRecords            BillingRecord[]
-  teamChatMessages          TeamChatMessage[]
+  teamAgentsOwned            TeamAgentMembership[]      @relation("TeamAgentOwner")
+  teamAgentsGranted          TeamAgentMembership[]      @relation("TeamAgentGrantor")
+  notifications              InAppNotification[]
+  challengesCreated          Challenge[]                @relation("ChallengeCreator")
+  subscription               UserSubscription?
+  billingRecords             BillingRecord[]
+  teamChatMessages           TeamChatMessage[]
   /// C-1: social graph
-  following                 UserFollow[]          @relation("Follower")
-  followers                 UserFollow[]          @relation("Following")
-  postLikes                 PostLike[]
-  postBookmarks             PostBookmark[]
-  projectBookmarks          ProjectBookmark[]
+  following                  UserFollow[]               @relation("Follower")
+  followers                  UserFollow[]               @relation("Following")
+  postLikes                  PostLike[]
+  postBookmarks              PostBookmark[]
+  projectBookmarks           ProjectBookmark[]
   /// P2-3: enterprise verification lives on `EnterpriseProfile`, not on `User`.
-  enterpriseProfile         EnterpriseProfile?
+  enterpriseProfile          EnterpriseProfile?
   /// P3-3: user-owned webhook endpoints for outbound events
-  webhookEndpoints          WebhookEndpoint[]
+  webhookEndpoints           WebhookEndpoint[]
   /// P3-FE-4: per-user notification channel toggles
-  notificationPreference    NotificationPreference?
+  notificationPreference     NotificationPreference?
   /// P3-BE-1 / P3-BE-4: outbound webhook delivery audit trail
-  webhookDeliveries         WebhookDelivery[]
-  oauthApps                 OAuthApp[]
-  oauthAuthorizationCodes   OAuthAuthorizationCode[]
-  oauthAccessTokens         OAuthAccessToken[]
-  automationWorkflows       AutomationWorkflow[]
-  automationWorkflowRuns    AutomationWorkflowRun[]
+  webhookDeliveries          WebhookDelivery[]
+  oauthApps                  OAuthApp[]
+  oauthAuthorizationCodes    OAuthAuthorizationCode[]
+  oauthAccessTokens          OAuthAccessToken[]
+  automationWorkflows        AutomationWorkflow[]
+  automationWorkflowRuns     AutomationWorkflowRun[]
 }
 
 enum EnterpriseVerificationStatus {
@@ -246,53 +248,53 @@ enum ReportTicketStatus {
 
 /// P2-3: B2B verification profile (one per user). Source of truth for enterprise fields.
 model EnterpriseProfile {
-  id             String                       @id @default(cuid())
-  userId         String                       @unique
-  status         EnterpriseVerificationStatus @default(none)
-  organization   String?
-  website        String?
-  useCase        String?
-  role           EnterpriseRole?
-  logoUrl        String?
-  industry       String?
-  appliedAt      DateTime?
-  reviewedAt     DateTime?
-  reviewedBy     String?
-  reviewNote     String?
-  createdAt      DateTime                     @default(now())
-  updatedAt      DateTime                     @updatedAt
-  user           User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String                       @id @default(cuid())
+  userId        String                       @unique
+  status        EnterpriseVerificationStatus @default(none)
+  organization  String?
+  website       String?
+  useCase       String?
+  role          EnterpriseRole?
+  logoUrl       String?
+  industry      String?
+  appliedAt     DateTime?
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  reviewNote    String?
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+  user          User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// P3-4: future B2B invites (schema only; no CRUD in app yet)
-  memberInvites  EnterpriseMemberInvite[]
+  memberInvites EnterpriseMemberInvite[]
 
   @@index([status])
 }
 
 /// P3-4: reserved for multi-seat enterprise (no workflow wired yet).
 model EnterpriseMemberInvite {
-  id                  String             @id @default(cuid())
+  id                  String                       @id @default(cuid())
   enterpriseProfileId String
   inviteeEmail        String
-  role                EnterpriseRole     @default(member)
+  role                EnterpriseRole               @default(member)
   status              EnterpriseMemberInviteStatus @default(pending)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  enterpriseProfile   EnterpriseProfile  @relation(fields: [enterpriseProfileId], references: [id], onDelete: Cascade)
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  enterpriseProfile   EnterpriseProfile            @relation(fields: [enterpriseProfileId], references: [id], onDelete: Cascade)
 
   @@index([enterpriseProfileId])
 }
 
 /// P3-3: per-user webhook targets with event allow-list
 model WebhookEndpoint {
-  id        String   @id @default(cuid())
-  userId    String
-  url       String
-  secret    String
-  events    String[]
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String            @id @default(cuid())
+  userId     String
+  url        String
+  secret     String
+  events     String[]
+  active     Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries WebhookDelivery[]
 
   @@index([userId, active])
@@ -306,93 +308,93 @@ enum WebhookDeliveryStatus {
 
 /// P3-BE-4: one row per HTTP delivery attempt outcome (after retries) for a target URL
 model WebhookDelivery {
-  id                 String                 @id @default(cuid())
-  userId             String
-  webhookEndpointId  String?
-  event              String
-  targetUrl          String
-  status             WebhookDeliveryStatus
-  httpStatus         Int?
-  errorMessage       String?
-  attempts           Int                    @default(0)
-  idempotencyKey     String?
-  createdAt          DateTime               @default(now())
-  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  webhookEndpoint    WebhookEndpoint?       @relation(fields: [webhookEndpointId], references: [id], onDelete: SetNull)
+  id                String                @id @default(cuid())
+  userId            String
+  webhookEndpointId String?
+  event             String
+  targetUrl         String
+  status            WebhookDeliveryStatus
+  httpStatus        Int?
+  errorMessage      String?
+  attempts          Int                   @default(0)
+  idempotencyKey    String?
+  createdAt         DateTime              @default(now())
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webhookEndpoint   WebhookEndpoint?      @relation(fields: [webhookEndpointId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([webhookEndpointId])
 }
 
 model OAuthApp {
-  id                  String                   @id @default(cuid())
-  userId              String
-  name                String
-  slug                String
-  description         String?
-  clientId            String                   @unique
-  clientSecretHash    String
-  redirectUris        String[]
-  scopes              String[]
-  active              Boolean                  @default(true)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  authorizationCodes  OAuthAuthorizationCode[]
-  accessTokens        OAuthAccessToken[]
+  id                 String                   @id @default(cuid())
+  userId             String
+  name               String
+  slug               String
+  description        String?
+  clientId           String                   @unique
+  clientSecretHash   String
+  redirectUris       String[]
+  scopes             String[]
+  active             Boolean                  @default(true)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorizationCodes OAuthAuthorizationCode[]
+  accessTokens       OAuthAccessToken[]
 
   @@unique([userId, slug])
   @@index([userId, active])
 }
 
 model OAuthAuthorizationCode {
-  id           String   @id @default(cuid())
-  appId        String
-  userId       String
-  codeHash     String   @unique
-  redirectUri  String
-  scopes       String[]
-  expiresAt    DateTime
-  usedAt       DateTime?
-  createdAt    DateTime @default(now())
-  app          OAuthApp @relation(fields: [appId], references: [id], onDelete: Cascade)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  appId       String
+  userId      String
+  codeHash    String    @unique
+  redirectUri String
+  scopes      String[]
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  app         OAuthApp  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([appId, userId])
   @@index([expiresAt])
 }
 
 model OAuthAccessToken {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   appId      String
   userId     String
-  tokenHash  String   @unique
+  tokenHash  String    @unique
   prefix     String
   scopes     String[]
   expiresAt  DateTime
   revokedAt  DateTime?
   lastUsedAt DateTime?
-  createdAt  DateTime @default(now())
-  app        OAuthApp @relation(fields: [appId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  app        OAuthApp  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([appId, revokedAt])
   @@index([userId, createdAt])
 }
 
 model AutomationWorkflow {
-  id             String   @id @default(cuid())
+  id             String                   @id @default(cuid())
   userId         String
   agentBindingId String?
   name           String
   description    String?
   triggerEvent   String
   filterJson     Json?
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  agentBinding   AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
+  active         Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentBinding   AgentBinding?            @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
   steps          AutomationWorkflowStep[]
   runs           AutomationWorkflowRun[]
 
@@ -416,17 +418,17 @@ model AutomationWorkflowStep {
 }
 
 model AutomationWorkflowRun {
-  id            String                      @id @default(cuid())
-  workflowId    String
-  userId        String
-  event         String
-  status        AutomationWorkflowRunStatus @default(pending)
+  id             String                      @id @default(cuid())
+  workflowId     String
+  userId         String
+  event          String
+  status         AutomationWorkflowRunStatus @default(pending)
   triggerPayload Json?
-  resultSummary String?
-  createdAt     DateTime                    @default(now())
-  completedAt   DateTime?
-  workflow      AutomationWorkflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  user          User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resultSummary  String?
+  createdAt      DateTime                    @default(now())
+  completedAt    DateTime?
+  workflow       AutomationWorkflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user           User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([workflowId, createdAt])
   @@index([userId, createdAt])
@@ -434,13 +436,13 @@ model AutomationWorkflowRun {
 
 /// P3-FE-4: notification category opt-in (defaults all enabled)
 model NotificationPreference {
-  userId                   String  @id
-  commentReplies           Boolean @default(true)
-  teamUpdates              Boolean @default(true)
-  collaborationModeration Boolean @default(true)
-  systemAnnouncements      Boolean @default(true)
-  updatedAt                DateTime @updatedAt
-  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                  String   @id
+  commentReplies          Boolean  @default(true)
+  teamUpdates             Boolean  @default(true)
+  collaborationModeration Boolean  @default(true)
+  systemAnnouncements     Boolean  @default(true)
+  updatedAt               DateTime @updatedAt
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model InAppNotification {
@@ -460,18 +462,18 @@ model InAppNotification {
 
 /// MCP v2 HTTP invoke audit (Bearer or session).
 model McpInvokeAudit {
-  id           String   @id @default(cuid())
-  tool         String
-  userId       String
-  apiKeyId     String?
+  id             String        @id @default(cuid())
+  tool           String
+  userId         String
+  apiKeyId       String?
   agentBindingId String?
-  httpStatus   Int
-  clientIp     String?
-  userAgent    String?
-  errorCode    String?
-  durationMs   Int?
-  createdAt    DateTime @default(now())
-  agentBinding AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
+  httpStatus     Int
+  clientIp       String?
+  userAgent      String?
+  errorCode      String?
+  durationMs     Int?
+  createdAt      DateTime      @default(now())
+  agentBinding   AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([userId, createdAt])
@@ -492,44 +494,86 @@ model McpInvokeIdempotency {
 }
 
 model ApiKey {
-  id         String    @id @default(cuid())
-  userId     String
+  id             String        @id @default(cuid())
+  userId         String
   agentBindingId String?
-  label      String
-  keyHash    String    @unique
-  prefix     String
+  label          String
+  keyHash        String        @unique
+  prefix         String
   /// JSON string[] of scope tokens (e.g. read:public, read:projects:list)
-  scopes     Json
-  lastUsedAt DateTime?
-  revokedAt  DateTime?
+  scopes         Json
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
   /// When set, Bearer auth rejects the key after this instant (P1).
-  expiresAt  DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  agentBinding AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
+  expiresAt      DateTime?
+  createdAt      DateTime      @default(now())
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentBinding   AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([agentBindingId])
 }
 
 model AgentBinding {
-  id          String   @id @default(cuid())
-  userId      String
-  label       String
-  agentType   String
-  description String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  apiKeys     ApiKey[]
-  auditLogs   AuditLog[]
-  mcpInvokes  McpInvokeAudit[]
-  actionAudits AgentActionAudit[]
+  id                   String                     @id @default(cuid())
+  userId               String
+  label                String
+  agentType            String
+  description          String?
+  active               Boolean                    @default(true)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  user                 User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKeys              ApiKey[]
+  auditLogs            AuditLog[]
+  mcpInvokes           McpInvokeAudit[]
+  actionAudits         AgentActionAudit[]
   confirmationRequests AgentConfirmationRequest[]
-  automationWorkflows AutomationWorkflow[]
+  automationWorkflows  AutomationWorkflow[]
+  teamMemberships      TeamAgentMembership[]
 
   @@index([userId, active])
+}
+
+/// W3: role cards for AI agents inside a team. Mirrors the "TeamRole" for
+/// humans but enumerates the write-capability levels the roadmap assigns to
+/// agents specifically (reader → reviewer → executor → coordinator). A
+/// commenter is an executor without write:team-tasks scope.
+enum TeamAgentRole {
+  reader
+  commenter
+  executor
+  reviewer
+  coordinator
+}
+
+/// W3: join table pinning an AgentBinding into a Team with a specific role
+/// card. Invariant: `ownerUserId` must already be a member of `teamId`; if
+/// the user is removed from the team the membership rows cascade on delete
+/// via application-level logic (enforced in the repository, not the schema,
+/// so we don't couple role changes to the human membership lifecycle).
+model TeamAgentMembership {
+  id              String        @id @default(cuid())
+  teamId          String
+  agentBindingId  String
+  /// Owner of the AgentBinding. Must be a member of `teamId`.
+  ownerUserId     String
+  role            TeamAgentRole @default(reader)
+  /// Team owner/admin who granted (or last modified) this membership.
+  grantedByUserId String
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  team         Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  agentBinding AgentBinding @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
+  ownerUser    User         @relation("TeamAgentOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  grantedBy    User         @relation("TeamAgentGrantor", fields: [grantedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([teamId, agentBindingId])
+  @@index([teamId, active])
+  @@index([agentBindingId])
+  @@index([ownerUserId])
 }
 
 model AgentActionAudit {
@@ -555,27 +599,27 @@ model AgentActionAudit {
 }
 
 model AgentConfirmationRequest {
-  id             String                  @id @default(cuid())
+  id              String                  @id @default(cuid())
   requesterUserId String
-  agentBindingId String
-  apiKeyId       String?
-  teamId         String?
-  taskId         String?
-  targetType     String
-  targetId       String
-  action         String
-  reason         String?
-  payload        Json
-  status         AgentConfirmationStatus @default(pending)
+  agentBindingId  String
+  apiKeyId        String?
+  teamId          String?
+  taskId          String?
+  targetType      String
+  targetId        String
+  action          String
+  reason          String?
+  payload         Json
+  status          AgentConfirmationStatus @default(pending)
   decidedByUserId String?
-  decidedAt      DateTime?
-  expiresAt      DateTime?
-  createdAt      DateTime                @default(now())
-  requester      User                    @relation("AgentConfirmationRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
-  decider        User?                   @relation("AgentConfirmationDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
-  agentBinding   AgentBinding            @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
-  team           Team?                   @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  task           TeamTask?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  decidedAt       DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime                @default(now())
+  requester       User                    @relation("AgentConfirmationRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  decider         User?                   @relation("AgentConfirmationDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  agentBinding    AgentBinding            @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
+  team            Team?                   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  task            TeamTask?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([requesterUserId, status, createdAt])
   @@index([agentBindingId, status, createdAt])
@@ -584,9 +628,9 @@ model AgentConfirmationRequest {
 }
 
 model CreatorProfile {
-  id                      String    @id @default(cuid())
-  slug                    String    @unique
-  userId                  String    @unique
+  id                      String                   @id @default(cuid())
+  slug                    String                   @unique
+  userId                  String                   @unique
   headline                String
   bio                     String
   skills                  String[]
@@ -598,81 +642,80 @@ model CreatorProfile {
   linkedinUrl             String?
   /// P2-1: full-text search (english)
   searchVector            Unsupported("tsvector")?
-  collaborationPreference String    @default("open")
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collaborationPreference String                   @default("open")
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects                Project[]
 
   @@index([searchVector], type: Gin)
 }
 
 model Project {
-  id           String        @id @default(cuid())
-  slug         String        @unique
-  creatorId    String
-  teamId       String?
-  title        String
-  oneLiner     String
-  description  String
+  id                   String                   @id @default(cuid())
+  slug                 String                   @unique
+  creatorId            String
+  teamId               String?
+  title                String
+  oneLiner             String
+  description          String
   /// P3-FE-3: optional long-form README (Markdown); shown on project detail tab
-  readmeMarkdown String?
+  readmeMarkdown       String?
   /// P2-1: PostgreSQL full-text search (english), maintained by DB.
-  searchVector Unsupported("tsvector")?
-  techStack    String[]
-  tags         String[]
-  status       ProjectStatus @default(idea)
-  demoUrl      String?
+  searchVector         Unsupported("tsvector")?
+  techStack            String[]
+  tags                 String[]
+  status               ProjectStatus            @default(idea)
+  demoUrl              String?
   /// F-3: extra display fields
-  repoUrl      String?
-  websiteUrl   String?
-  screenshots  String[]
-  logoUrl      String?
-  openSource   Boolean       @default(false)
-  license      String?
+  repoUrl              String?
+  websiteUrl           String?
+  screenshots          String[]
+  logoUrl              String?
+  openSource           Boolean                  @default(false)
+  license              String?
   /// C-5: daily featured rank (admin-set)
-  featuredRank Int?
-  featuredAt   DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  team         Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  featuredRank         Int?
+  featuredAt           DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  creator              CreatorProfile           @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  team                 Team?                    @relation(fields: [teamId], references: [id], onDelete: SetNull)
   collaborationIntents CollaborationIntent[]
-
-  @@index([searchVector], type: Gin)
   bookmarks            ProjectBookmark[]
 
+  @@index([searchVector], type: Gin)
   @@index([creatorId])
   @@index([teamId])
   @@index([featuredRank])
 }
 
 model Post {
-  id               String          @id @default(cuid())
-  slug             String          @unique
-  authorId         String
-  title            String
-  body             String
+  id              String                   @id @default(cuid())
+  slug            String                   @unique
+  authorId        String
+  title           String
+  body            String
   /// P2-1: PostgreSQL full-text search (english), maintained by DB.
-  searchVector     Unsupported("tsvector")?
-  tags             String[]
-  reviewStatus     ReviewStatus    @default(pending)
-  moderationNote   String?
-  reviewedAt       DateTime?
-  reviewedBy       String?
+  searchVector    Unsupported("tsvector")?
+  tags            String[]
+  reviewStatus    ReviewStatus             @default(pending)
+  moderationNote  String?
+  reviewedAt      DateTime?
+  reviewedBy      String?
   /// P2/C-4: admin featured post
-  featuredAt       DateTime?
-  featuredBy       String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  author           User            @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  reviewer         User?           @relation("PostReviewer", fields: [reviewedBy], references: [id])
-  featuredByUser   User?           @relation("PostFeaturedBy", fields: [featuredBy], references: [id])
-  comments         Comment[]
-  moderationCases  ModerationCase[]
-  reportTickets    ReportTicket[]
-  likes            PostLike[]
-  bookmarks        PostBookmark[]
+  featuredAt      DateTime?
+  featuredBy      String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  author          User                     @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewer        User?                    @relation("PostReviewer", fields: [reviewedBy], references: [id])
+  featuredByUser  User?                    @relation("PostFeaturedBy", fields: [featuredBy], references: [id])
+  comments        Comment[]
+  moderationCases ModerationCase[]
+  reportTickets   ReportTicket[]
+  likes           PostLike[]
+  bookmarks       PostBookmark[]
 
   @@index([searchVector], type: Gin)
   @@index([authorId])
@@ -719,35 +762,35 @@ model ModerationCase {
 }
 
 model ReportTicket {
-  id         String   @id @default(cuid())
+  id         String             @id @default(cuid())
   targetType String
   targetId   String
   postId     String?
   reporterId String
   reason     String
-  status     ReportTicketStatus   @default(open)
-  createdAt  DateTime @default(now())
+  status     ReportTicketStatus @default(open)
+  createdAt  DateTime           @default(now())
   resolvedAt DateTime?
   resolvedBy String?
-  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  reporter   User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  resolver   User?    @relation("ReportResolvedBy", fields: [resolvedBy], references: [id])
+  post       Post?              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter   User               @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolver   User?              @relation("ReportResolvedBy", fields: [resolvedBy], references: [id])
 
   @@index([status])
   @@index([targetType, targetId])
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String
+  id             String        @id @default(cuid())
+  actorId        String
   agentBindingId String?
-  action     String
-  entityType String
-  entityId   String
-  metadata   Json?
-  createdAt  DateTime @default(now())
-  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
-  agentBinding AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
+  action         String
+  entityType     String
+  entityId       String
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  actor          User          @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  agentBinding   AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
 
   @@index([actorId])
   @@index([entityType, entityId])
@@ -776,17 +819,17 @@ enum AdminAiDecision {
 
 /// v7 P0-11: AI governance assistant suggestions (human must confirm actions)
 model AdminAiSuggestion {
-  id              String                   @id @default(cuid())
-  targetType      AdminAiSuggestionTarget
-  targetId        String
-  suggestion      String
-  riskLevel       AdminAiRiskLevel         @default(low)
-  confidence      Float?
-  adminDecision   AdminAiDecision          @default(pending)
-  adminUserId     String?
-  decidedAt       DateTime?
-  createdAt       DateTime                 @default(now())
-  adminUser       User?                    @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  id            String                  @id @default(cuid())
+  targetType    AdminAiSuggestionTarget
+  targetId      String
+  suggestion    String
+  riskLevel     AdminAiRiskLevel        @default(low)
+  confidence    Float?
+  adminDecision AdminAiDecision         @default(pending)
+  adminUserId   String?
+  decidedAt     DateTime?
+  createdAt     DateTime                @default(now())
+  adminUser     User?                   @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
 
   @@index([targetType, targetId])
 }
@@ -818,10 +861,10 @@ model CollaborationIntent {
 
 /// UTC week starting Monday 00:00:00. Materialized ranking rows for stable weekly leaderboards.
 model WeeklyLeaderboardSnapshot {
-  id          String               @id @default(cuid())
+  id          String                 @id @default(cuid())
   weekStart   DateTime
   kind        WeeklyLeaderboardKind
-  generatedAt DateTime             @default(now())
+  generatedAt DateTime               @default(now())
   rows        WeeklyLeaderboardRow[]
 
   @@unique([weekStart, kind])
@@ -829,7 +872,7 @@ model WeeklyLeaderboardSnapshot {
 }
 
 model WeeklyLeaderboardRow {
-  id         String                   @id @default(cuid())
+  id         String                    @id @default(cuid())
   snapshotId String
   rank       Int
   entityId   String
@@ -842,33 +885,34 @@ model WeeklyLeaderboardRow {
 }
 
 model Team {
-  id            String   @id @default(cuid())
-  slug          String   @unique
-  name          String
-  mission       String?
-  ownerUserId   String
+  id                        String                     @id @default(cuid())
+  slug                      String                     @unique
+  name                      String
+  mission                   String?
+  ownerUserId               String
   /// T-1: external chat links
-  discordUrl    String?
-  telegramUrl   String?
-  slackUrl      String?
+  discordUrl                String?
+  telegramUrl               String?
+  slackUrl                  String?
   /// T-3: GitHub integration
-  githubOrgUrl  String?
-  githubRepoUrl String?
+  githubOrgUrl              String?
+  githubRepoUrl             String?
   /// Chat capacity: max concurrent WebSocket connections (default 50)
-  chatCapacity  Int      @default(50)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  owner         User     @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
-  memberships   TeamMembership[]
-  joinRequests  TeamJoinRequest[]
-  projects      Project[]
-  tasks         TeamTask[]
-  milestones    TeamMilestone[]
-  chatMessages  TeamChatMessage[]
-  discussions   TeamDiscussion[]
-  taskComments  TeamTaskComment[]
-  agentActionAudits AgentActionAudit[]
+  chatCapacity              Int                        @default(50)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  owner                     User                       @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  memberships               TeamMembership[]
+  joinRequests              TeamJoinRequest[]
+  projects                  Project[]
+  tasks                     TeamTask[]
+  milestones                TeamMilestone[]
+  chatMessages              TeamChatMessage[]
+  discussions               TeamDiscussion[]
+  taskComments              TeamTaskComment[]
+  agentActionAudits         AgentActionAudit[]
   agentConfirmationRequests AgentConfirmationRequest[]
+  agentMemberships          TeamAgentMembership[]
 
   @@index([ownerUserId])
 }
@@ -888,16 +932,16 @@ model TeamMembership {
 }
 
 model TeamJoinRequest {
-  id          String                 @id @default(cuid())
+  id          String                @id @default(cuid())
   teamId      String
   applicantId String
-  message     String                 @default("")
-  status      TeamJoinRequestStatus  @default(pending)
+  message     String                @default("")
+  status      TeamJoinRequestStatus @default(pending)
   reviewedAt  DateTime?
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  team        Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  applicant   User                   @relation("TeamJoinApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  applicant   User                  @relation("TeamJoinApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, applicantId])
   @@index([teamId, status])
@@ -905,28 +949,28 @@ model TeamJoinRequest {
 }
 
 model TeamTask {
-  id                String         @id @default(cuid())
-  teamId            String
-  title             String
-  description       String?
-  status            TeamTaskStatus @default(todo)
-  sortOrder         Int            @default(0)
-  milestoneId       String?
-  createdByUserId   String
-  assigneeUserId    String?
-  reviewRequestedAt DateTime?
-  reviewedAt        DateTime?
-  reviewedByUserId  String?
-  reviewNote        String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  team              Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  milestone         TeamMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
-  createdBy         User           @relation("TeamTaskCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  assignee          User?          @relation("TeamTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
-  reviewedBy        User?          @relation("TeamTaskReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  comments          TeamTaskComment[]
-  agentActionAudits AgentActionAudit[]
+  id                        String                     @id @default(cuid())
+  teamId                    String
+  title                     String
+  description               String?
+  status                    TeamTaskStatus             @default(todo)
+  sortOrder                 Int                        @default(0)
+  milestoneId               String?
+  createdByUserId           String
+  assigneeUserId            String?
+  reviewRequestedAt         DateTime?
+  reviewedAt                DateTime?
+  reviewedByUserId          String?
+  reviewNote                String?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  team                      Team                       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  milestone                 TeamMilestone?             @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  createdBy                 User                       @relation("TeamTaskCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  assignee                  User?                      @relation("TeamTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  reviewedBy                User?                      @relation("TeamTaskReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  comments                  TeamTaskComment[]
+  agentActionAudits         AgentActionAudit[]
   agentConfirmationRequests AgentConfirmationRequest[]
 
   @@index([teamId])
@@ -937,31 +981,31 @@ model TeamTask {
 }
 
 model TeamDiscussion {
-  id         String   @id @default(cuid())
-  teamId     String
-  authorId   String
-  title      String
-  body       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  teamId    String
+  authorId  String
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([teamId, createdAt])
   @@index([authorId, createdAt])
 }
 
 model TeamTaskComment {
-  id         String   @id @default(cuid())
-  teamId     String
-  taskId     String
-  authorId   String
-  body       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  task       TeamTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  teamId    String
+  taskId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  task      TeamTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([teamId, createdAt])
   @@index([taskId, createdAt])
@@ -969,22 +1013,22 @@ model TeamTaskComment {
 }
 
 model TeamMilestone {
-  id                String   @id @default(cuid())
-  teamId            String
-  title             String
-  description       String?
-  targetDate        DateTime
-  completed         Boolean  @default(false)
-  sortOrder         Int      @default(0)
+  id              String     @id @default(cuid())
+  teamId          String
+  title           String
+  description     String?
+  targetDate      DateTime
+  completed       Boolean    @default(false)
+  sortOrder       Int        @default(0)
   /// T-2: public visibility + progress
-  visibility        String   @default("team_only")
-  progress          Int      @default(0)
-  createdByUserId   String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  createdBy         User     @relation("TeamMilestoneCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  tasks             TeamTask[]
+  visibility      String     @default("team_only")
+  progress        Int        @default(0)
+  createdByUserId String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  team            Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy       User       @relation("TeamMilestoneCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  tasks           TeamTask[]
 
   @@index([teamId])
   @@index([teamId, completed])
@@ -1018,21 +1062,21 @@ model Challenge {
 
 /// Aggregated public collaboration credit for a user.
 model ContributionCredit {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  score              Int      @default(0)
-  tasksCompleted     Int      @default(0)
-  milestonesHit      Int      @default(0)
-  joinRequestsMade   Int      @default(0)
-  postsAuthored      Int      @default(0)
-  commentsAuthored   Int      @default(0)
-  projectsCreated    Int      @default(0)
-  intentsApproved    Int      @default(0)
-  postLikesReceived  Int      @default(0)
-  projectBookmarksReceived Int @default(0)
-  followerCount      Int      @default(0)
-  updatedAt          DateTime @updatedAt
-  createdAt          DateTime @default(now())
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  score                    Int      @default(0)
+  tasksCompleted           Int      @default(0)
+  milestonesHit            Int      @default(0)
+  joinRequestsMade         Int      @default(0)
+  postsAuthored            Int      @default(0)
+  commentsAuthored         Int      @default(0)
+  projectsCreated          Int      @default(0)
+  intentsApproved          Int      @default(0)
+  postLikesReceived        Int      @default(0)
+  projectBookmarksReceived Int      @default(0)
+  followerCount            Int      @default(0)
+  updatedAt                DateTime @updatedAt
+  createdAt                DateTime @default(now())
 
   @@index([score])
 }
@@ -1061,14 +1105,14 @@ model UserSubscription {
 }
 
 model BillingRecord {
-  id                String             @id @default(cuid())
+  id                String              @id @default(cuid())
   userId            String
   subscriptionId    String?
   paymentProvider   PaymentProvider
   tier              SubscriptionTier
   status            BillingRecordStatus @default(pending)
   amountCents       Int
-  currency          String             @default("USD")
+  currency          String              @default("USD")
   externalSessionId String?
   externalPaymentId String?
   description       String?
@@ -1076,10 +1120,10 @@ model BillingRecord {
   metadata          Json?
   settledAt         DateTime?
   refundedAt        DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription      UserSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription      UserSubscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([subscriptionId, createdAt])

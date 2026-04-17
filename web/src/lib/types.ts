@@ -311,6 +311,7 @@ export interface AuditLog {
     | "team_task"
     | "team_milestone"
     | "api_key"
+    | "team_membership"
     | "in_app_notification"
     | "enterprise_profile"
     | "enterprise_verification_application";
@@ -327,6 +328,34 @@ export interface AgentBindingSummary {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** v8 W3: role cards an agent may hold inside a team. */
+export type TeamAgentRole =
+  | "reader"
+  | "commenter"
+  | "executor"
+  | "reviewer"
+  | "coordinator";
+
+export interface TeamAgentMembershipSummary {
+  id: string;
+  teamId: string;
+  teamSlug?: string;
+  teamName?: string;
+  agentBindingId: string;
+  agentLabel?: string;
+  agentType?: string;
+  ownerUserId: string;
+  ownerName?: string;
+  role: TeamAgentRole;
+  grantedByUserId: string;
+  grantedByName?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** Last recorded action by this agent in the team (null if no audit yet). */
+  lastActionAt?: string | null;
 }
 
 export interface OAuthAppSummary {

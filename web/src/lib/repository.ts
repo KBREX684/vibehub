@@ -22,6 +22,7 @@ import {
   mockApiKeys,
 } from "@/lib/data/mock-api-keys";
 import { mockAgentBindings } from "@/lib/data/mock-agent-bindings";
+import { mockTeamAgentMemberships } from "@/lib/data/mock-team-agent-memberships";
 import {
   mockAuditLogs,
   mockAgentActionAudits,
@@ -91,6 +92,8 @@ import type {
   TeamMember,
   TeamMilestone,
   TeamRole,
+  TeamAgentRole,
+  TeamAgentMembershipSummary,
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
@@ -2157,6 +2160,58 @@ export async function listAgentActionAuditsForUser(params: {
   }
   const prisma = await getPrisma();
   const where = { actorUserId: params.userId };
+  const [rows, total] = await Promise.all([
+    prisma.agentActionAudit.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+    }),
+    prisma.agentActionAudit.count({ where }),
+  ]);
+  return {
+    items: rows.map((row) => toAgentActionAuditDto(row)),
+    pagination: {
+      page: params.page,
+      limit: params.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / params.limit)),
+    },
+  };
+}
+
+/**
+ * Team-scoped agent-action audit timeline (W3).
+ * Caller must already be a team member; the assertion is done here so API
+ * routes don't have to duplicate the check.
+ */
+export async function listAgentActionAuditsForTeam(params: {
+  teamSlug: string;
+  viewerUserId: string;
+  agentBindingId?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<AgentActionAuditRow>> {
+  const { teamId } = await assertTeamMemberRoleBySlug(
+    params.teamSlug,
+    params.viewerUserId
+  );
+
+  if (useMockData) {
+    const filtered = mockAgentActionAudits.filter(
+      (item) =>
+        item.teamId === teamId &&
+        (!params.agentBindingId ||
+          item.agentBindingId === params.agentBindingId)
+    );
+    return paginateArray(filtered, params.page, params.limit);
+  }
+  const prisma = await getPrisma();
+  const where: {
+    teamId: string;
+    agentBindingId?: string;
+  } = { teamId };
+  if (params.agentBindingId) where.agentBindingId = params.agentBindingId;
   const [rows, total] = await Promise.all([
     prisma.agentActionAudit.findMany({
       where,
@@ -8144,6 +8199,622 @@ export async function deleteAgentBindingForUser(params: {
       },
     });
   });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * v8 W3 — TeamAgentMembership
+ *
+ * All functions below enforce a single invariant:
+ *
+ *   An agent can only be a team member if its binding owner is a human
+ *   member of that team. If the owner leaves the team the memberships for
+ *   all of their bindings in that team are deactivated (not hard-deleted,
+ *   so audit history remains intact).
+ *
+ * Role upgrades to `coordinator` are separately gated: only team
+ *  `owner` / `admin` may grant that role. This is a policy decision, not
+ * a schema constraint, so we enforce it in the repository.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+function isTeamAgentRole(value: unknown): value is TeamAgentRole {
+  return (
+    value === "reader" ||
+    value === "commenter" ||
+    value === "executor" ||
+    value === "reviewer" ||
+    value === "coordinator"
+  );
+}
+
+/** Roles that require owner/admin approval to grant (never available to regular members). */
+const COORDINATOR_GATED_ROLES: ReadonlySet<TeamAgentRole> = new Set(["coordinator"]);
+
+function canManageTeamAgents(role: TeamRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/** Can a given role card write to team tasks (beyond the Confirmation queue)? */
+export function teamAgentCanWriteTasks(role: TeamAgentRole): boolean {
+  return role === "executor" || role === "coordinator";
+}
+
+/** Can a given role card create and reassign tasks? */
+export function teamAgentCanCoordinate(role: TeamAgentRole): boolean {
+  return role === "coordinator";
+}
+
+/** Can a given role card leave comments on tasks / discussions? */
+export function teamAgentCanComment(role: TeamAgentRole): boolean {
+  return role !== "reader";
+}
+
+function toTeamAgentMembershipSummary(row: {
+  id: string;
+  teamId: string;
+  teamSlug?: string;
+  teamName?: string;
+  agentBindingId: string;
+  agentLabel?: string;
+  agentType?: string;
+  ownerUserId: string;
+  ownerName?: string;
+  role: TeamAgentRole;
+  grantedByUserId: string;
+  grantedByName?: string;
+  active: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  lastActionAt?: Date | string | null;
+}): TeamAgentMembershipSummary {
+  const iso = (v: Date | string) =>
+    typeof v === "string" ? v : v.toISOString();
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    teamSlug: row.teamSlug,
+    teamName: row.teamName,
+    agentBindingId: row.agentBindingId,
+    agentLabel: row.agentLabel,
+    agentType: row.agentType,
+    ownerUserId: row.ownerUserId,
+    ownerName: row.ownerName,
+    role: row.role,
+    grantedByUserId: row.grantedByUserId,
+    grantedByName: row.grantedByName,
+    active: row.active,
+    createdAt: iso(row.createdAt),
+    updatedAt: iso(row.updatedAt),
+    lastActionAt:
+      row.lastActionAt === undefined || row.lastActionAt === null
+        ? null
+        : iso(row.lastActionAt),
+  };
+}
+
+/** List agent memberships for a team. Caller must already be a team member. */
+export async function listTeamAgentMemberships(params: {
+  teamSlug: string;
+  viewerUserId: string;
+}): Promise<TeamAgentMembershipSummary[]> {
+  const { teamId } = await assertTeamMemberRoleBySlug(
+    params.teamSlug,
+    params.viewerUserId
+  );
+
+  if (useMockData) {
+    return mockTeamAgentMemberships
+      .filter((m) => m.teamId === teamId)
+      .map((m) => {
+        const binding = mockAgentBindings.find((b) => b.id === m.agentBindingId);
+        const owner = mockUsers.find((u) => u.id === m.ownerUserId);
+        const grantor = mockUsers.find((u) => u.id === m.grantedByUserId);
+        const team = mockTeams.find((t) => t.id === m.teamId);
+        const lastAudit = mockAgentActionAudits
+          .filter((a) => a.teamId === teamId && a.agentBindingId === m.agentBindingId)
+          .map((a) => a.createdAt)
+          .sort()
+          .reverse()[0];
+        return toTeamAgentMembershipSummary({
+          ...m,
+          teamSlug: team?.slug,
+          teamName: team?.name,
+          agentLabel: binding?.label,
+          agentType: binding?.agentType,
+          ownerName: owner?.name,
+          grantedByName: grantor?.name,
+          lastActionAt: lastAudit ?? null,
+        });
+      })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  const prisma = await getPrisma();
+  const rows = await prisma.teamAgentMembership.findMany({
+    where: { teamId },
+    include: {
+      team: { select: { slug: true, name: true } },
+      agentBinding: { select: { label: true, agentType: true } },
+      ownerUser: { select: { name: true } },
+      grantedBy: { select: { name: true } },
+    },
+    orderBy: [{ updatedAt: "desc" }],
+  });
+  // Compute last action per (team, agentBinding) in a single aggregate query.
+  const lastByBinding = new Map<string, Date>();
+  if (rows.length > 0) {
+    const agg = await prisma.agentActionAudit.groupBy({
+      by: ["agentBindingId"],
+      where: {
+        teamId,
+        agentBindingId: { in: rows.map((r) => r.agentBindingId) },
+      },
+      _max: { createdAt: true },
+    });
+    for (const a of agg) {
+      if (a._max.createdAt) lastByBinding.set(a.agentBindingId, a._max.createdAt);
+    }
+  }
+
+  return rows.map((row) =>
+    toTeamAgentMembershipSummary({
+      id: row.id,
+      teamId: row.teamId,
+      teamSlug: row.team.slug,
+      teamName: row.team.name,
+      agentBindingId: row.agentBindingId,
+      agentLabel: row.agentBinding.label,
+      agentType: row.agentBinding.agentType,
+      ownerUserId: row.ownerUserId,
+      ownerName: row.ownerUser.name,
+      role: row.role as TeamAgentRole,
+      grantedByUserId: row.grantedByUserId,
+      grantedByName: row.grantedBy.name,
+      active: row.active,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      lastActionAt: lastByBinding.get(row.agentBindingId) ?? null,
+    })
+  );
+}
+
+/**
+ * Add an agent into a team.
+ *
+ * Checks:
+ *   - caller is team owner or admin
+ *   - binding belongs to a user who is already a team member
+ *   - binding is active
+ *   - role is a known TeamAgentRole
+ *   - coordinator role is only grantable by owner/admin (soft policy gate
+ *     also applies to upgrades)
+ *
+ * Idempotent in effect: if the (team, binding) pair already exists this
+ * throws `TEAM_AGENT_ALREADY_MEMBER`. Callers should use `updateTeamAgent`
+ * to change role / active.
+ */
+export async function addTeamAgentMembership(params: {
+  teamSlug: string;
+  actorUserId: string;
+  agentBindingId: string;
+  role?: TeamAgentRole;
+}): Promise<TeamAgentMembershipSummary> {
+  const role: TeamAgentRole = params.role ?? "reader";
+  if (!isTeamAgentRole(role)) throw new Error("INVALID_TEAM_AGENT_ROLE");
+
+  const { teamId, role: actorRole } = await assertTeamMemberRoleBySlug(
+    params.teamSlug,
+    params.actorUserId
+  );
+  if (!canManageTeamAgents(actorRole)) {
+    throw new Error("FORBIDDEN_TEAM_AGENT_MANAGE");
+  }
+  if (COORDINATOR_GATED_ROLES.has(role) && !canManageTeamAgents(actorRole)) {
+    throw new Error("FORBIDDEN_TEAM_AGENT_COORDINATOR");
+  }
+
+  const now = new Date().toISOString();
+
+  if (useMockData) {
+    const binding = mockAgentBindings.find((b) => b.id === params.agentBindingId);
+    if (!binding) throw new Error("AGENT_BINDING_NOT_FOUND");
+    if (!binding.active) throw new Error("AGENT_BINDING_INACTIVE");
+    const isOwnerMember = mockTeamMemberships.some(
+      (m) => m.teamId === teamId && m.userId === binding.userId
+    );
+    if (!isOwnerMember) throw new Error("AGENT_OWNER_NOT_TEAM_MEMBER");
+    const existing = mockTeamAgentMemberships.find(
+      (m) => m.teamId === teamId && m.agentBindingId === binding.id
+    );
+    if (existing) throw new Error("TEAM_AGENT_ALREADY_MEMBER");
+
+    const row = {
+      id: `tam_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      teamId,
+      agentBindingId: binding.id,
+      ownerUserId: binding.userId,
+      role,
+      grantedByUserId: params.actorUserId,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    mockTeamAgentMemberships.unshift(row);
+    mockAuditLogs.unshift({
+      id: `log_team_agent_add_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "team_agent_added",
+      entityType: "team_membership",
+      entityId: row.id,
+      metadata: { teamId, agentBindingId: binding.id, role },
+      createdAt: now,
+    });
+    const team = mockTeams.find((t) => t.id === teamId);
+    const owner = mockUsers.find((u) => u.id === binding.userId);
+    const grantor = mockUsers.find((u) => u.id === params.actorUserId);
+    return toTeamAgentMembershipSummary({
+      ...row,
+      teamSlug: team?.slug,
+      teamName: team?.name,
+      agentLabel: binding.label,
+      agentType: binding.agentType,
+      ownerName: owner?.name,
+      grantedByName: grantor?.name,
+      lastActionAt: null,
+    });
+  }
+
+  const prisma = await getPrisma();
+  const binding = await prisma.agentBinding.findUnique({
+    where: { id: params.agentBindingId },
+    select: {
+      id: true,
+      userId: true,
+      active: true,
+      label: true,
+      agentType: true,
+    },
+  });
+  if (!binding) throw new Error("AGENT_BINDING_NOT_FOUND");
+  if (!binding.active) throw new Error("AGENT_BINDING_INACTIVE");
+  const membership = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId, userId: binding.userId } },
+    select: { id: true },
+  });
+  if (!membership) throw new Error("AGENT_OWNER_NOT_TEAM_MEMBER");
+
+  const existing = await prisma.teamAgentMembership.findUnique({
+    where: { teamId_agentBindingId: { teamId, agentBindingId: binding.id } },
+    select: { id: true },
+  });
+  if (existing) throw new Error("TEAM_AGENT_ALREADY_MEMBER");
+
+  const created = await prisma.$transaction(async (tx) => {
+    const row = await tx.teamAgentMembership.create({
+      data: {
+        teamId,
+        agentBindingId: binding.id,
+        ownerUserId: binding.userId,
+        role,
+        grantedByUserId: params.actorUserId,
+        active: true,
+      },
+      include: {
+        team: { select: { slug: true, name: true } },
+        agentBinding: { select: { label: true, agentType: true } },
+        ownerUser: { select: { name: true } },
+        grantedBy: { select: { name: true } },
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.actorUserId,
+        action: "team_agent_added",
+        entityType: "team_membership",
+        entityId: row.id,
+        metadata: { teamId, agentBindingId: binding.id, role },
+      },
+    });
+    return row;
+  });
+
+  return toTeamAgentMembershipSummary({
+    id: created.id,
+    teamId: created.teamId,
+    teamSlug: created.team.slug,
+    teamName: created.team.name,
+    agentBindingId: created.agentBindingId,
+    agentLabel: created.agentBinding.label,
+    agentType: created.agentBinding.agentType,
+    ownerUserId: created.ownerUserId,
+    ownerName: created.ownerUser.name,
+    role: created.role as TeamAgentRole,
+    grantedByUserId: created.grantedByUserId,
+    grantedByName: created.grantedBy.name,
+    active: created.active,
+    createdAt: created.createdAt,
+    updatedAt: created.updatedAt,
+    lastActionAt: null,
+  });
+}
+
+/** Update role card and/or active flag for an existing team-agent membership. */
+export async function updateTeamAgentMembership(params: {
+  teamSlug: string;
+  actorUserId: string;
+  membershipId: string;
+  role?: TeamAgentRole;
+  active?: boolean;
+}): Promise<TeamAgentMembershipSummary> {
+  if (params.role !== undefined && !isTeamAgentRole(params.role)) {
+    throw new Error("INVALID_TEAM_AGENT_ROLE");
+  }
+  const { teamId, role: actorRole } = await assertTeamMemberRoleBySlug(
+    params.teamSlug,
+    params.actorUserId
+  );
+  if (!canManageTeamAgents(actorRole)) {
+    throw new Error("FORBIDDEN_TEAM_AGENT_MANAGE");
+  }
+  if (
+    params.role !== undefined &&
+    COORDINATOR_GATED_ROLES.has(params.role) &&
+    !canManageTeamAgents(actorRole)
+  ) {
+    throw new Error("FORBIDDEN_TEAM_AGENT_COORDINATOR");
+  }
+  const now = new Date().toISOString();
+
+  if (useMockData) {
+    const existing = mockTeamAgentMemberships.find(
+      (m) => m.id === params.membershipId && m.teamId === teamId
+    );
+    if (!existing) throw new Error("TEAM_AGENT_NOT_FOUND");
+    if (params.role !== undefined) existing.role = params.role;
+    if (params.active !== undefined) existing.active = params.active;
+    existing.updatedAt = now;
+    mockAuditLogs.unshift({
+      id: `log_team_agent_update_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "team_agent_updated",
+      entityType: "team_membership",
+      entityId: existing.id,
+      metadata: {
+        teamId,
+        agentBindingId: existing.agentBindingId,
+        role: existing.role,
+        active: existing.active,
+      },
+      createdAt: now,
+    });
+    const binding = mockAgentBindings.find((b) => b.id === existing.agentBindingId);
+    const owner = mockUsers.find((u) => u.id === existing.ownerUserId);
+    const grantor = mockUsers.find((u) => u.id === existing.grantedByUserId);
+    const team = mockTeams.find((t) => t.id === existing.teamId);
+    return toTeamAgentMembershipSummary({
+      ...existing,
+      teamSlug: team?.slug,
+      teamName: team?.name,
+      agentLabel: binding?.label,
+      agentType: binding?.agentType,
+      ownerName: owner?.name,
+      grantedByName: grantor?.name,
+      lastActionAt: null,
+    });
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.teamAgentMembership.findFirst({
+    where: { id: params.membershipId, teamId },
+    select: { id: true },
+  });
+  if (!existing) throw new Error("TEAM_AGENT_NOT_FOUND");
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.teamAgentMembership.update({
+      where: { id: existing.id },
+      data: {
+        ...(params.role !== undefined ? { role: params.role } : {}),
+        ...(params.active !== undefined ? { active: params.active } : {}),
+      },
+      include: {
+        team: { select: { slug: true, name: true } },
+        agentBinding: { select: { label: true, agentType: true } },
+        ownerUser: { select: { name: true } },
+        grantedBy: { select: { name: true } },
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.actorUserId,
+        action: "team_agent_updated",
+        entityType: "team_membership",
+        entityId: row.id,
+        metadata: {
+          teamId,
+          agentBindingId: row.agentBindingId,
+          role: row.role,
+          active: row.active,
+        },
+      },
+    });
+    return row;
+  });
+
+  return toTeamAgentMembershipSummary({
+    id: updated.id,
+    teamId: updated.teamId,
+    teamSlug: updated.team.slug,
+    teamName: updated.team.name,
+    agentBindingId: updated.agentBindingId,
+    agentLabel: updated.agentBinding.label,
+    agentType: updated.agentBinding.agentType,
+    ownerUserId: updated.ownerUserId,
+    ownerName: updated.ownerUser.name,
+    role: updated.role as TeamAgentRole,
+    grantedByUserId: updated.grantedByUserId,
+    grantedByName: updated.grantedBy.name,
+    active: updated.active,
+    createdAt: updated.createdAt,
+    updatedAt: updated.updatedAt,
+    lastActionAt: null,
+  });
+}
+
+/** Remove an agent membership from a team. */
+export async function removeTeamAgentMembership(params: {
+  teamSlug: string;
+  actorUserId: string;
+  membershipId: string;
+}): Promise<void> {
+  const { teamId, role: actorRole } = await assertTeamMemberRoleBySlug(
+    params.teamSlug,
+    params.actorUserId
+  );
+  if (!canManageTeamAgents(actorRole)) {
+    throw new Error("FORBIDDEN_TEAM_AGENT_MANAGE");
+  }
+  const now = new Date().toISOString();
+
+  if (useMockData) {
+    const idx = mockTeamAgentMemberships.findIndex(
+      (m) => m.id === params.membershipId && m.teamId === teamId
+    );
+    if (idx < 0) throw new Error("TEAM_AGENT_NOT_FOUND");
+    const [row] = mockTeamAgentMemberships.splice(idx, 1);
+    mockAuditLogs.unshift({
+      id: `log_team_agent_remove_${Date.now()}`,
+      actorId: params.actorUserId,
+      action: "team_agent_removed",
+      entityType: "team_membership",
+      entityId: row.id,
+      metadata: { teamId, agentBindingId: row.agentBindingId },
+      createdAt: now,
+    });
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const existing = await prisma.teamAgentMembership.findFirst({
+    where: { id: params.membershipId, teamId },
+    select: { id: true, agentBindingId: true },
+  });
+  if (!existing) throw new Error("TEAM_AGENT_NOT_FOUND");
+  await prisma.$transaction(async (tx) => {
+    await tx.teamAgentMembership.delete({ where: { id: existing.id } });
+    await tx.auditLog.create({
+      data: {
+        actorId: params.actorUserId,
+        action: "team_agent_removed",
+        entityType: "team_membership",
+        entityId: existing.id,
+        metadata: { teamId, agentBindingId: existing.agentBindingId },
+      },
+    });
+  });
+}
+
+/**
+ * Resolve the effective team-agent role for `(teamId, agentBindingId)`.
+ * Returns `null` if the agent is not a member of the team (or the
+ * membership is inactive). Used by MCP write handlers to gate task /
+ * discussion / membership operations.
+ */
+export async function resolveTeamAgentRole(params: {
+  teamId: string;
+  agentBindingId: string;
+}): Promise<TeamAgentRole | null> {
+  if (useMockData) {
+    const row = mockTeamAgentMemberships.find(
+      (m) =>
+        m.teamId === params.teamId &&
+        m.agentBindingId === params.agentBindingId &&
+        m.active
+    );
+    return row ? row.role : null;
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.teamAgentMembership.findUnique({
+    where: {
+      teamId_agentBindingId: {
+        teamId: params.teamId,
+        agentBindingId: params.agentBindingId,
+      },
+    },
+    select: { role: true, active: true },
+  });
+  if (!row || !row.active) return null;
+  return row.role as TeamAgentRole;
+}
+
+/**
+ * List the teams an agent binding is a member of. Used by
+ * `/settings/agents` so users can see which teams have granted their
+ * agent role cards.
+ */
+export async function listTeamAgentMembershipsForBinding(params: {
+  userId: string;
+  agentBindingId: string;
+}): Promise<TeamAgentMembershipSummary[]> {
+  // Authorization: the binding must belong to the user.
+  if (useMockData) {
+    const binding = mockAgentBindings.find(
+      (b) => b.id === params.agentBindingId && b.userId === params.userId
+    );
+    if (!binding) throw new Error("AGENT_BINDING_NOT_FOUND");
+    return mockTeamAgentMemberships
+      .filter((m) => m.agentBindingId === params.agentBindingId)
+      .map((m) => {
+        const team = mockTeams.find((t) => t.id === m.teamId);
+        const owner = mockUsers.find((u) => u.id === m.ownerUserId);
+        const grantor = mockUsers.find((u) => u.id === m.grantedByUserId);
+        return toTeamAgentMembershipSummary({
+          ...m,
+          teamSlug: team?.slug,
+          teamName: team?.name,
+          agentLabel: binding.label,
+          agentType: binding.agentType,
+          ownerName: owner?.name,
+          grantedByName: grantor?.name,
+          lastActionAt: null,
+        });
+      })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  const prisma = await getPrisma();
+  const binding = await prisma.agentBinding.findFirst({
+    where: { id: params.agentBindingId, userId: params.userId },
+    select: { id: true, label: true, agentType: true },
+  });
+  if (!binding) throw new Error("AGENT_BINDING_NOT_FOUND");
+  const rows = await prisma.teamAgentMembership.findMany({
+    where: { agentBindingId: binding.id },
+    include: {
+      team: { select: { slug: true, name: true } },
+      ownerUser: { select: { name: true } },
+      grantedBy: { select: { name: true } },
+    },
+    orderBy: [{ updatedAt: "desc" }],
+  });
+  return rows.map((row) =>
+    toTeamAgentMembershipSummary({
+      id: row.id,
+      teamId: row.teamId,
+      teamSlug: row.team.slug,
+      teamName: row.team.name,
+      agentBindingId: row.agentBindingId,
+      agentLabel: binding.label,
+      agentType: binding.agentType,
+      ownerUserId: row.ownerUserId,
+      ownerName: row.ownerUser.name,
+      role: row.role as TeamAgentRole,
+      grantedByUserId: row.grantedByUserId,
+      grantedByName: row.grantedBy.name,
+      active: row.active,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      lastActionAt: null,
+    })
+  );
 }
 
 function toApiKeySummary(row: {
