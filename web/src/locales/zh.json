@@ -272,6 +272,8 @@
     "closeNavigationMenu": "关闭导航菜单",
     "closeDialog": "关闭对话框"
   },
+  "discussions.new.title": "发起新讨论",
+  "discussions.new.subtitle": "分享一个想法、提出一个聚焦问题，或先提交一条待审核的更新。",
   "discussions.new.preview": "预览",
   "discussions.new.write": "编辑",
   "project.readme_tab": "README",
