@@ -13,58 +13,97 @@
 
 ## 当前状态
 
-### W1 · 产品定位与信息架构重写 · **实装中**
+### W1 · 产品定位与信息架构重写 · ✅ 第一轮完成
 
 | 子任务 | 状态 | 落地物 |
 |-------|------|-------|
-| W1-1 首页 AI+Human 叙事 | ✅ 代码落地 | `web/src/app/page.tsx` 重写：Hero 讲"作品 + Agent 进团队"双 CTA；四支柱区块；Agent 角色牌 + 4 步协作说明；VibeHub vs PH/GitHub/飞书 对比表；中国优先 CTA 尾部 |
-| W1-2 SiteNav 主导航重构 | ✅ 代码落地 | `web/src/components/site-nav.tsx` 新建（5 栏：广场/项目/团队/开发者/定价）；登录态显示「创建」下拉（发讨论 / 建项目 / 我的 Agent）；`web/src/app/layout.tsx` 已切换 |
-| W1-3 Onboarding 3 步向导 | ✅ 代码落地 | `/onboarding` 路由新建，Server Component + Client wizard；3 步：介绍 → AI 工具栈 → 第一件事；可跳过；埋点走 `/api/v1/me/onboarding-events` fire-and-forget（API 未实现也不影响 UI） |
-| W1-4 `/developers` 三场景重写 | ✅ 代码落地 | 从"功能清单"改为"开始使用"：场景 1 让 Cursor 接入 MCP · 场景 2 让 Agent 进团队 · 场景 3 做 SaaS / 按量计费；每段带可复制代码（CopyButton） |
-| W1 i18n 补齐 | ✅ 代码落地 | `zh.json` + `en.json` 新增 W1 所需的 nav / home.v8 / onboarding / developers.v8 / a11y 等键；两份 JSON 均已 `node -e` 验证合法 |
+| W1-1 首页 AI+Human 叙事 | ✅ PR #75 合入前 | `web/src/app/page.tsx` |
+| W1-2 SiteNav 主导航 | ✅ PR #75 合入前 | `web/src/components/site-nav.tsx` |
+| W1-3 Onboarding 3 步向导 | ✅ PR #75 合入前 | `web/src/app/onboarding/` |
+| W1-4 `/developers` 三场景重写 | ✅ PR #75 合入前 | `web/src/app/developers/page.tsx` |
+| W1 i18n 中英补齐 | ✅ PR #75 合入前 | `zh.json` + `en.json` |
 
-**注意**：PR #74（声称完成 W1）实际只合入 `package-lock.json` 一个文件，W1 功能代码从未合入 main。本 PR 才是 W1 真正的落地。
+注：PR #74 声称完成 W1 但实际只合入 `package-lock.json`；真正的 W1 落地见 PR #75。
 
-### W2 · 设计系统从 token 统一到组件统一 · **第一阶段完成**
+### W2 · 设计系统从 token 统一到组件统一 · ✅ 第一轮 + ✅ 第二轮完成
 
-| 子任务 | 状态 | 落地物 |
-|-------|------|-------|
-| UI 基础元件 (11 项) | ✅ 代码落地 | `web/src/components/ui/` 新增：EmptyState · ErrorState · LoadingSkeleton · PageHeader · StatCard · FormField · SectionCard · TagPill · ConfirmDialog · CopyButton · DataTable |
-| `components/ui/index.ts` 导出清单 | ✅ 代码落地 | 全部元件已统一导出；`Modal.title` 放宽为 ReactNode，保持向后兼容 |
-| audit 规范扫描脚本 | ✅ 代码落地 | `web/scripts/audit-ui-inlines.ts` + `npm run audit:ui-inlines`；支持 `--strict` / `--limit` / `--threshold`；当前基线 419 token-count + 37 palette 违规（93 文件） |
-| 违规清零 | ⏳ 待 W2 下半段 | 本轮不强制清零；下一步按页面逐条改造并把阈值推进到 strict 模式 |
+#### 第一轮（PR #75）— UI 基础元件
+
+| 元件 | 用途 |
+|------|------|
+| `EmptyState` / `ErrorState` | 统一空态 / 错误态 |
+| `LoadingSkeleton` | 四预设（list / card-grid / detail / table） |
+| `PageHeader` / `SectionCard` | 页面标题 / section 容器 |
+| `StatCard` | 指标卡（给 W7 仪表盘） |
+| `FormField` | 表单字段统一壳 |
+| `TagPill` | 带 accent token 的 pill |
+| `ConfirmDialog` | 破坏性动作确认 |
+| `CopyButton` | 剪贴板按钮（W1-4 依赖） |
+| `DataTable` | 后台通用表格 |
+
+#### 第二轮（本轮，PR #75 后续 commit）— 迁移 + 清零 palette 违规
+
+目标：把 `scripts/audit-ui-inlines` 的基线大幅压低，palette 硬违规清零。
+
+**设计 token 扩展：**
+- `globals.css` 新增 `--color-on-accent: #FFFFFF`（明暗主题一致）
+  - 用途：在饱和彩色 fill 上的前景文字/图标（通知徽章、gradient 头像、accent 填充按钮）
+  - 在 `DESIGN.md` §2 同步文档化
+
+**页面级迁移（完整重写到 v8 primitives）：**
+- `web/src/app/creators/[slug]/page.tsx` — 去除 `bg-white` / `bg-[#2d2d30]` / `text-white` / `bg-[#81e6d9]` Apple Bento 残留，改用 PageHeader + SectionCard + StatCard + TagPill + EmptyState
+- `web/src/app/search/page.tsx` — 去除 `rgba(255,255,255,0.85)` glass 容器，改用 PageHeader + EmptyState + TagPill + token driven pill filter
+- `web/src/components/upgrade-prompt.tsx` — modal 与 banner 两种形态都改用 token；使用现成 Button
+- `web/src/components/api-keys-panel.tsx` — 大量 Apple liquid-glass 残留清零，迁到 SectionCard + FormField + TagPill + ConfirmDialog + CopyButton + LoadingSkeleton；`window.confirm` 换为 ConfirmDialog
+- `web/src/components/team-milestones-panel.tsx` — 同上；timeline / progress bar 全走 token
+- `web/src/components/team-tasks-panel.tsx` — Kanban 看板、状态色卡、操作按钮全走 token + TagPill；`window.confirm` 换为 ConfirmDialog
+- `web/src/components/collaboration-intent-form.tsx` — input 统一走 `.input-base`；CTA 走 token
+- `web/src/components/site-nav.tsx` / `footer.tsx` / `login` / `signup` / `command-palette` — `text-white` / `text-black` 等零散 token 违规改为语义 token
+- `web/src/components/team-chat-panel.tsx` / `comment-thread.tsx` / `pricing-cards.tsx` — 同上
+
+**代码删除：**
+- `web/src/components/top-nav.tsx` 删除（confirmed 无引用，W1 已切换到 SiteNav）
+
+**治理工具升级：**
+- `scripts/audit-ui-inlines.ts` 新增 `--strict-palette` 模式（仅对 palette 违规非零退出）
+- `package.json` 新增 `npm run audit:ui-palette`（作为 CI palette 硬门槛候选）
+
+**违规削减（可复核）：**
+
+| 指标 | W2 第一轮 | W2 第二轮 | 变化 |
+|------|----------|----------|-----|
+| Palette hits | 37 | **0** | ✅ −100% |
+| Token-count hits (>6) | 419 | 348 | −17% |
+| Files w/ hits | 93 | 92 | −1 |
+
+`npm run audit:ui-palette` 目前 exit 0，具备随时切入 CI 的条件。
+
+#### W2 仍待完成（第三轮，下一轮再做）
+
+- Token-count 基线继续压低：目标 < 200，优先攻击 `app/discussions/[slug]` / `app/projects/[slug]` / `app/notifications` / `teams/[slug]` 等 hotspot
+- 将 `--strict` 完整模式推进 CI（当前只推 palette 子集）
+- 清理残余 `rounded-[32px]` / `shadow-[0_..._]` 旧 Apple Bento 遗产（非 palette 但是风格断层）
 
 ### W3 / W4 / W5 / W6 / W7 / W8 · 未启动（按路线图节奏）
 
 ---
 
-## 质量关卡（本 PR）
+## 质量关卡（本轮）
 
 - `npx tsc --noEmit` → ✅ 通过（0 错误）
-- `npm run lint` → ✅ 通过（只剩 3 条历史 warning，非本次新增）
+- `npm run lint` → ✅ 通过（3 条历史 warning 未变，本轮未新增）
 - `npm test` → ✅ 通过（58 test files · 240 tests · 0 fail）
-- `npm run build` → ✅ 通过（`/onboarding` 6.2 kB · `/developers` 1.38 kB · 首页未再大幅增大）
-- `npm run audit:ui-inlines` → 运行正常，产出基线报告
+- `npm run build` → ✅ 通过（`/teams/[slug]` 15.1 kB → 12.2 kB，减重收益）
+- `npm run audit:ui-inlines` → 运行正常
+- `npm run audit:ui-palette` → ✅ **exit 0**
 
 ---
 
-## 已识别的技术债与后续动作
+## 下一步（W2 第三轮）
 
-| 债务 | 影响范围 | v8 何时处理 |
-|------|---------|-----------|
-| `top-nav.tsx` 仍在仓库（已不再挂载） | 零功能影响；仅是死代码 | W2 下半段随全站迁移一并清理 |
-| `InAppNotification` onboarding 事件后端未落 | 只影响埋点，不影响用户体验 | W7 运营仪表盘阶段一并落后端 |
-| 419 条 className 长链违规 | 视觉一致性目标 | W2 下半段逐页拆到 `components/ui/*` |
-| `input-base` 裸类 (`FormField` 内) | 和 `Input` 组件存在两条路径 | W2 下半段统一收敛 |
-| 明显已废弃的 `nav.workspace` / "雷达工作台" 中文文案 | 企业工作台已降级 | 与后续清理一起处理 |
+1. 把 top 20 token-count 违规文件按优先级列清单
+2. 批次 D：`app/projects/[slug]` / `app/discussions/[slug]` / `app/notifications`
+3. 批次 E：admin 路径（后续 W7 仪表盘会重写，这里只做最小干预）
+4. W3 准备：`TeamAgentMembership` 迁移 + API 骨架
 
----
-
-## 下一步（W2 下半段）
-
-1. 运行 `audit:ui-inlines` → 选出 top-20 违规文件按优先级排序
-2. 将 `InAppNotification` / 通知面板 / 后台表格等高可见页率先切至 `DataTable` + `EmptyState`
-3. 把 `npm run audit:ui-inlines --strict --threshold=10` 纳入 CI 警告（非阻塞）
-4. 把 W3（TeamAgentMembership + 角色牌 UI）排到下一轮
-
-只有 W2 把违规逐步推向 0（或明确豁免），才允许宣布 W2 完成、进入 W3。
+完成后评估是否把 `--strict --threshold=10` 推进 CI 警告，并把 `--strict-palette` 升级为 CI 阻塞门槛。
