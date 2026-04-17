@@ -2,7 +2,6 @@
 import { reviewCollaborationIntent } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
-import { getSessionUserFromCookie } from "@/lib/auth";
 import { requireAdminSession } from "@/lib/admin-auth";
 
 const reviewSchema = z.object({
@@ -18,15 +17,8 @@ interface Params {
 
 export async function POST(request: Request, { params }: Params) {
   const adminAuth = await requireAdminSession();
-  let session = adminAuth.ok ? adminAuth.session : null;
-  if (!session) {
-    const cookieSession = await getSessionUserFromCookie();
-    if (cookieSession?.role === "user") {
-      session = cookieSession;
-    } else {
-      return adminAuth.response;
-    }
-  }
+  if (!adminAuth.ok) return adminAuth.response;
+  const session = adminAuth.session;
 
   try {
     const { intentId } = await params;
@@ -38,7 +30,6 @@ export async function POST(request: Request, { params }: Params) {
       action: parsed.action,
       note: parsed.note,
       adminUserId: session.userId,
-      projectOwnerUserId: session.role === "user" ? session.userId : undefined,
       inviteApplicantToTeamOnApprove: parsed.inviteApplicantToTeamOnApprove,
     });
 
@@ -56,16 +47,6 @@ const message = error instanceof Error ? error.message : String(error);
         404
       );
     }
-    if (message === "FORBIDDEN_NOT_PROJECT_OWNER") {
-      return apiError(
-        {
-          code: "FORBIDDEN",
-          message: "Only admins or the project owner can review this intent from the moderation queue",
-        },
-        403
-      );
-    }
-
     return apiError(
       {
         code: "ADMIN_REVIEW_COLLABORATION_INTENT_FAILED",

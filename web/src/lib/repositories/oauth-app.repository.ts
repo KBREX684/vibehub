@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
 import { enterpriseProfileSelect, sessionEnterpriseFromProfile } from "@/lib/enterprise-profile-db";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
@@ -45,6 +45,52 @@ function cleanRedirectUris(input: string[]): string[] {
     throw new Error("OAUTH_REDIRECT_URI_REQUIRED");
   }
   return [...set];
+}
+
+function normalizePkce(params: {
+  codeChallenge?: string;
+  codeChallengeMethod?: string;
+}): { codeChallenge?: string; codeChallengeMethod?: "plain" | "S256" } {
+  if (!params.codeChallenge?.trim()) {
+    return {};
+  }
+  const codeChallenge = params.codeChallenge.trim();
+  if (codeChallenge.length < 43 || codeChallenge.length > 128) {
+    throw new Error("INVALID_OAUTH_CODE_CHALLENGE");
+  }
+  if (!/^[A-Za-z0-9._~-]+$/.test(codeChallenge)) {
+    throw new Error("INVALID_OAUTH_CODE_CHALLENGE");
+  }
+  const requestedMethod = params.codeChallengeMethod?.trim() || "plain";
+  if (requestedMethod !== "plain" && requestedMethod !== "S256") {
+    throw new Error("INVALID_OAUTH_CODE_CHALLENGE_METHOD");
+  }
+  return {
+    codeChallenge,
+    codeChallengeMethod: requestedMethod,
+  };
+}
+
+function verifyPkceCodeVerifier(params: {
+  codeVerifier: string;
+  codeChallenge: string;
+  codeChallengeMethod?: string | null;
+}): boolean {
+  const verifier = params.codeVerifier.trim();
+  if (verifier.length < 43 || verifier.length > 128) return false;
+  if (!/^[A-Za-z0-9._~-]+$/.test(verifier)) return false;
+  const method = params.codeChallengeMethod === "S256" ? "S256" : "plain";
+  const expected =
+    method === "S256"
+      ? createHash("sha256").update(verifier, "utf8").digest("base64url")
+      : verifier;
+  try {
+    const a = Buffer.from(expected, "utf8");
+    const b = Buffer.from(params.codeChallenge, "utf8");
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 function toOAuthAppSummary(row: {
@@ -261,8 +307,14 @@ export async function issueOAuthAuthorizationCode(params: {
   userId: string;
   redirectUri: string;
   scopes: string[];
+  codeChallenge?: string;
+  codeChallengeMethod?: string;
 }): Promise<string> {
   const scopes = params.scopes.length ? normalizeApiKeyScopes(params.scopes) : [...DEFAULT_API_KEY_SCOPES];
+  const pkce = normalizePkce({
+    codeChallenge: params.codeChallenge,
+    codeChallengeMethod: params.codeChallengeMethod,
+  });
   const { code, codeHash } = generateOAuthAuthorizationCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
   if (isMockDataEnabled()) {
@@ -276,6 +328,8 @@ export async function issueOAuthAuthorizationCode(params: {
       codeHash,
       redirectUri: params.redirectUri,
       scopes,
+      codeChallenge: pkce.codeChallenge,
+      codeChallengeMethod: pkce.codeChallengeMethod,
       expiresAt: expiresAt.toISOString(),
       createdAt: new Date().toISOString(),
     });
@@ -299,6 +353,8 @@ export async function issueOAuthAuthorizationCode(params: {
       codeHash,
       redirectUri: params.redirectUri,
       scopes,
+      codeChallenge: pkce.codeChallenge ?? null,
+      codeChallengeMethod: pkce.codeChallengeMethod ?? null,
       expiresAt,
     },
   });
@@ -310,6 +366,7 @@ export async function exchangeOAuthAuthorizationCode(params: {
   clientSecret: string;
   code: string;
   redirectUri: string;
+  codeVerifier?: string;
 }): Promise<{ accessToken: string; expiresIn: number; scopes: string[] }> {
   const secretHash = hashApiKeyToken(params.clientSecret);
   const codeHash = hashOAuthOpaqueToken(params.code);
@@ -318,9 +375,7 @@ export async function exchangeOAuthAuthorizationCode(params: {
   const { token, prefix, tokenHash } = generateOAuthAccessToken();
 
   if (isMockDataEnabled()) {
-    const app = mockOAuthApps.find(
-      (item) => item.clientId === params.clientId && item.clientSecretHash === secretHash && item.active
-    );
+    const app = mockOAuthApps.find((item) => item.clientId === params.clientId && item.active);
     if (!app) throw new Error("OAUTH_INVALID_CLIENT");
     const authCode = mockOAuthAuthorizationCodes.find(
       (item) => item.codeHash === codeHash && item.appId === app.id && !item.usedAt
@@ -328,6 +383,16 @@ export async function exchangeOAuthAuthorizationCode(params: {
     if (!authCode) throw new Error("OAUTH_INVALID_CODE");
     if (authCode.redirectUri !== params.redirectUri) throw new Error("OAUTH_REDIRECT_URI_MISMATCH");
     if (new Date(authCode.expiresAt) < new Date()) throw new Error("OAUTH_CODE_EXPIRED");
+    if (authCode.codeChallenge) {
+      const ok = verifyPkceCodeVerifier({
+        codeVerifier: params.codeVerifier ?? "",
+        codeChallenge: authCode.codeChallenge,
+        codeChallengeMethod: authCode.codeChallengeMethod,
+      });
+      if (!ok) throw new Error("OAUTH_INVALID_CODE_VERIFIER");
+    } else if (app.clientSecretHash !== secretHash) {
+      throw new Error("OAUTH_INVALID_CLIENT");
+    }
     authCode.usedAt = new Date().toISOString();
     mockOAuthAccessTokens.unshift({
       id: `oauth_token_${Date.now()}_${randomBytes(3).toString("hex")}`,
@@ -347,7 +412,7 @@ export async function exchangeOAuthAuthorizationCode(params: {
     where: { clientId: params.clientId },
     select: { id: true, clientSecretHash: true, active: true },
   });
-  if (!app || !app.active || app.clientSecretHash !== secretHash) {
+  if (!app || !app.active) {
     throw new Error("OAUTH_INVALID_CLIENT");
   }
 
@@ -357,6 +422,16 @@ export async function exchangeOAuthAuthorizationCode(params: {
   if (!authCode) throw new Error("OAUTH_INVALID_CODE");
   if (authCode.redirectUri !== params.redirectUri) throw new Error("OAUTH_REDIRECT_URI_MISMATCH");
   if (authCode.expiresAt < new Date()) throw new Error("OAUTH_CODE_EXPIRED");
+  if (authCode.codeChallenge) {
+    const ok = verifyPkceCodeVerifier({
+      codeVerifier: params.codeVerifier ?? "",
+      codeChallenge: authCode.codeChallenge,
+      codeChallengeMethod: authCode.codeChallengeMethod,
+    });
+    if (!ok) throw new Error("OAUTH_INVALID_CODE_VERIFIER");
+  } else if (app.clientSecretHash !== secretHash) {
+    throw new Error("OAUTH_INVALID_CLIENT");
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.oAuthAuthorizationCode.update({

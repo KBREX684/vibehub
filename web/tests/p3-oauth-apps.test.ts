@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "crypto";
 import {
   createUserOAuthApp,
   exchangeOAuthAuthorizationCode,
@@ -44,5 +45,32 @@ describe("oauth apps (P3-2 mock)", () => {
     expect(session?.userId).toBe("u1");
     expect(session?.oauthAppClientId).toBe(app.clientId);
     expect(session?.apiKeyScopes).toContain("read:projects:list");
+  });
+
+  it("supports PKCE-protected authorization code exchange without client secret", async () => {
+    const app = await createUserOAuthApp({
+      userId: "u1",
+      name: "PKCE Native Client",
+      redirectUris: ["http://localhost:3020/callback"],
+      scopes: ["read:public"],
+    });
+    const verifier = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~pkce";
+    const challenge = createHash("sha256").update(verifier, "utf8").digest("base64url");
+    const code = await issueOAuthAuthorizationCode({
+      clientId: app.clientId,
+      userId: "u1",
+      redirectUri: "http://localhost:3020/callback",
+      scopes: ["read:public"],
+      codeChallenge: challenge,
+      codeChallengeMethod: "S256",
+    });
+    const token = await exchangeOAuthAuthorizationCode({
+      clientId: app.clientId,
+      clientSecret: "",
+      code,
+      redirectUri: "http://localhost:3020/callback",
+      codeVerifier: verifier,
+    });
+    expect(token.accessToken.startsWith("vho_")).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { assertContentSafeText, assertUrlCountAtMost, escapeHtmlAngleBrackets } 
 import { assertPublicHttpsUrl } from "@/lib/private-network-url";
 import { incrementContributionCreditField, contributionWeights } from "@/lib/contribution-credit-increment";
 import { dispatchNotificationPush } from "@/lib/push-dispatcher";
+import { decryptStoredSecret, encryptStoredSecret } from "@/lib/secret-crypto";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { WEBHOOK_EVENT_NAMES, isWebhookEventName } from "@/lib/webhook-events";
 import { paginateArray } from "@/lib/pagination";
@@ -9344,6 +9345,7 @@ export async function createUserWebhook(params: {
   }
   const events = rawEvents.length > 0 ? rawEvents : [...WEBHOOK_EVENT_NAMES];
   const secret = randomBytes(32).toString("hex");
+  const storedSecret = encryptStoredSecret(secret, "webhook-endpoint-secret");
   const now = new Date().toISOString();
   if (useMockData) {
     if (!mockUsers.some((u) => u.id === params.userId)) throw new Error("USER_NOT_FOUND");
@@ -9352,7 +9354,7 @@ export async function createUserWebhook(params: {
       id,
       userId: params.userId,
       url,
-      secret,
+      secret: storedSecret,
       events,
       active: true,
       createdAt: now,
@@ -9371,7 +9373,7 @@ export async function createUserWebhook(params: {
   }
   const prisma = await getPrisma();
   const row = await prisma.webhookEndpoint.create({
-    data: { userId: params.userId, url, secret, events, active: true },
+    data: { userId: params.userId, url, secret: storedSecret, events, active: true },
   });
   return {
     id: row.id,
@@ -9489,14 +9491,14 @@ export async function listWebhookDeliveries(params: {
 export async function getUserWebhookSecret(params: { userId: string; webhookId: string }): Promise<string | null> {
   if (useMockData) {
     const w = mockWebhookEndpoints.find((x) => x.id === params.webhookId && x.userId === params.userId);
-    return w?.secret ?? null;
+    return w?.secret ? decryptStoredSecret(w.secret, "webhook-endpoint-secret") : null;
   }
   const prisma = await getPrisma();
   const row = await prisma.webhookEndpoint.findFirst({
     where: { id: params.webhookId, userId: params.userId },
     select: { secret: true },
   });
-  return row?.secret ?? null;
+  return row?.secret ? decryptStoredSecret(row.secret, "webhook-endpoint-secret") : null;
 }
 
 export async function testUserWebhook(params: {

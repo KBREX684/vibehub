@@ -2,13 +2,25 @@ import type { NextConfig } from "next";
 
 function securityHeaders(): { key: string; value: string }[] {
   const isProd = process.env.NODE_ENV === "production";
+  const scriptSrc = ["'self'", "'unsafe-inline'"];
+  if (!isProd) {
+    scriptSrc.push("'unsafe-eval'");
+  }
+  const connectSrc = ["'self'", "https://api.github.com", "wss:"];
+  if (!isProd) {
+    connectSrc.push("ws:");
+  }
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    `script-src ${scriptSrc.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://avatars.githubusercontent.com https://*.githubusercontent.com",
     "font-src 'self'",
-    "connect-src 'self' https://api.github.com ws: wss:",
+    `connect-src ${connectSrc.join(" ")}`,
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "frame-src 'none'",
     "frame-ancestors 'none'",
   ].join("; ");
 

@@ -19,6 +19,7 @@
     "audit:ui-inlines": "tsx scripts/audit-ui-inlines.ts",
     "audit:ui-palette": "tsx scripts/audit-ui-inlines.ts --strict-palette",
     "audit:ui-strict": "tsx scripts/audit-ui-inlines.ts --strict",
+    "security:backfill-secrets": "tsx scripts/backfill-encrypted-secrets.ts",
     "check": "npm run lint && npm run test && npm run validate:openapi && npm run generate:types && npm run build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

@@ -16,6 +16,8 @@ export function assertProductionEnv(service = "runtime"): void {
   const missing: string[] = [];
   if (!process.env.DATABASE_URL?.trim()) missing.push("DATABASE_URL");
   if (!process.env.SESSION_SECRET?.trim()) missing.push("SESSION_SECRET");
+  if (!process.env.INTERNAL_SERVICE_SECRET?.trim()) missing.push("INTERNAL_SERVICE_SECRET");
+  if (!process.env.DATA_ENCRYPTION_KEY?.trim()) missing.push("DATA_ENCRYPTION_KEY");
 
   if (process.env.USE_MOCK_DATA === "true") {
     throw new Error(`[${service}] USE_MOCK_DATA=true is not allowed in production-like environments`);

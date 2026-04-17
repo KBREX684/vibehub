@@ -6,6 +6,7 @@ import { createPasswordResetToken } from "@/lib/repository";
 import { apiError } from "@/lib/response";
 import { isTransactionalEmailConfigured, sendTransactionalEmail } from "@/lib/mail";
 import { isProductionLikeEnv } from "@/lib/env-check";
+import { enforceAuthActionRateLimit } from "@/lib/auth-rate-limit";
 
 const bodySchema = z.object({ email: z.string().email() }).strict();
 
@@ -21,6 +22,22 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response;
   const zod = bodySchema.safeParse(parsed.body);
   if (!zod.success) return apiErrorFromZod(zod.error);
+  const rl = await enforceAuthActionRateLimit({
+    request,
+    action: "forgot_password",
+    identity: zod.data.email,
+  });
+  if (!rl.ok) {
+    return apiError(
+      {
+        code: "RATE_LIMITED",
+        message: "Too many password reset attempts. Please try again later.",
+        details: { retryAfterSeconds: rl.retryAfterSeconds },
+      },
+      429,
+      { "Retry-After": String(rl.retryAfterSeconds) }
+    );
+  }
 
   const token = await createPasswordResetToken(zod.data.email);
   if (token) {

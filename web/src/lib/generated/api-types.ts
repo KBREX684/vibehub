@@ -3419,6 +3419,7 @@ export interface paths {
                         filename: string;
                         /** @enum {string} */
                         contentType: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+                        sizeBytes: number;
                     };
                 };
             };
@@ -15028,7 +15029,30 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        grant_type: "authorization_code";
+                        client_id: string;
+                        client_secret?: string;
+                        code: string;
+                        /** Format: uri */
+                        redirect_uri: string;
+                        code_verifier?: string;
+                    };
+                    "application/x-www-form-urlencoded": {
+                        /** @enum {string} */
+                        grant_type: "authorization_code";
+                        client_id: string;
+                        client_secret?: string;
+                        code: string;
+                        /** Format: uri */
+                        redirect_uri: string;
+                        code_verifier?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Success */
                 200: {

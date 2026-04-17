@@ -5,6 +5,7 @@ import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { authenticateEmailPassword } from "@/lib/repository";
 import { setSessionCookieOnResponse } from "@/lib/auth-session-cookie";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { enforceAuthActionRateLimit } from "@/lib/auth-rate-limit";
 
 const bodySchema = z
   .object({
@@ -19,6 +20,22 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response;
   const zod = bodySchema.safeParse(parsed.body);
   if (!zod.success) return apiErrorFromZod(zod.error);
+  const rl = await enforceAuthActionRateLimit({
+    request,
+    action: "login",
+    identity: zod.data.email,
+  });
+  if (!rl.ok) {
+    return apiError(
+      {
+        code: "RATE_LIMITED",
+        message: "Too many login attempts. Please try again later.",
+        details: { retryAfterSeconds: rl.retryAfterSeconds },
+      },
+      429,
+      { "Retry-After": String(rl.retryAfterSeconds) }
+    );
+  }
 
   try {
     const user = await authenticateEmailPassword(zod.data.email, zod.data.password);

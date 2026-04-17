@@ -16,7 +16,7 @@ const ACTION_EXAMPLES = {
   send_slack_message: { webhookUrl: "https://hooks.slack.com/services/...", text: "VibeHub event {{event}} fired for {{payload.teamSlug}}" },
   send_discord_message: { webhookUrl: "https://discord.com/api/webhooks/...", content: "VibeHub event {{event}} fired" },
   send_feishu_message: { webhookUrl: "https://open.feishu.cn/open-apis/bot/...", text: "VibeHub event {{event}} fired" },
-  trigger_github_repository_dispatch: { owner: "acme", repo: "ops", token: "ghp_xxx", eventType: "vibehub_event", clientPayload: { teamSlug: "{{payload.teamSlug}}", taskId: "{{payload.taskId}}" } },
+  trigger_github_repository_dispatch: { owner: "acme", repo: "ops", token: "<github-personal-access-token>", eventType: "vibehub_event", clientPayload: { teamSlug: "{{payload.teamSlug}}", taskId: "{{payload.taskId}}" } },
 } as const;
 
 const ACTION_TYPES = Object.keys(ACTION_EXAMPLES) as Array<keyof typeof ACTION_EXAMPLES>;

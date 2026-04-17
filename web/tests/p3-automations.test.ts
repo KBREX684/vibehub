@@ -46,4 +46,28 @@ describe("automations (P3-3/P3-5 mock)", () => {
     const runs = await listUserAutomationRuns("u1");
     expect(runs.some((run) => run.workflowId === workflow.id && run.status === "succeeded")).toBe(true);
   });
+
+  it("redacts sensitive automation config in user-visible summaries", async () => {
+    const workflow = await createUserAutomationWorkflow({
+      userId: "u1",
+      name: "GitHub Dispatch",
+      triggerEvent: "team.task_ready_for_review",
+      steps: [
+        {
+          actionType: "trigger_github_repository_dispatch",
+          config: {
+            owner: "acme",
+            repo: "ops",
+            token: "ghp_example_secret_token_1234",
+            eventType: "vibehub_event",
+          },
+        },
+      ],
+    });
+
+    const workflows = await listUserAutomationWorkflows("u1");
+    const created = workflows.find((item) => item.id === workflow.id);
+    expect(created).toBeTruthy();
+    expect(created?.steps[0]?.config.token).not.toBe("ghp_example_secret_token_1234");
+  });
 });
