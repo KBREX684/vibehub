@@ -1,21 +1,34 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { AgentActionAuditRow, AgentBindingSummary, AgentConfirmationRequest } from "@/lib/types";
+import type {
+  AgentActionAuditRow,
+  AgentBindingSummary,
+  AgentConfirmationRequest,
+  TeamAgentMembershipSummary,
+} from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
-import { Bot, Plus, Trash2, RefreshCw, Check, X, ShieldCheck, Clock3 } from "lucide-react";
+import { Bot, Plus, Trash2, RefreshCw, Check, X, ShieldCheck, Clock3, Users } from "lucide-react";
+
+const TEAM_MEMBERSHIP_CHIP_CLASS =
+  "inline-flex items-center gap-1 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] rounded-[var(--radius-pill)] px-2 py-0.5 border border-[var(--color-border-subtle)]";
 
 interface ApiResponse {
   data?: {
     bindings?: AgentBindingSummary[];
     binding?: AgentBindingSummary;
     items?: AgentConfirmationRequest[] | AgentActionAuditRow[];
+    memberships?: TeamAgentMembershipSummary[];
   };
   error?: { message?: string };
 }
 
 export function AgentsClient() {
   const [bindings, setBindings] = useState<AgentBindingSummary[]>([]);
+  const [teamsByBinding, setTeamsByBinding] = useState<
+    Record<string, TeamAgentMembershipSummary[]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,9 +55,32 @@ export function AgentsClient() {
         setBindings([]);
         return;
       }
-      setBindings(json.data?.bindings ?? []);
+      const loadedBindings = json.data?.bindings ?? [];
+      setBindings(loadedBindings);
       setConfirmations((confirmationsJson.data?.items as AgentConfirmationRequest[] | undefined) ?? []);
       setAudits((auditsJson.data?.items as AgentActionAuditRow[] | undefined) ?? []);
+
+      // Fetch team memberships per binding (fire-and-forget per row).
+      const teamsMap: Record<string, TeamAgentMembershipSummary[]> = {};
+      await Promise.all(
+        loadedBindings.map(async (binding) => {
+          try {
+            const r = await apiFetch(
+              `/api/v1/me/agent-bindings/${encodeURIComponent(binding.id)}/teams`,
+              { credentials: "include" }
+            );
+            if (!r.ok) {
+              teamsMap[binding.id] = [];
+              return;
+            }
+            const j = (await r.json()) as ApiResponse;
+            teamsMap[binding.id] = j.data?.memberships ?? [];
+          } catch {
+            teamsMap[binding.id] = [];
+          }
+        })
+      );
+      setTeamsByBinding(teamsMap);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
       setBindings([]);
@@ -217,35 +253,59 @@ export function AgentsClient() {
           </div>
         ) : (
           <div className="space-y-3">
-            {bindings.map((binding) => (
-              <article key={binding.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] text-[var(--color-featured)]">
-                        <Bot className="w-4 h-4" />
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{binding.label}</p>
-                        <p className="text-xs text-[var(--color-text-secondary)] m-0">{binding.agentType}</p>
+            {bindings.map((binding) => {
+              const teamMemberships = teamsByBinding[binding.id] ?? [];
+              return (
+                <article key={binding.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] text-[var(--color-featured)]">
+                          <Bot className="w-4 h-4" aria-hidden="true" />
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{binding.label}</p>
+                          <p className="text-xs text-[var(--color-text-secondary)] m-0">{binding.agentType}</p>
+                        </div>
+                        <span className={`badge ${binding.active ? "badge-green" : "badge-neutral"}`}>{binding.active ? "Active" : "Paused"}</span>
                       </div>
-                      <span className={`badge ${binding.active ? "badge-green" : "badge-neutral"}`}>{binding.active ? "Active" : "Paused"}</span>
+                      {binding.description ? <p className="text-sm text-[var(--color-text-secondary)] mb-0">{binding.description}</p> : null}
+                      <p className="text-xs text-[var(--color-text-muted)] mb-0">Updated {new Date(binding.updatedAt).toLocaleString()}</p>
                     </div>
-                    {binding.description ? <p className="text-sm text-[var(--color-text-secondary)] mb-0">{binding.description}</p> : null}
-                    <p className="text-xs text-[var(--color-text-muted)] mb-0">Updated {new Date(binding.updatedAt).toLocaleString()}</p>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <button type="button" onClick={() => void toggleBinding(binding)} className="btn btn-secondary text-xs px-3 py-1.5">
+                        {binding.active ? "Pause" : "Resume"}
+                      </button>
+                      <button type="button" onClick={() => void removeBinding(binding.id)} className="btn btn-ghost text-xs px-3 py-1.5 inline-flex items-center gap-1.5 text-[var(--color-danger)]">
+                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <button type="button" onClick={() => void toggleBinding(binding)} className="btn btn-secondary text-xs px-3 py-1.5">
-                      {binding.active ? "Pause" : "Resume"}
-                    </button>
-                    <button type="button" onClick={() => void removeBinding(binding.id)} className="btn btn-ghost text-xs px-3 py-1.5 inline-flex items-center gap-1.5 text-[var(--color-danger)]">
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+                  {teamMemberships.length > 0 ? (
+                    <div className="mt-3 pt-3 border-t border-[var(--color-border-subtle)] flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-xs text-[var(--color-text-tertiary)]">
+                        <Users className="w-3 h-3" aria-hidden="true" />
+                        In teams:
+                      </span>
+                      {teamMemberships.map((m) => (
+                        <Link
+                          key={m.id}
+                          href={m.teamSlug ? `/teams/${m.teamSlug}/agents` : "#"}
+                          className={TEAM_MEMBERSHIP_CHIP_CLASS}
+                        >
+                          <span className="font-medium">{m.teamName ?? m.teamSlug ?? m.teamId}</span>
+                          <span className="font-mono text-[var(--color-text-tertiary)]">· {m.role}</span>
+                          {!m.active ? (
+                            <span className="text-[var(--color-text-muted)]">(paused)</span>
+                          ) : null}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

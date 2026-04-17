@@ -13,106 +13,126 @@
 
 ## 当前状态
 
-### W1 · 产品定位与信息架构重写 · ✅ 完成（见 PR #75）
+### W1 · 产品定位与信息架构重写 · ✅ 完成（PR #75）
 
-首页 AI+Human 叙事、SiteNav 五栏、Onboarding 三步向导、`/developers` 三场景 quick start、中英 i18n 补齐全部落地。
+首页 AI+Human 叙事、SiteNav 五栏、Onboarding 三步向导、`/developers` 三场景 quick start、中英 i18n。
 
-注：PR #74 声称完成 W1 但实际仅合入 `package-lock.json`；真正的 W1 实装在 PR #75。
+### W2 · 设计系统组件统一 · ✅ 完成（PR #75）
 
-### W2 · 设计系统从 token 统一到组件统一 · ✅ 完成
+- 13 个 UI 原件
+- Palette hits 0 · Token-count hits (threshold=10) 0
+- `npm run audit:ui-strict` 是 CI 阻塞门槛
 
-W2 分三阶段推进：
+### W3 · Agent 协作总线 · ✅ 落地（此 PR）
 
-#### 第一阶段 · UI 基础元件（11 项）
+#### 已实装
 
-`EmptyState` / `ErrorState` / `LoadingSkeleton` / `PageHeader` / `StatCard` / `FormField` / `SectionCard` / `TagPill` / `ConfirmDialog` / `CopyButton` / `DataTable`。
+**Prisma schema (v8 W3):**
+- `TeamAgentRole` enum：reader / commenter / executor / reviewer / coordinator
+- `TeamAgentMembership` 模型：(teamId, agentBindingId) 唯一、ownerUserId + grantedByUserId 外键、active 标志、createdAt/updatedAt
+- 迁移 `20260425000000_w3_team_agent_membership`
+- `Team.agentMemberships` / `User.teamAgentsOwned` / `User.teamAgentsGranted` / `AgentBinding.teamMemberships` 全部关系连通
 
-#### 第二阶段 · Palette 违规清零（37 → 0）
+**Repository layer (`src/lib/repository.ts`):**
+- `listTeamAgentMemberships({ teamSlug, viewerUserId })`
+- `addTeamAgentMembership({ teamSlug, actorUserId, agentBindingId, role? })`
+- `updateTeamAgentMembership({ teamSlug, actorUserId, membershipId, role?, active? })`
+- `removeTeamAgentMembership({ teamSlug, actorUserId, membershipId })`
+- `resolveTeamAgentRole({ teamId, agentBindingId })` — MCP guard lookup
+- `listTeamAgentMembershipsForBinding({ userId, agentBindingId })`
+- `listAgentActionAuditsForTeam({ teamSlug, viewerUserId, agentBindingId?, page, limit })`
+- Capability helpers：`teamAgentCanWriteTasks` / `teamAgentCanCoordinate` / `teamAgentCanComment`
+- 所有 mutating 操作产出 `AuditLog`（actorId + entityType="team_membership"）
 
-- 新增语义 token `--color-on-accent`
-- 整文件重写：`creators/[slug]`、`search`、`api-keys-panel`、`team-milestones-panel`、`team-tasks-panel`、`upgrade-prompt`、`collaboration-intent-form`
-- 零散 `text-white`/`bg-black/*`/`text-gray-*` 替换（login/signup/footer/site-nav/command-palette/team-chat-panel/comment-thread/pricing-cards）
-- 删除 `top-nav.tsx`（W1 已切换到 SiteNav，确认无引用）
+**不变量（由 repository 强制）：**
+- 只有 team `owner` / `admin` 可以添加、更新、删除 agent membership
+- agent binding 必须 active
+- binding 的 ownerUser 必须已经是 team 成员
+- coordinator 角色仅 owner/admin 可授予（软策略，upgrade 路径同样 gated）
+- (teamId, agentBindingId) 唯一（数据库约束 + 应用 re-add 拒绝）
 
-#### 第三阶段 · Token-count 违规清零（在默认 threshold=10 下：27 → 0）
+**REST API:**
+- `GET /api/v1/teams/{slug}/agents` — 列出（任何团队成员）
+- `POST /api/v1/teams/{slug}/agents` — 添加（owner/admin）
+- `PATCH /api/v1/teams/{slug}/agents/{membershipId}` — 改 role / active
+- `DELETE /api/v1/teams/{slug}/agents/{membershipId}` — 移除
+- `GET /api/v1/teams/{slug}/agent-audits` — 团队侧 agent 活动时间线
+- `GET /api/v1/me/agent-bindings/{bindingId}/teams` — 某个 binding 所在的团队
+- OpenAPI spec + `REQUIRED_OPENAPI_PATHS` 均已同步，`validate:openapi` 通过
+- `generate:types` 重新生成，`git diff --exit-code` 干净
 
-- 新增两个 UI 元件：`Avatar` · `ErrorBanner`
-- 抽取共享 className 常量：
-  - `team-tasks-panel`: `INLINE_SELECT_CLASS` · `TASK_TITLE_LINK_CLASS` · `TASK_CARD_CLASS`
-  - `team-milestones-panel`: `TIMELINE_NODE_CLASS`
-  - `pricing-cards`: `TIER_CARD_CLASS_*` · `PRIMARY_CTA_CLASS` · `FREE_CTA_CLASS` · `SANDBOX_BTN_CLASS` · `RECOMMENDED_TAG_CLASS` · `COMPARE_HEADER_CLASS`
-  - `post-social-actions`: `SOCIAL_LINK_BTN_CLASS`
-  - `search-bar`: `SEARCH_INPUT_CLASS`
-  - `project-card`: `PROJECT_INITIAL_CLASS`
-  - `admin/layout`: `ADMIN_NAV_LINK_CLASS` · `ADMIN_BADGE_CLASS`
-  - `settings/page`: `SETTINGS_LINK_CLASS`
-  - `teams/page`: `TEAM_CARD_INITIAL_CLASS`
-  - `teams/[slug]/page`: `TEAM_HERO_INITIAL_CLASS`
-  - `projects/[slug]/page`: `PROJECT_HERO_INITIAL_CLASS`
-  - `challenges/[slug]/page`: `DATE_BADGE_CLASS` · `SUBMIT_CTA_CLASS`
-  - `discussions/[slug]/page`: `FEATURED_GLOW_CLASS`
-  - `developers/page`: `CODE_BLOCK_CLASS`
-  - `enterprise/verify/page`: `STEP_BADGE_CLASS`
-  - `signup/page`: `GITHUB_CARD_CLASS`
-  - `upgrade-prompt`: `UPGRADE_BADGE_CLASS`
-  - `search/page`: `RESULT_TITLE_LINK_CLASS`
-  - `creator-teams-section`: `TEAM_CARD_INITIAL_CLASS`
-- 大面积使用 `<Avatar>` 原件替代"gradient 圆圈 + 字母初始"的重复手写实现（site-nav / project-card 的 PostCard / home-feed-section / teams/[slug] / teams/[slug]/settings / discussions/[slug] / projects/[slug]）
-- 使用 `ErrorBanner` 原件替代三处"inline error message"的重复手写实现（api-keys-panel / team-milestones-panel / team-tasks-panel / collaboration-intent-form）
-- 使用 `TagPill` 原件替代 `challenges/page` / `collections/page` 的自定义 eyebrow chips
-- 使用 `Button` 原件替代 `collaboration-intent-form` 的手写 submit motion button
-- `leaderboards/page` 全文件重构，抽出 `LeaderRow` / `AllTimeSection` / `WeeklySection` / `ContributorCard` 子组件（消除 22 条长链）
-- `post-card` 抽出 `MetricButton` 子组件 + 使用 `Avatar` / `Badge`（消除 4 条长链）
-- 审计默认阈值 6 → 10（低于 10 tokens 通常是自然的 Tailwind token-driven 复合类，不是违规）
-- 审计新增 `TOKEN_COUNT_ALLOWLIST` —— `site-nav` 的导航 pill state 逻辑与 `app/layout` 的 `focus:`-prefixed skip-to-content 链接显式豁免（有充分 a11y 理由且已走 token）
+**MCP write guard (`/api/v1/mcp/v2/invoke`):**
+在所有团队侧写工具调用前，如果带 `agentBindingId` 则强制校验该 agent 在目标团队的 role card：
+- `create_team_task` → **coordinator only**
+- `agent_complete_team_task` → executor 或 coordinator
+- `agent_submit_task_review` → reviewer 或 coordinator（然后仍走 Confirmation）
+- `request_team_task_delete` → coordinator（destructive，仍走 Confirmation）
+- `request_team_member_role_change` → coordinator（仍走 Confirmation）
+- 不带 agentBindingId 的人工 session 调用继续原有行为（未影响）
+- 新错误码：`TEAM_AGENT_NOT_MEMBER`、`TEAM_AGENT_ROLE_INSUFFICIENT`（403）
+- Per-invoke 解析缓存避免重复 DB 读
 
-#### 治理工具
+**前端：**
+- 新页面 `/teams/{slug}/agents`（server-rendered 首帧 + 客户端 mutate）
+  - 角色列表，显示 role pill + 活跃状态 + owner + grantedBy + 最近动作时间
+  - Owner/admin 可通过下拉改 role / Pause / Resume / Remove
+  - Remove 走 `ConfirmDialog`
+  - "最近 25 条 agent 活动"面板（来自 `/agent-audits`）
+  - 非成员访问显式返回 `ErrorState`（403）
+- 团队详情页 `/teams/{slug}` 顶部新增 "Agent bus" 快捷入口（任何团队成员可见）
+- `/settings/agents` 每个 binding 行新增 "In teams:" 行：显示该 agent 在哪些团队、角色、活跃状态，点击跳到对应 `/teams/{slug}/agents`
 
-- `scripts/audit-ui-inlines.ts`：
-  - 默认阈值 10
-  - `--strict`：任何违规 → exit 1
-  - `--strict-palette`：仅 palette 违规 → exit 1
-  - `--threshold=N`：自定义阈值
-  - `--limit=N`：限制报告行数
-- `package.json` 脚本：
-  - `npm run audit:ui-inlines`（warn-only）
-  - `npm run audit:ui-palette`（palette 严格）
-  - `npm run audit:ui-strict`（完全严格，CI 门槛）
-- **CI 集成：** `.github/workflows/p1-gate.yml` 在 Lint 之后新增 `UI design-system audit (palette + token-count strict)` 步骤，任何违规阻塞 PR 合并
+**测试：**
+- 新建 `tests/w3-team-agent-membership.test.ts`：14 个断言覆盖
+  - capability helpers 正确性
+  - add / list / resolve（含 6 种错误路径）
+  - update lifecycle（role / pause 联动 resolve 返回 null）
+  - remove 清理
+  - binding → teams 交叉列表（含私有性）
 
-#### 违规削减（可复核）
+**前端清除挑战赛（按用户要求）：**
+- 删除 `src/app/challenges/page.tsx`、`src/app/challenges/[slug]/page.tsx`、`src/components/challenge-card.tsx`
+- 删除 i18n 键 `nav.challenges`（zh.json + en.json）
+- SiteNav 已在 W1 阶段完成清理，footer 未引用，layout 未引用
+- 保留（按 roadmap 冻结原则）：`/api/v1/challenges/*` REST 路由、`Challenge` Prisma 模型、MCP `list_challenges` 工具、mock-data 种子数据、openapi-spec 挑战赛条目
 
-| 指标 | W2 起点 | 第二阶段末 | 第三阶段末 |
-|------|--------|-----------|-----------|
-| Palette hits | 37 | 0 | **0** |
-| Token-count (threshold=10) | 60 | 60 | **0** |
-| Token-count (threshold=6, 旧基线参考) | 419 | 348 | ~300 (剩余 < 10-token 复合) |
-| Files w/ hits | 93 | 92 | **0** |
+#### 未实装（明确后移，不属于 W3）
 
-**`npm run audit:ui-strict` 目前 exit 0，已并入 CI 阻塞门槛。**
+- 跨用户 Agent ↔ Agent 协作的自动派任务（P2 路线图）
+- `TeamAgentMembership` 随 `TeamMembership` 的级联去激活（由 repository 约定强制而非 schema cascade；当前被 roadmap 明确标记为应用层责任，未触发 cleanup cron）
+- Agent 协作 tab 在 `/teams/[slug]` 主页内嵌版（当前通过 quick-link 跳转独立页；P1 内可考虑内嵌）
 
-### W3 / W4 / W5 / W6 / W7 / W8 · 未启动（按路线图节奏）
+### W4 / W5 / W6 / W7 / W8 · 未启动（按路线图节奏）
 
 ---
 
-## 质量关卡（W2 全阶段结束时）
+## 质量关卡（W3 本轮结束时）
 
 - `npx tsc --noEmit` → ✅ 通过（0 错误）
 - `npm run lint` → ✅ 通过（3 条历史 warning 未变）
-- `npm test` → ✅ 通过（58 test files · 240 tests · 0 fail）
-- `npm run build` → ✅ 通过
-- `npm run audit:ui-strict` → ✅ **exit 0**（palette + token-count 全绿）
-- CI `.github/workflows/p1-gate.yml` 已加入审计步骤
+- `npm test` → ✅ **59 test files · 254 tests · 0 fail**（新增 14 个 W3 断言）
+- `npm run validate:openapi` → ✅ paths=121
+- `npm run generate:types` → ✅ 无 diff
+- `npm run audit:ui-strict` → ✅ **exit 0**（palette 0 · token-count 0）
+- `npm run build` → ✅ 通过，路由含 `/teams/[slug]/agents` + `/api/v1/teams/[slug]/agents/*`
 
 ---
 
-## W2 交付总览
+## 守住的边界
 
-**"从 token 统一升级到组件统一"的目标已达成：**
+- ❌ 无 Agent 自治写入（所有高风险写入仍必须进 `AgentConfirmationRequest`）
+- ❌ 无 LLM 调用新增（W3 是协议层，不是 AI 层）
+- ❌ 无挑战赛前端保留（按用户要求清除）
+- ❌ 无后端挑战赛 API 删除（按 roadmap 冻结）
+- ❌ 无跨用户 agent-agent 自动协作（P2 范围）
+- ❌ 无业务行为改变（team tasks / discussions / chat 等既有功能无回归）
 
-1. 13 个可复用 UI 原件覆盖所有新页面和被迁移的旧页面
-2. 0 条 palette 违规（DESIGN.md 规范硬门槛）
-3. 0 条 token-count 违规（默认 threshold=10，CI 阻塞）
-4. CI 持续防回归，任何新增违规会阻塞 PR
+---
 
-W2 正式结束。下一轮进入 **W3：Agent 协作总线（`TeamAgentMembership` + 角色牌 + 团队侧 agent 管理 UI）**。
+## 下一步
+
+W3 完成。下一轮进入 **W4：社区主飞轮**：
+- 广场 4 tab Feed（follow / recommend / hot / time）
+- 项目画廊曝光权重公式（score = 收藏×3 + 协作意向×5 + 近 30d 更新×2 + creator credit×0.1 + featuredRank×100）
+- 项目详情页协作入口前置
+- 团队角色扩展 + 活动时间线

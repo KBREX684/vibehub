@@ -21,6 +21,7 @@ import {
   Globe,
   ExternalLink,
   Settings2,
+  Bot,
 } from "lucide-react";
 
 interface Props {
@@ -131,15 +132,24 @@ export default async function TeamDetailPage({ params }: Props) {
               )}
             </div>
           )}
-          {canManageTeam && (
-            <div className="mt-5 pt-5 border-t border-[var(--color-border-subtle)]">
+          {isMember && (
+            <div className="mt-5 pt-5 border-t border-[var(--color-border-subtle)] flex flex-wrap gap-2">
               <Link
-                href={`/teams/${encodeURIComponent(team.slug)}/settings`}
+                href={`/teams/${encodeURIComponent(team.slug)}/agents`}
                 className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
               >
-                <Settings2 className="w-3 h-3" />
-                Team settings
+                <Bot className="w-3 h-3" aria-hidden="true" />
+                Agent bus
               </Link>
+              {canManageTeam && (
+                <Link
+                  href={`/teams/${encodeURIComponent(team.slug)}/settings`}
+                  className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                >
+                  <Settings2 className="w-3 h-3" aria-hidden="true" />
+                  Team settings
+                </Link>
+              )}
             </div>
           )}
         </div>
