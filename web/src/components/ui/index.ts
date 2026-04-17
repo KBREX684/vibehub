@@ -56,3 +56,9 @@ export type { CopyButtonProps } from "./copy-button";
 
 export { DataTable } from "./data-table";
 export type { DataTableProps, DataTableColumn } from "./data-table";
+
+export { Avatar } from "./avatar";
+export type { AvatarProps, AvatarSize, AvatarTone } from "./avatar";
+
+export { ErrorBanner } from "./error-banner";
+export type { ErrorBannerProps, ErrorBannerTone } from "./error-banner";
