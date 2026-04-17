@@ -661,8 +661,13 @@ body::before {
   .shiny-text,
   .gradient-text-animate,
   .float-animation,
+  .animate-fade-in-up,
   .particles-dot {
     animation: none !important;
+  }
+  .animate-fade-in-up {
+    opacity: 1 !important;
+    transform: none !important;
   }
   .shiny-text {
     -webkit-text-fill-color: unset;

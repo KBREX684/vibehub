@@ -26,7 +26,7 @@ export function GradientText({
 }: GradientTextProps) {
   const bg =
     gradient ??
-    "linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-violet), var(--color-accent-apple), var(--color-accent-cyan))";
+    "linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-accent-cyan) 26%, var(--color-text-primary) 48%, var(--color-accent-apple) 72%, var(--color-accent-violet) 88%, var(--color-text-primary) 100%)";
 
   return (
     <span
