@@ -52,7 +52,7 @@ export function StaggerList({
     <div ref={ref} className={className}>
       {children.map((child, i) => (
         <div
-          key={i}
+          key={`stagger-${i}`}
           className="transition-all duration-500"
           style={{
             opacity: visible ? 1 : 0,

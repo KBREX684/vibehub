@@ -59,7 +59,7 @@ export function SplitText({
     <span ref={containerRef} className={className} aria-label={text}>
       {words.map((word, i) => (
         <span
-          key={i}
+          key={`${word}-${i}`}
           aria-hidden="true"
           className="inline-block transition-all duration-500"
           style={{
