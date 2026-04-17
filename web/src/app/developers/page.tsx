@@ -1,231 +1,341 @@
+/**
+ * v8 W1-4 — Developer center rewritten as a three-scenario quick-start hub.
+ *
+ * Previous shape: a console-style "manage your API keys / agents / OAuth apps /
+ * automations" grid. That was the right shape for settings, but the wrong
+ * shape for "first contact with VibeHub's developer surface".
+ *
+ * New shape (three scenarios, each with a copyable snippet):
+ *   1. 让 Cursor 在 VibeHub 里搜项目  — MCP quick start
+ *   2. 让你的 Agent 加入团队协作     — AgentBinding + role cards
+ *   3. 做第三方 Agent / SaaS        — OAuth + billing overview
+ *
+ * We keep links to existing management pages (api-keys / agents / oauth-apps)
+ * but in a sidebar — discovery beats admin on first paint.
+ */
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
-  Key,
   Bot,
+  Terminal,
+  Key,
   AppWindow,
   Workflow,
   BookOpen,
   ExternalLink,
   ArrowRight,
-  Plus,
-  Terminal,
-  Activity,
+  Sparkles,
+  ShieldCheck,
+  Users,
+  Coins,
 } from "lucide-react";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
+import { PageHeader, CopyButton, Badge } from "@/components/ui";
+
+function baseUrl() {
+  const env = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
+  return env || "https://vibehub.dev";
+}
+
+function abs(path: string) {
+  const base = baseUrl();
+  if (!base) return path;
+  return `${base}${path}`;
+}
 
 export default async function DevelopersPage() {
   const session = await getSessionUserFromCookie();
   const { t } = await getServerTranslator();
 
-  const BASE = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ?? "";
-  function abs(path: string) {
-    return BASE ? `${BASE}${path}` : path;
+  const BASE = baseUrl();
+
+  const mcpSnippet = `{
+  "mcpServers": {
+    "vibehub": {
+      "url": "${abs("/api/v1/mcp/v2/manifest")}",
+      "headers": {
+        "Authorization": "Bearer <你的 VibeHub API Key>"
+      }
+    }
   }
+}`;
 
-  /* ── Console layout: overview + sidebar ──────────────────────────────── */
+  const agentCurl = `curl ${abs("/api/v1/me/agent-bindings")} \\
+  -H "Authorization: Bearer <你的 VibeHub API Key>" \\
+  -H "content-type: application/json" \\
+  -d '{"label":"My Cursor Agent","agentType":"cursor"}'`;
+
+  const mcpInvokeCurl = `curl ${abs("/api/v1/mcp/v2/invoke")} \\
+  -H "Authorization: Bearer <Bearer Key>" \\
+  -H "content-type: application/json" \\
+  -d '{"tool":"search_projects","input":{"query":"ai agent"}}'`;
+
   return (
-    <main className="container max-w-6xl pb-24 pt-8 space-y-8">
-
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)]">
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-[var(--radius-lg)] bg-[var(--color-primary-subtle)] flex items-center justify-center text-[var(--color-text-primary)]">
-            <Terminal className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">{t("developers.page_title")}</h1>
-            <p className="text-sm text-[var(--color-text-secondary)] m-0 mt-0.5">{t("developers.page_subtitle")}</p>
-          </div>
-        </div>
-        {session && (
-          <Link href="/settings/api-keys" className="btn btn-primary text-sm px-5 py-2 inline-flex w-fit">
-            <Plus className="w-4 h-4" />
-            {t("developers.create_api_key")}
-          </Link>
+    <main className="container max-w-6xl pb-24 pt-8 space-y-10">
+      <PageHeader
+        icon={Terminal}
+        eyebrow={t("developers.v8.eyebrow", "开发者中心 · 3 个场景起步")}
+        title={t("developers.v8.title", "把 VibeHub 接进你的 AI 工作流")}
+        subtitle={t(
+          "developers.v8.subtitle",
+          "从 Cursor / Claude / OpenClaw 到你自己的 Agent，我们通过 MCP 与 OpenAPI 提供稳定、可审计的协议位。"
         )}
-      </div>
+        actions={
+          session ? (
+            <Link href="/settings/api-keys" className="btn btn-primary text-sm px-4 py-2">
+              <Key className="w-4 h-4" aria-hidden="true" />
+              {t("developers.v8.new_key", "创建 API Key")}
+            </Link>
+          ) : (
+            <Link href="/login?redirect=/developers" className="btn btn-primary text-sm px-4 py-2">
+              {t("developers.v8.signin", "登录后开始")}
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          )
+        }
+      />
 
-      {!session && (
-        <div className="card p-6 text-center space-y-3">
-          <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-bg-elevated)] flex items-center justify-center mx-auto">
-            <Key className="w-6 h-6 text-[var(--color-text-muted)]" />
-          </div>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">Sign in to access Developer Console</h2>
-          <p className="text-sm text-[var(--color-text-secondary)] m-0 max-w-md mx-auto">
-            Create API keys, register agents, configure OAuth apps, and set up automations to integrate with the VibeHub platform.
-          </p>
-          <Link href="/login?redirect=/developers" className="btn btn-primary text-sm px-6 py-2.5 inline-flex">
-            Sign in
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      )}
-
+      {/* Three scenarios */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        {/* Main content — asset panels */}
         <div className="lg:col-span-8 space-y-5">
-
-          {/* API Keys */}
-          <section className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 m-0">
-                <Key className="w-4 h-4 text-[var(--color-primary-hover)]" />
-                {t("developers.api_keys")}
-              </h2>
-              <Link href="/settings/api-keys" className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] flex items-center gap-1 transition-colors">
-                Manage
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+          {/* Scenario 1 */}
+          <section className="card p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-cyan-subtle)] border border-[rgba(34,211,238,0.25)] flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-[var(--color-accent-cyan)]" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                    {t("developers.v8.scenarios.cursor.title", "让 Cursor / Claude 在 VibeHub 里搜项目")}
+                  </h2>
+                  <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
+                    {t(
+                      "developers.v8.scenarios.cursor.desc",
+                      "把 VibeHub MCP manifest 加到 Cursor / Claude Code 的 mcpServers 配置，立刻可以在 IDE 里调用 search_projects、get_project_detail 等只读工具。"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="cyan" pill>
+                {t("developers.v8.scenarios.cursor.tag", "只读 · 秒接入")}
+              </Badge>
             </div>
-            <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3">
-              Scoped API keys for OpenAPI, MCP tools, public catalog, embeds, and read-only discovery endpoints.
-            </p>
-            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)]">
-              <Activity className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {session ? "View your active keys and usage in settings." : "Sign in to create and manage API keys."}
-              </span>
+
+            <CodeBlock code={mcpSnippet} language="json" />
+            <div className="flex items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
+              <BookOpen className="w-3.5 h-3.5" aria-hidden="true" />
+              <a
+                href={abs("/api/v1/mcp/v2/manifest")}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              >
+                {t("developers.v8.scenarios.cursor.manifest", "查看 manifest 原始返回")}
+                <ExternalLink className="w-3 h-3" aria-hidden="true" />
+              </a>
+              <span className="text-[var(--color-text-muted)]">·</span>
+              <span>{t("developers.v8.scenarios.cursor.note", "支持 Cursor、Claude Code、OpenClaw、Codex CLI")}</span>
             </div>
           </section>
 
-          {/* Agent Bindings */}
-          <section className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 m-0">
-                <Bot className="w-4 h-4 text-[var(--color-accent-violet)]" />
-                {t("developers.agents")}
-              </h2>
-              <Link href="/settings/agents" className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] flex items-center gap-1 transition-colors">
-                Manage
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+          {/* Scenario 2 */}
+          <section className="card p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-violet-subtle)] border border-[rgba(167,139,250,0.25)] flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-[var(--color-accent-violet)]" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                    {t("developers.v8.scenarios.agent.title", "让你的 Agent 作为队员加入团队")}
+                  </h2>
+                  <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
+                    {t(
+                      "developers.v8.scenarios.agent.desc",
+                      "每个 Agent 通过独立 API Key 认证；写入需要人工 Confirmation；高风险动作永不自治。"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="violet" pill>
+                {t("developers.v8.scenarios.agent.tag", "写入 · 需 Confirmation")}
+              </Badge>
             </div>
-            <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3">
-              Register named agents, link API keys, and track MCP invocation audit trails separately from human usage.
-            </p>
-            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)]">
-              <Activity className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {session ? "View registered agents and their activity in settings." : "Sign in to register agents."}
-              </span>
+
+            <CodeBlock code={agentCurl} language="bash" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              {[
+                {
+                  icon: Users,
+                  title: t("developers.v8.scenarios.agent.bullet1.title", "角色牌"),
+                  desc: t(
+                    "developers.v8.scenarios.agent.bullet1.desc",
+                    "Reader / Commenter / Executor / Reviewer / Coordinator"
+                  ),
+                },
+                {
+                  icon: ShieldCheck,
+                  title: t("developers.v8.scenarios.agent.bullet2.title", "可审计"),
+                  desc: t(
+                    "developers.v8.scenarios.agent.bullet2.desc",
+                    "全链路写入 AgentActionAudit 与 AgentConfirmationRequest"
+                  ),
+                },
+                {
+                  icon: BookOpen,
+                  title: t("developers.v8.scenarios.agent.bullet3.title", "scope 收窄"),
+                  desc: t(
+                    "developers.v8.scenarios.agent.bullet3.desc",
+                    "每个 Key 继承用户权限，再按需裁减，永不超越"
+                  ),
+                },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div
+                  key={title}
+                  className="flex items-start gap-2 p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)]"
+                >
+                  <Icon className="w-3.5 h-3.5 text-[var(--color-text-secondary)] mt-0.5 shrink-0" aria-hidden="true" />
+                  <div>
+                    <p className="text-xs font-medium text-[var(--color-text-primary)] m-0">{title}</p>
+                    <p className="text-[11px] text-[var(--color-text-tertiary)] m-0 mt-0.5 leading-relaxed">
+                      {desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Link
+                href={session ? "/settings/agents" : "/login?redirect=/settings/agents"}
+                className="btn btn-secondary text-sm px-4 py-2"
+              >
+                <Bot className="w-3.5 h-3.5" aria-hidden="true" />
+                {t("developers.v8.scenarios.agent.cta_manage", "去「我的 Agent」")}
+              </Link>
+              <a
+                href={abs("/api/v1/openapi.json")}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-ghost text-sm px-4 py-2"
+              >
+                <BookOpen className="w-3.5 h-3.5" aria-hidden="true" />
+                {t("developers.v8.scenarios.agent.cta_openapi", "查看 OpenAPI 规范")}
+                <ExternalLink className="w-3 h-3" aria-hidden="true" />
+              </a>
             </div>
           </section>
 
-          {/* OAuth Apps */}
-          <section className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 m-0">
-                <AppWindow className="w-4 h-4 text-[var(--color-warning)]" />
-                {t("developers.oauth_apps")}
-              </h2>
-              <Link href="/settings/oauth-apps" className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] flex items-center gap-1 transition-colors">
-                Manage
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+          {/* Scenario 3 */}
+          <section className="card p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-apple-subtle)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center">
+                  <Coins className="w-5 h-5 text-[var(--color-accent-apple)]" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                    {t("developers.v8.scenarios.saas.title", "做第三方 Agent / SaaS")}
+                  </h2>
+                  <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
+                    {t(
+                      "developers.v8.scenarios.saas.desc",
+                      "用 OAuth 让 VibeHub 用户授权你的应用；按千次 MCP 写调用计费（P1 开放申请）。"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="apple" pill>
+                {t("developers.v8.scenarios.saas.tag", "P1 · 按量计费")}
+              </Badge>
             </div>
-            <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3">
-              Register third-party apps that use short-lived Bearer tokens with end-user consent screens instead of raw API keys.
-            </p>
-            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)]">
-              <Activity className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {session ? "View your registered OAuth applications in settings." : "Sign in to register OAuth apps."}
-              </span>
-            </div>
-          </section>
 
-          {/* Automations */}
-          <section className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 m-0">
-                <Workflow className="w-4 h-4 text-[var(--color-success)]" />
-                {t("developers.automations")}
-              </h2>
-              <Link href="/settings/automations" className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] flex items-center gap-1 transition-colors">
-                Manage
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3">
-              Trigger team actions or external notifications from VibeHub events. High-risk steps route through the confirmation queue.
-            </p>
-            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)]">
-              <Activity className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {session ? "View active automation workflows in settings." : "Sign in to create automations."}
-              </span>
+            <CodeBlock code={mcpInvokeCurl} language="bash" />
+
+            <div className="text-xs text-[var(--color-text-tertiary)] leading-relaxed">
+              {t(
+                "developers.v8.scenarios.saas.note",
+                "MCP Developer Access 面向 SaaS 型 AI 工具按千次写调用计费，不面向个人用户。个人用户请直接使用 Free / Pro 额度。"
+              )}
             </div>
           </section>
         </div>
 
-        {/* Sidebar — quick actions + reference */}
-        <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-20">
-
-          {/* Quick Actions */}
-          {session && (
-            <section className="card p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("developers.quick_links")}</h3>
-              <div className="space-y-1">
-                {[
-                  { href: "/settings/api-keys", icon: Key, label: t("developers.create_api_key") },
-                  { href: "/settings/agents", icon: Bot, label: t("developers.register_agent") },
-                  { href: "/settings/oauth-apps", icon: AppWindow, label: t("developers.register_oauth_app") },
-                  { href: "/settings/automations", icon: Workflow, label: t("developers.create_automation") },
-                ].map(({ href, icon: Icon, label }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="flex items-center gap-3 p-2.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors group"
-                  >
-                    <Icon className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors shrink-0" />
-                    <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">{label}</span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Reference & Docs */}
+        {/* Sidebar */}
+        <aside className="lg:col-span-4 space-y-4 lg:sticky lg:top-20">
           <section className="card p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 m-0">
-              <BookOpen className="w-4 h-4 text-[var(--color-accent-cyan)]" />
-              {t("developers.resources")}
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[var(--color-accent-cyan)]" aria-hidden="true" />
+              {t("developers.v8.sidebar.resources", "资源")}
             </h3>
             <div className="space-y-1">
               {[
-                { href: abs("/api/v1/openapi.json"), label: t("developers.openapi_spec"), external: true },
-                { href: abs("/api/v1/mcp/v2/manifest"), label: t("developers.mcp_manifest"), external: true },
-              ].map(({ href, label, external }) => (
+                { href: abs("/api/v1/openapi.json"), label: t("developers.v8.sidebar.openapi", "OpenAPI 规范") },
+                { href: abs("/api/v1/mcp/v2/manifest"), label: t("developers.v8.sidebar.manifest", "MCP manifest") },
+                { href: "/pricing", label: t("developers.v8.sidebar.pricing", "定价与额度") },
+              ].map(({ href, label }) => (
                 <a
                   key={href}
                   href={href}
-                  target={external ? "_blank" : undefined}
-                  rel={external ? "noreferrer" : undefined}
+                  target={href.startsWith("http") || href.startsWith(BASE) ? "_blank" : undefined}
+                  rel="noreferrer"
                   className="flex items-center justify-between p-2.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors group"
                 >
-                  <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">{label}</span>
-                  <ExternalLink className="w-3 h-3 text-[var(--color-text-muted)]" />
+                  <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)]">
+                    {label}
+                  </span>
+                  <ExternalLink className="w-3 h-3 text-[var(--color-text-muted)]" aria-hidden="true" />
                 </a>
               ))}
             </div>
           </section>
 
-          {/* Quick Start snippet */}
           <section className="card p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Quick Start</h3>
-            <pre className="m-0 overflow-x-auto rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] p-3 text-xs leading-5 text-[var(--color-text-secondary)]">
-{`curl ${abs("/api/v1/public/projects")} \\
-  -H "Accept: application/json"`}
-            </pre>
-            <p className="text-xs text-[var(--color-text-muted)] m-0">
-              Public catalog endpoints require no authentication. Add a Bearer token for scoped access.
-            </p>
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
+              {t("developers.v8.sidebar.manage_title", "管理你的接入")}
+            </h3>
+            <div className="space-y-1">
+              {[
+                { href: "/settings/api-keys", icon: Key, label: t("developers.v8.sidebar.manage.keys", "API Keys") },
+                { href: "/settings/agents", icon: Bot, label: t("developers.v8.sidebar.manage.agents", "Agents") },
+                { href: "/settings/oauth-apps", icon: AppWindow, label: t("developers.v8.sidebar.manage.oauth", "OAuth Apps") },
+                { href: "/settings/automations", icon: Workflow, label: t("developers.v8.sidebar.manage.automations", "Automations") },
+              ].map(({ href, icon: Icon, label }) => (
+                <Link
+                  key={href}
+                  href={session ? href : `/login?redirect=${encodeURIComponent(href)}`}
+                  className="flex items-center gap-3 p-2.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors group"
+                >
+                  <Icon className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)]" aria-hidden="true" />
+                  <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)]">
+                    {label}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </section>
-        </div>
+        </aside>
       </div>
     </main>
+  );
+}
+
+/* ── Local helpers ─────────────────────────────────────────────────────── */
+
+function CodeBlock({ code, language }: { code: string; language: string }) {
+  return (
+    <div className="relative group">
+      <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyButton value={code} size="sm" />
+      </div>
+      <pre className="m-0 overflow-x-auto rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-4 text-xs leading-relaxed text-[var(--color-text-secondary)] font-mono">
+        <code>{code}</code>
+      </pre>
+      <span className="absolute top-2 left-3 text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+        {language}
+      </span>
+    </div>
   );
 }

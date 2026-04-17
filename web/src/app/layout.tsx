@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CommandPalette } from "@/components/command-palette";
-import { TopNav } from "@/components/top-nav";
+import { SiteNav } from "@/components/site-nav";
 import { Footer } from "@/components/footer";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -44,7 +44,7 @@ export default async function RootLayout({
             >
               {t("a11y.skip_to_content", "Skip to main content")}
             </a>
-            <TopNav />
+            <SiteNav />
             <CommandPalette />
             <div id="main-content" className="flex-1 flex flex-col min-w-0">
               {children}

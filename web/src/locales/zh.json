@@ -27,15 +27,18 @@
     "overview": "概览",
     "discover": "发现",
     "discussions": "讨论",
+    "projects": "项目",
     "challenges": "挑战赛",
     "teams": "团队",
     "leaderboards": "排行榜",
     "developers": "开发者",
+    "pricing": "定价",
     "searchPlaceholder": "搜索...",
     "searchShortcut": "在任意页面按 Ctrl+K 搜索",
     "toggleLanguage": "切换语言",
     "openNotifications": "打开通知",
     "openUserMenu": "打开用户菜单",
+    "user_menu": "打开用户菜单",
     "closeUserMenu": "关闭用户菜单",
     "mainNavigation": "主导航",
     "mobileNavigation": "移动端导航",
@@ -44,15 +47,28 @@
     "open_search": "打开搜索",
     "workspace": "雷达工作台",
     "apiKeys": "API 密钥",
+    "api_keys": "API 密钥",
     "notifications": "通知",
     "account": "账号",
+    "profile": "个人主页",
+    "my_agents": "我的 Agent",
+    "my_teams": "我的团队",
     "admin": "管理后台",
     "signOut": "退出登录",
     "signIn": "登录",
     "theme_light": "浅色主题",
     "theme_dark": "深色主题",
     "theme_system": "跟随系统",
-    "theme_cycle": "切换主题（浅色 / 深色 / 系统）"
+    "theme_cycle": "切换主题（浅色 / 深色 / 系统）",
+    "quick": {
+      "create": "创建",
+      "new_post": "发一条讨论",
+      "new_post_desc": "在广场发帖，让同行看到你的想法",
+      "new_project": "建一个项目",
+      "new_project_desc": "发布作品，获得协作者",
+      "agents": "我的 Agent",
+      "agents_desc": "绑定与管理你的协作 Agent"
+    }
   },
   "not_found": {
     "description": "你要访问的页面不存在，或可能已经被移动。"
@@ -248,6 +264,7 @@
   "a11y": {
     "skip_to_content": "跳转到主要内容",
     "main_navigation": "主导航",
+    "mobile_navigation": "移动端导航",
     "open_mobile_menu": "打开导航菜单",
     "close_mobile_menu": "关闭导航菜单",
     "openNavigationMenu": "打开导航菜单",
@@ -306,5 +323,176 @@
       "forbidden_title": "访问受限",
       "forbidden_desc": "只有团队所有者和管理员可以管理团队设置。"
     }
+  },
+  "onboarding": {
+    "title": "欢迎来到 VibeHub",
+    "subtitle": "花 1 分钟完成三步，平台会根据你填的信息把合适的讨论、项目和队友推给你。",
+    "step_of": "第 {{current}} / {{total}} 步",
+    "skip": "跳过",
+    "skip_all": "全部跳过",
+    "back": "上一步",
+    "next": "下一步",
+    "done": "完成",
+    "s1": {
+      "heading": "介绍你自己",
+      "sub": "让同行知道你是谁、擅长什么。资料可随时在「设置」里修改。",
+      "nickname": "昵称",
+      "nicknameHint": "将显示在讨论、项目卡、团队页。",
+      "headline": "一句话介绍",
+      "headlineHint": "例如：一个做 AI 开发者工具的独立开发者。不超过 60 个字。",
+      "interests": "擅长领域",
+      "interestsHint": "至少选 1 个，最多 3 个；用于推荐流初始化。"
+    },
+    "s2": {
+      "heading": "你的 AI 工具栈",
+      "sub": "告诉我们你常用哪些 AI 编码工具，我们会在你完成绑定时给出针对性的 quick start。",
+      "note": "此步骤不会自动创建任何 Agent 绑定 —— 绑定必须你主动去「我的 Agent」操作。"
+    },
+    "s3": {
+      "heading": "第一件事",
+      "sub": "选一件今天想做的事，我们把你带到该页面。你也可以直接跳过，进入首页。",
+      "post": {
+        "title": "发一条讨论",
+        "desc": "把今天学到的一个 AI+代码方法写成一条讨论。"
+      },
+      "project": {
+        "title": "建一个项目",
+        "desc": "把正在做的作品发布出来，让同行看到。"
+      },
+      "agent": {
+        "title": "绑定我的第一个 Agent",
+        "desc": "让 Cursor / Claude / 自建 Agent 作为队员参与协作。"
+      }
+    },
+    "tags": {
+      "frontend": "前端",
+      "backend": "后端",
+      "ai": "AI / Agent",
+      "infra": "基础设施",
+      "mobile": "移动端",
+      "game": "游戏 / 交互",
+      "design": "产品 / 设计",
+      "research": "研究 / 论文"
+    },
+    "tools": {
+      "cursor": "Cursor",
+      "claude": "Claude Code",
+      "openclaw": "OpenClaw",
+      "codex": "Codex CLI",
+      "custom": "自建 Agent",
+      "none": "暂不使用"
+    }
+  },
+  "home.v8": {
+    "eyebrow": "中国中文开发者 · AI+Human 协作网络",
+    "hero_line1": "让你的作品被看见，",
+    "hero_line2": "让你的 Agent 合法进入团队。",
+    "hero_description": "VibeHub 是面向中国中文开发者的协作网络：广场讨论、项目画廊、小团队组队，再加上让 Cursor、Claude、自建 Agent 作为可审计队员参与协作的 Agent 总线。",
+    "cta_primary_guest": "免费注册，展示作品",
+    "cta_primary_authed": "展示我的作品",
+    "cta_secondary_guest": "给开发者看 Agent 接入",
+    "cta_secondary_authed": "让我的 Agent 进团队",
+    "pillars": {
+      "square": { "title": "广场讨论", "desc": "在这里产生灵感、发经验、找同行。" },
+      "gallery": { "title": "项目画廊", "desc": "让作品被发现、被收藏、被协作。" },
+      "teams": { "title": "团队协作", "desc": "陌生开发者也能低摩擦组队共创。" },
+      "agents": { "title": "Agent 总线", "desc": "Cursor、Claude、自建 Agent 都能作为队员参与。" }
+    },
+    "agent_section": {
+      "eyebrow": "差异化 · 仅 VibeHub",
+      "title": "Agent 是团队里的正式队员",
+      "subtitle": "在 VibeHub，你的 Cursor、Claude、自建 Agent 可以作为 ",
+      "subtitle_highlight": "可审计 · 可撤回 · 有角色牌 ",
+      "subtitle_tail": "的队员参与任务，每一次高风险写入都必须经人工确认。绝不自治。",
+      "learn_more": "查看协议接入"
+    },
+    "agent_roles": {
+      "role_card": "角色牌",
+      "reader": { "title": "Reader", "desc": "读取任务、讨论、聊天。默认角色，无写入权限。" },
+      "executor": { "title": "Executor", "desc": "可领取任务并标记完成，写入需要人工 Confirmation。" },
+      "reviewer": { "title": "Reviewer", "desc": "提交审查意见，明确标注 AI 建议，不做最终裁决。" }
+    },
+    "how": {
+      "eyebrow": "4 步跑通人机协作",
+      "s1": { "title": "绑定 Agent", "desc": "在「我的 Agent」里为 Cursor / Claude / 自建 agent 发放独立 API Key。" },
+      "s2": { "title": "加入团队", "desc": "团队 owner 给 Agent 发「角色牌」：Reader / Executor / Reviewer / Coordinator。" },
+      "s3": { "title": "参与任务", "desc": "Agent 读取任务、领取任务、提交审查，所有写入进入确认队列。" },
+      "s4": { "title": "人工兜底", "desc": "高风险动作由你本人批准，全链路留有审计日志，随时可撤回。" }
+    },
+    "diff": {
+      "eyebrow": "定位对比",
+      "title": "VibeHub 不是社区、不是看板、不是代码仓库",
+      "subtitle": "我们只解决一件别人没解决的事：让 AI Agent 在人类团队里成为可信的一等公民。",
+      "col": {
+        "dimension": "维度",
+        "vibehub": "VibeHub",
+        "other_community": "社区 / 掘金",
+        "github": "GitHub",
+        "feishu": "飞书 / 钉钉"
+      },
+      "row": {
+        "agent": { "dim": "Agent 作为队员" },
+        "teaming": { "dim": "面向陌生开发者的组队" },
+        "mcp": { "dim": "内容对 AI 可读 (MCP)" },
+        "china": { "dim": "中国大陆落地 + 支付" },
+        "projects": { "dim": "项目展示与协作意向" }
+      }
+    },
+    "cta_footer": {
+      "eyebrow": "中国大陆优先 · 中文优先",
+      "title": "从今天开始，把你的 Agent 带进团队",
+      "desc": "免费注册，Pro 月付 ¥29。不烧钱买增长，不替你付 LLM token。",
+      "primary_guest": "免费注册",
+      "primary_authed": "开始发布作品",
+      "secondary": "给开发者看 Agent 接入"
+    }
+  },
+  "developers.v8": {
+    "eyebrow": "开发者中心 · 3 个场景起步",
+    "title": "把 VibeHub 接进你的 AI 工作流",
+    "subtitle": "从 Cursor / Claude / OpenClaw 到你自己的 Agent，我们通过 MCP 与 OpenAPI 提供稳定、可审计的协议位。",
+    "new_key": "创建 API Key",
+    "signin": "登录后开始",
+    "scenarios": {
+      "cursor": {
+        "title": "让 Cursor / Claude 在 VibeHub 里搜项目",
+        "desc": "把 VibeHub MCP manifest 加到 Cursor / Claude Code 的 mcpServers 配置，立刻可以在 IDE 里调用 search_projects、get_project_detail 等只读工具。",
+        "tag": "只读 · 秒接入",
+        "manifest": "查看 manifest 原始返回",
+        "note": "支持 Cursor、Claude Code、OpenClaw、Codex CLI"
+      },
+      "agent": {
+        "title": "让你的 Agent 作为队员加入团队",
+        "desc": "每个 Agent 通过独立 API Key 认证；写入需要人工 Confirmation；高风险动作永不自治。",
+        "tag": "写入 · 需 Confirmation",
+        "bullet1": { "title": "角色牌", "desc": "Reader / Commenter / Executor / Reviewer / Coordinator" },
+        "bullet2": { "title": "可审计", "desc": "全链路写入 AgentActionAudit 与 AgentConfirmationRequest" },
+        "bullet3": { "title": "scope 收窄", "desc": "每个 Key 继承用户权限，再按需裁减，永不超越" },
+        "cta_manage": "去「我的 Agent」",
+        "cta_openapi": "查看 OpenAPI 规范"
+      },
+      "saas": {
+        "title": "做第三方 Agent / SaaS",
+        "desc": "用 OAuth 让 VibeHub 用户授权你的应用；按千次 MCP 写调用计费（P1 开放申请）。",
+        "tag": "P1 · 按量计费",
+        "note": "MCP Developer Access 面向 SaaS 型 AI 工具按千次写调用计费，不面向个人用户。个人用户请直接使用 Free / Pro 额度。"
+      }
+    },
+    "sidebar": {
+      "resources": "资源",
+      "openapi": "OpenAPI 规范",
+      "manifest": "MCP manifest",
+      "pricing": "定价与额度",
+      "manage_title": "管理你的接入",
+      "manage": {
+        "keys": "API Keys",
+        "agents": "Agents",
+        "oauth": "OAuth Apps",
+        "automations": "Automations"
+      }
+    }
+  },
+  "nav.v8_markers": {
+    "preserved": "保留 v8 占位"
   }
 }
