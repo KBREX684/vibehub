@@ -81,7 +81,7 @@ export function CopyButton({
         "transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]",
         sizeClass[size],
-        copied ? "text-[var(--color-success)] border-[rgba(52,211,153,0.35)]" : "",
+        copied ? "text-[var(--color-success)] border-[var(--color-success-border)]" : "",
         className,
       ].join(" ")}
     >

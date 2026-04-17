@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { LucideIcon } from "lucide-react";
 import { Inbox } from "lucide-react";
+import { FloatingIcon } from "./floating-icon";
 
 export interface EmptyStateProps {
   icon?: LucideIcon;
@@ -30,9 +31,11 @@ export function EmptyState({
         className,
       ].join(" ")}
     >
-      <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] flex items-center justify-center mb-4">
-        <Icon className="w-5 h-5 text-[var(--color-text-tertiary)]" aria-hidden="true" />
-      </div>
+      <FloatingIcon>
+        <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] flex items-center justify-center mb-4">
+          <Icon className="w-5 h-5 text-[var(--color-text-tertiary)]" aria-hidden="true" />
+        </div>
+      </FloatingIcon>
       <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] m-0">
         {title}
       </h3>

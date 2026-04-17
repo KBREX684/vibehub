@@ -5,6 +5,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { parsePagination } from "@/lib/pagination";
 import { getProjectFilterFacets, listFeaturedProjects, listProjectFeed, listTeams } from "@/lib/repository";
 import type { ProjectSortOrder, ProjectStatus } from "@/lib/types";
+import { AnimatedSection, BlurText } from "@/components/ui";
 import { Search, Compass, X, SlidersHorizontal, Sparkles, Flame, Clock3, BrainCircuit } from "lucide-react";
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
@@ -98,7 +99,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
     <main className="container pb-24 space-y-8 pt-8">
 
       {/* Page header */}
-      <section className="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-[var(--color-border)]">
+      <section className="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-[var(--color-border)] animate-fade-in-up">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-[var(--color-accent-cyan)]">
             <Compass className="w-6 h-6" />
@@ -126,18 +127,20 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
       </section>
 
       {featuredToday.length > 0 && (
-        <section className="space-y-4">
+        <AnimatedSection className="space-y-4" delayMs={80}>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[var(--color-featured)]" />
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">Featured today</h2>
+            <BlurText as="h2" className="text-lg font-semibold text-[var(--color-text-primary)] m-0">
+              Featured today
+            </BlurText>
             <span className="text-xs text-[var(--color-text-muted)]">Editorial picks — same rail as the home page</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-grid">
             {featuredToday.map((p) => (
               <ProjectCard key={p.id} project={p} featured />
             ))}
           </div>
-        </section>
+        </AnimatedSection>
       )}
 
       <section className="flex flex-wrap items-center gap-2">
@@ -290,7 +293,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
         </div>
       ) : classicPagination ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-grid">
             {items.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}

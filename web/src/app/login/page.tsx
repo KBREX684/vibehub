@@ -6,6 +6,8 @@ import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 import { getServerTranslator } from "@/lib/i18n";
 import { EmailAuthForms } from "@/components/email-auth-forms";
+import { LoginAuroraBackground } from "@/components/login-aurora-background";
+import { Float } from "@/components/ui";
 
 interface Props {
   searchParams: Promise<{ redirect?: string; required?: string; error?: string; verified?: string }>;
@@ -39,14 +41,17 @@ export default async function LoginPage({ searchParams }: Props) {
   const oauthHref = `/api/v1/auth/github?redirect=${encodeURIComponent(redirectTo)}`;
 
   return (
-    <main className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <main className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
+      <LoginAuroraBackground />
+      <div className="relative z-10 w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 font-bold text-xl text-[var(--color-text-primary)]">
-            <span className="w-8 h-8 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
-              <Zap className="w-4 h-4 text-[var(--color-text-inverse)]" />
-            </span>
+            <Float distance={3} speed={4}>
+              <span className="w-8 h-8 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
+                <Zap className="w-4 h-4 text-[var(--color-text-inverse)]" />
+              </span>
+            </Float>
             VibeHub
           </Link>
         </div>
@@ -74,7 +79,7 @@ export default async function LoginPage({ searchParams }: Props) {
 
           {/* Error */}
           {errorMsg && (
-            <div className="flex items-start gap-2 p-3 bg-[var(--color-error-subtle)] border border-[rgba(239,68,68,0.2)] rounded-[var(--radius-md)]">
+            <div className="flex items-start gap-2 p-3 bg-[var(--color-error-subtle)] border border-[var(--color-error-border)] rounded-[var(--radius-md)]">
               <AlertCircle className="w-4 h-4 text-[var(--color-error)] shrink-0 mt-0.5" />
               <p className="text-xs text-[var(--color-error)]">{errorMsg}</p>
             </div>

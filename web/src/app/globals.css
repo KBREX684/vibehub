@@ -36,33 +36,54 @@
   --color-primary:            #FFFFFF;
   --color-primary-hover:      #E5E5E5;
   --color-primary-subtle:     rgba(255,255,255,0.1);
+  --color-surface-overlay:    rgba(255,255,255,0.05);
+  --color-surface-overlay-strong: rgba(255,255,255,0.1);
+  --color-overlay-scrim:      rgba(0,0,0,0.6);
+  --color-admin-bg:           #060810;
+  --color-contrast-border:    rgba(0,0,0,0.16);
+  --color-contrast-surface-hover: rgba(0,0,0,0.06);
 
   /* === Semantic — real colours on the dark canvas === */
   --color-success:            #34d399;   /* emerald-400 */
   --color-success-subtle:     rgba(52,211,153,0.1);
+  --color-success-border:     rgba(52,211,153,0.25);
   --color-warning:            #fbbf24;   /* amber-400 */
   --color-warning-subtle:     rgba(251,191,36,0.1);
+  --color-warning-border:     rgba(251,191,36,0.25);
+  --color-warning-border-strong: rgba(251,191,36,0.3);
   --color-error:              #f87171;   /* red-400 */
   --color-error-subtle:       rgba(248,113,113,0.1);
+  --color-error-border:       rgba(248,113,113,0.25);
+  --color-error-border-strong: rgba(248,113,113,0.35);
   --color-info:               #60a5fa;   /* blue-400 */
   --color-info-subtle:        rgba(96,165,250,0.1);
+  --color-info-border:        rgba(96,165,250,0.25);
 
   /* === Accent palette (all components must use these; never inline hex) === */
   --color-accent-apple:       #0071e3;   /* Apple Blue — primary interactive CTA */
   --color-accent-apple-hover: #0062cc;
   --color-accent-apple-subtle: rgba(0,113,227,0.12);
+  --color-accent-apple-border: rgba(0,113,227,0.25);
 
   --color-accent-violet:        #a78bfa;  /* violet-400 */
   --color-accent-violet-hover:  #8b5cf6;
   --color-accent-violet-subtle: rgba(167,139,250,0.1);
+  --color-accent-violet-border: rgba(167,139,250,0.25);
 
   --color-accent-cyan:        #22d3ee;   /* cyan-400 */
   --color-accent-cyan-hover:  #06b6d4;
   --color-accent-cyan-subtle: rgba(34,211,238,0.1);
+  --color-accent-cyan-border: rgba(34,211,238,0.25);
 
   /* === Enterprise tier (emerald) === */
   --color-enterprise:         #34d399;   /* emerald-400 — same hue as success */
   --color-enterprise-subtle:  rgba(52,211,153,0.1);
+  --color-enterprise-border:  rgba(52,211,153,0.25);
+  --color-spotlight-default:  rgba(255,255,255,0.06);
+  --color-spotlight-apple:    rgba(0,113,227,0.08);
+  --color-spotlight-violet:   rgba(167,139,250,0.08);
+  --color-spotlight-cyan:     rgba(34,211,238,0.08);
+  --color-spotlight-success:  rgba(52,211,153,0.08);
 
   /* === Radii === */
   --radius-xs:    2px;
@@ -240,25 +261,31 @@ p { line-height: 1.6; color: var(--color-text-secondary); }
 }
 
 .btn-primary {
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  border-color: var(--color-primary);
+  background: var(--color-text-primary);
+  color: var(--color-bg-canvas);
+  border-color: var(--color-text-primary);
 }
-.btn-primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 88%, var(--color-bg-canvas));
+  border-color: color-mix(in srgb, var(--color-text-primary) 88%, var(--color-bg-canvas));
+}
 
 .btn-secondary {
   background: transparent;
   color: var(--color-text-primary);
-  border-color: var(--color-border);
+  border-color: color-mix(in srgb, var(--color-text-primary) 22%, transparent);
 }
-.btn-secondary:hover { background: var(--color-bg-surface-hover); border-color: var(--color-border-strong); }
+.btn-secondary:hover {
+  background: var(--color-bg-surface-hover);
+  border-color: color-mix(in srgb, var(--color-text-primary) 36%, transparent);
+}
 
 .btn-ghost {
   background: transparent;
   color: var(--color-text-secondary);
   border-color: transparent;
 }
-.btn-ghost:hover { background: rgba(255,255,255,0.05); color: var(--color-text-primary); }
+.btn-ghost:hover { background: var(--color-surface-overlay); color: var(--color-text-primary); }
 
 /* === Code blocks === */
 pre, code {
@@ -364,6 +391,27 @@ pre, code {
   --color-primary:            #18181b;
   --color-primary-hover:      #27272a;
   --color-primary-subtle:     rgba(0,0,0,0.06);
+  --color-surface-overlay:    rgba(0,0,0,0.05);
+  --color-surface-overlay-strong: rgba(0,0,0,0.1);
+  --color-overlay-scrim:      rgba(0,0,0,0.45);
+  --color-admin-bg:           #f5f5f5;
+  --color-contrast-border:    rgba(0,0,0,0.16);
+  --color-contrast-surface-hover: rgba(0,0,0,0.06);
+  --color-success-border:     rgba(52,211,153,0.25);
+  --color-warning-border:     rgba(251,191,36,0.25);
+  --color-warning-border-strong: rgba(251,191,36,0.3);
+  --color-error-border:       rgba(248,113,113,0.25);
+  --color-error-border-strong: rgba(248,113,113,0.35);
+  --color-info-border:        rgba(96,165,250,0.25);
+  --color-accent-apple-border: rgba(0,113,227,0.25);
+  --color-accent-violet-border: rgba(167,139,250,0.25);
+  --color-accent-cyan-border: rgba(34,211,238,0.25);
+  --color-enterprise-border:  rgba(52,211,153,0.25);
+  --color-spotlight-default:  rgba(0,0,0,0.05);
+  --color-spotlight-apple:    rgba(0,113,227,0.1);
+  --color-spotlight-violet:   rgba(167,139,250,0.12);
+  --color-spotlight-cyan:     rgba(34,211,238,0.12);
+  --color-spotlight-success:  rgba(52,211,153,0.1);
 
   --secondary:                rgba(0,0,0,0.04);
   --input:                    rgba(0,0,0,0.06);
@@ -433,3 +481,226 @@ pre, code {
   border: 1px solid var(--color-border);
   padding: 0.35rem 0.5rem;
 }
+
+/* =========================================
+   Visual Polish — reactbits-inspired animations
+   ========================================= */
+
+/* --- Noise texture overlay (pure CSS, zero JS) --- */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* --- Aurora blobs --- */
+.aurora-blob {
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  filter: blur(80px);
+  will-change: transform;
+  animation: aurora-drift var(--aurora-speed, 8s) ease-in-out infinite alternate;
+}
+
+.aurora-blob-1 {
+  top: -20%;
+  left: -10%;
+  animation-delay: 0s;
+}
+
+.aurora-blob-2 {
+  top: 10%;
+  right: -15%;
+  animation-delay: calc(var(--aurora-speed, 8s) * -0.33);
+  animation-direction: alternate-reverse;
+}
+
+.aurora-blob-3 {
+  bottom: -10%;
+  left: 30%;
+  width: 40%;
+  height: 40%;
+  animation-delay: calc(var(--aurora-speed, 8s) * -0.66);
+}
+
+@keyframes aurora-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(30px, -20px) scale(1.08); }
+  100% { transform: translate(-20px, 15px) scale(0.95); }
+}
+
+/* --- ShinyText shimmer --- */
+.shiny-text {
+  background: linear-gradient(
+    120deg,
+    var(--color-text-secondary) 30%,
+    var(--color-text-primary) 50%,
+    var(--color-text-secondary) 70%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-slide var(--shiny-speed, 3s) ease-in-out infinite;
+}
+
+@keyframes shiny-slide {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+/* --- GradientText --- */
+.gradient-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-animate {
+  animation: gradient-shift var(--gradient-speed, 4s) ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* --- ClickSpark particle burst --- */
+@keyframes click-spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--spark-x), var(--spark-y)) scale(0);
+  }
+}
+
+/* --- Particles background --- */
+@keyframes particles-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.15; }
+  50% { transform: translate3d(0, -10px, 0) scale(1.08); opacity: 0.4; }
+}
+
+@keyframes split-word-in {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0);
+  }
+}
+
+.particles-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particles-dot {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  background: var(--particle-color, var(--color-accent-cyan));
+  opacity: 0.18;
+  will-change: transform, opacity;
+  animation: particles-drift var(--particle-duration, 9s) ease-in-out infinite;
+  animation-delay: var(--particle-delay, 0s);
+}
+
+/* --- Float animation --- */
+.float-animation {
+  animation: float-bob var(--float-speed, 3s) ease-in-out infinite;
+}
+
+.footer-link {
+  position: relative;
+}
+
+.footer-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.2rem;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+
+.footer-link:hover::after,
+.footer-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(calc(var(--float-distance, 6px) * -1)); }
+}
+
+/* --- prefers-reduced-motion: disable all custom animations --- */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob,
+  .shiny-text,
+  .gradient-text-animate,
+  .float-animation,
+  .animate-fade-in-up,
+  .particles-dot {
+    animation: none !important;
+  }
+  .animate-fade-in-up {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .shiny-text {
+    -webkit-text-fill-color: unset;
+    background: none;
+    color: var(--color-text-secondary);
+  }
+  .gradient-text {
+    -webkit-text-fill-color: unset;
+  }
+  body::before {
+    display: none;
+  }
+  .stagger-grid > * {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+}
+
+/* --- Stagger grid: children animate in sequentially --- */
+.stagger-grid > * {
+  opacity: 0;
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.stagger-grid > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-grid > *:nth-child(2)  { animation-delay: 50ms; }
+.stagger-grid > *:nth-child(3)  { animation-delay: 100ms; }
+.stagger-grid > *:nth-child(4)  { animation-delay: 150ms; }
+.stagger-grid > *:nth-child(5)  { animation-delay: 200ms; }
+.stagger-grid > *:nth-child(6)  { animation-delay: 250ms; }
+.stagger-grid > *:nth-child(7)  { animation-delay: 300ms; }
+.stagger-grid > *:nth-child(8)  { animation-delay: 350ms; }
+.stagger-grid > *:nth-child(9)  { animation-delay: 400ms; }
+.stagger-grid > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-grid > *:nth-child(11) { animation-delay: 500ms; }
+.stagger-grid > *:nth-child(12) { animation-delay: 550ms; }
+.stagger-grid > *:nth-child(n+13) { animation-delay: 600ms; }

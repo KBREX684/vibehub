@@ -11,11 +11,11 @@ export interface ErrorBannerProps {
 
 const toneClass: Record<ErrorBannerTone, string> = {
   error:
-    "text-[var(--color-error)] bg-[var(--color-error-subtle)] border-[rgba(248,113,113,0.25)]",
+    "text-[var(--color-error)] bg-[var(--color-error-subtle)] border-[var(--color-error-border)]",
   warning:
-    "text-[var(--color-warning)] bg-[var(--color-warning-subtle)] border-[rgba(251,191,36,0.25)]",
+    "text-[var(--color-warning)] bg-[var(--color-warning-subtle)] border-[var(--color-warning-border)]",
   info:
-    "text-[var(--color-info)] bg-[var(--color-info-subtle)] border-[rgba(96,165,250,0.25)]",
+    "text-[var(--color-info)] bg-[var(--color-info-subtle)] border-[var(--color-info-border)]",
 };
 
 /**

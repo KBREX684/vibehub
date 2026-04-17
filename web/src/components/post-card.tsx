@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { MessageSquare, Heart, Bookmark, Star } from "lucide-react";
 import type { Post } from "@/lib/types";
-import { Avatar, Badge } from "@/components/ui";
+import { Avatar, Badge, SpotlightCard } from "@/components/ui";
 
 type MetricTone = "default" | "warning" | "primary";
 
@@ -63,7 +63,7 @@ export function PostCard({
   });
 
   const inner = (
-    <article className="card group transition-colors p-5">
+    <SpotlightCard className="card group transition-colors p-5" spotlightRadius={180}>
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
           <Avatar
@@ -126,7 +126,7 @@ export function PostCard({
           />
         </div>
       </div>
-    </article>
+    </SpotlightCard>
   );
 
   const href = detailHref ?? `/discussions/${post.slug}`;

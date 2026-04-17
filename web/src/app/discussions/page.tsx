@@ -90,7 +90,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
     <main className="container pb-24 space-y-8 pt-8">
 
       {/* Page header */}
-      <section className="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-[var(--color-border)]">
+      <section className="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-[var(--color-border)] animate-fade-in-up">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-[var(--color-accent-cyan)]">
             <MessageSquare className="w-6 h-6" />
@@ -167,7 +167,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
         </div>
       ) : classicPagination ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-grid">
             {items.map((post) => (
               <PostCard
                 key={post.id}

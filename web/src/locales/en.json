@@ -172,6 +172,8 @@
   "settings.notifications_saved": "Preferences saved.",
   "settings.webhooks_title": "Webhooks",
   "settings.webhooks_desc": "Outbound HTTPS webhooks with HMAC signatures.",
+  "discussions.new.title": "Start a new discussion",
+  "discussions.new.subtitle": "Share an idea, ask a focused question, or post an update for review before it goes live.",
   "discussions.new.preview": "Preview",
   "discussions.new.write": "Write",
   "project.readme_tab": "README",
