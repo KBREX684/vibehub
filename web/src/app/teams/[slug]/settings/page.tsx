@@ -21,6 +21,8 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+const MEMBERS_PREVIEW_LIMIT = 8;
+
 export default async function TeamSettingsPage({ params }: Props) {
   const { slug } = await params;
   const session = await getSessionUserFromCookie();
@@ -168,7 +170,7 @@ export default async function TeamSettingsPage({ params }: Props) {
               {t("team.settings.members_desc")}
             </p>
             <div className="space-y-2">
-              {team.members.slice(0, 8).map((member) => (
+              {team.members.slice(0, MEMBERS_PREVIEW_LIMIT).map((member) => (
                 <div key={member.userId} className="flex items-center justify-between gap-3 text-sm">
                   <div className="min-w-0 flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center text-xs font-semibold text-[var(--color-text-secondary)] shrink-0">
@@ -182,9 +184,9 @@ export default async function TeamSettingsPage({ params }: Props) {
                   <span className="tag capitalize shrink-0 text-[10px]">{member.role}</span>
                 </div>
               ))}
-              {team.members.length > 8 && (
+              {team.members.length > MEMBERS_PREVIEW_LIMIT && (
                 <p className="text-xs text-[var(--color-text-muted)] text-center pt-1 m-0">
-                  +{team.members.length - 8} more members
+                  +{team.members.length - MEMBERS_PREVIEW_LIMIT} more members
                 </p>
               )}
             </div>
@@ -197,7 +199,7 @@ export default async function TeamSettingsPage({ params }: Props) {
             </Link>
           </section>
 
-          {/* Coordination */}
+          {/* Coordination — links to team detail page sections (tasks, discussions, projects are anchored there) */}
           <section className="card p-5 space-y-3">
             <div className="flex items-center gap-2">
               <FolderKanban className="w-4 h-4 text-[var(--color-primary-hover)]" />
