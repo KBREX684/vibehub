@@ -2,13 +2,24 @@
 
 Updated: 2026-04-17
 
-## 2026-04-17 — v8.0 roadmap published
+## 2026-04-17 — v8.0 re-positioning: China-first AI+Human collaboration network
 
-- Published `docs/roadmap-v8.md`, the product-maturity roadmap following the v7.0 RC.
-- Scope centres on closing the v7.0 GA external blockers (SMTP, China payments, ICP, Redis) and upgrading VibeHub from "demo-grade" to "mature SaaS" on first impression.
-- Five parallel workstreams (GA closure / first-paint narrative / community flywheel / developer ecosystem / admin governance) plus three serial quality gates.
-- Explicit non-goals reaffirmed: no challenges, no enterprise workspace rebuild, no multi-agent autonomy, no light-mode, no PWA, no recommendation-model rebuild.
-- `docs/roadmap-current.md` updated to surface v8.0 as the next primary track while keeping the launch-readiness standard as the final gate.
+v8.0 is not "one more feature cycle". It is a full re-framing of VibeHub:
+
+- **New strategy doc**: `docs/product-strategy-v8.md` — supersedes `VibeHub_项目计划书_v3.0.md` (v4 pro edition) as the single source of strategic truth.
+- **Market**: China mainland · Chinese-speaking developers only · no overseas-first i18n.
+- **Audience**: VibeCoders, small-team leads, Agent builders.
+- **Four pillars**: discussion square · project gallery · team collaboration · **Agent collaboration bus**.
+- **Unique moat**: AI agents are first-class teammates with role cards, audit, confirmation queues, and human-in-the-loop for every risky write. Four modes of collaboration supported: human↔human, human↔agent, same-user agent↔agent, cross-user agent↔agent (gated). Agent autonomy is explicitly forbidden in v8.
+- **Business**: Free + Pro (¥29/mo) + Team (¥99/mo) + MCP Developer Access (usage-based, P1). No burn-rate growth.
+- **Cost discipline**: platform never pays for user-side LLM inference; domestic models preferred; monthly infra budget capped at ¥3100.
+- **Explicit non-goals** (frozen): challenges, enterprise workspace rebuild, multi-agent autonomy, self-hosted LLM, code hosting, CI/CD, light-mode, PWA, overseas market, subsidies.
+
+**New roadmap**: `docs/roadmap-v8.md` rewrites v8.0 into eight parallel workstreams (W1 IA rewrite / W2 design-system / W3 agent collaboration bus / W4 community flywheel / W5 developer ecosystem / W6 commerce+compliance / W7 admin+AI / W8 infra+observability) across Alpha/Beta/GA phases. Ten GA gates, three north-star metrics (WAHC / AO% / Agent rejection rate), and full acceptance criteria across function / visual / perf / security / cost.
+
+The earlier v8 maturity-convergence roadmap (published earlier today) is replaced by this re-framing.
+
+`docs/roadmap-current.md` updated to surface the new strategy and roadmap as the primary tracks; `launch-readiness-standard.md` remains the final gate.
 
 Updated (historical): 2026-04-14
 
