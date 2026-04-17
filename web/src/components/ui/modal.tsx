@@ -9,7 +9,9 @@ export interface ModalProps {
   /** `sm` ~400 px, `md` ~560 px (default), `lg` ~720 px */
   size?: "sm" | "md" | "lg";
   /** Accessible title (also rendered as the visible header when provided) */
-  title?: string;
+  title?: React.ReactNode;
+  /** Plain-text label for aria-label fallback when `title` is a node. */
+  ariaLabel?: string;
   children: React.ReactNode;
   /** Extra class applied to the panel container */
   className?: string;
@@ -21,7 +23,7 @@ const sizeClasses = {
   lg: "max-w-2xl",
 } as const;
 
-export function Modal({ open, onClose, size = "md", title, children, className = "" }: ModalProps) {
+export function Modal({ open, onClose, size = "md", title, ariaLabel, children, className = "" }: ModalProps) {
   // Keyboard: close on Escape
   React.useEffect(() => {
     if (!open) return;
@@ -84,7 +86,7 @@ export function Modal({ open, onClose, size = "md", title, children, className =
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={title ?? "Dialog"}
+      aria-label={ariaLabel ?? (typeof title === "string" ? title : "Dialog")}
       aria-labelledby={title ? titleId : undefined}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
