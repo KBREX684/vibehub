@@ -102,9 +102,28 @@ P0 核心任务：
 ## 配套文档
 
 - 当前主线：`docs/roadmap-current.md`
-- **v7.0 生产化升级总计划：`docs/roadmap-v7.md`**
+- **v8.0 战略底本：`docs/product-strategy-v8.md`**（市场定位 · 差异化 · 商业 · 成本 · 边界）
+- **v8.0 全维度路线图：`docs/roadmap-v8.md`**（八条工作线 · Alpha/Beta/GA）
+- v7.0 生产化升级总计划：`docs/roadmap-v7.md`（历史主线）
 - v5.0 路线图（历史存档）：`docs/roadmap-v5.md`
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
 - 仓库整理报告：`docs/repository-cleanup-report.md`
 - 上线就绪标准：`docs/launch-readiness-standard.md`
+
+## v8.0 定位要点（2026-04-17 重新立项）
+
+v8.0 不是"再做一轮功能"，而是**把 VibeHub 重立项为"中国中文开发者的 AI+Human 协作网络"**：
+
+- **市场定位**：中国大陆 · 中文开发者 · VibeCoder + 小团队 + Agent Builder
+- **四条支柱**：广场讨论 · 项目画廊 · 团队协作 · **Agent 协作总线**
+- **唯一壁垒**：AI Agent 在人类团队里是可审计 / 可追溯 / 可被人工驳回的"正式队员"
+  - 人 ↔ 人、人 ↔ Agent、同用户 Agent ↔ Agent、跨用户 Agent ↔ Agent（受控开通）四种协作模式
+  - Agent 永远不自治；所有高风险写入必须走 `AgentConfirmationRequest`
+- **成本守恒**：平台不自营 LLM、不代烧用户 token；国产模型优先；月固定成本 < ¥3100
+- **商业模型**：Free / Pro（¥29/月）/ Team（¥99/月起）+ MCP Developer Access 按量（P1）
+- **不做项**：挑战赛 · 企业工作台 · Agent 自治 · 自营 LLM · 代码托管 · CI/CD · 海外优先 · 补贴增长
+
+v8.0 GA 十个门槛（摘录）：中国合规完成 · 支付宝/微信任一渠道真实商户跑通 · Redis 上线 · Agent 协作总线（角色牌+协作日志+Confirmation）端到端 · 首屏叙事讲透定位 · 设计系统组件层统一 · 运营仪表盘三北极星（WAHC / AO% / Agent 拒绝率） · AI 审核助手真实闭环 · 成本守恒 · 质量基线。
+
+完整细节见 `docs/product-strategy-v8.md` 与 `docs/roadmap-v8.md`。
