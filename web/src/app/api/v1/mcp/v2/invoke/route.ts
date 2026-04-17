@@ -27,6 +27,7 @@ import {
   getPostBySlug,
   getProjectBySlug,
   getTalentRadar,
+  getTeamBySlug,
   getUserTier,
   listCollectionTopics,
   listCommentsForPost,
@@ -41,10 +42,18 @@ import {
   requestAgentTaskReview,
   requestAgentTeamMemberRoleChange,
   requestTeamJoin,
+  resolveTeamAgentRole,
   submitCollaborationIntent,
+  teamAgentCanCoordinate,
+  teamAgentCanWriteTasks,
   tryRegisterMcpInvokeIdempotency,
 } from "@/lib/repository";
-import type { CollaborationIntentType, ProjectStatus, TeamRole } from "@/lib/types";
+import type {
+  CollaborationIntentType,
+  ProjectStatus,
+  TeamAgentRole,
+  TeamRole,
+} from "@/lib/types";
 
 const bodySchema = z.object({
   tool: z.enum(MCP_V2_TOOL_NAMES),
@@ -68,6 +77,45 @@ function str(v: unknown): string | undefined {
 
 function assertNeverTool(value: never): never {
   throw new Error(`Unhandled MCP tool: ${String(value)}`);
+}
+
+/**
+ * v8 W3 — resolve the role card an agent holds inside a team.
+ *
+ * When an MCP write tool is invoked via an API key that is linked to an
+ * `AgentBinding`, we must consult `TeamAgentMembership` before letting
+ * the tool mutate anything on behalf of that agent. Three outcomes:
+ *
+ *   1. agentBindingId is null      → this is a human-driven MCP key, no
+ *                                    role-card check applies.
+ *   2. agent not in team / inactive → return null; caller must forbid.
+ *   3. otherwise                    → return the role; caller tests
+ *                                    capability helpers like
+ *                                    `teamAgentCanWriteTasks(role)`.
+ *
+ * The resolution is cached per-invocation via a Map passed in by the
+ * caller so we don't issue duplicate DB lookups when a single tool call
+ * touches the same team more than once.
+ */
+async function resolveAgentRoleInTeam(
+  teamSlug: string,
+  agentBindingId: string | null | undefined,
+  cache: Map<string, TeamAgentRole | null>
+): Promise<TeamAgentRole | null | "no-agent"> {
+  if (!agentBindingId) return "no-agent";
+  const cacheKey = `${teamSlug}\u0000${agentBindingId}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey)!;
+  const team = await getTeamBySlug(teamSlug);
+  if (!team) {
+    cache.set(cacheKey, null);
+    return null;
+  }
+  const role = await resolveTeamAgentRole({
+    teamId: team.id,
+    agentBindingId,
+  });
+  cache.set(cacheKey, role);
+  return role;
 }
 
 export async function POST(request: NextRequest) {
@@ -107,6 +155,49 @@ httpStatus = 400;
   userId = session.userId;
   const apiKeyId = session.apiKeyId;
   const agentBindingId = session.agentBindingId;
+  // v8 W3: resolve-once cache for (teamSlug → role) lookups during this invoke.
+  const agentRoleCache = new Map<string, TeamAgentRole | null>();
+
+  /**
+   * If this invocation is driven by an agent binding, require the agent
+   * to have a role card in the target team that satisfies `check`. When
+   * the check fails we return a 403 apiError; when it passes we return
+   * `null` so the caller can keep executing.
+   */
+  async function enforceTeamAgentRole(
+    teamSlug: string,
+    check: (role: TeamAgentRole) => boolean,
+    context: "write" | "coordinate" | "comment"
+  ): Promise<Response | null> {
+    const outcome = await resolveAgentRoleInTeam(
+      teamSlug,
+      agentBindingId,
+      agentRoleCache
+    );
+    if (outcome === "no-agent") return null;
+    if (outcome === null) {
+      await log(403, "TEAM_AGENT_NOT_MEMBER");
+      return apiError(
+        {
+          code: "TEAM_AGENT_NOT_MEMBER",
+          message:
+            "This agent is not a member of the team. Have a team owner add it first.",
+        },
+        403
+      );
+    }
+    if (!check(outcome)) {
+      await log(403, "TEAM_AGENT_ROLE_INSUFFICIENT");
+      return apiError(
+        {
+          code: "TEAM_AGENT_ROLE_INSUFFICIENT",
+          message: `Agent role "${outcome}" does not permit this ${context}.`,
+        },
+        403
+      );
+    }
+    return null;
+  }
 
   const rlUser = checkMcpUserToolRateLimit(userId, tool);
   if (!rlUser.ok) {
@@ -457,6 +548,12 @@ const msg = e instanceof Error ? e.message : String(e);
           await log(400, "INVALID_INPUT");
           return apiError({ code: "INVALID_INPUT", message: "teamSlug and title required" }, 400);
         }
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          teamAgentCanCoordinate,
+          "coordinate"
+        );
+        if (roleGate) return roleGate;
         const description = str(input.description);
         if (description) assertContentSafeText(description, "description");
         const st = str(input.status);
@@ -524,6 +621,12 @@ const msg = e instanceof Error ? e.message : String(e);
           await log(400, "INVALID_INPUT");
           return apiError({ code: "INVALID_INPUT", message: "teamSlug and taskId required" }, 400);
         }
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          teamAgentCanWriteTasks,
+          "write"
+        );
+        if (roleGate) return roleGate;
         const task = await agentCompleteTeamTask({
           teamSlug,
           taskId,
@@ -548,6 +651,13 @@ const msg = e instanceof Error ? e.message : String(e);
           await log(400, "INVALID_INPUT");
           return apiError({ code: "INVALID_INPUT", message: "teamSlug, taskId, decision=approve|reject required" }, 400);
         }
+        // Reviewer advisory: role must be reviewer or coordinator.
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          (role) => role === "reviewer" || role === "coordinator",
+          "write"
+        );
+        if (roleGate) return roleGate;
         const requestItem = await requestAgentTaskReview({
           teamSlug,
           taskId,
@@ -573,6 +683,12 @@ const msg = e instanceof Error ? e.message : String(e);
           await log(400, "INVALID_INPUT");
           return apiError({ code: "INVALID_INPUT", message: "teamSlug and taskId required" }, 400);
         }
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          teamAgentCanCoordinate,
+          "coordinate"
+        );
+        if (roleGate) return roleGate;
         const requestItem = await requestAgentTaskDelete({
           teamSlug,
           taskId,
@@ -598,6 +714,12 @@ const msg = e instanceof Error ? e.message : String(e);
           await log(400, "INVALID_INPUT");
           return apiError({ code: "INVALID_INPUT", message: "teamSlug, memberUserId, role=admin|member|reviewer required" }, 400);
         }
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          teamAgentCanCoordinate,
+          "coordinate"
+        );
+        if (roleGate) return roleGate;
         const requestItem = await requestAgentTeamMemberRoleChange({
           teamSlug,
           memberUserId,
@@ -630,7 +752,9 @@ const msg = e instanceof Error ? e.message : String(e);
       msg === "FORBIDDEN_TASK_DELETE" ||
       msg === "FORBIDDEN_NOT_OWNER" ||
       msg === "FORBIDDEN_AGENT_CONFIRMATION" ||
-      msg === "FORBIDDEN_NOT_TEAM_MEMBER"
+      msg === "FORBIDDEN_NOT_TEAM_MEMBER" ||
+      msg === "TEAM_AGENT_NOT_MEMBER" ||
+      msg === "TEAM_AGENT_ROLE_INSUFFICIENT"
     ) {
       await log(403, msg);
       return apiError({ code: "FORBIDDEN", message: msg }, 403);
