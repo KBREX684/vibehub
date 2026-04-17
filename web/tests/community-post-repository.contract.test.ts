@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
+import { PrismaClient } from "@prisma/client";
 import * as mockRepo from "@/lib/repositories/community/mock-post.repository";
 import * as prismaRepo from "@/lib/repositories/community/prisma-post.repository";
 import {
@@ -45,6 +46,22 @@ describe("P2-BE-2: CommunityPostRepository (mock + Prisma implementations)", () 
   it("prisma: listPosts is callable when DATABASE_URL is available", async () => {
     if (!process.env.DATABASE_URL?.trim()) {
       return;
+    }
+    const prisma = new PrismaClient();
+    try {
+      const rows = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = current_schema()
+            AND table_name = 'Post'
+        ) AS "exists"
+      `;
+      if (!rows[0]?.exists) {
+        return;
+      }
+    } finally {
+      await prisma.$disconnect();
     }
     const page = await prismaImpl.listPosts({ page: 1, limit: 3 });
     expect(Array.isArray(page.items)).toBe(true);

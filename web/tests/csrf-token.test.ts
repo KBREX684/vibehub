@@ -1,9 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHmac } from "crypto";
 import { deriveCsrfToken, encodeSession } from "../src/lib/auth";
 
 describe("CSRF token derivation (P0-BE-2)", () => {
   const secret = "dev-session-secret-change-me";
+  const originalSessionSecret = process.env.SESSION_SECRET;
+  const originalDatabaseUrl = process.env.DATABASE_URL;
+
+  beforeEach(() => {
+    process.env.SESSION_SECRET = secret;
+    delete process.env.DATABASE_URL;
+  });
+
+  afterEach(() => {
+    if (originalSessionSecret === undefined) delete process.env.SESSION_SECRET;
+    else process.env.SESSION_SECRET = originalSessionSecret;
+    if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = originalDatabaseUrl;
+  });
 
   it("returns a 32-char base64url string for a valid session cookie", () => {
     const sessionToken = encodeSession({ userId: "u1", role: "user", name: "Alice" });

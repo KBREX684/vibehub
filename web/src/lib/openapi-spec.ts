@@ -977,6 +977,34 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             "500": responses["500"],
           },
         },
+        patch: {
+          tags: ["teams"],
+          summary: "Update team overview settings (owner/admin; session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", minLength: 2, maxLength: 80 },
+                    mission: { oneOf: [{ type: "string", maxLength: 500 }, { type: "null" }] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": responses["200"],
+            "400": responses["400"],
+            "401": responses["401"],
+            "403": responses["403"],
+            "404": responses["404"],
+            "500": responses["500"],
+          },
+        },
       },
       "/api/v1/teams/{slug}/links": {
         patch: {

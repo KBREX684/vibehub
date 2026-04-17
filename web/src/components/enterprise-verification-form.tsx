@@ -32,8 +32,8 @@ function statusMeta(status: EnterpriseVerificationStatus) {
     case "approved":
       return {
         icon: CheckCircle2,
-        title: "Secondary enterprise access approved",
-        hint: "You can access the observer workspace and radar summary now.",
+        title: "Enterprise verification approved",
+        hint: "Your account now carries the enterprise badge and verified organization context.",
         tone: "text-[var(--color-success)]",
       };
     case "rejected":
@@ -47,14 +47,14 @@ function statusMeta(status: EnterpriseVerificationStatus) {
       return {
         icon: Clock3,
         title: "Verification in review",
-        hint: "Your observer workspace request is pending platform review.",
+        hint: "Your enterprise verification request is pending platform review.",
         tone: "text-[var(--color-warning)]",
       };
     default:
       return {
         icon: Clock3,
-        title: "Request observer workspace access",
-        hint: "Submit your organization details for a secondary access review.",
+        title: "Request enterprise verification",
+        hint: "Submit your organization details for a badge and verified company identity review.",
         tone: "text-[var(--color-text-secondary)]",
       };
   }
@@ -108,12 +108,14 @@ export function EnterpriseVerificationForm({
           useCase: form.useCase || undefined,
         }),
       });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { data?: EnterpriseVerificationSummary; error?: { message?: string; code?: string } }
+        | null;
+      if (!response.ok || !payload?.data) {
         const message = payload?.error?.message || payload?.error?.code || "Failed to submit enterprise verification request";
         throw new Error(message);
       }
-      const next = payload.data as EnterpriseVerificationSummary;
+      const next = payload.data;
       setStatus(next);
       setForm({
         organizationName: next.organizationName ?? form.organizationName,
@@ -199,7 +201,7 @@ export function EnterpriseVerificationForm({
             rows={3}
             value={form.useCase}
             onChange={(e) => setForm((p) => ({ ...p, useCase: e.target.value }))}
-            placeholder="How your organization will use VibeHub as an observer or discovery surface."
+            placeholder="How your organization plans to use VibeHub, and what should be reflected in the verification review."
           />
         </div>
         <button
@@ -208,7 +210,7 @@ export function EnterpriseVerificationForm({
           disabled={submitting}
           data-testid="enterprise-verify-submit"
         >
-          {submitting ? "Submitting..." : "Submit access request"}
+          {submitting ? "Submitting..." : "Submit verification request"}
           <ArrowRight className="w-4 h-4" />
         </button>
       </form>

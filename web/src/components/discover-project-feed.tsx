@@ -23,14 +23,14 @@ export interface DiscoverProjectFeedProps {
     page: number;
     limit: number;
   };
-  buildPageHref: (page: number) => string;
+  paginationModeHref: string;
 }
 
 export function DiscoverProjectFeed({
   filters,
   initialItems,
   initialPagination,
-  buildPageHref,
+  paginationModeHref,
 }: DiscoverProjectFeedProps) {
   const qsBase = useMemo(() => {
     const sp = new URLSearchParams();
@@ -43,12 +43,6 @@ export function DiscoverProjectFeed({
     sp.set("limit", String(filters.limit));
     return sp;
   }, [filters]);
-
-  const paginationModeHref = useMemo(() => {
-    const base = buildPageHref(1);
-    const sep = base.includes("?") ? "&" : "?";
-    return `${base}${sep}pagination=1`;
-  }, [buildPageHref]);
 
   const fetchPage = useCallback(
     async (page: number) => {

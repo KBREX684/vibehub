@@ -306,6 +306,66 @@ export async function getTeamBySlug(
   return detail;
 }
 
+export async function updateTeamProfile(params: {
+  teamSlug: string;
+  actorUserId: string;
+  name?: string;
+  mission?: string | null;
+}): Promise<TeamDetail> {
+  const nextName = params.name?.trim();
+  const nextMission = params.mission === undefined ? undefined : (params.mission?.trim() ?? "");
+
+  if (nextName !== undefined && nextName.length < 2) {
+    throw new Error("INVALID_TEAM_NAME");
+  }
+  if (nextName !== undefined && nextName.length > 80) {
+    throw new Error("INVALID_TEAM_NAME");
+  }
+  if (nextMission !== undefined && nextMission.length > 500) {
+    throw new Error("INVALID_TEAM_MISSION");
+  }
+
+  if (useMockData) {
+    const team = mockTeams.find((t) => t.slug === params.teamSlug);
+    if (!team) throw new Error("TEAM_NOT_FOUND");
+    const membership = mockTeamMemberships.find((m) => m.teamId === team.id && m.userId === params.actorUserId);
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      throw new Error("FORBIDDEN_NOT_OWNER");
+    }
+    if (nextName !== undefined) team.name = nextName;
+    if (nextMission !== undefined) team.mission = nextMission || undefined;
+    const detail = await getTeamBySlug(params.teamSlug, params.actorUserId);
+    if (!detail) throw new Error("TEAM_NOT_FOUND");
+    return detail;
+  }
+
+  const prisma = await getPrisma();
+  const team = await prisma.team.findUnique({ where: { slug: params.teamSlug }, select: { id: true } });
+  if (!team) throw new Error("TEAM_NOT_FOUND");
+  const membership = await prisma.teamMembership.findUnique({
+    where: { teamId_userId: { teamId: team.id, userId: params.actorUserId } },
+    select: { role: true },
+  });
+  if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+    throw new Error("FORBIDDEN_NOT_OWNER");
+  }
+
+  const data: Record<string, string | null> = {};
+  if (nextName !== undefined) data.name = nextName;
+  if (nextMission !== undefined) data.mission = nextMission || null;
+
+  if (Object.keys(data).length === 0) {
+    const detail = await getTeamBySlug(params.teamSlug, params.actorUserId);
+    if (!detail) throw new Error("TEAM_NOT_FOUND");
+    return detail;
+  }
+
+  await prisma.team.update({ where: { id: team.id }, data });
+  const detail = await getTeamBySlug(params.teamSlug, params.actorUserId);
+  if (!detail) throw new Error("TEAM_NOT_FOUND");
+  return detail;
+}
+
 export async function createTeam(input: {
   ownerUserId: string;
   name: string;

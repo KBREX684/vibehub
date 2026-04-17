@@ -73,8 +73,8 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
   return (
     <form onSubmit={onSubmit} className="card p-6 space-y-5">
       <p className="text-xs text-[var(--color-text-muted)] m-0">
-        Use full <code className="text-[var(--color-text-secondary)]">https://</code> links. Leave blank to clear a
-        field.
+        Use full <code className="text-[var(--color-text-secondary)]">https://</code> links. These are shown on the
+        team page and reused by project, GitHub, and community discovery surfaces. Leave blank to clear a field.
       </p>
       {FIELDS.map(({ key, label }) => (
         <div key={key} className="space-y-1.5">
@@ -94,7 +94,7 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
       ))}
       <div className="flex flex-wrap gap-3 pt-2">
         <button type="submit" className="btn btn-primary text-sm px-5 py-2" disabled={status === "loading"}>
-          {status === "loading" ? "Saving…" : "Save links"}
+          {status === "loading" ? "Saving..." : "Save links"}
         </button>
         <button type="button" className="btn btn-secondary text-sm px-5 py-2" onClick={() => router.push(`/teams/${encodeURIComponent(teamSlug)}`)}>
           Back to team

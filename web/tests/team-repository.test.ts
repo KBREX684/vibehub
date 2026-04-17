@@ -7,6 +7,7 @@ import {
   removeTeamMember,
   requestTeamJoin,
   reviewTeamJoinRequest,
+  updateTeamProfile,
 } from "../src/lib/repository";
 
 describe("teams repository (P3-1 + P3-2, mock)", () => {
@@ -115,6 +116,45 @@ describe("teams repository (P3-1 + P3-2, mock)", () => {
     await expect(
       removeTeamMember({ teamSlug: created.slug, actorUserId: "u1", memberUserId: "u1" })
     ).rejects.toThrow("CANNOT_REMOVE_OWNER");
+  });
+
+  it("owner or admin can update team overview settings", async () => {
+    const created = await createTeam({ ownerUserId: "u1", name: "Settings Team", mission: "Initial mission" });
+    await addTeamMemberByEmail({
+      teamSlug: created.slug,
+      actorUserId: "u1",
+      email: "bob@vibehub.dev",
+      role: "admin",
+    });
+
+    const updated = await updateTeamProfile({
+      teamSlug: created.slug,
+      actorUserId: "u2",
+      name: "Settings Team Updated",
+      mission: "Updated mission",
+    });
+
+    expect(updated.name).toBe("Settings Team Updated");
+    expect(updated.mission).toBe("Updated mission");
+  });
+
+  it("member cannot update team overview settings", async () => {
+    const created = await createTeam({ ownerUserId: "u1", name: "Locked Team" });
+    const req = await requestTeamJoin({ teamSlug: created.slug, userId: "u2" });
+    await reviewTeamJoinRequest({
+      teamSlug: created.slug,
+      requestId: req.id,
+      ownerUserId: "u1",
+      action: "approve",
+    });
+
+    await expect(
+      updateTeamProfile({
+        teamSlug: created.slug,
+        actorUserId: "u2",
+        name: "Should Fail",
+      })
+    ).rejects.toThrow("FORBIDDEN_NOT_OWNER");
   });
 
   it("keeps slug <= 48 chars when resolving duplicates", async () => {

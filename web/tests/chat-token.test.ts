@@ -1,7 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { decodeChatToken, encodeChatToken } from "../src/lib/chat-token";
 
 describe("chat token signing", () => {
+  const originalChatSecret = process.env.CHAT_WS_TOKEN_SECRET;
+  const originalDatabaseUrl = process.env.DATABASE_URL;
+  const secret = "dev-chat-token-secret-change-me";
+
+  beforeEach(() => {
+    process.env.CHAT_WS_TOKEN_SECRET = secret;
+    delete process.env.DATABASE_URL;
+  });
+
+  afterEach(() => {
+    if (originalChatSecret === undefined) delete process.env.CHAT_WS_TOKEN_SECRET;
+    else process.env.CHAT_WS_TOKEN_SECRET = originalChatSecret;
+    if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = originalDatabaseUrl;
+  });
+
   it("encodes and decodes valid chat token claims", () => {
     const token = encodeChatToken({
       teamSlug: "vibehub-core",

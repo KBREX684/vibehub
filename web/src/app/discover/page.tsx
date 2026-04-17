@@ -339,7 +339,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             page: pagination.page,
             limit: pagination.limit,
           }}
-          buildPageHref={(p) => buildHref(baseFilters, { page: String(p) }, false)}
+          paginationModeHref={buildHref(baseFilters, { page: "1", pagination: "1" }, false)}
         />
       )}
     </main>

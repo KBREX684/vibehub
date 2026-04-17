@@ -1,4 +1,11 @@
 {
+  "meta": {
+    "title": "VibeHub",
+    "description": "面向开发者的项目、团队与 API 原生协作社区。"
+  },
+  "search": {
+    "placeholder": "搜索项目、讨论、创作者..."
+  },
   "common": {
     "search": "搜索",
     "close": "关闭",
@@ -34,6 +41,7 @@
     "mobileNavigation": "移动端导航",
     "openMenu": "打开菜单",
     "closeMenu": "关闭菜单",
+    "open_search": "打开搜索",
     "workspace": "雷达工作台",
     "apiKeys": "API 密钥",
     "notifications": "通知",
@@ -45,6 +53,9 @@
     "theme_dark": "深色主题",
     "theme_system": "跟随系统",
     "theme_cycle": "切换主题（浅色 / 深色 / 系统）"
+  },
+  "not_found": {
+    "description": "你要访问的页面不存在，或可能已经被移动。"
   },
   "footer": {
     "platform": "平台",
@@ -62,6 +73,9 @@
     "blog": "博客",
     "careers": "招聘",
     "contact": "联系我们",
+    "github": "GitHub",
+    "twitter": "X / Twitter",
+    "website": "官网",
     "tagline": "面向 Vibe Coding 开发者的顶尖协作与展示平台。",
     "allRightsReserved": "保留所有权利。",
     "privacyPolicy": "隐私政策",
@@ -197,8 +211,8 @@
     "apiKeysDesc": "开发者密钥、权限范围与 MCP 工具。",
     "profile": "个人资料",
     "profileDesc": "编辑创作者资料、社交链接与协作偏好。",
-    "enterprise": "企业工作台",
-    "enterpriseDesc": "申请 observer workspace 访问权限（可选）。",
+    "enterprise": "企业认证",
+    "enterpriseDesc": "提交企业认证申请（仅认证徽章，不提供独立工作台）。",
     "projectEditHintPrefix": "项目创建与编辑位于",
     "projectEditHintSuffix": "和各项目详情页。",
     "notificationsTitle": "通知",
@@ -213,6 +227,9 @@
   },
   "a11y": {
     "skip_to_content": "跳转到主要内容",
+    "main_navigation": "主导航",
+    "open_mobile_menu": "打开导航菜单",
+    "close_mobile_menu": "关闭导航菜单",
     "openNavigationMenu": "打开导航菜单",
     "closeNavigationMenu": "关闭导航菜单",
     "closeDialog": "关闭对话框"

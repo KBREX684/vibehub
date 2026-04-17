@@ -147,6 +147,7 @@ import {
   createTeam as createTeamFromDomain,
   getTeamBySlug as getTeamBySlugFromDomain,
   listTeams as listTeamsFromDomain,
+  updateTeamProfile as updateTeamProfileFromDomain,
 } from "@/lib/repositories/team.repository";
 import {
   createPost as createPostFromDomain,
@@ -6902,6 +6903,15 @@ export async function listTeams(params: { page: number; limit: number }): Promis
 
 export async function getTeamBySlug(slug: string, viewerUserId?: string | null): Promise<TeamDetail | null> {
   return getTeamBySlugFromDomain(slug, viewerUserId);
+}
+
+export async function updateTeamProfile(params: {
+  teamSlug: string;
+  actorUserId: string;
+  name?: string;
+  mission?: string | null;
+}): Promise<TeamDetail> {
+  return updateTeamProfileFromDomain(params);
 }
 
 export async function createTeam(input: {

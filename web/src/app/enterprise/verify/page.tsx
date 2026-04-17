@@ -23,17 +23,18 @@ export default async function EnterpriseVerifyPage() {
           <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-enterprise-subtle)] flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-6 h-6 text-[var(--color-enterprise)]" />
           </div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Apply for observer workspace access</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Apply for enterprise verification</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-2">
-            Submit your organization profile to unlock the optional observer workspace for market scans and funnel summaries.
+            Submit your organization profile for a manual verification review. In v7 this unlocks an enterprise badge
+            and verified identity context only, not a separate workspace product.
           </p>
         </div>
 
         <div className="space-y-3">
           {[
-            { step: 1, icon: Shield, title: "Submit application", desc: "Share the organization details behind your observer account" },
-            { step: 2, icon: Clock, title: "Manual review", desc: "Platform admins verify the request without changing platform admin rights" },
-            { step: 3, icon: CheckCircle, title: "Access granted", desc: "Observer workspace is unlocked for this account" },
+            { step: 1, icon: Shield, title: "Submit application", desc: "Share the organization details behind your company or operating entity" },
+            { step: 2, icon: Clock, title: "Manual review", desc: "Platform admins verify the request and supporting context" },
+            { step: 3, icon: CheckCircle, title: "Verification result", desc: "Approved accounts receive an enterprise badge and review record" },
           ].map(({ step, icon: Icon, title, desc }) => (
             <div
               key={step}
