@@ -120,13 +120,13 @@ export function PricingCards() {
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-white/10 transition-colors"
+                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                         onClick={() => void startCheckout(tier, "alipay")}
                       >
                         Alipay sandbox
                       </button>
                       <button
-                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-white/10 transition-colors"
+                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                         onClick={() => void startCheckout(tier, "wechatpay")}
                       >
                         WeChat sandbox

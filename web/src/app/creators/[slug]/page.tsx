@@ -1,14 +1,63 @@
+/**
+ * v8 W2 — creator detail page migrated off the legacy "Apple Bento" palette.
+ *
+ * Previous layout hard-coded `bg-white`, `bg-black/5`, `bg-[#2d2d30]`,
+ * `text-white` and bespoke 32/24 px radii inline. All of that lived outside
+ * our design system and was the single biggest source of palette violations
+ * on this repo. The new layout uses:
+ *   - PageHeader: identity + headline + verify badge + skills
+ *   - SectionCard: collaboration preference
+ *   - StatCard grid: growth metrics (6 cards, sourced from
+ *     /api/v1/creators/{slug}/growth)
+ *   - EmptyState: empty portfolio
+ *   - TagPill: skill chips
+ *
+ * Semantics (copy / data) preserved, only the presentation changes.
+ */
 import { notFound } from "next/navigation";
-import { getCreatorBySlug, listProjects, getCreatorGrowthStats } from "@/lib/repository";
+import {
+  getCreatorBySlug,
+  listProjects,
+  getCreatorGrowthStats,
+} from "@/lib/repository";
 import { ProjectCard } from "@/components/project-card";
 import { CreatorGrowthMixChart } from "@/components/creator-growth-sparkline";
 import { CreatorPostsSection } from "./creator-posts-section";
 import { CreatorTeamsSection } from "./creator-teams-section";
-import { User, Briefcase, Code2, Users, MessageSquare, Star, FolderGit2, Activity, ShieldCheck } from "lucide-react";
+import {
+  User,
+  Briefcase,
+  Code2,
+  Users,
+  MessageSquare,
+  Star,
+  FolderGit2,
+  Activity,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  EmptyState,
+  PageHeader,
+  SectionCard,
+  StatCard,
+  TagPill,
+} from "@/components/ui";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
+
+const COLLAB_PREF_LABELS: Record<string, string> = {
+  open: "Open to Collaborate",
+  invite_only: "Invite Only",
+  closed: "Not Collaborating",
+};
+
+const COLLAB_PREF_ACCENT: Record<string, "success" | "warning" | "default"> = {
+  open: "success",
+  invite_only: "warning",
+  closed: "default",
+};
 
 export default async function CreatorDetailPage({ params }: Props) {
   const { slug } = await params;
@@ -17,164 +66,148 @@ export default async function CreatorDetailPage({ params }: Props) {
     notFound();
   }
 
-  const [
-    { items: creatorProjects },
-    stats
-  ] = await Promise.all([
+  const [{ items: creatorProjects }, stats] = await Promise.all([
     listProjects({ creatorId: creator.id, page: 1, limit: 20 }),
-    getCreatorGrowthStats(slug)
+    getCreatorGrowthStats(slug),
   ]);
 
-  const prefMap: Record<string, string> = {
-    open: "Open to Collaborate",
-    invite_only: "Invite Only",
-    closed: "Not Collaborating",
-  };
+  const prefKey = creator.collaborationPreference;
+  const prefLabel = COLLAB_PREF_LABELS[prefKey] ?? prefKey;
+  const prefAccent = COLLAB_PREF_ACCENT[prefKey] ?? "default";
 
   return (
-    <>
-      <main className="container pb-24 space-y-8 mt-6">
-        
-        {/* Bento Resume Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Hero Bento (Left) */}
-          <article className="lg:col-span-8 relative p-8 md:p-12 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60 overflow-hidden">
-            {/* Decorative Glow */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#81e6d9] rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4 opacity-30 pointer-events-none" />
-            
-            <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-8 mb-10">
-                <div className="w-28 h-28 rounded-[24px] bg-gradient-to-br from-[#f5ebd4] to-[#81e6d9] flex items-center justify-center shadow-[0_16px_48px_-8px_rgba(0,0,0,0.1)] shrink-0 border border-white/40">
-                  <User className="w-12 h-12 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-4xl md:text-5xl font-semibold tracking-[-0.03em] text-[var(--color-text-primary)] m-0 leading-none">
-                      {creator.slug}
-                    </h1>
-                    <ShieldCheck className="w-6 h-6 text-[var(--color-accent-apple)]" />
-                  </div>
-                  <p className="text-xl text-[var(--color-text-secondary)] font-medium m-0">
-                    {creator.headline}
-                  </p>
-                </div>
-              </div>
+    <main className="container pb-24 pt-8 space-y-8">
+      <PageHeader
+        icon={User}
+        eyebrow="Creator"
+        title={
+          <span className="inline-flex items-center gap-2">
+            <span>{creator.slug}</span>
+            <ShieldCheck
+              className="w-5 h-5 text-[var(--color-accent-apple)]"
+              aria-label="Verified profile"
+            />
+          </span>
+        }
+        subtitle={creator.headline}
+      />
 
-              <div className="p-6 rounded-[24px] bg-black/5 border border-black/5 mb-10">
-                <p className="text-[1.05rem] text-[var(--color-text-secondary)] leading-[1.6] whitespace-pre-wrap m-0">
-                  {creator.bio}
-                </p>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Bio + skills */}
+        <div className="lg:col-span-8 space-y-6">
+          <SectionCard
+            title="About"
+            description="Auto-populated from the creator's profile."
+            icon={User}
+          >
+            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-wrap m-0">
+              {creator.bio}
+            </p>
+          </SectionCard>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-4 m-0">
-                    <Code2 className="w-4 h-4" /> Tech Stack
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {creator.skills.map((skill) => (
-                      <span key={skill} className="text-[0.85rem] font-medium px-3 py-1.5 bg-white border border-black/5 text-[var(--color-text-primary)] rounded-[12px] shadow-sm">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-4 m-0">
-                    <Users className="w-4 h-4" /> Collaboration
-                  </h3>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#81e6d9]/20 text-[#0d9488] rounded-[12px] font-medium">
-                    <div className="w-2 h-2 rounded-full bg-[#0d9488] animate-pulse" />
-                    {prefMap[creator.collaborationPreference] || creator.collaborationPreference}
-                  </div>
-                </div>
+          <SectionCard title="Tech stack" icon={Code2}>
+            {creator.skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {creator.skills.map((skill) => (
+                  <TagPill key={skill} accent="default" mono size="md">
+                    {skill}
+                  </TagPill>
+                ))}
               </div>
+            ) : (
+              <EmptyState title="No tech stack declared" />
+            )}
+          </SectionCard>
+
+          <SectionCard title="Collaboration" icon={Users}>
+            <div className="flex items-center gap-2">
+              <TagPill accent={prefAccent}>
+                <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
+                {prefLabel}
+              </TagPill>
             </div>
-          </article>
-
-          {/* Stats Bento (Right) */}
-          {stats && (
-            <aside className="lg:col-span-4 flex flex-col gap-6">
-              <div className="p-8 rounded-[32px] bg-[#2d2d30] text-white shadow-[0_16px_48px_-8px_rgba(0,0,0,0.15)] flex-1 flex flex-col">
-                <div className="flex items-center gap-2 mb-2 text-[#81e6d9]">
-                  <Activity className="w-5 h-5" />
-                  <h3 className="text-lg font-semibold tracking-tight m-0 text-white">Growth</h3>
-                </div>
-                <p className="text-[0.75rem] text-white/50 m-0 mb-6">
-                  From <span className="font-mono text-white/70">GET /api/v1/creators/{slug}/growth</span>
-                </p>
-
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center">
-                    <FolderGit2 className="w-5 h-5 text-[#81e6d9] mb-3" />
-                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.projectCount}</strong>
-                    <span className="text-[0.8rem] font-medium text-white/60">Projects</span>
-                  </div>
-                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center">
-                    <MessageSquare className="w-5 h-5 text-[#f5ebd4] mb-3" />
-                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.postCount}</strong>
-                    <span className="text-[0.8rem] font-medium text-white/60">Discussions</span>
-                  </div>
-                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center">
-                    <Star className="w-5 h-5 text-[#f5ebd4] mb-3" />
-                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.featuredPostCount}</strong>
-                    <span className="text-[0.8rem] font-medium text-white/60">Featured</span>
-                  </div>
-                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center">
-                    <Users className="w-5 h-5 text-[#81e6d9] mb-3" />
-                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.collaborationIntentCount}</strong>
-                    <span className="text-[0.8rem] font-medium text-white/60">Intents</span>
-                  </div>
-                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center col-span-2 sm:col-span-1">
-                    <MessageSquare className="w-5 h-5 text-[#81e6d9] mb-3" />
-                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.commentCount}</strong>
-                    <span className="text-[0.8rem] font-medium text-white/60">Comments written</span>
-                  </div>
-                  <div className="p-5 rounded-[20px] bg-black/40 border border-white/10 flex flex-col justify-center col-span-2 sm:col-span-1">
-                    <MessageSquare className="w-5 h-5 text-[#f5ebd4] mb-3" />
-                    <strong className="text-3xl font-mono font-bold text-white mb-1">{stats.receivedCommentCount}</strong>
-                    <span className="text-[0.8rem] font-medium text-white/60">Comments received</span>
-                  </div>
-                </div>
-                <div className="mt-6 pt-6 border-t border-white/10 text-white">
-                  <CreatorGrowthMixChart stats={stats} />
-                </div>
-              </div>
-            </aside>
-          )}
+          </SectionCard>
         </div>
 
-        {/* Projects Section */}
-        <section className="pt-8">
-          <div className="flex items-center gap-3 mb-8 px-4">
-            <Briefcase className="w-6 h-6 text-[var(--color-text-tertiary)]" />
-            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">
-              Portfolio
-            </h2>
-            <span className="text-[0.85rem] font-bold px-3 py-1 bg-black/5 text-[var(--color-text-secondary)] rounded-[980px]">
-              {creatorProjects.length}
-            </span>
+        {/* Growth stats */}
+        {stats ? (
+          <aside className="lg:col-span-4 space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">
+              <Activity className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Growth · GET /api/v1/creators/{slug}/growth</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard
+                label="Projects"
+                value={stats.projectCount}
+                icon={FolderGit2}
+              />
+              <StatCard
+                label="Discussions"
+                value={stats.postCount}
+                icon={MessageSquare}
+              />
+              <StatCard
+                label="Featured"
+                value={stats.featuredPostCount}
+                icon={Star}
+              />
+              <StatCard
+                label="Intents"
+                value={stats.collaborationIntentCount}
+                icon={Users}
+              />
+              <StatCard
+                label="Comments written"
+                value={stats.commentCount}
+                icon={MessageSquare}
+                className="col-span-2"
+              />
+              <StatCard
+                label="Comments received"
+                value={stats.receivedCommentCount}
+                icon={MessageSquare}
+                className="col-span-2"
+              />
+            </div>
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4">
+              <CreatorGrowthMixChart stats={stats} />
+            </div>
+          </aside>
+        ) : null}
+      </div>
+
+      <section className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Briefcase className="w-5 h-5 text-[var(--color-text-tertiary)]" aria-hidden="true" />
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">
+            Portfolio
+          </h2>
+          <TagPill accent="default" mono size="sm">
+            {creatorProjects.length}
+          </TagPill>
+        </div>
+
+        {creatorProjects.length === 0 ? (
+          <div className="card p-0">
+            <EmptyState
+              icon={Briefcase}
+              title="No projects published yet"
+              description="When this creator ships a project, it will appear here."
+              block
+            />
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {creatorProjects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+      </section>
 
-          {creatorProjects.length === 0 ? (
-            <div className="text-center py-24 rounded-[32px] bg-[rgba(255,255,255,0.5)] border border-white/60 shadow-sm">
-              <Briefcase className="w-12 h-12 text-[var(--color-text-tertiary)] mx-auto mb-4 opacity-50" />
-              <p className="text-[1.05rem] font-medium text-[var(--color-text-secondary)]">No projects published yet.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {creatorProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <CreatorPostsSection authorUserId={creator.userId} />
-        <CreatorTeamsSection userId={creator.userId} />
-      </main>
-    </>
+      <CreatorPostsSection authorUserId={creator.userId} />
+      <CreatorTeamsSection userId={creator.userId} />
+    </main>
   );
 }

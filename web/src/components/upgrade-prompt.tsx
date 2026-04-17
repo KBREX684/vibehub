@@ -7,6 +7,7 @@ import { UPGRADE_MESSAGES } from "@/lib/subscription";
 import { Sparkles, X, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
+import { Button } from "@/components/ui";
 
 interface Props {
   reason: UpgradeReason;
@@ -51,100 +52,89 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
   if (variant === "modal") {
     return (
       <AnimatePresence>
-        {!dismissed && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            {/* Heavy Blur Backdrop */}
-            <motion.div 
+        {!dismissed ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={msg.title}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-white/40 backdrop-blur-[40px] saturate-[150%]"
+              className="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-sm"
+              aria-hidden="true"
               onClick={handleDismiss}
             />
-            
-            {/* Spring Modal */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
-              className="relative w-full max-w-md bg-[rgba(255,255,255,0.85)] border border-white/60 rounded-[32px] p-8 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.1)] text-center overflow-hidden"
+              exit={{ opacity: 0, scale: 0.97, y: 8 }}
+              transition={{ duration: 0.15 }}
+              className="relative w-full max-w-md rounded-[var(--radius-2xl)] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)] p-7 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Decorative Glow */}
-              <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#f5ebd4] rounded-full blur-[64px] opacity-60 pointer-events-none" />
-              <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-[#81e6d9] rounded-full blur-[64px] opacity-40 pointer-events-none" />
+              <div className="w-12 h-12 mx-auto rounded-[var(--radius-lg)] bg-[var(--color-accent-apple-subtle)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center mb-5">
+                <Sparkles className="w-5 h-5 text-[var(--color-accent-apple)]" aria-hidden="true" />
+              </div>
 
-              <div className="relative z-10">
-                <div className="w-16 h-16 mx-auto bg-gradient-to-br from-[#f5ebd4] to-[#81e6d9] rounded-[20px] flex items-center justify-center mb-6 shadow-sm">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                
-                <h3 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-3">
-                  {msg.title}
-                </h3>
-                
-                <p className="text-[0.95rem] text-[var(--color-text-secondary)] leading-[1.6] mb-8">
-                  {msg.body}
-                </p>
-                
-                <div className="flex flex-col gap-3">
-                  <motion.button 
-                    className="w-full py-4 rounded-[16px] bg-[var(--color-accent-apple)] text-white font-semibold text-[1.05rem] shadow-[0_8px_24px_rgba(0,122,255,0.25)] hover:bg-[#0062cc] transition-colors flex items-center justify-center gap-2"
-                    onClick={handleUpgrade}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    Upgrade to Pro <ChevronRight className="w-5 h-5" />
-                  </motion.button>
-                  
-                  <motion.button 
-                    className="w-full py-3 rounded-[16px] bg-transparent text-[var(--color-text-secondary)] font-medium hover:bg-black/5 transition-colors"
-                    onClick={handleDismiss}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    Maybe Later
-                  </motion.button>
-                </div>
+              <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text-primary)] mb-2 m-0">
+                {msg.title}
+              </h3>
+
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-6 m-0">
+                {msg.body}
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <Button variant="apple" size="md" onClick={handleUpgrade} className="w-full">
+                  Upgrade to Pro
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDismiss} className="w-full">
+                  Maybe later
+                </Button>
               </div>
             </motion.div>
           </div>
-        )}
+        ) : null}
       </AnimatePresence>
     );
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: -10 }}
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-4 bg-gradient-to-r from-[#f5ebd4]/20 to-[#81e6d9]/20 border border-[#81e6d9]/40 rounded-[16px] p-4 my-4 shadow-sm"
+      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-accent-apple-subtle)] bg-[var(--color-accent-apple-subtle)] p-3 my-3"
+      role="status"
     >
-      <div className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center flex-shrink-0">
-        <Sparkles className="w-5 h-5 text-[#0d9488]" />
+      <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center shrink-0">
+        <Sparkles className="w-4 h-4 text-[var(--color-accent-apple)]" aria-hidden="true" />
       </div>
-      
+
       <div className="flex-1 min-w-0">
-        <strong className="block text-[0.95rem] text-[var(--color-text-primary)] mb-0.5">{msg.title}</strong>
-        <span className="block text-[0.85rem] text-[var(--color-text-secondary)] truncate">{msg.body}</span>
+        <strong className="block text-sm font-medium text-[var(--color-text-primary)] m-0">
+          {msg.title}
+        </strong>
+        <span className="block text-xs text-[var(--color-text-secondary)] truncate">
+          {msg.body}
+        </span>
       </div>
-      
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <motion.button 
-          className="px-4 py-2 rounded-[980px] bg-[var(--color-accent-apple)] text-white text-sm font-medium whitespace-nowrap shadow-sm hover:bg-[#0062cc] transition-colors"
-          onClick={handleUpgrade}
-          whileTap={{ scale: 0.96 }}
-        >
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Button variant="apple" size="sm" onClick={handleUpgrade}>
           Upgrade
-        </motion.button>
-        <motion.button 
-          className="p-2 rounded-full text-[var(--color-text-tertiary)] hover:bg-black/5 hover:text-[var(--color-text-primary)] transition-colors"
+        </Button>
+        <button
+          type="button"
           onClick={handleDismiss}
-          whileTap={{ scale: 0.9 }}
           aria-label="Dismiss"
+          className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors"
         >
-          <X className="w-4 h-4" />
-        </motion.button>
+          <X className="w-4 h-4" aria-hidden="true" />
+        </button>
       </div>
     </motion.div>
   );

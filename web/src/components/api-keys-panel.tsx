@@ -1,9 +1,26 @@
 "use client";
 
+/**
+ * v8 W2 — migrated off the legacy "Apple liquid-glass" palette.
+ *
+ * All `rgba(255,255,255,0.85)` / `text-white` / `bg-[#2d2d30]` /
+ * `bg-[#007aff]` / `bg-[#e11d48]` literals removed in favor of:
+ *   - globals.css tokens (`--color-bg-surface`, `--color-accent-apple`, etc.)
+ *   - v8 primitives: SectionCard, EmptyState, Button, CopyButton, TagPill,
+ *     ConfirmDialog, LoadingSkeleton, FormField
+ *
+ * Functional contract preserved:
+ *   - loads /api/v1/me/api-keys and /api/v1/me/agent-bindings
+ *   - creates new key with label + scopes + optional agentBindingId
+ *   - reveals the one-time plaintext secret with CopyButton
+ *   - revokes (with confirm dialog instead of window.confirm)
+ *   - surfaces upgrade gating via UpgradePlanCallout
+ */
+
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { isDevDemoAuth } from "@/lib/dev-demo";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   API_KEY_SCOPE_READ_PUBLIC,
   API_KEY_SCOPES,
@@ -12,8 +29,27 @@ import {
 import type { AgentBindingSummary, ApiKeyCreated, ApiKeySummary } from "@/lib/types";
 import type { UpgradeReason } from "@/lib/subscription";
 import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
-import { Key, Plus, Trash2, Copy, CheckCircle2, AlertCircle, Clock, Shield, Sparkles, Bot } from "lucide-react";
+import {
+  Key,
+  Plus,
+  Trash2,
+  AlertCircle,
+  Clock,
+  Shield,
+  Sparkles,
+  Bot,
+} from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import {
+  Button,
+  ConfirmDialog,
+  CopyButton,
+  EmptyState,
+  FormField,
+  LoadingSkeleton,
+  SectionCard,
+  TagPill,
+} from "@/components/ui";
 
 const OPTIONAL_SCOPES = API_KEY_SCOPES.filter((s) => s !== API_KEY_SCOPE_READ_PUBLIC);
 
@@ -30,16 +66,14 @@ export function ApiKeysPanel({ currentUserId }: Props) {
   const [newLabel, setNewLabel] = useState("");
   const [selectedAgentBindingId, setSelectedAgentBindingId] = useState("");
   const [lastSecret, setLastSecret] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(() => {
     const s = new Set<string>();
     for (const x of DEFAULT_API_KEY_SCOPES) {
-      if (x !== API_KEY_SCOPE_READ_PUBLIC) {
-        s.add(x);
-      }
+      if (x !== API_KEY_SCOPE_READ_PUBLIC) s.add(x);
     }
     return s;
   });
+  const [revokeTarget, setRevokeTarget] = useState<ApiKeySummary | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,8 +83,14 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         apiFetch("/api/v1/me/api-keys", { credentials: "include" }),
         apiFetch("/api/v1/me/agent-bindings", { credentials: "include" }),
       ]);
-      const keysJson = (await keysRes.json()) as { data?: { keys?: ApiKeySummary[] }; error?: { message?: string } };
-      const bindingsJson = (await bindingsRes.json()) as { data?: { bindings?: AgentBindingSummary[] }; error?: { message?: string } };
+      const keysJson = (await keysRes.json()) as {
+        data?: { keys?: ApiKeySummary[] };
+        error?: { message?: string };
+      };
+      const bindingsJson = (await bindingsRes.json()) as {
+        data?: { bindings?: AgentBindingSummary[] };
+        error?: { message?: string };
+      };
       if (!keysRes.ok) {
         setMsg(keysJson.error?.message ?? "Failed to load keys");
         setKeys([]);
@@ -81,7 +121,6 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     setMsg(null);
     setUpgradeReason(undefined);
     setLastSecret(null);
-    setCopied(false);
     try {
       const res = await apiFetch("/api/v1/me/api-keys", {
         method: "POST",
@@ -103,9 +142,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         return;
       }
       const k = json.data?.key;
-      if (k?.secret) {
-        setLastSecret(k.secret);
-      }
+      if (k?.secret) setLastSecret(k.secret);
       setNewLabel("");
       setSelectedAgentBindingId("");
       await load();
@@ -114,9 +151,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     }
   }
 
-  async function revoke(id: string) {
-    if (!confirm("Are you sure you want to revoke this API key? This action cannot be undone.")) return;
-    
+  async function performRevoke(id: string) {
     setMsg(null);
     try {
       const res = await apiFetch(`/api/v1/me/api-keys/${encodeURIComponent(id)}`, {
@@ -134,89 +169,75 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     }
   }
 
-  const handleCopy = async () => {
-    if (!lastSecret) return;
-    try {
-      await navigator.clipboard.writeText(lastSecret);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Failed to copy key");
-    }
-  };
-
   if (!currentUserId) {
     return (
-      <div className="p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] text-center">
-        <Key className="w-12 h-12 text-[var(--color-text-tertiary)] mx-auto mb-4" />
-        <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-2">Authentication Required</h2>
-        <p className="text-[0.95rem] text-[var(--color-text-secondary)] mb-6">
-          Please log in to manage your API keys and access tokens.
-        </p>
-        {isDevDemoAuth() ? (
-          <a
-            href="/api/v1/auth/demo-login?role=user&redirect=/settings/api-keys"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-[980px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,122,255,0.3)]"
-          >
-            Demo Login
-          </a>
-        ) : (
-          <Link
-            href="/login?redirect=%2Fsettings%2Fapi-keys"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-[980px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,122,255,0.3)]"
-          >
-            Sign in
-          </Link>
-        )}
-      </div>
+      <SectionCard icon={Key} title="Authentication required" description="Please sign in to manage your API keys and access tokens.">
+        <div className="flex justify-center">
+          {isDevDemoAuth() ? (
+            <a href="/api/v1/auth/demo-login?role=user&redirect=/settings/api-keys">
+              <Button variant="apple" size="md">
+                Demo login
+              </Button>
+            </a>
+          ) : (
+            <Link href="/login?redirect=%2Fsettings%2Fapi-keys">
+              <Button variant="apple" size="md">
+                Sign in
+              </Button>
+            </Link>
+          )}
+        </div>
+      </SectionCard>
     );
   }
 
-  const inputClasses = "w-full bg-black/5 border border-transparent rounded-[12px] px-4 py-3 text-[0.95rem] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] outline-none transition-all duration-300 focus:bg-white focus:border-[#81e6d9]/50 focus:shadow-[0_0_16px_rgba(129,230,217,0.3)]";
-
   return (
-    <div className="space-y-8">
-      {/* Header Bento */}
-      <div className="p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#007aff]/10 flex items-center justify-center text-[#007aff]">
-            <Key className="w-6 h-6" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">API Keys</h2>
-        </div>
-        <p className="text-[0.95rem] text-[var(--color-text-secondary)] leading-[1.6] max-w-3xl">
-          Use these keys to authenticate your scripts, integrations, or AI agents with the VibeHub API. 
-          Each key is scoped to specific permissions. Bearer access is subject to per-key rate limits.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <SectionCard
+        icon={Key}
+        title="API keys"
+        description="Use these keys to authenticate scripts, integrations, or AI agents. Each key is scoped. Bearer access is subject to per-key rate limits."
+      />
 
-      {/* Create Key Bento */}
-      <div className="p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text-primary)] mb-6 flex items-center gap-2">
-          <Plus className="w-5 h-5 text-[var(--color-accent-apple)]" /> Create New Key
-        </h3>
-        
-        <form onSubmit={(ev) => void createKey(ev)} className="space-y-6">
-          <div className="flex flex-col gap-2">
-            <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">Key Label</label>
-            <input 
-              value={newLabel} 
-              onChange={(e) => setNewLabel(e.target.value)} 
-              required 
-              maxLength={80} 
+      {/* Create key */}
+      <SectionCard
+        icon={Plus}
+        title="Create new key"
+        description="Label the key, choose scopes, and optionally link it to one of your agent bindings for attribution."
+      >
+        <form onSubmit={(ev) => void createKey(ev)} className="space-y-4">
+          <FormField label="Key label" required>
+            <input
+              className="input-base"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              required
+              maxLength={80}
               placeholder="e.g., Production Agent, CI/CD Pipeline"
-              className={inputClasses}
             />
-          </div>
+          </FormField>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)] flex items-center gap-2">
-              <Bot className="w-4 h-4" /> Linked Agent
-            </label>
+          <FormField
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                <Bot className="w-3.5 h-3.5" aria-hidden="true" />
+                Linked agent
+              </span>
+            }
+            hint={
+              <>
+                Link the key to a named agent so MCP and API audits stay attributable. Manage agents in{" "}
+                <Link href="/settings/agents" className="underline hover:text-[var(--color-text-primary)]">
+                  Settings
+                </Link>
+                .
+              </>
+            }
+          >
             <select
+              className="input-base"
               value={selectedAgentBindingId}
               onChange={(event) => setSelectedAgentBindingId(event.target.value)}
-              className={inputClasses}
             >
               <option value="">No linked agent</option>
               {agentBindings.map((binding) => (
@@ -226,29 +247,34 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                 </option>
               ))}
             </select>
-            <p className="text-[0.8rem] text-[var(--color-text-secondary)] m-0">
-              Link the key to a named agent so MCP and API audits stay attributable. Manage agents in{" "}
-              <Link href="/settings/agents" className="underline hover:text-[var(--color-text-primary)]">
-                Settings
-              </Link>
-              .
-            </p>
-          </div>
-          
-          <div className="flex flex-col gap-3">
-            <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)] flex items-center gap-2">
-              <Shield className="w-4 h-4" /> Scopes & Permissions
-            </label>
-            <div className="p-5 rounded-[16px] bg-black/5 border border-black/5 space-y-4">
-              <label className="flex items-center gap-3 cursor-not-allowed opacity-60">
-                <input type="checkbox" checked disabled className="w-4 h-4 rounded border-black/20 text-[#007aff] focus:ring-[#007aff]" />
-                <code className="text-[0.85rem] font-mono bg-black/5 px-2 py-0.5 rounded-md">{API_KEY_SCOPE_READ_PUBLIC}</code>
-                <span className="text-[0.85rem] text-[var(--color-text-secondary)]">(Required base scope)</span>
+          </FormField>
+
+          <FormField
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5" aria-hidden="true" />
+                Scopes & permissions
+              </span>
+            }
+          >
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-4 space-y-3">
+              <label className="flex items-center gap-2 opacity-80">
+                <input
+                  type="checkbox"
+                  checked
+                  disabled
+                  className="h-3.5 w-3.5 accent-[var(--color-accent-apple)]"
+                  aria-label="Required base scope"
+                />
+                <code className="text-xs font-mono rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] border border-[var(--color-border-subtle)] px-1.5 py-0.5">
+                  {API_KEY_SCOPE_READ_PUBLIC}
+                </code>
+                <span className="text-xs text-[var(--color-text-tertiary)]">(required base scope)</span>
               </label>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-black/5">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3 border-t border-[var(--color-border-subtle)]">
                 {OPTIONAL_SCOPES.map((s) => (
-                  <label key={s} className="flex items-center gap-3 cursor-pointer group">
+                  <label key={s} className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={selectedScopes.has(s)}
@@ -260,161 +286,179 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                           return n;
                         });
                       }}
-                      className="w-4 h-4 rounded border-black/20 text-[#007aff] focus:ring-[#007aff] transition-colors"
+                      className="h-3.5 w-3.5 accent-[var(--color-accent-apple)]"
                     />
-                    <code className="text-[0.85rem] font-mono bg-black/5 px-2 py-0.5 rounded-md group-hover:bg-black/10 transition-colors">{s}</code>
+                    <code className="text-xs font-mono rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] border border-[var(--color-border-subtle)] px-1.5 py-0.5 group-hover:border-[var(--color-border)]">
+                      {s}
+                    </code>
                   </label>
                 ))}
               </div>
             </div>
-          </div>
-          
-          <div className="pt-2">
-            <motion.button 
-              type="submit" 
-              className="px-6 py-3 rounded-[12px] bg-[var(--color-text-primary)] text-white font-medium hover:bg-black transition-colors shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            >
-              Generate Secret Key
-            </motion.button>
-          </div>
+          </FormField>
+
+          <Button variant="primary" size="md" type="submit">
+            Generate secret key
+          </Button>
         </form>
 
         <AnimatePresence>
-          {lastSecret && (
-            <motion.div 
+          {lastSecret ? (
+            <motion.div
               initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: "auto", marginTop: 24 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 16 }}
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
               className="overflow-hidden"
             >
-              <div className="p-6 rounded-[20px] bg-[#2d2d30] border border-white/10 shadow-[0_16px_48px_-8px_rgba(0,0,0,0.2)]">
-                <div className="flex items-center gap-2 mb-3 text-[#f5ebd4]">
-                  <AlertCircle className="w-5 h-5" />
-                  <h4 className="text-[0.95rem] font-semibold m-0">Save this key now</h4>
+              <div className="rounded-[var(--radius-lg)] border border-[var(--color-warning-subtle)] bg-[var(--color-warning-subtle)] p-4">
+                <div className="flex items-center gap-2 mb-2 text-[var(--color-warning)]">
+                  <AlertCircle className="w-4 h-4" aria-hidden="true" />
+                  <h4 className="text-sm font-semibold m-0">Save this key now</h4>
                 </div>
-                <p className="text-[0.85rem] text-white/60 mb-4">
-                  For your security, this secret key will only be shown once. You will not be able to see it again after leaving this page.
+                <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3 leading-relaxed">
+                  For your security, this secret key will only be shown once. You will not be able to see it
+                  again after leaving this page.
                 </p>
-                <div className="flex items-center gap-3">
-                  <code className="flex-1 p-4 rounded-[12px] bg-black/40 text-[#81e6d9] font-mono text-[0.9rem] break-all border border-white/5">
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 p-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-canvas)] text-[var(--color-accent-cyan)] font-mono text-xs break-all">
                     {lastSecret}
                   </code>
-                  <motion.button
-                    onClick={handleCopy}
-                    className={`flex items-center justify-center w-12 h-12 rounded-[12px] flex-shrink-0 transition-colors ${
-                      copied ? "bg-[#34c759] text-white" : "bg-white/10 text-white hover:bg-white/20"
-                    }`}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    aria-label="Copy to clipboard"
-                  >
-                    {copied ? <CheckCircle2 className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                  </motion.button>
+                  <CopyButton value={lastSecret} size="md" />
                 </div>
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
 
-        {msg && (
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            className="mt-6 text-[0.9rem] font-medium text-[#e11d48] bg-[#fee2e2] px-4 py-3 rounded-[12px] flex items-center gap-2"
-          >
+        {msg ? (
+          <p className="mt-4 text-xs text-[var(--color-error)] bg-[var(--color-error-subtle)] rounded-[var(--radius-md)] px-3 py-2 inline-flex items-center gap-2 m-0">
+            <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
             {msg}
-          </motion.p>
-        )}
+          </p>
+        ) : null}
         {upgradeReason ? <UpgradePlanCallout upgradeReason={upgradeReason} className="mt-4" /> : null}
-      </div>
+      </SectionCard>
 
-      {/* Keys List Bento */}
-      <div className="p-8 rounded-[32px] bg-[rgba(255,255,255,0.85)] backdrop-blur-[24px] saturate-[150%] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.04)] border border-white/60">
-        <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text-primary)] mb-6 flex items-center gap-2">
-          <Key className="w-5 h-5 text-[var(--color-text-tertiary)]" /> Active Keys
-        </h3>
-        
+      {/* Keys list */}
+      <SectionCard icon={Key} title="Active keys" description="All keys issued to this account. Revoke any key to invalidate it immediately.">
         {loading && keys.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-[var(--color-text-tertiary)]">
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-6 h-6 border-2 border-current border-t-transparent rounded-full" />
-          </div>
+          <LoadingSkeleton preset="list" count={3} />
         ) : keys.length === 0 ? (
-          <div className="text-center py-12 text-[var(--color-text-secondary)] bg-black/5 rounded-[20px] border border-black/5">
-            <p className="text-[0.95rem]">No API keys found. Create one above to get started.</p>
-          </div>
+          <EmptyState
+            icon={Key}
+            title="No API keys yet"
+            description="Create one above to start calling the platform via MCP or OpenAPI."
+          />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {keys.map((k) => (
-              <motion.div 
-                key={k.id} 
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-6 rounded-[16px] border transition-colors ${
-                  k.revokedAt 
-                    ? "bg-[#1a1a1a] border-transparent opacity-60" 
-                    : "bg-[#0a0a0a] border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)]"
-                }`}
+              <article
+                key={k.id}
+                className={[
+                  "rounded-[var(--radius-lg)] border p-4 transition-colors",
+                  k.revokedAt
+                    ? "border-[var(--color-border-subtle)] bg-[var(--color-bg-subtle)] opacity-75"
+                    : "border-[var(--color-border)] bg-[var(--color-bg-elevated)]",
+                ].join(" ")}
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <strong className="text-[1.05rem] font-semibold text-white">{k.label}</strong>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                      <strong className="text-sm font-semibold text-[var(--color-text-primary)]">
+                        {k.label}
+                      </strong>
                       {k.revokedAt ? (
-                        <span className="px-2.5 py-0.5 rounded-[980px] bg-white/10 text-white/50 text-[10px] font-bold uppercase tracking-wider">
-                          Revoked
-                        </span>
+                        <TagPill accent="default" size="sm" mono>
+                          revoked
+                        </TagPill>
                       ) : (
-                        <span className="px-2.5 py-0.5 rounded-[980px] bg-[#81e6d9]/20 text-[#81e6d9] text-[10px] font-bold uppercase tracking-wider">
-                          Active
-                        </span>
+                        <TagPill accent="success" size="sm" mono>
+                          active
+                        </TagPill>
                       )}
                     </div>
-                    <code className="text-[0.85rem] font-mono text-white/70 bg-white/5 px-2 py-0.5 rounded-md border border-white/10">
+                    <code className="inline-block text-xs font-mono rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] px-1.5 py-0.5">
                       {k.prefix}••••••••••••••••
                     </code>
                   </div>
-                  
-                  {!k.revokedAt && (
-                    <motion.button 
-                      onClick={() => void revoke(k.id)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-transparent border border-white/10 text-white/70 text-sm font-medium hover:bg-[#e11d48]/10 hover:text-[#e11d48] hover:border-[#e11d48]/30 transition-colors self-start md:self-auto"
-                      whileTap={{ scale: 0.95 }}
+
+                  {!k.revokedAt ? (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setRevokeTarget(k)}
                     >
-                      <Trash2 className="w-4 h-4" /> Revoke
-                    </motion.button>
-                  )}
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.85rem] text-white/50 mb-4">
-                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Created: {new Date(k.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                  {k.agentBinding ? (
-                    <span className="flex items-center gap-1.5"><Bot className="w-3.5 h-3.5" /> Agent: {k.agentBinding.label}</span>
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      Revoke
+                    </Button>
                   ) : null}
-                  {k.lastUsedAt && !k.revokedAt && (
-                    <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Last used: {new Date(k.lastUsedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                  )}
-                  {k.revokedAt && (
-                    <span className="flex items-center gap-1.5"><AlertCircle className="w-3.5 h-3.5" /> Revoked: {new Date(k.revokedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                  )}
                 </div>
-                
-                <div className="pt-4 border-t border-white/10">
+
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[var(--color-text-tertiary)] mb-3">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="w-3 h-3" aria-hidden="true" />
+                    Created: {formatDate(k.createdAt)}
+                  </span>
+                  {k.agentBinding ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Bot className="w-3 h-3" aria-hidden="true" />
+                      Agent: {k.agentBinding.label}
+                    </span>
+                  ) : null}
+                  {k.lastUsedAt && !k.revokedAt ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3" aria-hidden="true" />
+                      Last used: {formatDate(k.lastUsedAt)}
+                    </span>
+                  ) : null}
+                  {k.revokedAt ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <AlertCircle className="w-3 h-3" aria-hidden="true" />
+                      Revoked: {formatDate(k.revokedAt)}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="pt-3 border-t border-[var(--color-border-subtle)]">
                   <div className="flex flex-wrap gap-1.5">
-                    {k.scopes.map(scope => (
-                      <span key={scope} className="text-[10px] font-mono px-2 py-1 bg-white/5 border border-white/10 text-white/60 rounded-md">
+                    {k.scopes.map((scope) => (
+                      <TagPill key={scope} accent="default" size="sm" mono>
                         {scope}
-                      </span>
+                      </TagPill>
                     ))}
                   </div>
                 </div>
-              </motion.div>
+              </article>
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
+
+      <ConfirmDialog
+        open={revokeTarget !== null}
+        title="Revoke API key?"
+        description={
+          revokeTarget
+            ? `This will immediately invalidate "${revokeTarget.label}". Any integrations using it will stop working. This action cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Revoke"
+        cancelLabel="Cancel"
+        tone="destructive"
+        onClose={() => setRevokeTarget(null)}
+        onConfirm={async () => {
+          if (revokeTarget) await performRevoke(revokeTarget.id);
+          setRevokeTarget(null);
+        }}
+      />
     </div>
   );
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }

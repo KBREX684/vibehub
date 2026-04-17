@@ -439,7 +439,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
                   <div
                     className={`px-3 py-2 rounded-[var(--radius-lg)] text-sm leading-relaxed max-w-full break-words ${
                       isSelf
-                        ? "bg-[var(--color-primary)] text-white"
+                        ? "bg-[var(--color-primary)] text-[var(--color-text-inverse)]"
                         : "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
                     } ${msg.pending ? "opacity-60" : ""}`}
                   >

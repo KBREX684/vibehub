@@ -52,8 +52,8 @@ export function Footer() {
           {/* Brand col */}
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2 font-bold text-base text-[var(--color-text-primary)] mb-3">
-              <span className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
-                <Zap className="w-3.5 h-3.5 text-white" />
+              <span className="w-6 h-6 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
+                <Zap className="w-3.5 h-3.5 text-[var(--color-text-inverse)]" />
               </span>
               VibeHub
             </Link>

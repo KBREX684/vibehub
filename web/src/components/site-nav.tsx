@@ -145,7 +145,7 @@ export function SiteNav() {
           aria-label="VibeHub"
         >
           <span className="w-7 h-7 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
-            <Zap className="w-4 h-4 text-black" aria-hidden="true" />
+            <Zap className="w-4 h-4 text-[var(--color-text-inverse)]" aria-hidden="true" />
           </span>
           <span>VibeHub</span>
         </Link>
@@ -277,7 +277,7 @@ export function SiteNav() {
             >
               <Bell className="w-4 h-4" aria-hidden="true" />
               {unreadCount > 0 ? (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[var(--color-accent-apple)] text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] text-[9px] font-bold flex items-center justify-center">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               ) : null}
@@ -298,7 +298,7 @@ export function SiteNav() {
                   aria-label={t("nav.user_menu", "打开用户菜单")}
                   className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-violet)] flex items-center justify-center text-white text-xs font-semibold">
+                  <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-violet)] flex items-center justify-center text-[var(--color-on-accent)] text-xs font-semibold">
                     {user.name?.charAt(0)?.toUpperCase() || "U"}
                   </span>
                   <span className="hidden sm:block text-sm font-medium text-[var(--color-text-primary)] max-w-[100px] truncate">

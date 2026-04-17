@@ -50,7 +50,7 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
     }
   }
 
-  const inputClasses = "w-full bg-black/5 border border-transparent rounded-[12px] px-4 py-3 text-[0.95rem] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] outline-none transition-all duration-300 focus:bg-white focus:border-[#81e6d9]/50 focus:shadow-[0_0_16px_rgba(129,230,217,0.3)]";
+  const inputClasses = "input-base";
 
   return (
     <form className="flex flex-col gap-5" onSubmit={onSubmit}>
@@ -100,7 +100,7 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
         <motion.button 
           type="submit" 
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-[12px] bg-[var(--color-accent-apple)] text-white font-medium hover:bg-[#0062cc] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[0_4px_12px_rgba(0,122,255,0.2)]"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-[var(--radius-md)] bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] font-medium hover:bg-[var(--color-accent-apple-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           whileTap={loading ? {} : { scale: 0.97 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
         >
@@ -109,7 +109,7 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
               <motion.div 
                 animate={{ rotate: 360 }} 
                 transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                className="w-4 h-4 border-2 border-[rgba(255,255,255,0.3)] border-t-[var(--color-on-accent)] rounded-full"
               />
               Submitting...
             </span>

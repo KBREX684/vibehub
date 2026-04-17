@@ -21,8 +21,8 @@ export default async function SignupPage({ searchParams }: Props) {
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 font-bold text-xl text-[var(--color-text-primary)]">
-            <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
+            <span className="w-8 h-8 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
+              <Zap className="w-4 h-4 text-[var(--color-text-inverse)]" />
             </span>
             VibeHub
           </Link>

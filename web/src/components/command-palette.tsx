@@ -178,7 +178,7 @@ export function CommandPalette() {
       <button
         type="button"
         aria-label={t("search.close")}
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-sm"
         onClick={closePalette}
       />
       <div

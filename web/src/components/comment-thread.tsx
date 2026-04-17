@@ -321,7 +321,7 @@ function CommentCard({
               onClick={handleDelete}
               disabled={isPending}
               data-testid={`comment-confirm-delete-${comment.id}`}
-              className="btn text-xs px-3 py-1 bg-[var(--color-error)] text-white disabled:opacity-40"
+              className="btn text-xs px-3 py-1 bg-[var(--color-error)] text-[var(--color-on-accent)] disabled:opacity-40"
             >
               {isPending ? "…" : "Delete"}
             </button>
