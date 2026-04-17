@@ -16,6 +16,7 @@
     "generate:types": "tsx scripts/generate-api-types.ts",
     "smoke:live-data": "tsx scripts/smoke-live-data.ts",
     "pg:index-stats": "tsx scripts/pg-index-stats.ts",
+    "audit:ui-inlines": "tsx scripts/audit-ui-inlines.ts",
     "check": "npm run lint && npm run test && npm run validate:openapi && npm run generate:types && npm run build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
