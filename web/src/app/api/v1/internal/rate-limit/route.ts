@@ -3,7 +3,6 @@ import { checkDistributedRateLimit, shouldTreatMissingRedisAsDegraded } from "@/
 import { logger, serializeError } from "@/lib/logger";
 import { withRequestLogging } from "@/lib/request-logging";
 import { apiError, apiSuccess } from "@/lib/response";
-import { resolveSessionSigningSecret } from "@/lib/session-secret-resolver";
 import { emitSystemAlert } from "@/lib/system-alerts";
 
 export const runtime = "nodejs";
@@ -15,7 +14,7 @@ const bodySchema = z.object({
 });
 
 function resolveInternalSecret() {
-  return process.env.INTERNAL_SERVICE_SECRET?.trim() || resolveSessionSigningSecret() || "";
+  return process.env.INTERNAL_SERVICE_SECRET?.trim() || "";
 }
 
 export async function POST(request: Request) {

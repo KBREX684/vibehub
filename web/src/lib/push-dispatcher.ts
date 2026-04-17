@@ -1,6 +1,7 @@
-import { createHash, randomBytes } from "crypto";
+import { randomBytes } from "crypto";
 import { assertPublicHttpsUrl } from "@/lib/private-network-url";
 import type { InAppNotificationKind } from "@/lib/types";
+import { signWebhookPayload } from "@/lib/webhook-signature";
 
 function getWebhookUrl(): string | undefined {
   const u = process.env.NOTIFICATION_WEBHOOK_URL?.trim();
@@ -53,8 +54,7 @@ export async function dispatchNotificationPush(params: {
       };
       const secret = getWebhookSecret();
       if (secret) {
-        const sig = createHash("sha256").update(`${secret}:${body}`, "utf8").digest("hex");
-        headers["X-VibeHub-Signature"] = `sha256=${sig}`;
+        headers["X-VibeHub-Signature"] = `sha256=${signWebhookPayload(secret, body)}`;
       }
       const idem = randomBytes(16).toString("hex");
       headers["Idempotency-Key"] = idem;

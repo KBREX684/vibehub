@@ -6,6 +6,7 @@ import { registerUserWithEmailPassword } from "@/lib/repository";
 import { isTransactionalEmailConfigured, sendTransactionalEmail } from "@/lib/mail";
 import { getRequestLogger, serializeError } from "@/lib/logger";
 import { isProductionLikeEnv } from "@/lib/env-check";
+import { enforceAuthActionRateLimit } from "@/lib/auth-rate-limit";
 
 const bodySchema = z
   .object({
@@ -28,6 +29,22 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response;
   const zod = bodySchema.safeParse(parsed.body);
   if (!zod.success) return apiErrorFromZod(zod.error);
+  const rl = await enforceAuthActionRateLimit({
+    request,
+    action: "register",
+    identity: zod.data.email,
+  });
+  if (!rl.ok) {
+    return apiError(
+      {
+        code: "RATE_LIMITED",
+        message: "Too many registration attempts. Please try again later.",
+        details: { retryAfterSeconds: rl.retryAfterSeconds },
+      },
+      429,
+      { "Retry-After": String(rl.retryAfterSeconds) }
+    );
+  }
 
   try {
     const { userId, verificationToken } = await registerUserWithEmailPassword(zod.data);

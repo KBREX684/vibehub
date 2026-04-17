@@ -1,17 +1,13 @@
-import { createHash } from "crypto";
 import type { WebhookDeliverJob } from "@/lib/webhook-job-types";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { logger } from "@/lib/logger";
+import { signWebhookPayload } from "@/lib/webhook-signature";
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 400;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-function hmacHex(secret: string, body: string): string {
-  return createHash("sha256").update(`${secret}:${body}`, "utf8").digest("hex");
 }
 
 /**
@@ -28,7 +24,7 @@ export async function deliverWebhookHttp(job: WebhookDeliverJob): Promise<{
     "Idempotency-Key": job.idempotencyKey,
   };
   if (job.secret) {
-    headers["X-VibeHub-Signature"] = `sha256=${hmacHex(job.secret, job.body)}`;
+    headers["X-VibeHub-Signature"] = `sha256=${signWebhookPayload(job.secret, job.body)}`;
   }
 
   let lastHttp: number | undefined;

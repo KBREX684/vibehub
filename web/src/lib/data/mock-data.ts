@@ -644,6 +644,8 @@ export const mockOAuthAuthorizationCodes: Array<{
   codeHash: string;
   redirectUri: string;
   scopes: string[];
+  codeChallenge?: string;
+  codeChallengeMethod?: string;
   expiresAt: string;
   usedAt?: string;
   createdAt: string;

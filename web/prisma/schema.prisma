@@ -354,6 +354,8 @@ model OAuthAuthorizationCode {
   codeHash    String    @unique
   redirectUri String
   scopes      String[]
+  codeChallenge       String?
+  codeChallengeMethod String?
   expiresAt   DateTime
   usedAt      DateTime?
   createdAt   DateTime  @default(now())

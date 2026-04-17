@@ -5,6 +5,13 @@ import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { getPrisma } from "@/lib/repository";
 import { assertPublicHttpsUrl } from "@/lib/private-network-url";
 import { logger } from "@/lib/logger";
+import {
+  decryptStoredSecret,
+  encryptStoredSecret,
+  isEncryptedSecret,
+  maskSecretValue,
+  maskWebhookUrl,
+} from "@/lib/secret-crypto";
 import { mockAgentBindings } from "@/lib/data/mock-agent-bindings";
 import {
   mockAutomationWorkflowRuns,
@@ -33,9 +40,64 @@ const ACTION_TYPES: readonly AutomationWorkflowActionType[] = [
   "trigger_github_repository_dispatch",
 ] as const;
 
+const SENSITIVE_ACTION_FIELDS: Partial<Record<AutomationWorkflowActionType, readonly string[]>> = {
+  send_slack_message: ["webhookUrl"],
+  send_discord_message: ["webhookUrl"],
+  send_feishu_message: ["webhookUrl"],
+  trigger_github_repository_dispatch: ["token"],
+};
+
 function ensureActionType(value: string): AutomationWorkflowActionType {
   if ((ACTION_TYPES as readonly string[]).includes(value)) return value as AutomationWorkflowActionType;
   throw new Error("INVALID_AUTOMATION_ACTION_TYPE");
+}
+
+function encryptSensitiveStepConfig(
+  actionType: AutomationWorkflowActionType,
+  config: WorkflowStepConfig
+): WorkflowStepConfig {
+  const sensitiveKeys = SENSITIVE_ACTION_FIELDS[actionType];
+  if (!sensitiveKeys?.length) return { ...config };
+  const next = { ...config };
+  for (const key of sensitiveKeys) {
+    const value = next[key];
+    if (typeof value === "string" && value.trim()) {
+      next[key] = encryptStoredSecret(value, `automation:${actionType}:${key}`);
+    }
+  }
+  return next;
+}
+
+function decryptSensitiveStepConfig(
+  actionType: AutomationWorkflowActionType,
+  config: WorkflowStepConfig
+): WorkflowStepConfig {
+  const sensitiveKeys = SENSITIVE_ACTION_FIELDS[actionType];
+  if (!sensitiveKeys?.length) return { ...config };
+  const next = { ...config };
+  for (const key of sensitiveKeys) {
+    const value = next[key];
+    if (typeof value === "string" && isEncryptedSecret(value)) {
+      next[key] = decryptStoredSecret(value, `automation:${actionType}:${key}`);
+    }
+  }
+  return next;
+}
+
+function redactSensitiveStepConfig(
+  actionType: AutomationWorkflowActionType,
+  config: WorkflowStepConfig
+): WorkflowStepConfig {
+  const next = decryptSensitiveStepConfig(actionType, config);
+  const sensitiveKeys = SENSITIVE_ACTION_FIELDS[actionType];
+  if (!sensitiveKeys?.length) return next;
+  for (const key of sensitiveKeys) {
+    const value = next[key];
+    if (typeof value === "string" && value.trim()) {
+      next[key] = key === "webhookUrl" ? maskWebhookUrl(value) : maskSecretValue(value);
+    }
+  }
+  return next;
 }
 
 function toStepSummary(row: {
@@ -45,12 +107,16 @@ function toStepSummary(row: {
   config: unknown;
   createdAt: Date | string;
   updatedAt: Date | string;
-}): AutomationWorkflowStepSummary {
+}, options?: { redactSensitive?: boolean }): AutomationWorkflowStepSummary {
+  const actionType = row.actionType as AutomationWorkflowActionType;
   return {
     id: row.id,
     sortOrder: row.sortOrder,
-    actionType: row.actionType as AutomationWorkflowActionType,
-    config: (row.config as Record<string, unknown>) ?? {},
+    actionType,
+    config:
+      options?.redactSensitive === false
+        ? decryptSensitiveStepConfig(actionType, (row.config as Record<string, unknown>) ?? {})
+        : redactSensitiveStepConfig(actionType, (row.config as Record<string, unknown>) ?? {}),
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
@@ -162,7 +228,10 @@ function matchFilter(filter: Record<string, unknown> | undefined, payload: Recor
   return true;
 }
 
-export async function listUserAutomationWorkflows(userId: string): Promise<AutomationWorkflowSummary[]> {
+export async function listUserAutomationWorkflows(
+  userId: string,
+  options?: { redactSensitive?: boolean }
+): Promise<AutomationWorkflowSummary[]> {
   if (isMockDataEnabled()) {
     return mockAutomationWorkflows
       .filter((item) => item.userId === userId)
@@ -173,7 +242,7 @@ export async function listUserAutomationWorkflows(userId: string): Promise<Autom
           mockAutomationWorkflowSteps
             .filter((step) => step.workflowId === row.id)
             .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map(toStepSummary),
+            .map((step) => toStepSummary(step, options)),
           row.agentBindingId
             ? mockAgentBindings.find((binding) => binding.id === row.agentBindingId && binding.userId === userId)?.label
             : undefined
@@ -191,7 +260,7 @@ export async function listUserAutomationWorkflows(userId: string): Promise<Autom
     orderBy: { createdAt: "desc" },
   });
   return rows.map((row) =>
-    toWorkflowSummary(row, row.steps.map(toStepSummary), row.agentBinding?.label)
+    toWorkflowSummary(row, row.steps.map((step) => toStepSummary(step, options)), row.agentBinding?.label)
   );
 }
 
@@ -259,7 +328,7 @@ export async function createUserAutomationWorkflow(params: {
         workflowId,
         sortOrder: index,
         actionType: step.actionType,
-        config: step.config,
+        config: encryptSensitiveStepConfig(step.actionType, step.config),
         createdAt: now,
         updatedAt: now,
       });
@@ -269,7 +338,10 @@ export async function createUserAutomationWorkflow(params: {
       : undefined;
     return toWorkflowSummary(
       mockAutomationWorkflows[0]!,
-      mockAutomationWorkflowSteps.filter((item) => item.workflowId === workflowId).sort((a, b) => a.sortOrder - b.sortOrder).map(toStepSummary),
+      mockAutomationWorkflowSteps
+        .filter((item) => item.workflowId === workflowId)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((step) => toStepSummary(step)),
       bindingLabel
     );
   }
@@ -295,7 +367,7 @@ export async function createUserAutomationWorkflow(params: {
         create: params.steps.map((step, index) => ({
           sortOrder: index,
           actionType: ensureActionType(step.actionType),
-          config: step.config as Prisma.InputJsonValue,
+          config: encryptSensitiveStepConfig(step.actionType, step.config) as Prisma.InputJsonValue,
         })),
       },
     },
@@ -304,7 +376,7 @@ export async function createUserAutomationWorkflow(params: {
       agentBinding: { select: { label: true } },
     },
   });
-  return toWorkflowSummary(row, row.steps.map(toStepSummary), row.agentBinding?.label);
+  return toWorkflowSummary(row, row.steps.map((step) => toStepSummary(step)), row.agentBinding?.label);
 }
 
 export async function updateUserAutomationWorkflow(params: {
@@ -343,7 +415,7 @@ export async function updateUserAutomationWorkflow(params: {
           workflowId: row.id,
           sortOrder: index,
           actionType: step.actionType,
-          config: step.config,
+          config: encryptSensitiveStepConfig(step.actionType, step.config),
           createdAt: row.updatedAt,
           updatedAt: row.updatedAt,
         });
@@ -351,7 +423,10 @@ export async function updateUserAutomationWorkflow(params: {
     }
     return toWorkflowSummary(
       row,
-      mockAutomationWorkflowSteps.filter((item) => item.workflowId === row.id).sort((a, b) => a.sortOrder - b.sortOrder).map(toStepSummary),
+      mockAutomationWorkflowSteps
+        .filter((item) => item.workflowId === row.id)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((step) => toStepSummary(step)),
       row.agentBindingId ? mockAgentBindings.find((binding) => binding.id === row.agentBindingId)?.label : undefined
     );
   }
@@ -395,7 +470,7 @@ export async function updateUserAutomationWorkflow(params: {
             workflowId: existing.id,
             sortOrder: index,
             actionType: ensureActionType(step.actionType),
-            config: step.config as Prisma.InputJsonValue,
+            config: encryptSensitiveStepConfig(step.actionType, step.config) as Prisma.InputJsonValue,
           })),
         });
       }
@@ -410,7 +485,7 @@ export async function updateUserAutomationWorkflow(params: {
     },
   });
   if (!full) throw new Error("AUTOMATION_WORKFLOW_NOT_FOUND");
-  return toWorkflowSummary(full, full.steps.map(toStepSummary), full.agentBinding?.label);
+  return toWorkflowSummary(full, full.steps.map((step) => toStepSummary(step)), full.agentBinding?.label);
 }
 
 export async function deleteUserAutomationWorkflow(params: { userId: string; workflowId: string }): Promise<void> {
@@ -621,7 +696,7 @@ export async function dispatchAutomationWorkflows(
   payload: Record<string, unknown>
 ): Promise<void> {
   try {
-    const workflows = await listUserAutomationWorkflows(userId);
+    const workflows = await listUserAutomationWorkflows(userId, { redactSensitive: false });
     for (const workflow of workflows) {
       if (!workflow.active || workflow.triggerEvent !== event) continue;
       if (!matchFilter(workflow.filterJson, payload)) continue;

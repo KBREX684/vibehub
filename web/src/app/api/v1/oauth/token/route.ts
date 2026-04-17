@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       clientSecret: body.client_secret ?? "",
       code: body.code ?? "",
       redirectUri: body.redirect_uri ?? "",
+      codeVerifier: body.code_verifier ?? "",
     });
     return apiSuccess({
       access_token: token.accessToken,

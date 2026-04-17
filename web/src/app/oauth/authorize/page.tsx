@@ -12,6 +12,9 @@ export default async function OAuthAuthorizePage({ searchParams }: PageProps) {
   const redirectUri = typeof params.redirect_uri === "string" ? params.redirect_uri : "";
   const scope = typeof params.scope === "string" ? params.scope : "";
   const state = typeof params.state === "string" ? params.state : "";
+  const codeChallenge = typeof params.code_challenge === "string" ? params.code_challenge : "";
+  const codeChallengeMethod =
+    typeof params.code_challenge_method === "string" ? params.code_challenge_method : "";
   const session = await getSessionUserFromCookie();
 
   if (!clientId || !redirectUri) {
@@ -28,7 +31,11 @@ export default async function OAuthAuthorizePage({ searchParams }: PageProps) {
   }
 
   if (!session) {
-    redirect(`/login?redirect=${encodeURIComponent(`/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}${state ? `&state=${encodeURIComponent(state)}` : ""}`)}`);
+    redirect(
+      `/login?redirect=${encodeURIComponent(
+        `/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}${state ? `&state=${encodeURIComponent(state)}` : ""}${codeChallenge ? `&code_challenge=${encodeURIComponent(codeChallenge)}` : ""}${codeChallengeMethod ? `&code_challenge_method=${encodeURIComponent(codeChallengeMethod)}` : ""}`
+      )}`
+    );
   }
 
   let app = null;
@@ -83,6 +90,8 @@ export default async function OAuthAuthorizePage({ searchParams }: PageProps) {
               <input type="hidden" name="redirect_uri" value={redirectUri} />
               <input type="hidden" name="scope" value={scope} />
               <input type="hidden" name="state" value={state} />
+              <input type="hidden" name="code_challenge" value={codeChallenge} />
+              <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />
               <button type="submit" name="decision" value="approve" className="btn btn-primary">
                 Approve
               </button>

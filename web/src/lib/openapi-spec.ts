@@ -278,13 +278,14 @@ export function buildOpenApiDocument(): Record<string, unknown> {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["filename", "contentType"],
+                  required: ["filename", "contentType", "sizeBytes"],
                   properties: {
                     filename: { type: "string" },
                     contentType: {
                       type: "string",
                       enum: ["image/png", "image/jpeg", "image/webp", "image/gif"],
                     },
+                    sizeBytes: { type: "integer", minimum: 1, maximum: 5242880 },
                   },
                 },
               },
@@ -2023,6 +2024,39 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         post: {
           tags: ["oauth"],
           summary: "Exchange authorization code for OAuth Bearer token",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["grant_type", "client_id", "code", "redirect_uri"],
+                  properties: {
+                    grant_type: { type: "string", enum: ["authorization_code"] },
+                    client_id: { type: "string" },
+                    client_secret: { type: "string" },
+                    code: { type: "string" },
+                    redirect_uri: { type: "string", format: "uri" },
+                    code_verifier: { type: "string" },
+                  },
+                },
+              },
+              "application/x-www-form-urlencoded": {
+                schema: {
+                  type: "object",
+                  required: ["grant_type", "client_id", "code", "redirect_uri"],
+                  properties: {
+                    grant_type: { type: "string", enum: ["authorization_code"] },
+                    client_id: { type: "string" },
+                    client_secret: { type: "string" },
+                    code: { type: "string" },
+                    redirect_uri: { type: "string", format: "uri" },
+                    code_verifier: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
           responses: { "200": responses["200"], "400": responses["400"], "500": responses["500"] },
         },
       },

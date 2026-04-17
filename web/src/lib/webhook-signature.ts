@@ -1,14 +1,14 @@
-import { createHash, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
-function hmacHex(secret: string, body: string): string {
-  return createHash("sha256").update(`${secret}:${body}`, "utf8").digest("hex");
+export function signWebhookPayload(secret: string, body: string): string {
+  return createHmac("sha256", secret).update(body, "utf8").digest("hex");
 }
 
 /** Verify `X-VibeHub-Signature: sha256=<hex>` from inbound tests or replays. */
 export function verifyWebhookSignature(secret: string, rawBody: string, signatureHeader: string | null): boolean {
   if (!signatureHeader?.startsWith("sha256=")) return false;
   const got = signatureHeader.slice("sha256=".length);
-  const expected = hmacHex(secret, rawBody);
+  const expected = signWebhookPayload(secret, rawBody);
   try {
     const a = Buffer.from(got, "hex");
     const b = Buffer.from(expected, "hex");

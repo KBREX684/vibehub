@@ -105,8 +105,7 @@ async function checkDistributedIpRateLimit(
   bucketKey: string,
   maxRequestsPerMinute: number
 ): Promise<{ ok: true } | { ok: false; retryAfterSeconds: number }> {
-  const internalSecret =
-    process.env.INTERNAL_SERVICE_SECRET?.trim() || resolveSessionSigningSecret() || "";
+  const internalSecret = process.env.INTERNAL_SERVICE_SECRET?.trim() || "";
   if (!internalSecret) {
     return checkIpRateLimit(bucketKey, maxRequestsPerMinute);
   }
