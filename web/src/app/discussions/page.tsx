@@ -57,6 +57,34 @@ export default async function DiscussionsPage({ searchParams }: Props) {
     { sort: "following" as const, icon: Users, label: "Following" },
     { sort: "recommended" as const, icon: Sparkles, label: "Recommended" },
   ];
+  const FEED_META: Record<PostSortOrder, { description: string; emptyTitle: string; emptyBody: string }> = {
+    recent: {
+      description: "Latest approved threads across the square.",
+      emptyTitle: "No recent discussions",
+      emptyBody: "No approved threads have been published yet.",
+    },
+    hot: {
+      description: "Momentum ranking using likes, comments, bookmarks, and recency decay.",
+      emptyTitle: "Nothing is trending yet",
+      emptyBody: "Hot picks appear here once discussions start collecting real engagement.",
+    },
+    following: {
+      description: "Only creators you follow, ordered by newest activity.",
+      emptyTitle: "Your following feed is empty",
+      emptyBody: "Follow creators from profile pages and their latest posts will show up here.",
+    },
+    recommended: {
+      description: "Interest-based recommendations from your recent interaction graph. No LLM ranking.",
+      emptyTitle: "No recommendations yet",
+      emptyBody: "Like, bookmark, or author a few posts first and this feed will become personalized.",
+    },
+    featured: {
+      description: "Editorially featured discussions.",
+      emptyTitle: "No featured discussions yet",
+      emptyBody: "Featured discussions appear here after review.",
+    },
+  };
+  const activeMeta = FEED_META[sort];
 
   return (
     <main className="container pb-24 space-y-8 pt-8">
@@ -75,6 +103,9 @@ export default async function DiscussionsPage({ searchParams }: Props) {
               {pagination.total} active threads
               {authorId ? " · Filtered by author" : personalizedFeed ? " · Personalized view" : " · Share knowledge, ask questions"}
             </p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1 mb-0">
+              {activeMeta.description}
+            </p>
           </div>
         </div>
 
@@ -85,6 +116,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
               <Link
                 key={s}
                 href={buildDiscussionsHref({ sort: s, authorId, classicPagination })}
+                scroll={false}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-[var(--radius-pill)] transition-all ${
                   sort === s
                     ? "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] shadow-sm border border-[var(--color-border)]"
@@ -127,10 +159,10 @@ export default async function DiscussionsPage({ searchParams }: Props) {
         <div className="card p-16 text-center">
           <MessageSquare className="w-10 h-10 text-[var(--color-text-muted)] mx-auto mb-4 opacity-50" />
           <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-2">
-            No discussions yet
+            {activeMeta.emptyTitle}
           </h3>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Be the first to start a conversation.
+            {activeMeta.emptyBody}
           </p>
         </div>
       ) : classicPagination ? (

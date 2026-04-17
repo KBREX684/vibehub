@@ -547,32 +547,44 @@ export async function listProjects(params: {
 
 function normalizeProjectFeed(project: Project): Project {
   const bookmarkCount = project.bookmarkCount ?? 0;
+  const recentBookmarkDelta = project.recentBookmarkDelta ?? 0;
   const collaborationIntentCount = project.collaborationIntentCount ?? 0;
-  const activityScore = project.activityScore ?? bookmarkCount * 4 + collaborationIntentCount * 6;
+  const activityScore = project.activityScore ?? bookmarkCount * 3 + collaborationIntentCount * 5;
   return {
     ...project,
     bookmarkCount,
+    recentBookmarkDelta,
     collaborationIntentCount,
     activityScore,
   };
 }
 
-function projectFreshnessBoost(updatedAtIso: string): number {
-  const ageHours = Math.max(0, (Date.now() - new Date(updatedAtIso).getTime()) / (1000 * 60 * 60));
-  return Math.max(0, 24 - Math.min(ageHours, 24));
+function projectUpdatedWithin30DaysBoost(updatedAtIso: string): number {
+  const ageMs = Date.now() - new Date(updatedAtIso).getTime();
+  return ageMs <= 30 * 24 * 60 * 60 * 1000 ? 2 : 0;
 }
 
-function computeProjectActivityScore(input: {
+function projectFeaturedWeight(featuredRank?: number | null): number {
+  if (featuredRank == null) return 0;
+  // Lower rank means a stronger editorial pick; convert it into a positive boost.
+  return Math.max(1, 11 - Math.min(featuredRank, 10)) * 100;
+}
+
+function computeProjectDiscoveryScore(input: {
   bookmarkCount: number;
+  recentBookmarkDelta?: number;
   collaborationIntentCount: number;
   updatedAt: string;
   creatorContributionScore?: number;
+  featuredRank?: number | null;
 }) {
   return (
-    input.bookmarkCount * 4 +
-    input.collaborationIntentCount * 6 +
-    projectFreshnessBoost(input.updatedAt) +
-    Math.round((input.creatorContributionScore ?? 0) / 20)
+    input.bookmarkCount * 3 +
+    (input.recentBookmarkDelta ?? 0) +
+    input.collaborationIntentCount * 5 +
+    projectUpdatedWithin30DaysBoost(input.updatedAt) +
+    (input.creatorContributionScore ?? 0) * 0.1 +
+    projectFeaturedWeight(input.featuredRank)
   );
 }
 
@@ -643,22 +655,37 @@ export async function listProjectFeed(params: {
 
     const items = filtered.map((project) => {
       const bookmarkCount = mockProjectBookmarks.filter((item) => item.projectId === project.id).length;
+      const recentBookmarkDelta = mockProjectBookmarks.filter((item) => {
+        if (item.projectId !== project.id) return false;
+        return Date.now() - new Date(item.createdAt).getTime() <= 7 * 24 * 60 * 60 * 1000;
+      }).length;
       const collaborationIntentCount = mockCollaborationIntents.filter((item) => item.projectId === project.id).length;
       const creator = mockCreators.find((item) => item.id === project.creatorId);
       const credit = creator ? mockContributionCredits.find((item) => item.userId === creator.userId) : undefined;
       const recommendationScore =
         project.tags.reduce((sum, tag) => sum + (interestTags.get(tag) ?? 0), 0) +
         project.techStack.reduce((sum, tech) => sum + (interestTech.get(tech) ?? 0), 0) +
-        (creator && followedCreatorUserIds.has(creator.userId) ? 8 : 0);
-      return normalizeProjectFeed({
-        ...project,
-        bookmarkCount,
-        collaborationIntentCount,
-        activityScore: computeProjectActivityScore({
+        (creator && followedCreatorUserIds.has(creator.userId) ? 8 : 0) +
+        computeProjectDiscoveryScore({
           bookmarkCount,
+          recentBookmarkDelta,
           collaborationIntentCount,
           updatedAt: project.updatedAt,
           creatorContributionScore: credit?.score,
+          featuredRank: project.featuredRank,
+        });
+      return normalizeProjectFeed({
+        ...project,
+        bookmarkCount,
+        recentBookmarkDelta,
+        collaborationIntentCount,
+        activityScore: computeProjectDiscoveryScore({
+          bookmarkCount,
+          recentBookmarkDelta,
+          collaborationIntentCount,
+          updatedAt: project.updatedAt,
+          creatorContributionScore: credit?.score,
+          featuredRank: project.featuredRank,
         }),
         featuredRank: sort === "recommended" ? Math.round(recommendationScore) : project.featuredRank,
       });
@@ -719,6 +746,17 @@ export async function listProjectFeed(params: {
     select: { userId: true, score: true },
   });
   const creditMap = new Map(creditRows.map((row) => [row.userId, row.score]));
+  const recentBookmarkRows = rows.length
+    ? await prisma.projectBookmark.groupBy({
+        by: ["projectId"],
+        where: {
+          projectId: { in: rows.map((row) => row.id) },
+          createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        },
+        _count: { _all: true },
+      })
+    : [];
+  const recentBookmarkMap = new Map(recentBookmarkRows.map((row) => [row.projectId, row._count._all]));
   const bookmarkedRows = params.viewerUserId
     ? await prisma.projectBookmark.findMany({
         where: { userId: params.viewerUserId },
@@ -765,18 +803,29 @@ export async function listProjectFeed(params: {
     normalizeProjectFeed({
       ...toProjectDto({ ...row, team: row.team }),
       bookmarkCount: row._count.bookmarks,
+      recentBookmarkDelta: recentBookmarkMap.get(row.id) ?? 0,
       collaborationIntentCount: row._count.collaborationIntents,
-      activityScore: computeProjectActivityScore({
+      activityScore: computeProjectDiscoveryScore({
         bookmarkCount: row._count.bookmarks,
+        recentBookmarkDelta: recentBookmarkMap.get(row.id) ?? 0,
         collaborationIntentCount: row._count.collaborationIntents,
         updatedAt: row.updatedAt.toISOString(),
         creatorContributionScore: creditMap.get(row.creator.userId),
+        featuredRank: row.featuredRank,
       }),
       featuredRank:
         sort === "recommended"
           ? row.tags.reduce((sum, tag) => sum + (interestTags.get(tag) ?? 0), 0) +
             row.techStack.reduce((sum, tech) => sum + (interestTech.get(tech) ?? 0), 0) +
-            (followedCreatorIds.has(row.creator.userId) ? 8 : 0)
+            (followedCreatorIds.has(row.creator.userId) ? 8 : 0) +
+            computeProjectDiscoveryScore({
+              bookmarkCount: row._count.bookmarks,
+              recentBookmarkDelta: recentBookmarkMap.get(row.id) ?? 0,
+              collaborationIntentCount: row._count.collaborationIntents,
+              updatedAt: row.updatedAt.toISOString(),
+              creatorContributionScore: creditMap.get(row.creator.userId),
+              featuredRank: row.featuredRank,
+            })
           : row.featuredRank ?? undefined,
     })
   );
@@ -805,6 +854,101 @@ export async function getProjectFilterFacets(): Promise<{ tags: string[]; techSt
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
   return getProjectBySlugFromDomain(slug);
+}
+
+export async function getProjectEngagementSnapshot(params: {
+  projectId: string;
+  viewerUserId?: string | null;
+  limit?: number;
+}): Promise<{
+  bookmarkCount: number;
+  recentBookmarkDelta: number;
+  viewerHasBookmarked: boolean;
+  recentBookmarkers: Array<{ userId: string; name: string }>;
+  recentCollaborationIntents: Array<{
+    id: string;
+    applicantId: string;
+    applicantName: string;
+    intentType: CollaborationIntent["intentType"];
+    message: string;
+    status: CollaborationIntent["status"];
+    createdAt: string;
+  }>;
+}> {
+  const limit = Math.max(1, Math.min(params.limit ?? 3, 6));
+  if (useMockData) {
+    const projectBookmarks = mockProjectBookmarks.filter((item) => item.projectId === params.projectId);
+    const recentBookmarkers = projectBookmarks
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit)
+      .map((item) => ({
+        userId: item.userId,
+        name: mockUsers.find((user) => user.id === item.userId)?.name ?? item.userId,
+      }));
+    const recentCollaborationIntents = mockCollaborationIntents
+      .filter((item) => item.projectId === params.projectId)
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit)
+      .map((item) => ({
+        id: item.id,
+        applicantId: item.applicantId,
+        applicantName: mockUsers.find((user) => user.id === item.applicantId)?.name ?? item.applicantId,
+        intentType: item.intentType,
+        message: item.message,
+        status: item.status,
+        createdAt: item.createdAt,
+      }));
+    return {
+      bookmarkCount: projectBookmarks.length,
+      recentBookmarkDelta: projectBookmarks.filter((item) => Date.now() - new Date(item.createdAt).getTime() <= 7 * 24 * 60 * 60 * 1000).length,
+      viewerHasBookmarked: Boolean(params.viewerUserId && projectBookmarks.some((item) => item.userId === params.viewerUserId)),
+      recentBookmarkers,
+      recentCollaborationIntents,
+    };
+  }
+
+  const prisma = await getPrisma();
+  const recentThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [bookmarkCount, recentBookmarkDelta, viewerBookmark, recentBookmarkers, recentCollaborationIntents] = await Promise.all([
+    prisma.projectBookmark.count({ where: { projectId: params.projectId } }),
+    prisma.projectBookmark.count({ where: { projectId: params.projectId, createdAt: { gte: recentThreshold } } }),
+    params.viewerUserId
+      ? prisma.projectBookmark.findFirst({
+          where: { projectId: params.projectId, userId: params.viewerUserId },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+    prisma.projectBookmark.findMany({
+      where: { projectId: params.projectId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: { user: { select: { id: true, name: true } } },
+    }),
+    prisma.collaborationIntent.findMany({
+      where: { projectId: params.projectId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: { applicant: { select: { id: true, name: true } } },
+    }),
+  ]);
+
+  return {
+    bookmarkCount,
+    recentBookmarkDelta,
+    viewerHasBookmarked: Boolean(viewerBookmark),
+    recentBookmarkers: recentBookmarkers.map((item) => ({ userId: item.user.id, name: item.user.name })),
+    recentCollaborationIntents: recentCollaborationIntents.map((item) => ({
+      id: item.id,
+      applicantId: item.applicant.id,
+      applicantName: item.applicant.name,
+      intentType: item.intentType,
+      message: item.message,
+      status: item.status,
+      createdAt: item.createdAt.toISOString(),
+    })),
+  };
 }
 
 export async function updateProjectTeamLink(params: {
@@ -2089,16 +2233,22 @@ export async function listTeamTaskActivity(params: {
         const meta = log.metadata as Record<string, unknown> | undefined;
         return meta?.teamId === teamId && (log.entityId === params.taskId || meta?.taskId === params.taskId);
       })
-      .map((log) => ({
-        id: log.id,
-        actorId: log.actorId,
-        actorName: mockUsers.find((item) => item.id === log.actorId)?.name,
-        action: log.action,
-        entityType: log.entityType,
-        entityId: log.entityId,
-        metadata: log.metadata,
-        createdAt: log.createdAt,
-      }))
+      .map((log) => {
+        const metadata = log.metadata as Record<string, unknown> | undefined;
+        const kind = classifyTeamActivityEntry({ entityType: log.entityType, action: log.action });
+        return {
+          id: log.id,
+          kind,
+          actorId: log.actorId,
+          actorName: mockUsers.find((item) => item.id === log.actorId)?.name,
+          action: log.action,
+          entityType: log.entityType,
+          entityId: log.entityId,
+          metadata,
+          summary: summarizeTeamActivityEntry({ kind, action: log.action, metadata }),
+          createdAt: log.createdAt,
+        };
+      })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
@@ -2120,16 +2270,22 @@ export async function listTeamTaskActivity(params: {
     include: { actor: { select: { name: true } } },
     take: 100,
   });
-  return rows.map((log) => ({
-    id: log.id,
-    actorId: log.actorId,
-    actorName: log.actor.name,
-    action: log.action,
-    entityType: log.entityType,
-    entityId: log.entityId,
-    metadata: log.metadata as Record<string, unknown> | undefined,
-    createdAt: log.createdAt.toISOString(),
-  }));
+  return rows.map((log) => {
+    const metadata = log.metadata as Record<string, unknown> | undefined;
+    const kind = classifyTeamActivityEntry({ entityType: log.entityType, action: log.action });
+    return {
+      id: log.id,
+      kind,
+      actorId: log.actorId,
+      actorName: log.actor.name,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      metadata,
+      summary: summarizeTeamActivityEntry({ kind, action: log.action, metadata }),
+      createdAt: log.createdAt.toISOString(),
+    };
+  });
 }
 
 async function listTeamReviewerUserIds(teamId: string): Promise<string[]> {
@@ -4842,17 +4998,19 @@ export async function togglePostBookmark(
   return { bookmarked: true, bookmarkCount };
 }
 
-export async function toggleProjectBookmark(userId: string, projectSlug: string): Promise<{ bookmarked: boolean }> {
+export async function toggleProjectBookmark(userId: string, projectSlug: string): Promise<{ bookmarked: boolean; bookmarkCount: number }> {
   if (useMockData) {
     const project = mockProjects.find((p) => p.slug === projectSlug);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
     const existing = mockProjectBookmarks.findIndex((b) => b.userId === userId && b.projectId === project.id);
     if (existing >= 0) {
       mockProjectBookmarks.splice(existing, 1);
-      return { bookmarked: false };
+      const bookmarkCount = mockProjectBookmarks.filter((b) => b.projectId === project.id).length;
+      return { bookmarked: false, bookmarkCount };
     }
     mockProjectBookmarks.push({ id: `pbk_${Date.now()}`, userId, projectId: project.id, createdAt: new Date().toISOString() });
-    return { bookmarked: true };
+    const bookmarkCount = mockProjectBookmarks.filter((b) => b.projectId === project.id).length;
+    return { bookmarked: true, bookmarkCount };
   }
   const prisma = await getPrisma();
   const project = await prisma.project.findUnique({ where: { slug: projectSlug }, select: { id: true } });
@@ -4860,10 +5018,12 @@ export async function toggleProjectBookmark(userId: string, projectSlug: string)
   const existing = await prisma.projectBookmark.findUnique({ where: { userId_projectId: { userId, projectId: project.id } } });
   if (existing) {
     await prisma.projectBookmark.delete({ where: { id: existing.id } });
-    return { bookmarked: false };
+    const bookmarkCount = await prisma.projectBookmark.count({ where: { projectId: project.id } });
+    return { bookmarked: false, bookmarkCount };
   }
   await prisma.projectBookmark.create({ data: { userId, projectId: project.id } });
-  return { bookmarked: true };
+  const bookmarkCount = await prisma.projectBookmark.count({ where: { projectId: project.id } });
+  return { bookmarked: true, bookmarkCount };
 }
 
 export async function toggleUserFollow(followerId: string, followingSlug: string): Promise<{ following: boolean }> {
@@ -10195,19 +10355,46 @@ export async function getCreatorGrowthStats(creatorSlug: string): Promise<Creato
   };
 }
 
+function classifyTeamActivityEntry(input: { entityType: string; action: string }): TeamActivityLogEntry["kind"] {
+  if (input.entityType === "agent_action_audit") return "agent";
+  if (input.entityType === "team_discussion") return "discussion";
+  return "task";
+}
+
+function summarizeTeamActivityEntry(input: {
+  kind: TeamActivityLogEntry["kind"];
+  action: string;
+  metadata?: Record<string, unknown>;
+}): string {
+  if (input.kind === "agent") {
+    return input.action.replaceAll("_", " ");
+  }
+  const title =
+    typeof input.metadata?.title === "string"
+      ? input.metadata.title
+      : typeof input.metadata?.taskTitle === "string"
+        ? input.metadata.taskTitle
+        : typeof input.metadata?.discussionTitle === "string"
+          ? input.metadata.discussionTitle
+          : null;
+  return title ? `${input.action.replaceAll("_", " ")} · ${title}` : input.action.replaceAll("_", " ");
+}
+
 // ─── P3: 协作日志 (Team Activity Log) ──────────────────
 
 export async function listTeamActivityLog(params: {
   teamSlug: string;
   page: number;
   limit: number;
+  type?: TeamActivityLogEntry["kind"] | "all";
 }): Promise<Paginated<TeamActivityLogEntry>> {
+  const type = params.type ?? "all";
   if (useMockData) {
     const team = mockTeams.find((t) => t.slug === params.teamSlug);
     if (!team) return { items: [], pagination: { page: params.page, limit: params.limit, total: 0, totalPages: 1 } };
 
     const teamEntityTypes = ["team", "team_task", "team_milestone", "team_join_request", "team_discussion", "team_task_comment"];
-    const entries = mockAuditLogs
+    const auditEntries = mockAuditLogs
       .filter((log) => {
         if (!teamEntityTypes.includes(log.entityType)) return false;
         const meta = log.metadata as Record<string, unknown> | undefined;
@@ -10217,17 +10404,40 @@ export async function listTeamActivityLog(params: {
         const user = mockUsers.find((u) => u.id === log.actorId);
         return {
           id: log.id,
+          kind: classifyTeamActivityEntry({ entityType: log.entityType, action: log.action }),
           actorId: log.actorId,
           actorName: user?.name,
           action: log.action,
           entityType: log.entityType,
           entityId: log.entityId,
           metadata: log.metadata,
+          summary: summarizeTeamActivityEntry({
+            kind: classifyTeamActivityEntry({ entityType: log.entityType, action: log.action }),
+            action: log.action,
+            metadata: log.metadata as Record<string, unknown> | undefined,
+          }),
           createdAt: log.createdAt,
         } as TeamActivityLogEntry;
       });
+    const agentEntries = mockAgentActionAudits
+      .filter((item) => item.teamId === team.id)
+      .map((item) => ({
+        id: item.id,
+        kind: "agent" as const,
+        actorId: item.actorUserId,
+        actorName: mockUsers.find((user) => user.id === item.actorUserId)?.name,
+        action: item.action,
+        entityType: "agent_action_audit",
+        entityId: item.taskId ?? item.id,
+        metadata: item.metadata,
+        summary: summarizeTeamActivityEntry({ kind: "agent", action: item.action, metadata: item.metadata }),
+        createdAt: item.createdAt,
+      }));
+    const merged = [...auditEntries, ...agentEntries]
+      .filter((item) => (type === "all" ? true : item.kind === type))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    return paginateArray(entries, params.page, params.limit);
+    return paginateArray(merged, params.page, params.limit);
   }
 
   const prisma = await getPrisma();
@@ -10242,34 +10452,55 @@ export async function listTeamActivityLog(params: {
     metadata: { path: ["teamId"], equals: teamId },
   };
 
-  const [items, total] = await Promise.all([
+  const [items, agentRows] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
       include: { actor: { select: { name: true } } },
     }),
-    prisma.auditLog.count({ where }),
+    prisma.agentActionAudit.findMany({
+      where: { teamId },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
-  return {
-    items: items.map((log) => ({
-      id: log.id,
-      actorId: log.actorId,
-      actorName: log.actor.name,
-      action: log.action,
-      entityType: log.entityType,
-      entityId: log.entityId,
-      metadata: log.metadata as Record<string, unknown> | undefined,
-      createdAt: log.createdAt.toISOString(),
+  const merged = [
+    ...items.map((log) => {
+      const kind = classifyTeamActivityEntry({ entityType: log.entityType, action: log.action });
+      const metadata = log.metadata as Record<string, unknown> | undefined;
+      return {
+        id: log.id,
+        kind,
+        actorId: log.actorId,
+        actorName: log.actor.name,
+        action: log.action,
+        entityType: log.entityType,
+        entityId: log.entityId,
+        metadata,
+        summary: summarizeTeamActivityEntry({ kind, action: log.action, metadata }),
+        createdAt: log.createdAt.toISOString(),
+      } satisfies TeamActivityLogEntry;
+    }),
+    ...agentRows.map((row) => ({
+      id: row.id,
+      kind: "agent" as const,
+      actorId: row.actorUserId,
+      actorName: undefined,
+      action: row.action,
+      entityType: "agent_action_audit",
+      entityId: row.taskId ?? row.id,
+      metadata: row.metadata as Record<string, unknown> | undefined,
+      summary: summarizeTeamActivityEntry({ kind: "agent", action: row.action, metadata: row.metadata as Record<string, unknown> | undefined }),
+      createdAt: row.createdAt.toISOString(),
     })),
-    pagination: {
-      page: params.page,
-      limit: params.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / params.limit)),
-    },
+  ]
+    .filter((item) => (type === "all" ? true : item.kind === type))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const paginated = paginateArray(merged, params.page, params.limit);
+
+  return {
+    items: paginated.items,
+    pagination: paginated.pagination,
   };
 }
 

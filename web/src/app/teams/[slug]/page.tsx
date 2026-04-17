@@ -26,10 +26,13 @@ import {
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 }
 
-export default async function TeamDetailPage({ params }: Props) {
+export default async function TeamDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const query = (await searchParams) ?? {};
+  const activeTab = query.tab === "activity" ? "activity" : "overview";
   const session = await getSessionUserFromCookie();
   const team = await getTeamBySlug(slug, session?.userId ?? null);
 
@@ -155,7 +158,35 @@ export default async function TeamDetailPage({ params }: Props) {
         </div>
       </section>
 
+      <section className="flex flex-wrap items-center gap-2">
+        <Link
+          href={`/teams/${encodeURIComponent(team.slug)}`}
+          scroll={false}
+          className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-pill)] text-xs border transition-colors ${
+            activeTab === "overview"
+              ? "bg-[var(--color-bg-elevated)] border-[var(--color-border-strong)] text-[var(--color-text-primary)]"
+              : "bg-[var(--color-bg-canvas)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+          }`}
+        >
+          Overview
+        </Link>
+        <Link
+          href={`/teams/${encodeURIComponent(team.slug)}?tab=activity`}
+          scroll={false}
+          className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-pill)] text-xs border transition-colors ${
+            activeTab === "activity"
+              ? "bg-[var(--color-bg-elevated)] border-[var(--color-border-strong)] text-[var(--color-text-primary)]"
+              : "bg-[var(--color-bg-canvas)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+          }`}
+        >
+          Activity
+        </Link>
+      </section>
+
       {/* Two-column layout */}
+      {activeTab === "activity" ? (
+        <TeamActivityTimeline teamSlug={team.slug} currentUserId={session?.userId ?? null} fullWidth />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
         {/* Main col */}
@@ -254,10 +285,13 @@ export default async function TeamDetailPage({ params }: Props) {
 
         {/* Sidebar */}
         <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-20">
-          <TeamDetailActions team={team} currentUserId={session?.userId ?? null} />
+          <div id="join-team" className="scroll-mt-20">
+            <TeamDetailActions team={team} currentUserId={session?.userId ?? null} />
+          </div>
           <TeamActivityTimeline teamSlug={team.slug} currentUserId={session?.userId ?? null} />
         </div>
       </div>
+      )}
     </main>
   );
 }

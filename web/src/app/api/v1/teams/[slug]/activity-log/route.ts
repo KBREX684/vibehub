@@ -22,7 +22,12 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { slug } = await params;
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
-    const result = await listTeamActivityLog({ teamSlug: slug, page, limit });
+    const typeRaw = url.searchParams.get("type");
+    const type =
+      typeRaw === "task" || typeRaw === "discussion" || typeRaw === "agent"
+        ? typeRaw
+        : "all";
+    const result = await listTeamActivityLog({ teamSlug: slug, page, limit, type });
     return apiSuccess(result);
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);

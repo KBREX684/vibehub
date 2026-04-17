@@ -13,6 +13,17 @@ async function getPrisma() {
   return db.prisma;
 }
 
+function computeHotScore(input: {
+  likeCount: number;
+  bookmarkCount: number;
+  commentCount: number;
+  createdAt: Date;
+}) {
+  const ageHours = Math.max(0, (Date.now() - input.createdAt.getTime()) / (1000 * 60 * 60));
+  const decay = Math.max(0, 48 - Math.min(ageHours, 48)) / 6;
+  return input.commentCount * 5 + input.likeCount * 3 + input.bookmarkCount * 2 + decay;
+}
+
 export async function listPosts(params: ListPostsParams): Promise<Paginated<Post>> {
   const cursorRaw = params.cursor?.trim();
   const cursorDecoded = cursorRaw ? decodeCursor(cursorRaw) : null;
@@ -73,13 +84,27 @@ export async function listPosts(params: ListPostsParams): Promise<Paginated<Post
       where: { id: { in: ids } },
       include: {
         author: { select: { name: true } },
-        _count: { select: { likes: true, bookmarks: true } },
+        _count: { select: { likes: true, bookmarks: true, comments: true } },
       },
     });
     const byId = new Map(posts.map((p) => [p.id, p]));
     let ordered = ids.map((id) => byId.get(id)).filter(Boolean) as typeof posts;
     if (params.sort === "hot") {
-      ordered = [...ordered].sort((a, b) => b._count.likes - a._count.likes);
+      ordered = [...ordered].sort((a, b) =>
+        computeHotScore({
+          likeCount: b._count.likes,
+          bookmarkCount: b._count.bookmarks,
+          commentCount: b._count.comments,
+          createdAt: b.createdAt,
+        }) -
+          computeHotScore({
+            likeCount: a._count.likes,
+            bookmarkCount: a._count.bookmarks,
+            commentCount: a._count.comments,
+            createdAt: a.createdAt,
+          }) ||
+        b.createdAt.getTime() - a.createdAt.getTime()
+      );
     }
     return {
       items: ordered.map((p) =>
@@ -122,31 +147,62 @@ export async function listPosts(params: ListPostsParams): Promise<Paginated<Post
   const orderBy: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[] =
     params.sort === "featured"
       ? [{ featuredAt: "desc" }, { createdAt: "desc" }]
-      : params.sort === "hot"
-        ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
-        : { createdAt: "desc" };
+      : { createdAt: "desc" };
 
-  const skip = canUseCursor && cursorDecoded ? 0 : offset;
+  const skip = params.sort === "hot" ? 0 : canUseCursor && cursorDecoded ? 0 : offset;
   const takePlusOne =
-    (canUseCursor && cursorDecoded) || (!q && keysetEligible) ? take + 1 : take;
+    params.sort === "hot"
+      ? undefined
+      : (canUseCursor && cursorDecoded) || (!q && keysetEligible)
+        ? take + 1
+        : take;
 
   const [items, total] = await Promise.all([
     prisma.post.findMany({
       where,
       orderBy,
       skip,
-      take: takePlusOne,
+      ...(takePlusOne ? { take: takePlusOne } : {}),
       include: {
         author: { select: { name: true } },
-        _count: { select: { likes: true, bookmarks: true } },
+        _count: { select: { likes: true, bookmarks: true, comments: true } },
       },
     }),
     prisma.post.count({ where }),
   ]);
 
   let orderedItems = items;
-  if (q && params.sort === "hot") {
-    orderedItems = [...items].sort((a, b) => b._count.likes - a._count.likes);
+  if (params.sort === "hot") {
+    orderedItems = [...items].sort((a, b) =>
+      computeHotScore({
+        likeCount: b._count.likes,
+        bookmarkCount: b._count.bookmarks,
+        commentCount: b._count.comments,
+        createdAt: b.createdAt,
+      }) -
+        computeHotScore({
+          likeCount: a._count.likes,
+          bookmarkCount: a._count.bookmarks,
+          commentCount: a._count.comments,
+          createdAt: a.createdAt,
+        }) ||
+      b.createdAt.getTime() - a.createdAt.getTime()
+    );
+  }
+
+  if (params.sort === "hot") {
+    const paged = orderedItems.slice(offset, offset + take);
+    return {
+      items: paged.map((p) =>
+        toPostDto({ ...p, authorName: p.author.name, likeCount: p._count.likes, bookmarkCount: p._count.bookmarks })
+      ),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
   }
 
   const hasMorePage =

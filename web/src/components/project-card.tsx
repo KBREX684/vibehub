@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Star, GitFork, Zap, Users, Flame } from "lucide-react";
+import { Star, Zap, Users, Flame, Clock3, TrendingUp } from "lucide-react";
 import type { Project } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -22,6 +22,11 @@ export function ProjectCard({
   project: Project;
   featured?: boolean;
 }) {
+  const updatedAt = new Date(project.updatedAt);
+  const updatedLabel = Number.isNaN(updatedAt.getTime())
+    ? "Recently updated"
+    : updatedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
   return (
     <article className="relative group card transition-colors overflow-hidden">
       {featured && (
@@ -129,15 +134,19 @@ export function ProjectCard({
               <Users className="w-3 h-3" />
               {project.collaborationIntentCount ?? 0}
             </span>
-            <span className="flex items-center gap-1">
-              <Star className="w-3 h-3" />
-              {project.techStack?.length ?? 0}
-            </span>
-            <span className="flex items-center gap-1">
-              <GitFork className="w-3 h-3" />
-              {project.screenshots?.length ?? 0}
-            </span>
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-[var(--color-text-muted)]">
+          <span className="inline-flex items-center gap-1">
+            <Clock3 className="w-3 h-3" />
+            Updated {updatedLabel}
+          </span>
+          {typeof project.recentBookmarkDelta === "number" && project.recentBookmarkDelta > 0 ? (
+            <span className="inline-flex items-center gap-1 text-[var(--color-success)]">
+              <TrendingUp className="w-3 h-3" />
+              +{project.recentBookmarkDelta} saves this week
+            </span>
+          ) : null}
         </div>
       </div>
     </article>

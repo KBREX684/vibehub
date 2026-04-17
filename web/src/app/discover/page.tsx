@@ -145,6 +145,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           <Link
             key={value}
             href={buildHref(baseFilters, { sort: value, page: undefined }, classicPagination)}
+            scroll={false}
             className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-pill)] text-xs border transition-colors ${
               sort === value
                 ? "bg-[var(--color-bg-elevated)] border-[var(--color-border-strong)] text-[var(--color-text-primary)]"
@@ -156,6 +157,12 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           </Link>
         ))}
       </section>
+
+      {sort === "hot" && (
+        <div className="card p-4 text-sm text-[var(--color-text-secondary)]">
+          Hot projects rank by saves, collaboration intents, recent updates, creator credit, and editorial picks.
+        </div>
+      )}
 
       {sort === "recommended" && !session && (
         <div className="card p-4 text-sm text-[var(--color-text-secondary)]">

@@ -102,19 +102,67 @@
 - `TeamAgentMembership` 随 `TeamMembership` 的级联去激活（由 repository 约定强制而非 schema cascade；当前被 roadmap 明确标记为应用层责任，未触发 cleanup cron）
 - Agent 协作 tab 在 `/teams/[slug]` 主页内嵌版（当前通过 quick-link 跳转独立页；P1 内可考虑内嵌）
 
-### W4 / W5 / W6 / W7 / W8 · 未启动（按路线图节奏）
+### W4 · 社区主飞轮 · ✅ 落地（本次实现）
+
+#### 已实装
+
+- **广场 Feed 四流收口**
+  - `/discussions` 明确 `recent / hot / following / recommended`
+  - 每个 feed 都有独立说明和空状态
+  - `hot` 改成评论 + 点赞 + 收藏 + 时间衰减的确定性排序
+
+- **项目画廊曝光权重**
+  - `/discover` 的 `hot / recommended` 由统一项目发现分计算驱动
+  - 当前分数因子：
+    - 收藏数
+    - 最近 7 天收藏增量
+    - 协作意向数
+    - 近 30 天更新 boost
+    - creator contribution credit
+    - featuredRank editorial weight
+  - 项目卡片新增最近活动信号：最后更新时间、最近收藏增量、协作意向数
+
+- **项目详情协作入口前置**
+  - `/projects/[slug]` hero 区主 CTA 已前置为协作动作
+  - 三种互斥状态：
+    - 已绑定团队 → `Apply to join {team}`
+    - 项目 owner 且未绑定团队 → `Start a team`
+    - 其他用户 → `Join collaboration`
+  - 侧栏新增“Recent collaboration signals”
+  - 项目详情页新增可用的 bookmark 按钮，已处理 hydration 前死点击问题
+
+- **团队动态升为一等入口**
+  - `/teams/[slug]` 新增 `Overview / Activity` tab
+  - `TeamActivityTimeline` 支持 `All / Tasks / Discussions / Agent` 过滤
+  - 活动源聚合：
+    - `AuditLog`
+    - `AgentActionAudit`
+  - 空状态和筛选交互已修复，不再出现“按钮切了但文案不变”
+
+#### 走查与回归
+
+- 新增 `tests/w4-community-loop.test.ts`
+- 新增 `tests/e2e/w4-community-loop.spec.ts`
+- 走查覆盖：
+  - discussions 四流
+  - discover 热门流
+  - project detail 协作 CTA + bookmark 交互
+  - team activity 筛选
+
+### W5 / W6 / W7 / W8 · 未启动（按路线图节奏）
 
 ---
 
-## 质量关卡（W3 本轮结束时）
+## 质量关卡（W4 本轮结束时）
 
 - `npx tsc --noEmit` → ✅ 通过（0 错误）
-- `npm run lint` → ✅ 通过（3 条历史 warning 未变）
-- `npm test` → ✅ **59 test files · 254 tests · 0 fail**（新增 14 个 W3 断言）
+- `npm run lint` → ✅ 通过（2 条历史 warning 未变）
+- `npm test` → ✅ **60 test files · 257 tests · 0 fail**
 - `npm run validate:openapi` → ✅ paths=121
 - `npm run generate:types` → ✅ 无 diff
 - `npm run audit:ui-strict` → ✅ **exit 0**（palette 0 · token-count 0）
-- `npm run build` → ✅ 通过，路由含 `/teams/[slug]/agents` + `/api/v1/teams/[slug]/agents/*`
+- `npm run build` → ✅ 通过，路由含 `/teams/[slug]/agents` + `W4` 更新后的 `/discussions` `/discover` `/projects/[slug]` `/teams/[slug]`
+- `PLAYWRIGHT_PORT=3117 npm run test:e2e -- tests/e2e/w4-community-loop.spec.ts` → ✅ 4/4 通过
 
 ---
 
@@ -131,8 +179,8 @@
 
 ## 下一步
 
-W3 完成。下一轮进入 **W4：社区主飞轮**：
-- 广场 4 tab Feed（follow / recommend / hot / time）
-- 项目画廊曝光权重公式（score = 收藏×3 + 协作意向×5 + 近 30d 更新×2 + creator credit×0.1 + featuredRank×100）
-- 项目详情页协作入口前置
-- 团队角色扩展 + 活动时间线
+W4 已完成。下一轮按路线图进入：
+- **W5 开发者生态**：开发者中心重构、交互式 API 文档、API Key 用量视图、MCP manifest 版本化
+- **W6 商业与合规**：中国支付真实商户、Free/Pro/Team 套餐生效、合规定稿
+- **W7 后台治理与 AI 助手**：运营仪表盘、AI 审核三类任务闭环
+- **W8 基础设施与可观测**：Redis 上线、健康检查增强、结构化日志与告警

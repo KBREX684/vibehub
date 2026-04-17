@@ -6,7 +6,13 @@ import { assertContentSafeText } from "@/lib/content-safety";
 import { mockAuditLogs, mockComments, mockModerationCases, mockPosts, mockUsers } from "@/lib/data/mock-data";
 import type { Post } from "@/lib/types";
 import type { ListPostsParams, Paginated } from "./shared";
-import { toPostDto } from "./shared";
+
+function computeHotScore(input: { postId: string; likeCount: number; bookmarkCount: number; createdAt: string }) {
+  const commentCount = mockComments.filter((comment) => comment.postId === input.postId).length;
+  const ageHours = Math.max(0, (Date.now() - new Date(input.createdAt).getTime()) / (1000 * 60 * 60));
+  const decay = Math.max(0, 48 - Math.min(ageHours, 48)) / 6;
+  return commentCount * 5 + input.likeCount * 3 + input.bookmarkCount * 2 + decay;
+}
 
 export async function listPostsMock(params: ListPostsParams): Promise<Paginated<Post>> {
   const cursorRaw = params.cursor?.trim();
@@ -52,9 +58,20 @@ export async function listPostsMock(params: ListPostsParams): Promise<Paginated<
     });
   } else if (params.sort === "hot") {
     filtered = [...filtered].sort((a, b) => {
-      const ca = mockComments.filter((c) => c.postId === a.id).length;
-      const cb = mockComments.filter((c) => c.postId === b.id).length;
-      if (cb !== ca) return cb - ca;
+      const scoreDiff =
+        computeHotScore({
+          postId: b.id,
+          likeCount: b.likeCount ?? 0,
+          bookmarkCount: b.bookmarkCount ?? 0,
+          createdAt: b.createdAt,
+        }) -
+        computeHotScore({
+          postId: a.id,
+          likeCount: a.likeCount ?? 0,
+          bookmarkCount: a.bookmarkCount ?? 0,
+          createdAt: a.createdAt,
+        });
+      if (scoreDiff !== 0) return scoreDiff;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   } else {

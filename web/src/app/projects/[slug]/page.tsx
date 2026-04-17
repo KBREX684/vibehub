@@ -5,10 +5,12 @@ import { CollaborationIntentForm } from "@/components/collaboration-intent-form"
 import { ProjectCollaborationOwnerPanel } from "@/components/project-collaboration-owner-panel";
 import { ProjectTeamLinkForm } from "@/components/project-team-link-form";
 import { ShareProjectButton } from "@/components/share-project-button";
+import { ProjectBookmarkButton } from "@/components/project-bookmark-button";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import {
   getCreatorProfileById,
   getProjectBySlug,
+  getProjectEngagementSnapshot,
   listProjectCollaborationIntents,
   listPublicMilestonesForProject,
   listProjects,
@@ -79,10 +81,11 @@ export default async function ProjectDetailPage({ params }: Props) {
       : { items: [] };
   const ownerTeams =
     isProjectOwner && session ? await listOwnedTeamSummariesForUser(session.userId) : [];
-  const [publicMilestones, relatedProjects, creatorCredit] = await Promise.all([
+  const [publicMilestones, relatedProjects, creatorCredit, engagementSnapshot] = await Promise.all([
     listPublicMilestonesForProject(project.id),
     listProjects({ tag: project.tags[0], page: 1, limit: 4 }),
     creatorProfile ? getContributionCredit(creatorProfile.userId) : Promise.resolve(null),
+    getProjectEngagementSnapshot({ projectId: project.id, viewerUserId: session?.userId ?? null }),
   ]);
 
   const related = relatedProjects.items.filter((p) => p.id !== project.id).slice(0, 3);
@@ -102,6 +105,25 @@ export default async function ProjectDetailPage({ params }: Props) {
   };
 
   const activeCollabCount = approvedIntents.pagination.total;
+  const primaryCollaborationAction = project.team
+    ? {
+        href: session ? `/teams/${project.team.slug}#join-team` : `/login?redirect=${encodeURIComponent(`/teams/${project.team.slug}`)}`,
+        label: `Apply to join ${project.team.name}`,
+        description: "This project already runs inside a team. Join the team first, then participate in tasks and discussions.",
+      }
+    : isProjectOwner
+      ? {
+          href: "/teams/new",
+          label: "Start a team",
+          description: "Link this project to a team so collaboration can move from intent into real execution.",
+        }
+      : {
+          href: session ? "#project-collaboration-intent" : `/login?redirect=${encodeURIComponent(`/projects/${project.slug}`)}`,
+          label: "Join collaboration",
+          description: activeCollabCount > 0
+            ? `There are already ${activeCollabCount} active collaborator${activeCollabCount !== 1 ? "s" : ""}. Add your intent and the owner can route you into the right team.`
+            : "No team is linked yet. Submit your intent to join or help start the first collaboration thread.",
+        };
 
   return (
     <main className="container pb-24 pt-6">
@@ -192,6 +214,39 @@ export default async function ProjectDetailPage({ params }: Props) {
               )}
             </div>
 
+            <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-muted)] m-0">
+                    Collaboration
+                  </p>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
+                    {primaryCollaborationAction.label}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-secondary)] m-0 max-w-2xl">
+                    {primaryCollaborationAction.description}
+                  </p>
+                </div>
+                {primaryCollaborationAction.href.startsWith("#") ? (
+                  <a
+                    href={primaryCollaborationAction.href}
+                    className="btn btn-primary text-sm px-4 py-2 inline-flex items-center gap-1.5"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    {primaryCollaborationAction.label}
+                  </a>
+                ) : (
+                  <Link
+                    href={primaryCollaborationAction.href}
+                    className="btn btn-primary text-sm px-4 py-2 inline-flex items-center gap-1.5"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    {primaryCollaborationAction.label}
+                  </Link>
+                )}
+              </div>
+            </div>
+
             {/* Action links */}
             <div className="flex flex-wrap gap-2 mt-1">
               {project.demoUrl && (
@@ -205,6 +260,13 @@ export default async function ProjectDetailPage({ params }: Props) {
                   Live Demo
                 </a>
               )}
+              <ProjectBookmarkButton
+                projectSlug={project.slug}
+                initialBookmarked={engagementSnapshot.viewerHasBookmarked}
+                initialCount={engagementSnapshot.bookmarkCount}
+                loginHref={`/login?redirect=${encodeURIComponent(`/projects/${project.slug}`)}`}
+                isAuthenticated={Boolean(session)}
+              />
               {project.repoUrl && (
                 <a
                   href={project.repoUrl}
@@ -306,7 +368,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           ) : null}
 
           {/* Collaboration CTA */}
-          <section className="card p-6">
+          <section id="project-collaboration-intent" className="card p-6 scroll-mt-20">
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-4 h-4 text-[var(--color-primary-hover)]" />
               <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
@@ -387,7 +449,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         {/* Sidebar */}
         <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-20">
 
-          {/* Creator card */}
+	          {/* Creator card */}
           {creatorProfile && (
             <aside className="card p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -422,7 +484,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           )}
 
           {/* Milestones */}
-          {publicMilestones.length > 0 && (
+	          {publicMilestones.length > 0 && (
             <aside className="card p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Target className="w-4 h-4 text-[var(--color-primary-hover)]" />
@@ -463,9 +525,56 @@ export default async function ProjectDetailPage({ params }: Props) {
             </aside>
           )}
 
-          <ProjectTeamLinkForm project={project} canEdit={canLinkTeam} />
+	          <ProjectTeamLinkForm project={project} canEdit={canLinkTeam} />
 
-          {/* MCP Agent Config */}
+	          <aside className="card p-5">
+	            <div className="flex items-center justify-between gap-3 mb-4">
+	              <div>
+	                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Recent collaboration signals</h3>
+	                <p className="text-xs text-[var(--color-text-muted)] mt-1 mb-0">
+	                  {engagementSnapshot.bookmarkCount} saves total
+	                  {engagementSnapshot.recentBookmarkDelta > 0 ? ` · +${engagementSnapshot.recentBookmarkDelta} this week` : ""}
+	                </p>
+	              </div>
+	              <span className="tag tag-cyan">{activeCollabCount} intents</span>
+	            </div>
+	            <div className="space-y-4">
+	              <div>
+	                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)] mb-2">Recent bookmarkers</p>
+	                {engagementSnapshot.recentBookmarkers.length > 0 ? (
+	                  <div className="flex flex-wrap gap-2">
+	                    {engagementSnapshot.recentBookmarkers.map((bookmark) => (
+	                      <span key={`${bookmark.userId}-${bookmark.name}`} className="tag">
+	                        {bookmark.name}
+	                      </span>
+	                    ))}
+	                  </div>
+	                ) : (
+	                  <p className="text-xs text-[var(--color-text-secondary)] m-0">No one has bookmarked this project yet.</p>
+	                )}
+	              </div>
+	              <div>
+	                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)] mb-2">Recent collaboration intents</p>
+	                {engagementSnapshot.recentCollaborationIntents.length > 0 ? (
+	                  <div className="space-y-2">
+	                    {engagementSnapshot.recentCollaborationIntents.map((intent) => (
+	                      <div key={intent.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3">
+	                        <div className="flex items-center justify-between gap-2">
+	                          <span className="text-xs font-medium text-[var(--color-text-primary)]">{intent.applicantName}</span>
+	                          <span className="tag text-[10px] capitalize">{intent.intentType}</span>
+	                        </div>
+	                        <p className="text-xs text-[var(--color-text-secondary)] mt-2 mb-0 line-clamp-2">{intent.message}</p>
+	                      </div>
+	                    ))}
+	                  </div>
+	                ) : (
+	                  <p className="text-xs text-[var(--color-text-secondary)] m-0">No collaboration intents yet.</p>
+	                )}
+	              </div>
+	            </div>
+	          </aside>
+
+	          {/* MCP Agent Config */}
           <aside className="card p-5 bg-[var(--color-bg-elevated)]">
             <div className="flex items-center gap-2 mb-3 text-[var(--color-accent-cyan)]">
               <Terminal className="w-4 h-4" />

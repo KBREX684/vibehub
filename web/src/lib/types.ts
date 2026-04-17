@@ -105,6 +105,7 @@ export interface Project {
   featuredAt?: string;
   featuredRank?: number;
   bookmarkCount?: number;
+  recentBookmarkDelta?: number;
   collaborationIntentCount?: number;
   activityScore?: number;
 }
@@ -660,12 +661,14 @@ export interface CollaborationIntentConversionMetrics {
 /** P3: Team-scoped activity log entry. */
 export interface TeamActivityLogEntry {
   id: string;
+  kind: "task" | "discussion" | "agent";
   actorId: string;
   actorName?: string;
   action: string;
   entityType: string;
   entityId: string;
   metadata?: Record<string, unknown>;
+  summary?: string;
   createdAt: string;
 }
 
