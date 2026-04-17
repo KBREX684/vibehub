@@ -60,5 +60,8 @@ export type { DataTableProps, DataTableColumn } from "./data-table";
 export { Avatar } from "./avatar";
 export type { AvatarProps, AvatarSize, AvatarTone } from "./avatar";
 
+export { AvatarStack } from "./avatar-stack";
+export type { AvatarStackProps, AvatarStackItem } from "./avatar-stack";
+
 export { ErrorBanner } from "./error-banner";
 export type { ErrorBannerProps, ErrorBannerTone } from "./error-banner";

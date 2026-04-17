@@ -16,7 +16,7 @@ import { getTeamBySlug } from "@/lib/repository";
 import { TeamLinksSettingsForm } from "@/components/team-links-settings-form";
 import { TeamOverviewSettingsForm } from "@/components/team-overview-settings-form";
 import { getServerTranslator } from "@/lib/i18n";
-import { Avatar } from "@/components/ui";
+import { Avatar, AvatarStack } from "@/components/ui";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -170,6 +170,15 @@ export default async function TeamSettingsPage({ params }: Props) {
             <p className="text-xs text-[var(--color-text-secondary)] m-0">
               {t("team.settings.members_desc")}
             </p>
+            <AvatarStack
+              items={team.members.map((member) => ({
+                id: member.userId,
+                initial: member.name.charAt(0),
+                alt: member.name,
+              }))}
+              totalCount={team.memberCount}
+              size="sm"
+            />
             <div className="space-y-2">
               {team.members.slice(0, MEMBERS_PREVIEW_LIMIT).map((member) => (
                 <div key={member.userId} className="flex items-center justify-between gap-3 text-sm">
