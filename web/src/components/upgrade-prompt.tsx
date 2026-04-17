@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
 import { Button } from "@/components/ui";
 
+const UPGRADE_BADGE_CLASS =
+  "w-12 h-12 mx-auto rounded-[var(--radius-lg)] bg-[var(--color-accent-apple-subtle)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center mb-5";
+
 interface Props {
   reason: UpgradeReason;
   /** "banner" shows an inline dismissable bar. "modal" shows a centered overlay. Defaults to "banner". */
@@ -75,7 +78,7 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
               className="relative w-full max-w-md rounded-[var(--radius-2xl)] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)] p-7 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-12 h-12 mx-auto rounded-[var(--radius-lg)] bg-[var(--color-accent-apple-subtle)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center mb-5">
+              <div className={UPGRADE_BADGE_CLASS}>
                 <Sparkles className="w-5 h-5 text-[var(--color-accent-apple)]" aria-hidden="true" />
               </div>
 

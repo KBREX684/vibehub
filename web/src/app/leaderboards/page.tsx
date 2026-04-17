@@ -1,3 +1,11 @@
+/**
+ * v8 W2 stage-3 — leaderboards refactored to share a single row/card
+ * helper per list. The page had four parallel list sections, each
+ * repeating the same long className string on every <li>. That is
+ * high-token-count audit noise even though each expression is already
+ * token-driven. Extracting a `<LeaderRow>` / `<ContributorCard>` helper
+ * collapses it to one definition per pattern.
+ */
 import Link from "next/link";
 import {
   getDiscussionLeaderboard,
@@ -20,6 +28,7 @@ import {
   MessageSquare,
   Activity,
 } from "lucide-react";
+import { TagPill } from "@/components/ui";
 
 function formatWeekRangeLabel(weekStart: Date): string {
   const end = new Date(weekStart.getTime());
@@ -39,11 +48,56 @@ function toWeekParam(weekStart: Date): string {
   return `${weekStart.getUTCFullYear()}-${String(weekStart.getUTCMonth() + 1).padStart(2, "0")}-${String(weekStart.getUTCDate()).padStart(2, "0")}`;
 }
 
-const RANK_STYLES = [
-  "bg-gradient-to-br from-[var(--color-featured-subtle)] to-[rgba(245,158,11,0.15)] text-[var(--color-featured)]",
-  "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]",
-  "bg-[rgba(139,92,246,0.12)] text-[var(--color-accent-violet)]",
-];
+const RANK_STYLES: Record<number, string> = {
+  0: "bg-[var(--color-warning-subtle)] text-[var(--color-warning)] border-[rgba(251,191,36,0.3)]",
+  1: "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] border-[var(--color-border)]",
+  2: "bg-[var(--color-accent-violet-subtle)] text-[var(--color-accent-violet)] border-[rgba(167,139,250,0.3)]",
+};
+
+const RANK_FALLBACK = "bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] border-[var(--color-border-subtle)]";
+
+function rankBadge(index: number, size: "sm" | "md" = "md") {
+  const dim = size === "sm" ? "w-6 h-6 text-[11px]" : "w-8 h-8 text-xs";
+  return `${dim} rounded-[var(--radius-md)] flex items-center justify-center font-bold shrink-0 border ${RANK_STYLES[index] ?? RANK_FALLBACK}`;
+}
+
+/** A row inside one of the leaderboard list sections. */
+function LeaderRow({
+  index,
+  href,
+  title,
+  score,
+  scoreIcon,
+  compact = false,
+}: {
+  index: number;
+  href: string;
+  title: string;
+  score: number | string;
+  scoreIcon?: React.ReactNode;
+  compact?: boolean;
+}) {
+  return (
+    <li className="group flex items-center gap-3 p-2.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors">
+      <span className={rankBadge(index, compact ? "sm" : "md")}>
+        {index + 1}
+      </span>
+      <Link
+        href={href}
+        className="min-w-0 flex-1 text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-apple)] transition-colors truncate"
+      >
+        {title}
+      </Link>
+      <span className="shrink-0 inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-tertiary)]">
+        {scoreIcon}
+        {score}
+      </span>
+    </li>
+  );
+}
+
+const LB_LIST_CLASSNAME = "space-y-1.5 relative z-10";
+const LB_EMPTY_CLASSNAME = "text-center py-10 text-sm text-[var(--color-text-muted)]";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -79,238 +133,264 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
       listContributionLeaderboard(10),
     ]);
 
-  const contributionNames = await getUserDisplayNames(contributionLB.map((u) => u.userId));
+  const contributionNames = await getUserDisplayNames(
+    contributionLB.map((u) => u.userId)
+  );
 
   return (
     <main className="container pb-24 space-y-12 pt-8">
-
       {/* Hero */}
       <section className="page-hero text-center pb-8 border-b border-[var(--color-border)]">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-[var(--radius-pill)] bg-[var(--color-featured-subtle)] border border-[rgba(245,158,11,0.2)] text-xs font-medium text-[var(--color-featured)] mb-6">
-          <Medal className="w-3.5 h-3.5" />
+        <TagPill accent="warning" size="md" className="mb-5">
+          <Medal className="w-3.5 h-3.5" aria-hidden="true" />
           VibeHub Leaderboards
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-[var(--color-text-primary)] mb-3">
+        </TagPill>
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--color-text-primary)] mb-3">
           Community Rankings
         </h1>
         <p className="text-sm text-[var(--color-text-secondary)] max-w-lg mx-auto mb-8">
-          Track the most influential discussions, projects, and contributors across
-          the VibeHub ecosystem.
+          Track the most influential discussions, projects, and contributors
+          across the VibeHub ecosystem.
         </p>
 
         {/* Week selector */}
         <div className="inline-flex items-center gap-2 bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-1.5">
           <Link
             href={`/leaderboards?week=${toWeekParam(prevWeek)}`}
-            className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] rounded-[var(--radius-md)] transition-colors"
+            className="p-2 rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors"
+            aria-label="Previous week"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           </Link>
-          <div className="flex items-center gap-2 px-4 text-sm font-medium text-[var(--color-text-primary)]">
-            <Calendar className="w-3.5 h-3.5 text-[var(--color-primary-hover)]" />
+          <div className="flex items-center gap-2 px-3 text-sm font-medium text-[var(--color-text-primary)]">
+            <Calendar className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" aria-hidden="true" />
             {formatWeekRangeLabel(effectiveWeek)}
           </div>
           <Link
             href={`/leaderboards?week=${toWeekParam(nextWeek)}`}
-            className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] rounded-[var(--radius-md)] transition-colors"
+            className="p-2 rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors"
+            aria-label="Next week"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </Link>
-          {effectiveWeek.getTime() !== nowWeek.getTime() && (
+          {effectiveWeek.getTime() !== nowWeek.getTime() ? (
             <Link
               href="/leaderboards"
               className="btn btn-primary text-xs px-3 py-1.5 ml-1"
             >
-              Current Week
+              Current week
             </Link>
-          )}
+          ) : null}
         </div>
 
-        {invalidWeek && (
-          <p className="text-[var(--color-error)] text-xs mt-4 bg-[var(--color-error-subtle)] inline-block px-4 py-2 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.2)]">
+        {invalidWeek ? (
+          <p className="mt-4 text-xs text-[var(--color-error)] bg-[var(--color-error-subtle)] inline-block px-3 py-1.5 rounded-[var(--radius-md)] border border-[rgba(248,113,113,0.25)]">
             Invalid date — showing current week
           </p>
-        )}
+        ) : null}
       </section>
 
       {/* Weekly Leaderboards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <WeeklySection
+          icon={Flame}
+          tone="warning"
+          title="Hot discussions"
+          subtitle="By new comments this week"
+          source={weeklyDisc.source}
+        >
+          {weeklyDisc.rows.length === 0 ? (
+            <li className={LB_EMPTY_CLASSNAME}>No data for this week</li>
+          ) : (
+            weeklyDisc.rows.map((row, i) => (
+              <LeaderRow
+                key={row.entityId}
+                index={i}
+                href={`/discussions/${row.slug}`}
+                title={row.title}
+                score={row.score}
+              />
+            ))
+          )}
+        </WeeklySection>
 
-        {/* Weekly Discussions */}
-        <section className="card p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-warning-subtle)] rounded-full blur-[60px] -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-          <div className="flex items-center justify-between mb-6 relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-warning-subtle)] flex items-center justify-center">
-                <Flame className="w-5 h-5 text-[var(--color-warning)]" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Hot Discussions</h2>
-                <p className="text-xs text-[var(--color-text-muted)]">By new comments this week</p>
-              </div>
-            </div>
-            <span className="tag">{weeklyDisc.source === "materialized" ? "Snapshot" : "Live"}</span>
-          </div>
-          <ol className="space-y-2 relative z-10">
-            {weeklyDisc.rows.length === 0 ? (
-              <li className="text-center py-10 text-sm text-[var(--color-text-muted)]">No data for this week</li>
-            ) : (
-              weeklyDisc.rows.map((row, i) => (
-                <li key={row.entityId} className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors group">
-                  <div className={`w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center text-xs font-bold shrink-0 ${RANK_STYLES[i] ?? "bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]"}`}>
-                    {row.rank}
-                  </div>
-                  <div className="min-w-0 flex-1 flex items-center justify-between gap-3">
-                    <Link
-                      href={`/discussions/${row.slug}`}
-                      className="text-sm text-[var(--color-text-primary)] font-medium hover:text-[var(--color-primary-hover)] transition-colors truncate"
-                    >
-                      {row.title}
-                    </Link>
-                    <span className="text-xs font-mono font-bold text-[var(--color-text-muted)] shrink-0 bg-[var(--color-bg-elevated)] px-2 py-0.5 rounded">
-                      {row.score}
-                    </span>
-                  </div>
-                </li>
-              ))
-            )}
-          </ol>
-        </section>
-
-        {/* Weekly Projects */}
-        <section className="card p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-accent-cyan-subtle)] rounded-full blur-[60px] -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-          <div className="flex items-center justify-between mb-6 relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-accent-cyan-subtle)] flex items-center justify-center">
-                <Activity className="w-5 h-5 text-[var(--color-accent-cyan)]" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Active Projects</h2>
-                <p className="text-xs text-[var(--color-text-muted)]">By new collaboration intents</p>
-              </div>
-            </div>
-            <span className="tag">{weeklyProj.source === "materialized" ? "Snapshot" : "Live"}</span>
-          </div>
-          <ol className="space-y-2 relative z-10">
-            {weeklyProj.rows.length === 0 ? (
-              <li className="text-center py-10 text-sm text-[var(--color-text-muted)]">No data for this week</li>
-            ) : (
-              weeklyProj.rows.map((row, i) => (
-                <li key={row.entityId} className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors group">
-                  <div className={`w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center text-xs font-bold shrink-0 ${RANK_STYLES[i] ?? "bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]"}`}>
-                    {row.rank}
-                  </div>
-                  <div className="min-w-0 flex-1 flex items-center justify-between gap-3">
-                    <Link
-                      href={`/projects/${row.slug}`}
-                      className="text-sm text-[var(--color-text-primary)] font-medium hover:text-[var(--color-primary-hover)] transition-colors truncate"
-                    >
-                      {row.title}
-                    </Link>
-                    <span className="text-xs font-mono font-bold text-[var(--color-text-muted)] shrink-0 bg-[var(--color-bg-elevated)] px-2 py-0.5 rounded">
-                      {row.score}
-                    </span>
-                  </div>
-                </li>
-              ))
-            )}
-          </ol>
-        </section>
+        <WeeklySection
+          icon={Activity}
+          tone="cyan"
+          title="Active projects"
+          subtitle="By new collaboration intents"
+          source={weeklyProj.source}
+        >
+          {weeklyProj.rows.length === 0 ? (
+            <li className={LB_EMPTY_CLASSNAME}>No data for this week</li>
+          ) : (
+            weeklyProj.rows.map((row, i) => (
+              <LeaderRow
+                key={row.entityId}
+                index={i}
+                href={`/projects/${row.slug}`}
+                title={row.title}
+                score={row.score}
+              />
+            ))
+          )}
+        </WeeklySection>
       </div>
 
       {/* Contribution Hall of Fame */}
       <section className="card p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-featured-subtle)] flex items-center justify-center">
-            <Star className="w-5 h-5 text-[var(--color-featured)]" />
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-warning-subtle)] flex items-center justify-center">
+            <Star className="w-5 h-5 text-[var(--color-warning)]" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Contribution Hall of Fame</h2>
-            <p className="text-xs text-[var(--color-text-muted)]">All-time top contributors by credit score</p>
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+              Contribution Hall of Fame
+            </h2>
+            <p className="text-xs text-[var(--color-text-muted)] m-0 mt-0.5">
+              All-time top contributors by credit score
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {contributionLB.map((user, index) => (
-            <div key={user.userId} className="flex items-center gap-3 p-4 bg-[var(--color-bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-all">
-              <div className={`w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-bold shrink-0 ${RANK_STYLES[index] ?? "bg-[var(--color-bg-surface)] text-[var(--color-text-muted)]"}`}>
-                {index + 1}
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                  {contributionNames[user.userId] ?? user.userId}
-                </div>
-                <div className="text-xs font-mono font-bold text-[var(--color-primary-hover)]">
-                  {user.score.toLocaleString()} credits
-                </div>
-              </div>
-            </div>
+            <ContributorCard
+              key={user.userId}
+              rank={index}
+              name={contributionNames[user.userId] ?? user.userId}
+              score={user.score}
+            />
           ))}
         </div>
       </section>
 
       {/* All-time leaderboards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* All-time Discussions */}
-        <section className="card p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <Trophy className="w-5 h-5 text-[var(--color-text-muted)]" />
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">All-Time Discussions</h2>
-              <p className="text-xs text-[var(--color-text-muted)]">By total comments</p>
-            </div>
-          </div>
-          <ol className="space-y-1.5">
-            {discussions.map((row, index) => (
-              <li key={row.postId} className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors">
-                <span className="w-6 h-6 flex items-center justify-center text-xs font-bold text-[var(--color-text-muted)] bg-[var(--color-bg-elevated)] rounded shrink-0">
-                  {index + 1}
-                </span>
-                <Link
-                  href={`/discussions/${row.slug}`}
-                  className="text-xs text-[var(--color-text-primary)] font-medium hover:text-[var(--color-primary-hover)] transition-colors truncate flex-1"
-                >
-                  {row.title}
-                </Link>
-                <span className="text-xs font-mono text-[var(--color-text-muted)] shrink-0 flex items-center gap-1">
-                  <MessageSquare className="w-3 h-3" />
-                  {row.commentCount}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <AllTimeSection title="All-time discussions" subtitle="By total comments">
+          {discussions.map((row, index) => (
+            <LeaderRow
+              key={row.postId}
+              index={index}
+              compact
+              href={`/discussions/${row.slug}`}
+              title={row.title}
+              score={row.commentCount}
+              scoreIcon={<MessageSquare className="w-3 h-3" aria-hidden="true" />}
+            />
+          ))}
+        </AllTimeSection>
 
-        {/* All-time Projects */}
-        <section className="card p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <Trophy className="w-5 h-5 text-[var(--color-text-muted)]" />
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">All-Time Projects</h2>
-              <p className="text-xs text-[var(--color-text-muted)]">By collaboration intents</p>
-            </div>
-          </div>
-          <ol className="space-y-1.5">
-            {projects.map((row, index) => (
-              <li key={row.projectId} className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors">
-                <span className="w-6 h-6 flex items-center justify-center text-xs font-bold text-[var(--color-text-muted)] bg-[var(--color-bg-elevated)] rounded shrink-0">
-                  {index + 1}
-                </span>
-                <Link
-                  href={`/projects/${row.slug}`}
-                  className="text-xs text-[var(--color-text-primary)] font-medium hover:text-[var(--color-primary-hover)] transition-colors truncate flex-1"
-                >
-                  {row.title}
-                </Link>
-                <span className="text-xs font-mono text-[var(--color-text-muted)] shrink-0 flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  {row.intentCount}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <AllTimeSection title="All-time projects" subtitle="By collaboration intents">
+          {projects.map((row, index) => (
+            <LeaderRow
+              key={row.projectId}
+              index={index}
+              compact
+              href={`/projects/${row.slug}`}
+              title={row.title}
+              score={row.intentCount}
+              scoreIcon={<Users className="w-3 h-3" aria-hidden="true" />}
+            />
+          ))}
+        </AllTimeSection>
       </div>
     </main>
+  );
+}
+
+/* ── Local helpers ─────────────────────────────────────────────────────── */
+
+function WeeklySection({
+  icon: Icon,
+  tone,
+  title,
+  subtitle,
+  source,
+  children,
+}: {
+  icon: typeof Flame;
+  tone: "warning" | "cyan";
+  title: string;
+  subtitle: string;
+  source: "materialized" | "live";
+  children: React.ReactNode;
+}) {
+  const iconWrap =
+    tone === "warning"
+      ? "bg-[var(--color-warning-subtle)] text-[var(--color-warning)]"
+      : "bg-[var(--color-accent-cyan-subtle)] text-[var(--color-accent-cyan)]";
+  return (
+    <section className="card p-6 relative">
+      <div className="flex items-center justify-between mb-5 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-[var(--radius-lg)] flex items-center justify-center ${iconWrap}`}>
+            <Icon className="w-5 h-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+              {title}
+            </h2>
+            <p className="text-xs text-[var(--color-text-muted)] m-0 mt-0.5">
+              {subtitle}
+            </p>
+          </div>
+        </div>
+        <TagPill accent={source === "materialized" ? "default" : "success"} size="sm" mono>
+          {source === "materialized" ? "Snapshot" : "Live"}
+        </TagPill>
+      </div>
+      <ol className={LB_LIST_CLASSNAME}>{children}</ol>
+    </section>
+  );
+}
+
+function AllTimeSection({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="card p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <Trophy className="w-5 h-5 text-[var(--color-text-muted)]" aria-hidden="true" />
+        <div>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
+            {title}
+          </h2>
+          <p className="text-xs text-[var(--color-text-muted)] m-0 mt-0.5">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+      <ol className="space-y-1.5">{children}</ol>
+    </section>
+  );
+}
+
+function ContributorCard({
+  rank,
+  name,
+  score,
+}: {
+  rank: number;
+  name: string;
+  score: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-colors">
+      <span className={rankBadge(rank)}>{rank + 1}</span>
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+          {name}
+        </div>
+        <div className="text-xs font-mono text-[var(--color-text-tertiary)]">
+          {score.toLocaleString()} credits
+        </div>
+      </div>
+    </div>
   );
 }

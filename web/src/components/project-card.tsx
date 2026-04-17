@@ -12,6 +12,9 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "tag",
 };
 
+const PROJECT_INITIAL_CLASS =
+  "w-10 h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 text-base font-mono font-bold text-[var(--color-text-primary)]";
+
 export function ProjectCard({
   project,
   featured,
@@ -45,7 +48,7 @@ export function ProjectCard({
               />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 text-base font-mono font-bold text-[var(--color-text-primary)]">
+            <div className={PROJECT_INITIAL_CLASS}>
               {project.title.charAt(0)}
             </div>
           )}

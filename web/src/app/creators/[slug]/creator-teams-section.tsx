@@ -2,6 +2,9 @@ import Link from "next/link";
 import { Users, ArrowRight } from "lucide-react";
 import { listTeamsForUser } from "@/lib/repository";
 
+const TEAM_CARD_INITIAL_CLASS =
+  "w-10 h-10 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-sm font-bold text-[var(--color-accent-violet)] shrink-0";
+
 interface Props {
   userId: string;
 }
@@ -25,7 +28,7 @@ export async function CreatorTeamsSection({ userId }: Props) {
             href={`/teams/${encodeURIComponent(team.slug)}`}
             className="card p-5 flex items-start gap-3 hover:-translate-y-0.5 transition-all duration-200 group"
           >
-            <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-sm font-bold text-[var(--color-accent-violet)] shrink-0">
+            <div className={TEAM_CARD_INITIAL_CLASS}>
               {team.name.charAt(0)}
             </div>
             <div className="min-w-0 flex-1">

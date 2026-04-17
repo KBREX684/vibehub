@@ -42,6 +42,7 @@ import { useTheme } from "@/app/context/ThemeContext";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { openCommandPalette } from "@/components/command-palette";
+import { Avatar } from "@/components/ui";
 
 type NavLink = {
   href: string;
@@ -298,9 +299,7 @@ export function SiteNav() {
                   aria-label={t("nav.user_menu", "打开用户菜单")}
                   className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-violet)] flex items-center justify-center text-[var(--color-on-accent)] text-xs font-semibold">
-                    {user.name?.charAt(0)?.toUpperCase() || "U"}
-                  </span>
+                  <Avatar tone="violet" size="sm" initial={user.name?.charAt(0) || "U"} alt={user.name} />
                   <span className="hidden sm:block text-sm font-medium text-[var(--color-text-primary)] max-w-[100px] truncate">
                     {user.name}
                   </span>

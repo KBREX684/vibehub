@@ -2,6 +2,9 @@ import Link from "next/link";
 import { listTeams } from "@/lib/repository";
 import { Users, Globe, Plus, GitFork } from "lucide-react";
 
+const TEAM_CARD_INITIAL_CLASS =
+  "w-10 h-10 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-base font-bold text-[var(--color-accent-violet)] shrink-0";
+
 export default async function TeamsPage() {
   const { items, pagination } = await listTeams({ page: 1, limit: 50 });
 
@@ -57,7 +60,7 @@ export default async function TeamsPage() {
             >
               {/* Header */}
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-base font-bold text-[var(--color-accent-violet)] shrink-0">
+                <div className={TEAM_CARD_INITIAL_CLASS}>
                   {team.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">

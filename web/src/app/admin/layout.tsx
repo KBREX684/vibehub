@@ -14,6 +14,12 @@ import {
   HeartPulse,
 } from "lucide-react";
 
+const ADMIN_NAV_LINK_CLASS =
+  "flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[rgba(255,255,255,0.05)] transition-colors";
+
+const ADMIN_BADGE_CLASS =
+  "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest bg-[var(--color-error-subtle)] text-[var(--color-error)] border border-[rgba(239,68,68,0.2)]";
+
 export default async function AdminLayout({
   children,
 }: {
@@ -55,19 +61,15 @@ export default async function AdminLayout({
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {NAV.map(({ href, label, icon: Icon }) => (
-            <a
-              key={href}
-              href={href}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
-            >
+            <a key={href} href={href} className={ADMIN_NAV_LINK_CLASS}>
               <Icon className="w-3.5 h-3.5 shrink-0" />
               {label}
             </a>
           ))}
         </nav>
         <div className="px-5 py-3 border-t border-[rgba(255,255,255,0.06)]">
-          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest bg-[var(--color-error-subtle)] text-[var(--color-error)] border border-[rgba(239,68,68,0.2)]">
-            <ShieldAlert className="w-2.5 h-2.5" />
+          <span className={ADMIN_BADGE_CLASS}>
+            <ShieldAlert className="w-2.5 h-2.5" aria-hidden="true" />
             Admin
           </span>
         </div>

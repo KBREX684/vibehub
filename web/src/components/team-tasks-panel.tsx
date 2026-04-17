@@ -15,12 +15,12 @@ import {
   ArrowDown,
   ChevronDown,
   Target,
-  AlertCircle,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
 import {
   Button,
   ConfirmDialog,
+  ErrorBanner,
   FormField,
   LoadingSkeleton,
   SectionCard,
@@ -59,6 +59,18 @@ const BOARD_COLUMNS: { status: TeamTaskStatus; title: string }[] = [
 function sortTasksForColumn(rows: TeamTask[]): TeamTask[] {
   return [...rows].sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
 }
+
+/** Shared classname for inline <select> controls inside task cards. */
+const INLINE_SELECT_CLASS =
+  "w-full appearance-none pl-2 pr-6 py-1 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] outline-none cursor-pointer hover:border-[var(--color-border)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)]";
+
+/** Task title link — heavy a11y focus-ring kept in one place. */
+const TASK_TITLE_LINK_CLASS =
+  "text-sm font-semibold text-[var(--color-text-primary)] leading-snug hover:text-[var(--color-accent-apple)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-sm)]";
+
+/** Kanban card surface with hover states. */
+const TASK_CARD_CLASS =
+  "group relative rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-surface-hover)] transition-colors";
 
 export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, viewerRole }: Props) {
   const router = useRouter();
@@ -441,12 +453,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
         ) : null}
       </AnimatePresence>
 
-      {msg ? (
-        <p className="text-xs text-[var(--color-error)] bg-[var(--color-error-subtle)] rounded-[var(--radius-md)] px-3 py-2 mb-4 inline-flex items-center gap-2 m-0">
-          <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-          {msg}
-        </p>
-      ) : null}
+      {msg ? <ErrorBanner className="mb-4">{msg}</ErrorBanner> : null}
 
       {loading && tasks.length === 0 ? (
         <LoadingSkeleton preset="card-grid" count={6} columns={3} />
@@ -503,7 +510,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                         exit={{ opacity: 0, scale: 0.96 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         key={t.id}
-                        className="group relative rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-surface-hover)] transition-colors"
+                        className={TASK_CARD_CLASS}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex items-start gap-2 min-w-0 flex-1">
@@ -518,7 +525,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                             ) : null}
                             <Link
                               href={`/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(t.id)}`}
-                              className="text-sm font-semibold text-[var(--color-text-primary)] leading-snug hover:text-[var(--color-accent-apple)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-sm)]"
+                              className={TASK_TITLE_LINK_CLASS}
                             >
                               {t.title}
                             </Link>
@@ -577,7 +584,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                                 void patchTask(t.id, { status: e.target.value as TeamTaskStatus })
                               }
                               aria-label="Change status"
-                              className="w-full appearance-none pl-2 pr-6 py-1 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] outline-none cursor-pointer hover:border-[var(--color-border)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)]"
+                              className={INLINE_SELECT_CLASS}
                             >
                               {STATUSES.map((s) => (
                                 <option key={s.value} value={s.value}>
@@ -600,7 +607,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                                 })
                               }
                               aria-label="Change assignee"
-                              className="w-full appearance-none pl-2 pr-6 py-1 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] outline-none cursor-pointer hover:border-[var(--color-border)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)]"
+                              className={INLINE_SELECT_CLASS}
                             >
                               <option value="">Unassigned</option>
                               {members.map((m) => (

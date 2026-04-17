@@ -4,6 +4,9 @@ import { Search, Hash, Box, User, Briefcase, MessageSquare } from "lucide-react"
 import { SearchHighlight } from "@/components/search-highlight";
 import { Button, EmptyState, PageHeader, TagPill } from "@/components/ui";
 
+const RESULT_TITLE_LINK_CLASS =
+  "text-base font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-accent-apple)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-sm)]";
+
 interface Props {
   searchParams: Promise<{ q?: string; type?: string }>;
 }
@@ -125,7 +128,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 </TagPill>
                 <Link
                   href={`/${item.type === "post" ? "discussions" : item.type === "creator" ? "creators" : "projects"}/${item.slug}`}
-                  className="text-base font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-accent-apple)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-sm)]"
+                  className={RESULT_TITLE_LINK_CLASS}
                 >
                   <SearchHighlight text={item.title} query={qTrim} />
                 </Link>

@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
 
+const SEARCH_INPUT_CLASS =
+  "w-full py-3 pl-11 pr-28 bg-[var(--color-bg-canvas)] text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] rounded-[var(--radius-md)] border border-[var(--color-border)] outline-none transition-all duration-200 font-mono";
+
 export function SearchBar() {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -35,7 +38,7 @@ export function SearchBar() {
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder={t("search.placeholder")}
-        className="w-full py-3 pl-11 pr-28 bg-[var(--color-bg-canvas)] text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] rounded-[var(--radius-md)] border border-[var(--color-border)] outline-none transition-all duration-200 font-mono"
+        className={SEARCH_INPUT_CLASS}
         style={{
           borderColor: isFocused ? "var(--color-text-primary)" : undefined,
         }}

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Heart, Bookmark, Share2 } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
 
+const SOCIAL_LINK_BTN_CLASS =
+  "flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all";
+
 interface Props {
   postSlug: string;
   likeCount: number;
@@ -145,7 +148,7 @@ export function PostSocialActions({
       <button
         type="button"
         onClick={copyLink}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all"
+        className={SOCIAL_LINK_BTN_CLASS}
         aria-label="Copy link"
       >
         <Share2 className="w-3.5 h-3.5" />

@@ -5,6 +5,10 @@ import { Clock, ArrowLeft, Star, MessageSquare, Hash, TrendingUp, BookOpen } fro
 import { CommentThread } from "@/components/comment-thread";
 import { PostSocialActions } from "@/components/post-social-actions";
 import { PostReportButton } from "@/components/post-report-button";
+import { Avatar } from "@/components/ui";
+
+const FEATURED_GLOW_CLASS =
+  "absolute top-0 right-0 w-32 h-32 bg-[var(--color-warning-subtle)] rounded-full blur-[60px] translate-x-1/2 -translate-y-1/2 pointer-events-none";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -60,9 +64,7 @@ export default async function DiscussionDetailPage({ params }: Props) {
 
           {/* Article */}
           <article className="card p-6 md:p-8 mb-8 relative overflow-hidden">
-            {post.featuredAt && (
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-featured-subtle)] rounded-full blur-[60px] translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-            )}
+            {post.featuredAt ? <div className={FEATURED_GLOW_CLASS} aria-hidden="true" /> : null}
 
             <div className="relative z-10">
               {/* Tags */}
@@ -92,9 +94,7 @@ export default async function DiscussionDetailPage({ params }: Props) {
               {/* Meta */}
               <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-secondary)] mb-8 pb-6 border-b border-[var(--color-border)]">
                 <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-xs font-semibold text-[var(--color-primary-hover)]">
-                    {post.authorName?.charAt(0)?.toUpperCase() ?? "A"}
-                  </span>
+                  <Avatar tone="cyan" size="sm" initial={post.authorName?.charAt(0) || "A"} alt={post.authorName ?? "Author"} />
                   <span className="font-medium text-[var(--color-text-primary)]">
                     {post.authorName ?? post.authorId}
                   </span>

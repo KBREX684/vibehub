@@ -3,6 +3,12 @@ import Link from "next/link";
 import { getChallengeBySlug } from "@/lib/repository";
 import { ArrowLeft, Trophy, Flag, BookOpen, Clock } from "lucide-react";
 
+const DATE_BADGE_CLASS =
+  "inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-elevated)] px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--color-border)]";
+
+const SUBMIT_CTA_CLASS =
+  "inline-flex items-center justify-center gap-2 bg-[var(--color-warning)] text-[var(--color-text-inverse)] px-8 py-3 rounded-[var(--radius-xl)] font-semibold text-base hover:opacity-90 transition-opacity";
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -56,8 +62,8 @@ export default async function ChallengeDetailPage({ params }: Props) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-elevated)] px-4 py-2 rounded-[var(--radius-lg)] border border-[var(--color-border)]">
-            <Clock className="w-4 h-4 text-[var(--color-text-muted)]" />
+          <div className={DATE_BADGE_CLASS}>
+            <Clock className="w-4 h-4 text-[var(--color-text-muted)]" aria-hidden="true" />
             {startDate} — {endDate}
           </div>
         </div>
@@ -105,10 +111,7 @@ export default async function ChallengeDetailPage({ params }: Props) {
 
         {challenge.status === "active" && (
           <div className="mt-12 pt-8 border-t border-[var(--color-border)] text-center">
-            <Link
-              href="/projects/new"
-              className="inline-flex items-center justify-center gap-2 bg-[var(--color-warning)] hover:bg-[#f59e0b] text-black px-8 py-3.5 rounded-[var(--radius-xl)] font-bold text-base transition-all"
-            >
+            <Link href="/projects/new" className={SUBMIT_CTA_CLASS}>
               提交项目参与挑战
             </Link>
             <p className="text-[var(--color-text-muted)] text-sm mt-4">

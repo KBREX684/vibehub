@@ -4,6 +4,7 @@ import { getFollowFeed, listFeaturedProjects, listPosts } from "@/lib/repository
 import type { Project, SessionUser, TeamSummary } from "@/lib/types";
 import { PostCard } from "@/components/post-card";
 import { ProjectCard } from "@/components/project-card";
+import { Avatar } from "@/components/ui";
 import { getServerTranslator } from "@/lib/i18n";
 
 interface Props {
@@ -143,9 +144,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
                   href={`/teams/${team.slug}`}
                   className="card p-4 flex items-start gap-3 transition-colors block"
                 >
-                  <div className="w-9 h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] flex items-center justify-center text-sm font-mono font-bold text-[var(--color-text-primary)] shrink-0">
-                    {team.name.charAt(0)}
-                  </div>
+                  <Avatar tone="neutral" size="md" square initial={team.name.charAt(0)} alt={team.name} />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{team.name}</span>

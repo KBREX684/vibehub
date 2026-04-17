@@ -16,6 +16,7 @@ import { getTeamBySlug } from "@/lib/repository";
 import { TeamLinksSettingsForm } from "@/components/team-links-settings-form";
 import { TeamOverviewSettingsForm } from "@/components/team-overview-settings-form";
 import { getServerTranslator } from "@/lib/i18n";
+import { Avatar } from "@/components/ui";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -173,9 +174,7 @@ export default async function TeamSettingsPage({ params }: Props) {
               {team.members.slice(0, MEMBERS_PREVIEW_LIMIT).map((member) => (
                 <div key={member.userId} className="flex items-center justify-between gap-3 text-sm">
                   <div className="min-w-0 flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center text-xs font-semibold text-[var(--color-text-secondary)] shrink-0">
-                      {member.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar tone="neutral" size="sm" initial={member.name.charAt(0)} alt={member.name} />
                     <div className="min-w-0">
                       <p className="text-[var(--color-text-primary)] font-medium truncate m-0 text-xs">{member.name}</p>
                       <p className="text-[10px] text-[var(--color-text-muted)] truncate m-0">{member.email}</p>

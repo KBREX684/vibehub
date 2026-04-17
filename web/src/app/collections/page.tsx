@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listCollectionTopics } from "@/lib/repository";
 import { Layers, ArrowRight, Hash } from "lucide-react";
+import { TagPill } from "@/components/ui";
 
 export default async function CollectionsIndexPage() {
   const topics = listCollectionTopics();
@@ -8,10 +9,10 @@ export default async function CollectionsIndexPage() {
   return (
     <main className="container pb-24">
       <section className="py-16 md:py-24 flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-pill)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-text-secondary)] mb-8">
-          <Layers className="w-4 h-4 text-[var(--color-accent-cyan)]" />
+        <TagPill accent="cyan" size="md" className="mb-6">
+          <Layers className="w-3.5 h-3.5" aria-hidden="true" />
           <span>精选专题集合</span>
-        </div>
+        </TagPill>
 
         <h1 className="text-4xl md:text-5xl font-extrabold text-[var(--color-text-primary)] tracking-tight mb-6 max-w-3xl leading-[1.1]">
           探索 VibeHub 优质内容

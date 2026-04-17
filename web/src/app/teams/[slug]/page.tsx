@@ -8,6 +8,10 @@ import { TeamDiscussionsPanel } from "@/components/team-discussions-panel";
 import { TeamActivityTimeline } from "@/components/team-activity-timeline";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug, listTeamMilestones, getGitHubRepoStats } from "@/lib/repository";
+import { Avatar } from "@/components/ui";
+
+const TEAM_HERO_INITIAL_CLASS =
+  "w-16 h-16 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-2xl font-bold text-[var(--color-accent-violet)] border border-[var(--color-border)] shrink-0";
 import {
   ArrowLeft,
   Users,
@@ -62,7 +66,7 @@ export default async function TeamDetailPage({ params }: Props) {
         <div className="relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
             {/* Avatar */}
-            <div className="w-16 h-16 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-2xl font-bold text-[var(--color-accent-violet)] border border-[var(--color-border)] shrink-0">
+            <div className={TEAM_HERO_INITIAL_CLASS}>
               {team.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -156,12 +160,8 @@ export default async function TeamDetailPage({ params }: Props) {
             <div className="space-y-2">
               {team.members.map((m, i) => (
                 <div key={m.userId} className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors">
-                  <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-violet-subtle)] flex items-center justify-center text-xs font-bold text-[var(--color-primary-hover)] shrink-0">
-                    {i + 1}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center text-xs font-semibold text-[var(--color-text-secondary)] shrink-0">
-                    {m.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar tone="neutral" size="sm" initial={String(i + 1)} alt={`Rank ${i + 1}`} />
+                  <Avatar tone="neutral" size="md" initial={m.name.charAt(0)} alt={m.name} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium text-[var(--color-text-primary)]">{m.name}</div>
                     <div className="text-xs text-[var(--color-text-muted)]">{m.email}</div>

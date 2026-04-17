@@ -9,6 +9,26 @@ import { apiFetch } from "@/lib/api-fetch";
 
 const TIERS: SubscriptionTier[] = ["free", "pro"];
 
+const TIER_CARD_CLASS_FREE =
+  "bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)]";
+const TIER_CARD_CLASS_PRO =
+  "bg-[var(--color-primary)] text-[var(--color-text-inverse)]";
+
+const PRIMARY_CTA_CLASS =
+  "w-full py-3 bg-[var(--color-text-inverse)] text-[var(--color-primary)] border border-[var(--color-text-inverse)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity";
+
+const FREE_CTA_CLASS =
+  "w-full py-3 border border-[var(--color-border-strong)] text-center font-mono text-sm uppercase tracking-wider hover:bg-[var(--color-bg-surface-hover)] transition-colors mt-auto";
+
+const SANDBOX_BTN_CLASS =
+  "py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[rgba(255,255,255,0.1)] transition-colors";
+
+const RECOMMENDED_TAG_CLASS =
+  "inline-flex items-center px-2 py-1 border border-[var(--color-text-inverse)] text-[10px] font-mono font-bold uppercase tracking-wider";
+
+const COMPARE_HEADER_CLASS =
+  "hidden md:grid grid-cols-[1fr_120px_120px] px-6 py-3 border-b border-[var(--color-border)] text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-surface)]";
+
 interface FeatureRow {
   label: string;
   free: string | boolean;
@@ -66,9 +86,7 @@ export function PricingCards() {
             <div
               key={tier}
               className={`flex flex-col p-8 md:p-10 transition-colors ${
-                isPro
-                  ? "bg-[var(--color-primary)] text-[var(--color-text-inverse)]"
-                  : "bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)]"
+                isPro ? TIER_CARD_CLASS_PRO : TIER_CARD_CLASS_FREE
               }`}
             >
               <div className="flex-grow flex flex-col">
@@ -76,11 +94,7 @@ export function PricingCards() {
                   <h2 className="text-2xl font-semibold tracking-tight m-0">
                     {pricing.label}
                   </h2>
-                  {isPro && (
-                    <span className="inline-flex items-center px-2 py-1 border border-[var(--color-text-inverse)] text-[10px] font-mono font-bold uppercase tracking-wider">
-                      Recommended
-                    </span>
-                  )}
+                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>Recommended</span>}
                 </div>
 
                 <div className="mb-6">
@@ -104,29 +118,26 @@ export function PricingCards() {
                 </p>
 
                 {tier === "free" ? (
-                  <Link
-                    href="/signup"
-                    className="w-full py-3 border border-[var(--color-border-strong)] text-center font-mono text-sm uppercase tracking-wider hover:bg-[var(--color-bg-surface-hover)] transition-colors mt-auto"
-                  >
+                  <Link href="/signup" className={FREE_CTA_CLASS}>
                     Get Started Free
                   </Link>
                 ) : (
                   <div className="mt-auto space-y-3">
                     <button
-                      className="w-full py-3 bg-[var(--color-text-inverse)] text-[var(--color-primary)] border border-[var(--color-text-inverse)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity"
+                      className={PRIMARY_CTA_CLASS}
                       onClick={() => void startCheckout(tier, "stripe")}
                     >
                       Upgrade with Stripe
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+                        className={SANDBOX_BTN_CLASS}
                         onClick={() => void startCheckout(tier, "alipay")}
                       >
                         Alipay sandbox
                       </button>
                       <button
-                        className="py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+                        className={SANDBOX_BTN_CLASS}
                         onClick={() => void startCheckout(tier, "wechatpay")}
                       >
                         WeChat sandbox
@@ -147,7 +158,7 @@ export function PricingCards() {
         </div>
         
         {/* Desktop Table Header */}
-        <div className="hidden md:grid grid-cols-[1fr_120px_120px] px-6 py-3 border-b border-[var(--color-border)] text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-surface)]">
+        <div className={COMPARE_HEADER_CLASS}>
           <span>Feature</span>
           <span className="text-center">Free</span>
           <span className="text-center">Pro</span>

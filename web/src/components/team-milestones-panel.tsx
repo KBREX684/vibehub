@@ -30,18 +30,21 @@ import {
   Trash2,
   Globe,
   Lock,
-  AlertCircle,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
 import {
   Button,
   ConfirmDialog,
   EmptyState,
+  ErrorBanner,
   FormField,
   LoadingSkeleton,
   SectionCard,
   TagPill,
 } from "@/components/ui";
+
+const TIMELINE_NODE_CLASS =
+  "absolute -left-[26px] md:-left-[34px] top-1 w-5 h-5 rounded-full bg-[var(--color-bg-canvas)] border border-[var(--color-border-strong)] flex items-center justify-center";
 
 interface Props {
   teamSlug: string;
@@ -258,12 +261,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
         ) : null}
       </AnimatePresence>
 
-      {msg ? (
-        <p className="text-xs text-[var(--color-error)] bg-[var(--color-error-subtle)] rounded-[var(--radius-md)] px-3 py-2 mb-4 inline-flex items-center gap-2 m-0">
-          <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-          {msg}
-        </p>
-      ) : null}
+      {msg ? <ErrorBanner className="mb-4">{msg}</ErrorBanner> : null}
 
       {loading && items.length === 0 ? (
         <LoadingSkeleton preset="list" count={3} />
@@ -285,10 +283,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                 transition={{ type: "spring", stiffness: 300, damping: 30, delay: index * 0.05 }}
                 className="relative"
               >
-                <span
-                  className="absolute -left-[26px] md:-left-[34px] top-1 w-5 h-5 rounded-full bg-[var(--color-bg-canvas)] border border-[var(--color-border-strong)] flex items-center justify-center"
-                  aria-hidden="true"
-                >
+                <span className={TIMELINE_NODE_CLASS} aria-hidden="true">
                   {isDone ? (
                     <CheckCircle2 className="w-4 h-4 text-[var(--color-success)]" />
                   ) : (

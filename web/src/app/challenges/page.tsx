@@ -1,6 +1,7 @@
 import { ChallengeCard } from "@/components/challenge-card";
 import { listChallenges } from "@/lib/repository";
 import { Trophy, Sparkles } from "lucide-react";
+import { TagPill } from "@/components/ui";
 
 export default async function ChallengesPage() {
   const { items: challenges } = await listChallenges({ page: 1, limit: 20 });
@@ -8,10 +9,10 @@ export default async function ChallengesPage() {
   return (
     <main className="container pb-24">
       <section className="py-16 md:py-24 flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-pill)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-text-secondary)] mb-8">
-          <Trophy className="w-4 h-4 text-[var(--color-warning)]" />
+        <TagPill accent="warning" size="md" className="mb-6">
+          <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
           <span>VibeHub 官方挑战赛</span>
-        </div>
+        </TagPill>
 
         <h1 className="text-4xl md:text-5xl font-extrabold text-[var(--color-text-primary)] tracking-tight mb-6 max-w-3xl leading-[1.1]">
           参与挑战，展示你的 VibeCoding 实力

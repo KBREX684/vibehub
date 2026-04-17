@@ -16,6 +16,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+const SETTINGS_LINK_CLASS =
+  "group flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] p-4 transition-colors hover:bg-[var(--color-bg-surface)] hover:border-[var(--color-border-strong)]";
+
 /* ── Settings group definition ─────────────────────────────────────────── */
 interface SettingsLink {
   href: string;
@@ -174,10 +177,7 @@ export default async function SettingsIndexPage() {
           <ul className="space-y-2">
             {group.links.map(({ href, titleKey, titleFallback, descKey, descFallback, icon: Icon }) => (
               <li key={href}>
-                <Link
-                  href={href}
-                  className="group flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] p-4 transition-colors hover:bg-[var(--color-bg-surface)] hover:border-[var(--color-border-strong)]"
-                >
+                <Link href={href} className={SETTINGS_LINK_CLASS}>
                   <div className="flex items-start gap-3 min-w-0">
                     <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]">
                       <Icon className="h-4 w-4" />

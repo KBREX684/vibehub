@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Users, UserPlus } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import { Button, ErrorBanner } from "@/components/ui";
 
 interface Props {
   projectSlug: string;
@@ -97,49 +98,41 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
       </div>
 
       <div className="pt-2">
-        <motion.button 
-          type="submit" 
+        <Button
+          type="submit"
+          variant="apple"
+          size="md"
+          loading={loading}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-[var(--radius-md)] bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] font-medium hover:bg-[var(--color-accent-apple-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          whileTap={loading ? {} : { scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          className="w-full"
         >
           {loading ? (
-            <span className="flex items-center gap-2">
-              <motion.div 
-                animate={{ rotate: 360 }} 
-                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                className="w-4 h-4 border-2 border-[rgba(255,255,255,0.3)] border-t-[var(--color-on-accent)] rounded-full"
-              />
-              Submitting...
-            </span>
+            "Submitting..."
           ) : (
             <>
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4" aria-hidden="true" />
               Submit collaboration intent
             </>
           )}
-        </motion.button>
+        </Button>
       </div>
 
-      {success && (
-        <motion.p 
-          initial={{ opacity: 0, y: 10 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          className="text-[0.9rem] font-medium text-[#0d9488] bg-[#81e6d9]/20 px-4 py-3 rounded-[12px] flex items-center gap-2"
+      {success ? (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          {success}
-        </motion.p>
-      )}
-      {error && (
-        <motion.p 
-          initial={{ opacity: 0, y: 10 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          className="text-[0.9rem] font-medium text-[#e11d48] bg-[#fee2e2] px-4 py-3 rounded-[12px] flex items-center gap-2"
+          <ErrorBanner tone="info">{success}</ErrorBanner>
+        </motion.div>
+      ) : null}
+      {error ? (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          {error}
-        </motion.p>
-      )}
+          <ErrorBanner tone="error">{error}</ErrorBanner>
+        </motion.div>
+      ) : null}
     </form>
   );
 }

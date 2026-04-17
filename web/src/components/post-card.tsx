@@ -3,6 +3,45 @@
 import Link from "next/link";
 import { MessageSquare, Heart, Bookmark, Star } from "lucide-react";
 import type { Post } from "@/lib/types";
+import { Avatar, Badge } from "@/components/ui";
+
+type MetricTone = "default" | "warning" | "primary";
+
+/**
+ * Small shared helper so each metric (like / bookmark / comment) is one
+ * call site instead of a 10+ token className copy-paste. Still uses
+ * design-system tokens; no new colors.
+ */
+function MetricButton({
+  tone,
+  value,
+  icon,
+  onlyIcon = false,
+  ariaLabel,
+}: {
+  tone: MetricTone;
+  value?: number;
+  icon: React.ReactNode;
+  onlyIcon?: boolean;
+  ariaLabel?: string;
+}) {
+  const toneClass =
+    tone === "warning"
+      ? "hover:text-[var(--color-warning)] hover:bg-[var(--color-warning-subtle)]"
+      : tone === "primary"
+        ? "hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)]"
+        : "hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]";
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-xs text-[var(--color-text-muted)] transition-colors ${toneClass}`}
+    >
+      {icon}
+      {!onlyIcon && value !== undefined ? <span>{value}</span> : null}
+    </button>
+  );
+}
 
 export function PostCard({
   post,
@@ -25,36 +64,35 @@ export function PostCard({
 
   const inner = (
     <article className="card group transition-colors p-5">
-      {/* Author row */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full border border-[var(--color-border)] flex items-center justify-center text-xs font-mono font-semibold text-[var(--color-text-primary)]">
-            {post.authorName?.charAt(0)?.toUpperCase() ?? "A"}
-          </span>
+          <Avatar
+            tone="neutral"
+            size="sm"
+            initial={post.authorName?.charAt(0) || "A"}
+            alt={post.authorName ?? "Author"}
+          />
           <span className="text-sm font-medium text-[var(--color-text-primary)]">
             {post.authorName ?? "Anonymous"}
           </span>
           <span className="text-xs text-[var(--color-text-muted)]">· {date}</span>
         </div>
-        {post.featuredAt && (
-          <span className="tag tag-yellow flex items-center gap-1">
-            <Star className="w-2.5 h-2.5" />
+        {post.featuredAt ? (
+          <Badge variant="warning" pill>
+            <Star className="w-2.5 h-2.5" aria-hidden="true" />
             Featured
-          </span>
-        )}
+          </Badge>
+        ) : null}
       </div>
 
-      {/* Title */}
       <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-1.5 line-clamp-2 leading-snug group-hover:underline transition-colors">
         {post.title}
       </h3>
 
-      {/* Excerpt */}
       <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed mb-3">
         {body}
       </p>
 
-      {/* Footer */}
       <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-subtle)]">
         <div className="tag-row">
           {post.tags.slice(0, 3).map((tag) => (
@@ -63,22 +101,29 @@ export function PostCard({
             </span>
           ))}
         </div>
-        <div className="flex items-center gap-1 z-20 relative">
-          {post.likeCount > 0 && (
-            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-warning)] hover:bg-[var(--color-warning-subtle)] transition-colors">
-              <Heart className="w-3 h-3" />
-              <span>{post.likeCount}</span>
-            </button>
-          )}
-          {post.bookmarkCount > 0 && (
-            <button className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)] transition-colors">
-              <Bookmark className="w-3 h-3" />
-              <span>{post.bookmarkCount}</span>
-            </button>
-          )}
-          <button className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] transition-colors">
-            <MessageSquare className="w-3 h-3" />
-          </button>
+        <div className="flex items-center gap-1 relative z-20">
+          {post.likeCount > 0 ? (
+            <MetricButton
+              tone="warning"
+              value={post.likeCount}
+              icon={<Heart className="w-3 h-3" aria-hidden="true" />}
+              ariaLabel={`${post.likeCount} likes`}
+            />
+          ) : null}
+          {post.bookmarkCount > 0 ? (
+            <MetricButton
+              tone="primary"
+              value={post.bookmarkCount}
+              icon={<Bookmark className="w-3 h-3" aria-hidden="true" />}
+              ariaLabel={`${post.bookmarkCount} bookmarks`}
+            />
+          ) : null}
+          <MetricButton
+            tone="default"
+            onlyIcon
+            icon={<MessageSquare className="w-3 h-3" aria-hidden="true" />}
+            ariaLabel="Open discussion"
+          />
         </div>
       </div>
     </article>

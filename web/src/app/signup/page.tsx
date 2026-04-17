@@ -4,6 +4,9 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { Zap, GitBranch, ArrowLeft, AlertCircle } from "lucide-react";
 import { EmailAuthForms } from "@/components/email-auth-forms";
 
+const GITHUB_CARD_CLASS =
+  "flex items-start gap-4 p-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-elevated)] transition-all group";
+
 interface Props {
   searchParams: Promise<{ intent?: string; error?: string }>;
 }
@@ -56,10 +59,7 @@ export default async function SignupPage({ searchParams }: Props) {
             </div>
           </div>
 
-          <a
-            href="/api/v1/auth/github?redirect=/"
-            className="flex items-start gap-4 p-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-elevated)] transition-all group"
-          >
+          <a href="/api/v1/auth/github?redirect=/" className={GITHUB_CARD_CLASS}>
             <div className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0 mt-0.5 bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]">
               <GitBranch className="w-4.5 h-4.5" />
             </div>

@@ -5,6 +5,9 @@ import { getEnterpriseProfileByUserId } from "@/lib/repository";
 import { EnterpriseVerificationForm } from "@/components/enterprise-verification-form";
 import { Building2, Shield, ArrowRight, CheckCircle, Clock } from "lucide-react";
 
+const STEP_BADGE_CLASS =
+  "w-8 h-8 rounded-full bg-[var(--color-enterprise-subtle)] flex items-center justify-center text-xs font-bold text-[var(--color-enterprise)] shrink-0";
+
 export default async function EnterpriseVerifyPage() {
   const session = await getSessionUserFromCookie();
   if (!session) redirect("/login?redirect=/enterprise/verify&intent=enterprise");
@@ -40,7 +43,7 @@ export default async function EnterpriseVerifyPage() {
               key={step}
               className="flex items-start gap-3 p-4 bg-[var(--color-bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--color-border)]"
             >
-              <div className="w-8 h-8 rounded-full bg-[var(--color-enterprise-subtle)] flex items-center justify-center text-xs font-bold text-[var(--color-enterprise)] shrink-0">
+              <div className={STEP_BADGE_CLASS}>
                 {step}
               </div>
               <div>

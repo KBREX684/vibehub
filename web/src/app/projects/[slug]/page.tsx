@@ -33,6 +33,10 @@ import {
   Pencil,
 } from "lucide-react";
 import { ProjectReadmeSection } from "@/components/project-readme-section";
+import { Avatar } from "@/components/ui";
+
+const PROJECT_HERO_INITIAL_CLASS =
+  "w-24 h-24 md:w-32 md:h-32 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-4xl font-bold text-[var(--color-primary-hover)] border border-[var(--color-border)]";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -129,7 +133,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                 />
               </div>
             ) : (
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-4xl font-bold text-[var(--color-primary-hover)] border border-[var(--color-border)]">
+              <div className={PROJECT_HERO_INITIAL_CLASS}>
                 {project.title.charAt(0)}
               </div>
             )}
@@ -391,9 +395,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Creator</h3>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-sm font-bold text-[var(--color-primary-hover)] shrink-0">
-                  {creatorProfile.headline.charAt(0).toUpperCase()}
-                </div>
+                <Avatar tone="cyan" size="lg" initial={creatorProfile.headline.charAt(0)} alt={creatorProfile.headline} />
                 <div className="min-w-0">
                   <Link href={`/creators/${creatorProfile.slug}`} className="text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-primary-hover)] transition-colors">
                     {creatorProfile.headline}

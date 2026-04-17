@@ -324,13 +324,16 @@ export default async function DevelopersPage() {
 
 /* ── Local helpers ─────────────────────────────────────────────────────── */
 
+const CODE_BLOCK_CLASS =
+  "m-0 overflow-x-auto rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-4 text-xs leading-relaxed text-[var(--color-text-secondary)] font-mono";
+
 function CodeBlock({ code, language }: { code: string; language: string }) {
   return (
     <div className="relative group">
       <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         <CopyButton value={code} size="sm" />
       </div>
-      <pre className="m-0 overflow-x-auto rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-4 text-xs leading-relaxed text-[var(--color-text-secondary)] font-mono">
+      <pre className={CODE_BLOCK_CLASS}>
         <code>{code}</code>
       </pre>
       <span className="absolute top-2 left-3 text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">

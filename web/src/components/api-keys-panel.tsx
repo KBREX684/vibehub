@@ -45,6 +45,7 @@ import {
   ConfirmDialog,
   CopyButton,
   EmptyState,
+  ErrorBanner,
   FormField,
   LoadingSkeleton,
   SectionCard,
@@ -330,12 +331,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
           ) : null}
         </AnimatePresence>
 
-        {msg ? (
-          <p className="mt-4 text-xs text-[var(--color-error)] bg-[var(--color-error-subtle)] rounded-[var(--radius-md)] px-3 py-2 inline-flex items-center gap-2 m-0">
-            <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-            {msg}
-          </p>
-        ) : null}
+        {msg ? <ErrorBanner className="mt-4">{msg}</ErrorBanner> : null}
         {upgradeReason ? <UpgradePlanCallout upgradeReason={upgradeReason} className="mt-4" /> : null}
       </SectionCard>
 
