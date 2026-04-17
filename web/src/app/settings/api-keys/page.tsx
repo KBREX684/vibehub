@@ -71,6 +71,7 @@ export default async function ApiKeysSettingsPage() {
             <div className="space-y-2">
               {[
                 { href: "/developers", label: "Developers hub" },
+                { href: "/developers/api-docs", label: "Interactive API docs" },
                 { href: "/settings/agents", label: "Agent bindings" },
                 { href: "/api/v1/openapi.json", label: "OpenAPI Spec", external: true },
                 { href: "/api/v1/mcp/v2/manifest", label: "MCP v2 Manifest", external: true },

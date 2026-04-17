@@ -2,20 +2,14 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { getPaymentProvider } from "@/lib/billing/payment-provider";
+import { clientIp } from "@/lib/api-key-rate-limit";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
-import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { readJsonObjectBody } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { getRequestLogger, serializeError } from "@/lib/logger";
-
-/** v4.0: Only Free + Pro — single Stripe price mapping. */
-const TIER_PRICE_IDS: Record<string, string | undefined> = {
-  pro: process.env.STRIPE_PRICE_PRO,
-};
-
-const useMockData = isMockDataEnabled();
+import { withRequestLogging } from "@/lib/request-logging";
 
 const checkoutBodySchema = z.object({
   tier: z.literal("pro"),
@@ -25,53 +19,66 @@ const checkoutBodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const auth = await authenticateRequest(request);
-  if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
-  if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
+  return withRequestLogging(
+    request,
+    {
+      route: "POST /api/v1/billing/checkout",
+      alertOn5xx: { kind: "billing.checkout_failed", dedupeKey: "billing-checkout-failed" },
+    },
+    async () => {
+      const auth = await authenticateRequest(request);
+      if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
+      if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
 
-  const parsed = await readJsonObjectBody(request);
-  if (!parsed.ok) return parsed.response;
-  const zod = checkoutBodySchema.safeParse(parsed.body);
-  if (!zod.success) return apiErrorFromZod(zod.error);
-  const { tier, paymentProvider = "stripe", successUrl: bodySuccess, cancelUrl: bodyCancel } = zod.data;
+      const parsed = await readJsonObjectBody(request);
+      if (!parsed.ok) return parsed.response;
+      const zod = checkoutBodySchema.safeParse(parsed.body);
+      if (!zod.success) return apiErrorFromZod(zod.error);
+      const { tier, paymentProvider = "stripe", successUrl: bodySuccess, cancelUrl: bodyCancel } = zod.data;
 
-  const priceId = TIER_PRICE_IDS[tier];
-  if (!priceId) {
-    return apiError({ code: "INVALID_TIER", message: "tier must be 'pro'" }, 400);
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  const successUrl = bodySuccess ?? `${baseUrl}/settings/subscription?success=1`;
-  const cancelUrl = bodyCancel ?? `${baseUrl}/pricing`;
-
-  try {
-    if (!process.env.STRIPE_SECRET_KEY && useMockData) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-      return apiSuccess({
-        url: `${baseUrl}/settings/subscription?checkout=mock`,
-        sessionId: "mock_checkout_session",
-      });
+      const successUrl = bodySuccess ?? `${baseUrl}/settings/subscription?success=1`;
+      const cancelUrl = bodyCancel ?? `${baseUrl}/pricing`;
+
+      try {
+        const provider = getPaymentProvider(paymentProvider);
+        const readiness = provider.getReadiness();
+        if (readiness.status === "not_configured") {
+          return apiError(
+            {
+              code: "PAYMENT_PROVIDER_NOT_CONFIGURED",
+              message: readiness.notes[0] ?? `${paymentProvider} is not configured`,
+            },
+            503
+          );
+        }
+        const session = await provider.createCheckoutSession({
+          userId: auth.user.userId,
+          tier,
+          successUrl,
+          cancelUrl,
+          baseUrl,
+          requestIp: clientIp(request),
+        });
+
+        return apiSuccess({ url: session.url, sessionId: session.sessionId, paymentProvider, mode: session.mode });
+      } catch (err) {
+        const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
+        if (repositoryErrorResponse) return repositoryErrorResponse;
+        const msg = err instanceof Error ? err.message : String(err);
+        if (
+          msg === "STRIPE_NOT_CONFIGURED" ||
+          msg === "ALIPAY_NOT_CONFIGURED" ||
+          msg === "WECHATPAY_NOT_CONFIGURED"
+        ) {
+          return apiError({ code: "PAYMENT_PROVIDER_NOT_CONFIGURED", message: "Payment provider is not configured" }, 503);
+        }
+        const mapped = apiErrorFromRepositoryMessage(msg);
+        if (mapped) return mapped;
+        const log = getRequestLogger(request, { route: "POST /api/v1/billing/checkout" });
+        log.error({ err: serializeError(err) }, "checkout failed");
+        return apiError({ code: "CHECKOUT_FAILED", message: msg }, 500);
+      }
     }
-
-    const provider = getPaymentProvider(paymentProvider);
-    const session = await provider.createCheckoutSession({
-      userId: auth.user.userId,
-      tier,
-      successUrl,
-      cancelUrl,
-      baseUrl,
-      stripePriceId: priceId,
-    });
-
-    return apiSuccess({ url: session.url, sessionId: session.sessionId, paymentProvider });
-  } catch (err) {
-    const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
-    if (repositoryErrorResponse) return repositoryErrorResponse;
-    const msg = err instanceof Error ? err.message : String(err);
-    const mapped = apiErrorFromRepositoryMessage(msg);
-    if (mapped) return mapped;
-    const log = getRequestLogger(request, { route: "POST /api/v1/billing/checkout" });
-    log.error({ err: serializeError(err) }, "checkout failed");
-    return apiError({ code: "CHECKOUT_FAILED", message: msg }, 500);
-  }
+  );
 }

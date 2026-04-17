@@ -11,7 +11,7 @@ v8.0 is not "one more feature cycle". It is a full re-framing of VibeHub:
 - **Audience**: VibeCoders, small-team leads, Agent builders.
 - **Four pillars**: discussion square · project gallery · team collaboration · **Agent collaboration bus**.
 - **Unique moat**: AI agents are first-class teammates with role cards, audit, confirmation queues, and human-in-the-loop for every risky write. Four modes of collaboration supported: human↔human, human↔agent, same-user agent↔agent, cross-user agent↔agent (gated). Agent autonomy is explicitly forbidden in v8.
-- **Business**: Free + Pro (¥29/mo) + Team (¥99/mo) + MCP Developer Access (usage-based, P1). No burn-rate growth.
+- **Business**: Free + Pro (¥29/mo) as the public pricing model. Team is deferred to a later commerce phase. MCP Developer Access remains application-only in P1. No burn-rate growth.
 - **Cost discipline**: platform never pays for user-side LLM inference; domestic models preferred; monthly infra budget capped at ¥3100.
 - **Explicit non-goals** (frozen): challenges, enterprise workspace rebuild, multi-agent autonomy, self-hosted LLM, code hosting, CI/CD, light-mode, PWA, overseas market, subsidies.
 

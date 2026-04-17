@@ -1,7 +1,7 @@
 /**
  * Subscription tier definitions, limits, and gate helpers.
  *
- * v4.0 strategy: only Free + Pro ($9/month). Team Pro removed.
+ * v8.0 strategy: only Free + Pro (¥29/month) for the current GA path.
  *
  * Core principle: Free users fully experience the community (browse, post,
  * comment, like, join teams). Pro unlocks "more space", "more exposure",
@@ -10,6 +10,11 @@
 
 export type SubscriptionTier = "free" | "pro";
 export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
+export interface SubscriptionEntitlementLike {
+  tier: SubscriptionTier;
+  status: SubscriptionStatus;
+  currentPeriodEnd?: string | Date | null;
+}
 
 // ─── Tier limits ─────────────────────────────────────────────────────────────
 
@@ -62,9 +67,24 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
 // ─── Pricing (display only) ───────────────────────────────────────────────────
 
 export const TIER_PRICING = {
-  free: { label: "Free", priceMonthly: 0, currency: "USD" },
-  pro: { label: "Pro", priceMonthly: 9, currency: "USD" },
+  free: { label: "Free", priceMonthly: 0, currency: "CNY" },
+  pro: { label: "Pro", priceMonthly: 29, currency: "CNY" },
 } satisfies Record<SubscriptionTier, { label: string; priceMonthly: number; currency: string }>;
+
+export function resolveEntitledTier(subscription: SubscriptionEntitlementLike): SubscriptionTier {
+  if (subscription.tier === "free") return "free";
+  if (!(subscription.status === "active" || subscription.status === "trialing")) return "free";
+  if (!subscription.currentPeriodEnd) return subscription.tier;
+  const end = subscription.currentPeriodEnd instanceof Date ? subscription.currentPeriodEnd : new Date(subscription.currentPeriodEnd);
+  if (Number.isNaN(end.getTime())) return subscription.tier;
+  return end.getTime() > Date.now() ? subscription.tier : "free";
+}
+
+export function formatTierPrice(tier: SubscriptionTier) {
+  const pricing = TIER_PRICING[tier];
+  if (pricing.priceMonthly === 0) return "免费";
+  return `¥${pricing.priceMonthly}/月`;
+}
 
 // ─── Gate helpers ─────────────────────────────────────────────────────────────
 
@@ -129,19 +149,19 @@ export function getApiRateUsagePercent(tier: SubscriptionTier, usedThisMinute: n
 export const UPGRADE_MESSAGES: Record<UpgradeReason, { title: string; body: string }> = {
   team_limit: {
     title: "Upgrade to create more teams",
-    body: "Free plan allows 1 team. Upgrade to Pro ($9/mo) for up to 5 teams.",
+    body: "Free plan allows 1 team. Upgrade to Pro (¥29/mo) for up to 5 teams.",
   },
   team_member_limit: {
     title: "Team member limit reached",
-    body: "Free plan allows 5 members per team. Upgrade to Pro ($9/mo) for up to 20.",
+    body: "Free plan allows 5 members per team. Upgrade to Pro (¥29/mo) for up to 20.",
   },
   project_limit: {
     title: "Upgrade for unlimited projects",
-    body: "Free plan allows 5 projects. Upgrade to Pro ($9/mo) for unlimited projects.",
+    body: "Free plan allows 5 projects. Upgrade to Pro (¥29/mo) for unlimited projects.",
   },
   screenshot_limit: {
     title: "Upgrade for more screenshots",
-    body: "Free plan allows 3 screenshots per project. Upgrade to Pro ($9/mo) for 10.",
+    body: "Free plan allows 3 screenshots per project. Upgrade to Pro (¥29/mo) for 10.",
   },
   feature_project: {
     title: "Upgrade to apply for daily featured",
@@ -153,10 +173,10 @@ export const UPGRADE_MESSAGES: Record<UpgradeReason, { title: string; body: stri
   },
   mcp_tools: {
     title: "Upgrade to unlock all MCP tools",
-    body: "Free plan includes 5 basic MCP tools. Upgrade to Pro ($9/mo) for all 9 tools.",
+    body: "Free plan includes 5 basic MCP tools. Upgrade to Pro (¥29/mo) for all 9 tools.",
   },
   api_key_limit: {
     title: "Upgrade for more API keys",
-    body: "Free plan allows 2 API keys. Upgrade to Pro ($9/mo) for up to 10.",
+    body: "Free plan allows 2 API keys. Upgrade to Pro (¥29/mo) for up to 10.",
   },
 };

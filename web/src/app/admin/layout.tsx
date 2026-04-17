@@ -12,6 +12,7 @@ import {
   Home,
   Building2,
   HeartPulse,
+  LayoutDashboard,
 } from "lucide-react";
 
 const ADMIN_NAV_LINK_CLASS =
@@ -32,21 +33,21 @@ export default async function AdminLayout({
   }
 
   const NAV = [
-    { href: "/admin",                label: "Overview",      icon: BarChart2  },
-    { href: "/admin/users",          label: "Users",         icon: Users      },
-    { href: "/admin/moderation",     label: "Moderation",    icon: FileText   },
-    { href: "/admin/collaboration",  label: "Intents",       icon: Link2      },
-    { href: "/admin/enterprise",     label: "Enterprise",    icon: Building2  },
-    { href: "/admin/reports",        label: "Reports",       icon: FileText   },
-    { href: "/admin/health",         label: "Health",        icon: HeartPulse },
-    { href: "/admin/ai-suggestions", label: "AI suggestions", icon: Cpu       },
-    { href: "/admin/audit-logs",     label: "Audit Logs",    icon: Settings   },
-    { href: "/admin/mcp-audits",     label: "MCP Audits",    icon: Cpu        },
+    { href: "/admin", label: "Home", icon: Home },
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/moderation", label: "Moderation", icon: FileText },
+    { href: "/admin/collaboration", label: "Intents", icon: Link2 },
+    { href: "/admin/enterprise", label: "Enterprise", icon: Building2 },
+    { href: "/admin/reports", label: "Reports", icon: FileText },
+    { href: "/admin/health", label: "Health", icon: HeartPulse },
+    { href: "/admin/ai-suggestions", label: "AI suggestions", icon: Cpu },
+    { href: "/admin/audit-logs", label: "Audit logs", icon: Settings },
+    { href: "/admin/mcp-audits", label: "MCP audits", icon: BarChart2 },
   ];
 
   return (
     <div className="min-h-screen bg-[#060810] flex">
-      {/* Sidebar */}
       <aside className="w-56 shrink-0 border-r border-[rgba(255,255,255,0.06)] flex flex-col">
         <div className="px-5 py-4 border-b border-[rgba(255,255,255,0.06)]">
           <Link href="/" className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] mb-3">
@@ -61,10 +62,10 @@ export default async function AdminLayout({
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {NAV.map(({ href, label, icon: Icon }) => (
-            <a key={href} href={href} className={ADMIN_NAV_LINK_CLASS}>
+            <Link key={href} href={href} className={ADMIN_NAV_LINK_CLASS}>
               <Icon className="w-3.5 h-3.5 shrink-0" />
               {label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="px-5 py-3 border-t border-[rgba(255,255,255,0.06)]">
@@ -75,10 +76,7 @@ export default async function AdminLayout({
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 min-w-0 overflow-auto">
-        {children}
-      </div>
+      <div className="flex-1 min-w-0 overflow-auto">{children}</div>
     </div>
   );
 }

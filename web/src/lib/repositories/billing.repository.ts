@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { mockBillingRecords, mockSubscriptions } from "@/lib/data/mock-data";
 import type { BillingRecord, PaymentProviderKind, UserSubscription } from "@/lib/types";
+import { resolveEntitledTier } from "@/lib/subscription";
 
 const useMockData = isMockDataEnabled();
 
@@ -182,8 +183,7 @@ export async function upsertUserSubscription(params: {
 
 export async function getUserTier(userId: string): Promise<UserSubscription["tier"]> {
   const sub = await getUserSubscription(userId);
-  if (sub.status === "active" || sub.status === "trialing") return sub.tier;
-  return "free";
+  return resolveEntitledTier(sub);
 }
 
 export async function listBillingRecordsForUser(userId: string, limit = 20): Promise<BillingRecord[]> {
@@ -214,6 +214,28 @@ export async function getBillingRecordByIdForUser(params: {
   const prisma = await getPrisma();
   const row = await prisma.billingRecord.findFirst({
     where: { id: params.recordId, userId: params.userId },
+  });
+  return row ? toBillingRecordDto(row) : null;
+}
+
+export async function getBillingRecordByExternalSessionId(params: {
+  paymentProvider: PaymentProviderKind;
+  externalSessionId: string;
+}): Promise<BillingRecord | null> {
+  if (useMockData) {
+    const row = mockBillingRecords.find(
+      (record) =>
+        record.paymentProvider === params.paymentProvider && record.externalSessionId === params.externalSessionId
+    );
+    return row ? toBillingRecordDto(row) : null;
+  }
+  const prisma = await getPrisma();
+  const row = await prisma.billingRecord.findFirst({
+    where: {
+      paymentProvider: params.paymentProvider,
+      externalSessionId: params.externalSessionId,
+    },
+    orderBy: { createdAt: "desc" },
   });
   return row ? toBillingRecordDto(row) : null;
 }

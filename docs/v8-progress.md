@@ -149,20 +149,245 @@
   - project detail 协作 CTA + bookmark 交互
   - team activity 筛选
 
-### W5 / W6 / W7 / W8 · 未启动（按路线图节奏）
+### W5 · 开发者生态 · ✅ 落地（本次实现）
+
+#### 已实装
+
+- **开发者中心收口**
+  - `/developers` 保留三场景 quick start
+  - 资源区新增 `/developers/api-docs`
+  - 新增 protocol status：OpenAPI version、manifestVersion、protocolVersion、generatedAt
+
+- **交互式 API 文档**
+  - 新增 `/developers/api-docs`
+  - 基于 `lib/openapi-spec.ts` 单一来源渲染，不手写 endpoint 清单
+  - 支持：
+    - tag / method / path / summary 搜索
+    - request params / request schema / responses 浏览
+    - auth mode 切换：Anonymous / Session / Bearer API Key
+    - same-origin JSON `Try it`
+  - OpenAPI operation 元数据新增：
+    - `x-required-scope`
+    - `x-auth-modes`
+    - `x-rate-limit-tier`
+
+- **API Key 用量面板**
+  - 新增 `GET /api/v1/me/api-keys/{keyId}/usage`
+  - `/settings/api-keys` 每个 key 现在展示：
+    - 近 7 天 sparkline
+    - 7d / 24h / errors / tools 摘要
+    - 最近 100 条 MCP 调用展开面板
+    - 按 tool / success|error 前端过滤
+  - 数据源完全复用 `McpInvokeAudit.apiKeyId`
+
+- **MCP manifest 版本化**
+  - `GET /api/v1/mcp/v2/manifest` 新增：
+    - `manifestVersion`
+    - `protocolVersion`
+    - `generatedAt`
+  - 每个 tool 新增：
+    - `exampleInput`
+    - `capabilityGroup`
+    - `writeTool`
+
+#### 走查与回归
+
+- 新增 `tests/w5-developer-experience.test.ts`
+- 手工链路已验证：
+  - `/developers/api-docs` 返回 200
+  - demo session 下可创建 API key
+  - `/api/v1/me/api-keys/{keyId}/usage` 返回稳定结构
+  - `/api/v1/mcp/v2/manifest` 返回版本字段与 tool 元数据
+
+### W6 · 商业与合规收口 · ✅ 落地（本次实现）
+
+#### 已实装
+
+- **中国支付 provider 收口**
+  - `lib/billing/providers/alipay.ts` 已落地 checkout / webhook / cancel / getSubscription
+  - `lib/billing/providers/wechatpay.ts` 已落地 checkout / webhook / cancel / getSubscription
+  - `lib/billing/providers/stripe.ts` 保留海外银行卡与 portal 主通道
+  - `/api/v1/billing/checkout` / `portal` / `webhook` 已统一走 provider 分派，不再伪造 production 成功支付
+  - 未配置 provider 时明确返回 `PAYMENT_PROVIDER_NOT_CONFIGURED`
+
+- **公开套餐收口**
+  - 当前公开订阅模型统一为 `Free / Pro`
+  - `Team` 套餐已从当前公开商业化口径中延后，只保留为后续商业化阶段
+  - `/pricing`、`/settings/subscription`、`subscription.ts`、账单展示和 provider 文案已统一为人民币与中国支付优先
+  - 订阅权益继续真实驱动 quota，且 `resolveEntitledTier()` 已用于处理过期 / past_due 权益回落
+
+- **合规页面最终版**
+  - `/privacy`
+  - `/terms`
+  - `/rules`
+  - `/aigc`
+  - footer 已补全规则与 AIGC 链接
+
+- **运营/发布文档同步**
+  - `docs/roadmap-v8.md`
+  - `docs/roadmap-current.md`
+  - `docs/product-strategy-v8.md`
+  - `docs/release-notes.md`
+  - `docs/p0-compliance-checklist.md`
+  - `docs/v7-go-live-checklist.md`
+  - 已统一到：
+    - 中国支付优先
+    - Free / Pro 公开套餐
+    - Team 延后
+    - MCP Developer Access 申请制、非当前个人订阅入口
+
+#### 走查与回归
+
+- 本地 production build 已通过，新增 `/aigc`、`/api/v1/billing/*` 与健康检查增强路由进入产物
+- development + demo session 演练已验证：
+  - `/settings/subscription` 登录保护与页面内容正常
+  - `/api/v1/billing/checkout` 在带 `X-CSRF-Token` 时可成功进入
+    - `alipay` sandbox checkout
+    - `wechatpay` sandbox checkout
+  - 不带 CSRF 的写请求会被正确拒绝
+- `/api/v1/health` 与 `/api/v1/admin/health` 已新增 `smtp` 与 `payments` readiness 视图
+
+#### RC / go-live 演练（2026-04-17）
+
+- 见：`docs/v8-rc-go-live-rehearsal-2026-04-17.md`
+- production-like 环境已完成：
+  - clean schema `migrate -> seed -> smoke`
+  - `next start` + `ws-server`
+  - 登录 / 讨论 / 项目 / 团队 / API+MCP / 企业认证 / 后台治理链路
+- 结论：
+  - 代码与部署基线通过
+  - W6 剩余阻塞已收口为外部项：
+    - SMTP
+    - 支付宝 live 商户参数
+    - 微信支付 live 商户参数（若纳入首发）
+    - ICP / 法务 / AIGC / 跨境数据终审
+
+### W7 · 后台治理与 AI 助手 · ✅ 落地（本次实现）
+
+#### 已实装
+
+- **运营仪表盘**
+  - 新增 `/admin/dashboard`
+  - 聚合模块统一收口到 `web/src/lib/admin/metrics.ts`
+  - 三个北极星：
+    - `WAHC`
+    - `AO%`
+    - `Agent rejection rate`
+  - 六个辅助指标：
+    - `DAU`
+    - `new users`
+    - `new posts`
+    - `new projects`
+    - `active subscriptions`
+    - `open reports`
+  - 指标卡统一包含 `value / delta7d / sparkline`
+
+- **AI 审核三类任务闭环**
+  - `AdminAiSuggestion` 已扩展：
+    - `queue`
+    - `priority`
+    - `labels`
+    - `decisionNote`
+    - `modelProvider`
+    - `modelName`
+    - `updatedAt`
+  - 新增：
+    - `POST /api/v1/admin/ai-suggestions/generate`
+    - `POST /api/v1/admin/ai-suggestions/{suggestionId}/decision`
+  - 已接通三类任务：
+    - `summarize_report(ticketId)`
+    - `triage_post(postId)`
+    - `verify_enterprise(userId)`
+  - 模型策略：
+    - 配置 `ADMIN_AI_PROVIDER_*` 时走 provider
+    - 未配置时回退 heuristic
+  - 页面不再在 render 阶段偷偷写 suggestion；改为显式“Generate AI suggestion”
+
+- **后台三面板筛选闭环**
+  - `/admin/ai-suggestions`
+    - `targetType / riskLevel / adminDecision / queue` 筛选
+    - 支持 `accept / reject / modified` 决策与 `decisionNote`
+  - `/admin/audit-logs`
+    - `actorId / action / agentBindingId / dateFrom / dateTo` 筛选
+  - `/admin/mcp-audits`
+    - `tool / success|error / agentBindingId / dateFrom / dateTo` 筛选
+  - 对应 API 均已扩展为服务端筛选，不再依赖前端全量列表本地过滤
+
+- **目标页显式 AI 入口**
+  - `/admin/reports` 支持生成举报摘要并决策
+  - `/admin/moderation` 支持生成帖子预审建议并决策
+  - `/admin/enterprise` 支持生成企业核验建议并决策
+  - `/admin` 保持 overview 入口位，`/admin/dashboard` 为正式指标页
+
+#### 走查与回归
+
+- 新增 `tests/w7-admin-governance.test.ts`
+- `development` + demo admin 演练已验证：
+  - `/admin/dashboard` 返回 200
+  - 真实 report id 触发 `generate` 成功
+  - `decision` 可回写 accepted + note
+  - `/admin/ai-suggestions`、`/admin/audit-logs`、`/admin/mcp-audits` 筛选页返回 200
+
+### W8 · 基础设施与可观测 · ✅ 落地（本次实现）
+
+#### 已实装
+
+- **Redis 基线**
+  - 新增统一 Redis client 与分布式限流基础层
+  - middleware 保留 auth / CSRF / request-id，分布式 IP 限流经内部 Node route 落 Redis
+  - `mcp-user-write-rate-limit`、`agent-action-rate-limit` 已切到分布式实现
+  - `ws-server` 已支持 Redis pub/sub fan-out 与跨实例 presence 汇总
+
+- **结构化日志**
+  - 新增 request logging wrapper，用于关键 admin / billing / infra 路由
+  - 运行时代码路径的 `console.*` 已清零
+  - 关键失败路径统一落 `logger.*` + `serializeError`
+
+- **健康检查与告警**
+  - 新增 `SystemAlert` 模型与告警模块
+  - `/api/v1/health` 统一聚合 DB / Redis / WebSocket / SMTP / payments / admin-AI readiness
+  - `/api/v1/admin/health` 与 `/admin/health` 已展示 recent unresolved alerts
+  - 已接入的告警源：
+    - billing webhook failure
+    - admin-AI provider failure
+    - Redis memory fallback in production-like mode
+    - request wrapper 5xx
+
+- **部署与回滚**
+  - `web/docs/deployment-v7.md` 已升级为 v8 部署与回滚 runbook
+  - 明确 Redis / SMTP / payment provider / admin-AI provider / DB backup 要求
+
+#### 本轮验证
+
+- `npm run lint` → ✅ 通过（2 条历史 warning 未变）
+- `npm run validate:openapi` → ✅ paths=127
+- `npm run generate:types` → ✅ 无 diff
+- `npm test` → ✅ **64 test files · 275 tests · 0 fail**
+- `npm run build` → ✅ 通过
+- `timeout 5s env WS_PORT=0 ... npx tsx ws-server.ts` → ✅ 可启动并优雅退出
+
+#### 当前仍不在 W8 内解决
+
+- Redis 改造成正式 session store（当前仍是签名 cookie + sessionVersion）
+- 外部监控平台（Sentry / Datadog / Prometheus）
+- W6 外部 blocker：SMTP、真实支付商户、ICP、法务、AIGC / 跨境最终审批
 
 ---
 
-## 质量关卡（W4 本轮结束时）
+## 质量关卡（W8 本轮结束时）
 
 - `npx tsc --noEmit` → ✅ 通过（0 错误）
 - `npm run lint` → ✅ 通过（2 条历史 warning 未变）
-- `npm test` → ✅ **60 test files · 257 tests · 0 fail**
-- `npm run validate:openapi` → ✅ paths=121
+- `npm test` → ✅ **64 test files · 275 tests · 0 fail**
+- `npm run validate:openapi` → ✅ paths=127
 - `npm run generate:types` → ✅ 无 diff
 - `npm run audit:ui-strict` → ✅ **exit 0**（palette 0 · token-count 0）
-- `npm run build` → ✅ 通过，路由含 `/teams/[slug]/agents` + `W4` 更新后的 `/discussions` `/discover` `/projects/[slug]` `/teams/[slug]`
+- `npm run build` → ✅ 通过，新增 `/api/v1/internal/rate-limit` 与 W8 health/alert plumbing
 - `PLAYWRIGHT_PORT=3117 npm run test:e2e -- tests/e2e/w4-community-loop.spec.ts` → ✅ 4/4 通过
+- `development` 演练：
+  - demo 登录 + `/settings/subscription` + `alipay/wechatpay sandbox checkout` → ✅
+  - demo admin + `/admin/dashboard` + AI generate/decision + admin filters → ✅
+  - `timeout 5s env WS_PORT=0 ... npx tsx ws-server.ts` → ✅
 
 ---
 
@@ -179,8 +404,9 @@
 
 ## 下一步
 
-W4 已完成。下一轮按路线图进入：
-- **W5 开发者生态**：开发者中心重构、交互式 API 文档、API Key 用量视图、MCP manifest 版本化
-- **W6 商业与合规**：中国支付真实商户、Free/Pro/Team 套餐生效、合规定稿
-- **W7 后台治理与 AI 助手**：运营仪表盘、AI 审核三类任务闭环
-- **W8 基础设施与可观测**：Redis 上线、健康检查增强、结构化日志与告警
+W8 已完成，production-like RC / go-live 演练也已完成。后续重点不再是新增工作线，而是清掉剩余外部上线阻塞：
+
+- **SMTP 联调**：让 production 邮箱注册 / 验证 / 重置密码真正可用
+- **支付宝 live 商户联调**：至少完成一次真实支付与一次退款演练
+- **微信支付首发决策**：明确是否纳入 GA；若纳入，同步补齐商户/证书/API v3 key
+- **合规终审**：ICP / 法务 / AIGC / 推荐/跨境数据审批全部完成

@@ -1,4 +1,5 @@
 import type {
+  AdminAiSuggestionRecord,
   AgentActionAuditRow,
   AgentConfirmationRequest,
   AuditLog,
@@ -9,12 +10,14 @@ import type {
   ContributionCreditProfile,
   CreatorProfile,
   InAppNotificationKind,
+  McpInvokeAuditRow,
   ModerationCase,
   Post,
   Project,
   ReportTicket,
   SubscriptionPlanInfo,
   SubscriptionTier,
+  SystemAlertRecord,
   TeamJoinRequestStatus,
   TeamDiscussion,
   TeamRole,
@@ -146,9 +149,21 @@ export interface MockInAppNotification {
   createdAt: string;
 }
 
+const globalMockState = globalThis as typeof globalThis & {
+  __vibehubMockAdminAiSuggestions?: AdminAiSuggestionRecord[];
+  __vibehubMockSystemAlerts?: SystemAlertRecord[];
+};
+
 export const mockInAppNotifications: MockInAppNotification[] = [];
 export const mockAgentActionAudits: AgentActionAuditRow[] = [];
 export const mockAgentConfirmationRequests: AgentConfirmationRequest[] = [];
+export const mockMcpInvokeAudits: McpInvokeAuditRow[] = [];
+export const mockAdminAiSuggestions: AdminAiSuggestionRecord[] =
+  globalMockState.__vibehubMockAdminAiSuggestions ??
+  (globalMockState.__vibehubMockAdminAiSuggestions = []);
+export const mockSystemAlerts: SystemAlertRecord[] =
+  globalMockState.__vibehubMockSystemAlerts ??
+  (globalMockState.__vibehubMockSystemAlerts = []);
 export const mockEnterpriseProfiles: MockEnterpriseProfile[] = [];
 export const mockEnterpriseVerificationApplications: MockEnterpriseVerificationApplication[] = [];
 export const mockTeamDiscussions: MockTeamDiscussion[] = [

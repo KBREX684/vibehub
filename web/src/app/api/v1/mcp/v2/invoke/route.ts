@@ -199,7 +199,7 @@ httpStatus = 400;
     return null;
   }
 
-  const rlUser = checkMcpUserToolRateLimit(userId, tool);
+  const rlUser = await checkMcpUserToolRateLimit(userId, tool);
   if (!rlUser.ok) {
     httpStatus = 429;
     errorCode = "MCP_USER_TOOL_RATE_LIMITED";
@@ -226,7 +226,7 @@ httpStatus = 400;
   }
 
   if (agentBindingId && isMcpWriteTool(tool as McpV2ToolName)) {
-    const agentRl = checkAgentActionRateLimit(agentBindingId, tool);
+    const agentRl = await checkAgentActionRateLimit(agentBindingId, tool);
     if (!agentRl.ok) {
       httpStatus = 429;
       errorCode = "AGENT_ACTION_RATE_LIMITED";

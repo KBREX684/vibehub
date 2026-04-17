@@ -817,6 +817,19 @@ enum AdminAiDecision {
   modified
 }
 
+enum SystemAlertSeverity {
+  info
+  warning
+  critical
+}
+
+enum SystemAlertDeliveryStatus {
+  pending
+  sent
+  skipped
+  failed
+}
+
 /// v7 P0-11: AI governance assistant suggestions (human must confirm actions)
 model AdminAiSuggestion {
   id            String                  @id @default(cuid())
@@ -825,13 +838,41 @@ model AdminAiSuggestion {
   suggestion    String
   riskLevel     AdminAiRiskLevel        @default(low)
   confidence    Float?
+  queue         String?
+  priority      String                  @default("normal")
+  labels        Json?
   adminDecision AdminAiDecision         @default(pending)
   adminUserId   String?
+  decisionNote  String?
   decidedAt     DateTime?
+  modelProvider String?
+  modelName     String?
   createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
   adminUser     User?                   @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
 
   @@index([targetType, targetId])
+  @@index([queue, createdAt])
+  @@index([adminDecision, riskLevel, createdAt])
+}
+
+model SystemAlert {
+  id             String                    @id @default(cuid())
+  kind           String
+  severity       SystemAlertSeverity       @default(warning)
+  message        String
+  dedupeKey      String?
+  metadata       Json?
+  deliveryStatus SystemAlertDeliveryStatus @default(pending)
+  deliverySummary String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  resolvedAt     DateTime?
+
+  @@index([kind, createdAt])
+  @@index([severity, createdAt])
+  @@index([resolvedAt, createdAt])
+  @@index([dedupeKey, createdAt])
 }
 
 model CollaborationIntent {

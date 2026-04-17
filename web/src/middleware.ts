@@ -24,6 +24,7 @@ const CSRF_EXEMPT_PREFIXES = [
   "/api/v1/auth/github",
   "/api/v1/billing/webhook",
   "/api/v1/embed/",
+  "/api/v1/internal/rate-limit",
 ];
 
 function isCsrfExempt(pathname: string): boolean {
@@ -53,11 +54,11 @@ async function deriveEdgeCsrfToken(rawSession: string, secret: string): Promise<
 }
 
 // ─── API rate limit ───────────────────────────────────────────────────────────
-const RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_MAX_WRITES_PER_MINUTE = 30;
 const DEFAULT_MAX_GETS_PER_MINUTE = 300;
 const DEFAULT_MAX_SEARCH_GETS_PER_MINUTE = 60;
 
+const RATE_LIMIT_WINDOW_MS = 60_000;
 const ipBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function maxWritesPerMinute(): number {
@@ -99,6 +100,49 @@ function checkIpRateLimit(
   return { ok: true };
 }
 
+async function checkDistributedIpRateLimit(
+  request: NextRequest,
+  bucketKey: string,
+  maxRequestsPerMinute: number
+): Promise<{ ok: true } | { ok: false; retryAfterSeconds: number }> {
+  const internalSecret =
+    process.env.INTERNAL_SERVICE_SECRET?.trim() || resolveSessionSigningSecret() || "";
+  if (!internalSecret) {
+    return checkIpRateLimit(bucketKey, maxRequestsPerMinute);
+  }
+
+  try {
+    const response = await fetch(new URL("/api/v1/internal/rate-limit", request.url), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-secret": internalSecret,
+      },
+      body: JSON.stringify({
+        bucketKey,
+        maxRequests: maxRequestsPerMinute,
+        windowMs: RATE_LIMIT_WINDOW_MS,
+      }),
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return checkIpRateLimit(bucketKey, maxRequestsPerMinute);
+    }
+    const json = (await response.json()) as {
+      data?: { ok?: boolean; retryAfterSeconds?: number };
+    };
+    if (json.data?.ok) {
+      return { ok: true };
+    }
+    return {
+      ok: false,
+      retryAfterSeconds: Math.max(1, Number(json.data?.retryAfterSeconds ?? 60)),
+    };
+  } catch {
+    return checkIpRateLimit(bucketKey, maxRequestsPerMinute);
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { method, nextUrl } = request;
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
@@ -135,6 +179,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (nextUrl.pathname.startsWith("/api/v1/internal/rate-limit")) {
+    return withRequestId(
+      NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
+    );
+  }
+
   const isApi = nextUrl.pathname.startsWith("/api/");
   const isReadMethod = method === "GET";
   const isWriteMethod =
@@ -148,7 +202,7 @@ export async function middleware(request: NextRequest) {
       const isSearchPath = nextUrl.pathname.startsWith("/api/v1/search");
       const readMax = isSearchPath ? maxSearchGetsPerMinute() : maxGetsPerMinute();
       const readBucketKey = `${ip}:read:${isSearchPath ? "search" : "default"}`;
-      const rlRead = checkIpRateLimit(readBucketKey, readMax);
+      const rlRead = await checkDistributedIpRateLimit(request, readBucketKey, readMax);
       if (!rlRead.ok) {
         return withRequestId(
           NextResponse.json(
@@ -218,7 +272,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // ── Write rate limit ──────────────────────────────────────────────────
-    const rl = checkIpRateLimit(`${ip}:write`, maxWritesPerMinute());
+    const rl = await checkDistributedIpRateLimit(request, `${ip}:write`, maxWritesPerMinute());
     if (!rl.ok) {
       return withRequestId(
         NextResponse.json(

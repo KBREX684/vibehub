@@ -35,7 +35,7 @@ import { verifyChatToken, type ChatTokenErrorCode } from "./src/lib/chat-token";
 import { assertUrlCountAtMost, escapeHtmlAngleBrackets } from "./src/lib/content-safety";
 import { assertProductionEnv } from "./src/lib/env-check";
 import { logger, serializeError } from "./src/lib/logger";
-import Redis from "ioredis";
+import { getRedisClient, getRedisPublisher, getRedisSubscriber, hasRedisConfigured } from "./src/lib/redis";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -54,6 +54,9 @@ const NEXT_BASE_URL     = process.env.NEXT_BASE_URL ?? "http://localhost:3000";
 const INTERNAL_SERVICE_SECRET = process.env.INTERNAL_SERVICE_SECRET ?? "";
 const REDIS_URL = process.env.REDIS_URL?.trim() || "";
 const IS_PRODUCTION     = process.env.NODE_ENV === "production";
+const WS_REDIS_CHANNEL = "ws:events";
+const WS_INSTANCE_ID =
+  process.env.WS_INSTANCE_ID?.trim() || `ws_${process.pid}_${Math.random().toString(36).slice(2, 8)}`;
 
 assertProductionEnv("ws-server");
 
@@ -87,13 +90,6 @@ const rooms = new Map<string, Set<AuthedClient>>();
 const history = new Map<string, ChatMessage[]>();
 // userId → message timestamps (P2-5 rate limit)
 const userMessageTimestamps = new Map<string, number[]>();
-const redis =
-  REDIS_URL
-    ? new Redis(REDIS_URL, {
-        maxRetriesPerRequest: 2,
-        enableReadyCheck: true,
-      })
-    : null;
 const wsTokenUserCache = new Map<string, string>();
 
 function getCapacity(teamSlug: string): number {
@@ -110,18 +106,86 @@ function getRoomCount(teamSlug: string): number {
   return rooms.get(teamSlug)?.size ?? 0;
 }
 
-function broadcastPresence(teamSlug: string) {
-  const count = getRoomCount(teamSlug);
+function sendPresenceToLocalClients(teamSlug: string, count: number) {
   const msg = JSON.stringify({ type: "presence", count });
   rooms.get(teamSlug)?.forEach(({ ws }) => {
     if (ws.readyState === WebSocket.OPEN) ws.send(msg);
   });
 }
 
-function broadcastMessage(teamSlug: string, msg: ChatMessage, skip?: WebSocket) {
+function broadcastMessageLocal(teamSlug: string, msg: ChatMessage, skip?: WebSocket) {
   const payload = JSON.stringify({ type: "message", ...msg });
   rooms.get(teamSlug)?.forEach(({ ws }) => {
     if (ws !== skip && ws.readyState === WebSocket.OPEN) ws.send(payload);
+  });
+}
+
+async function publishWsEvent(payload: Record<string, unknown>) {
+  if (!REDIS_URL) return;
+  const publisher = await getRedisPublisher();
+  if (!publisher) return;
+  try {
+    await publisher.publish(WS_REDIS_CHANNEL, JSON.stringify({ ...payload, instanceId: WS_INSTANCE_ID }));
+  } catch (error) {
+    logger.warn({ err: serializeError(error) }, "[ws-server] failed to publish redis event");
+  }
+}
+
+async function getPresenceCount(teamSlug: string): Promise<number> {
+  if (!REDIS_URL) return getRoomCount(teamSlug);
+  const redis = await getRedisClient();
+  if (!redis) return getRoomCount(teamSlug);
+  try {
+    const values = await redis.hvals(`ws:presence:${teamSlug}`);
+    const total = values.reduce((sum, value) => sum + Number.parseInt(value || "0", 10), 0);
+    return Number.isFinite(total) ? total : getRoomCount(teamSlug);
+  } catch {
+    return getRoomCount(teamSlug);
+  }
+}
+
+async function syncPresenceCount(teamSlug: string) {
+  if (!REDIS_URL) return;
+  const redis = await getRedisClient();
+  if (!redis) return;
+  try {
+    const key = `ws:presence:${teamSlug}`;
+    await redis.hset(key, WS_INSTANCE_ID, String(getRoomCount(teamSlug)));
+    await redis.expire(key, 3600);
+  } catch (error) {
+    logger.warn({ err: serializeError(error) }, "[ws-server] failed to sync presence count");
+  }
+}
+
+async function broadcastPresence(teamSlug: string) {
+  await syncPresenceCount(teamSlug);
+  const count = await getPresenceCount(teamSlug);
+  sendPresenceToLocalClients(teamSlug, count);
+  await publishWsEvent({ type: "presence", teamSlug, count });
+}
+
+async function initRedisPubSub() {
+  if (!hasRedisConfigured()) return;
+  const subscriber = await getRedisSubscriber();
+  if (!subscriber) return;
+  await subscriber.subscribe(WS_REDIS_CHANNEL);
+  subscriber.on("message", (_channel, raw) => {
+    try {
+      const event = JSON.parse(raw) as
+        | { type: "presence"; teamSlug: string; count: number; instanceId?: string }
+        | { type: "message"; teamSlug: string; message: ChatMessage; instanceId?: string };
+      if (event.instanceId === WS_INSTANCE_ID) return;
+      if (event.type === "presence") {
+        sendPresenceToLocalClients(event.teamSlug, event.count);
+        return;
+      }
+      if (event.type === "message") {
+        addToHistory(event.teamSlug, event.message);
+        broadcastMessageLocal(event.teamSlug, event.message);
+      }
+    } catch (error) {
+      logger.warn({ err: serializeError(error) }, "[ws-server] failed to process redis pubsub event");
+    }
   });
 }
 
@@ -211,7 +275,8 @@ async function postMessageAndBroadcast(client: AuthedClient, body: string) {
 
   // Echo to sender + broadcast to room after persistence.
   sendJson(client.ws, { type: "message", ...persisted });
-  broadcastMessage(client.teamSlug, persisted, client.ws);
+  broadcastMessageLocal(client.teamSlug, persisted, client.ws);
+  await publishWsEvent({ type: "message", teamSlug: client.teamSlug, message: persisted });
 }
 
 function postHistoryFallback(ws: WebSocket, teamSlug: string) {
@@ -243,11 +308,7 @@ function requireWsServerTokenOrWarn() {
 }
 
 requireWsServerTokenOrWarn();
-if (redis) {
-  redis.on("error", () => {
-    // Keep WS server resilient when Redis is transiently unavailable.
-  });
-}
+void initRedisPubSub();
 
 async function fetchWithWsAuth(url: string, userId: string): Promise<Response | null> {
   if (!INTERNAL_SERVICE_SECRET) return null;
@@ -268,8 +329,10 @@ async function issueWsAuthToken(userId: string): Promise<string> {
   if (wsTokenUserCache.size > 10_000) {
     wsTokenUserCache.clear();
   }
-  if (redis) {
+  if (REDIS_URL) {
     try {
+      const redis = await getRedisClient();
+      if (!redis) return token;
       await redis.set(`ws-auth:${token}`, userId, "EX", 180);
     } catch {
       // Best effort: keep local fallback for development and transient redis failures.
@@ -427,7 +490,7 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
         rooms.get(teamSlug)!.add(client);
 
         // Notify presence update immediately
-        broadcastPresence(teamSlug);
+        void broadcastPresence(teamSlug);
 
         // Fetch DB history (async) then send; fall back to in-memory
         fetchDbHistoryOrFallback(teamSlug, userId, ws);
@@ -478,7 +541,7 @@ wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
       if (rooms.get(client.teamSlug)?.size === 0) {
         rooms.delete(client.teamSlug);
       }
-      broadcastPresence(client.teamSlug);
+      void broadcastPresence(client.teamSlug);
     }
   });
 

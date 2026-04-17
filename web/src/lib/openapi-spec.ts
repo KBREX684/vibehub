@@ -56,10 +56,123 @@ export const responses = {
   "500": { description: "Server error", content: { "application/json": { schema: errorEnvelope } } },
 } as const;
 
+const OPERATION_METHODS = ["get", "post", "put", "patch", "delete"] as const;
+
+type OpenApiHttpMethod = (typeof OPERATION_METHODS)[number];
+type OpenApiOperation = {
+  security?: Array<Record<string, string[]>>;
+  tags?: string[];
+  [key: string]: unknown;
+};
+
+const OPERATION_SCOPE_HINTS: Record<string, string> = {
+  "GET /api/v1/projects": "read:projects:list",
+  "POST /api/v1/projects": "write:projects",
+  "GET /api/v1/projects/{slug}": "read:projects:detail",
+  "GET /api/v1/creators": "read:creators:list",
+  "GET /api/v1/creators/{slug}": "read:creators:detail",
+  "GET /api/v1/posts": "read:posts:list",
+  "POST /api/v1/posts": "write:posts",
+  "GET /api/v1/posts/{slug}": "read:posts:detail",
+  "GET /api/v1/teams": "read:teams:list",
+  "GET /api/v1/teams/{slug}": "read:team:detail",
+  "GET /api/v1/teams/{slug}/tasks": "read:team:tasks",
+  "POST /api/v1/teams/{slug}/tasks": "write:team:tasks",
+  "PATCH /api/v1/teams/{slug}/tasks/batch": "write:team:tasks",
+  "PATCH /api/v1/teams/{slug}/tasks/{taskId}": "write:team:tasks",
+  "GET /api/v1/teams/{slug}/tasks/{taskId}/comments": "read:team:tasks",
+  "GET /api/v1/teams/{slug}/tasks/{taskId}/activity": "read:team:tasks",
+  "GET /api/v1/teams/{slug}/milestones": "read:team:milestones",
+  "GET /api/v1/me/teams": "read:teams:self",
+  "GET /api/v1/me/enterprise/workspace": "read:enterprise:workspace",
+  "GET /api/v1/mcp/search_projects": MCP_V2_TOOL_SCOPES.search_projects,
+  "GET /api/v1/mcp/search_creators": MCP_V2_TOOL_SCOPES.search_creators,
+  "GET /api/v1/mcp/get_project_detail": MCP_V2_TOOL_SCOPES.get_project_detail,
+};
+
+const OPERATION_AUTH_MODE_HINTS: Record<string, string[]> = {
+  "GET /api/v1/projects": ["anonymous", "session", "bearer_api_key"],
+  "GET /api/v1/projects/{slug}": ["anonymous", "session", "bearer_api_key"],
+  "GET /api/v1/creators": ["anonymous", "session", "bearer_api_key"],
+  "GET /api/v1/creators/{slug}": ["anonymous", "session", "bearer_api_key"],
+  "GET /api/v1/posts": ["anonymous", "session", "bearer_api_key"],
+  "GET /api/v1/posts/{slug}": ["anonymous", "session", "bearer_api_key"],
+  "GET /api/v1/teams": ["anonymous", "session", "bearer_api_key"],
+  "GET /api/v1/teams/{slug}": ["anonymous", "session", "bearer_api_key"],
+};
+
+function inferRequiredScope(path: string, method: OpenApiHttpMethod, operation: OpenApiOperation): string | null {
+  const authModes = inferAuthModes(path, method, operation);
+  if (!authModes.includes("bearer_api_key")) {
+    return null;
+  }
+  if (path === "/api/v1/mcp/v2/invoke" && method === "post") {
+    return "per-tool";
+  }
+  return OPERATION_SCOPE_HINTS[`${method.toUpperCase()} ${path}`] ?? null;
+}
+
+function inferAuthModes(path: string, method: OpenApiHttpMethod, operation: OpenApiOperation): string[] {
+  const hinted = OPERATION_AUTH_MODE_HINTS[`${method.toUpperCase()} ${path}`];
+  if (hinted) {
+    return [...hinted];
+  }
+  const summary = typeof operation.summary === "string" ? operation.summary.toLowerCase() : "";
+  const modes = new Set<string>();
+  const security = operation.security ?? [];
+  if (security.length === 0) {
+    if (summary.includes("scoped bearer")) {
+      modes.add("anonymous");
+      modes.add("session");
+      modes.add("bearer_api_key");
+      return [...modes];
+    }
+    modes.add("anonymous");
+    return [...modes];
+  }
+  for (const requirement of security) {
+    if (requirement.SessionCookie) {
+      modes.add("session");
+    }
+    if (requirement.BearerApiKey) {
+      modes.add("bearer_api_key");
+    }
+  }
+  if (modes.size === 0) {
+    modes.add("anonymous");
+  }
+  return [...modes];
+}
+
+function inferRateLimitTier(path: string, method: OpenApiHttpMethod, operation: OpenApiOperation): string {
+  const authModes = inferAuthModes(path, method, operation);
+  if (path === "/api/v1/mcp/v2/invoke" || authModes.includes("bearer_api_key")) {
+    return "api_key_scoped";
+  }
+  if (authModes.includes("session")) {
+    return "session_standard";
+  }
+  return "public";
+}
+
+function decorateOpenApiDocument(doc: Record<string, unknown>) {
+  const paths = doc.paths as Record<string, Record<string, OpenApiOperation>>;
+  for (const [path, pathItem] of Object.entries(paths)) {
+    for (const method of OPERATION_METHODS) {
+      const operation = pathItem?.[method];
+      if (!operation) continue;
+      operation["x-required-scope"] = inferRequiredScope(path, method, operation);
+      operation["x-auth-modes"] = inferAuthModes(path, method, operation);
+      operation["x-rate-limit-tier"] = inferRateLimitTier(path, method, operation);
+    }
+  }
+  return doc;
+}
+
 /** OpenAPI 3.0 document for VibeHub `/api/v1` (P4-4). */
 export function buildOpenApiDocument(): Record<string, unknown> {
   const scopeList = [...API_KEY_SCOPES].join(", ");
-  return {
+  return decorateOpenApiDocument({
     openapi: "3.0.3",
     info: {
       title: "VibeHub API",
@@ -527,7 +640,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/me/subscription": {
         get: {
           tags: ["me"],
-          summary: "Get current user's subscription, limits, pricing, and recent billing records (session cookie)",
+          summary: "Get current user's subscription, quota limits, pricing, and recent billing records (session cookie)",
           security: [{ SessionCookie: [] }],
           responses: { "200": responses["200"], "401": responses["401"], "500": responses["500"] },
         },
@@ -535,7 +648,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/billing/checkout": {
         post: {
           tags: ["subscription"],
-          summary: "Create a checkout session for Stripe or China payment sandbox (session cookie)",
+          summary: "Create a checkout session for Stripe, Alipay, or WeChat Pay (session cookie)",
           security: [{ SessionCookie: [] }],
           requestBody: {
             required: true,
@@ -560,7 +673,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/billing/portal": {
         post: {
           tags: ["subscription"],
-          summary: "Open Stripe billing portal or China payment manual management entry (session cookie)",
+          summary: "Open Stripe billing portal or return a manual renewal entry for China-local payment channels (session cookie)",
           security: [{ SessionCookie: [] }],
           requestBody: {
             content: {
@@ -1645,6 +1758,104 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/api/v1/admin/ai-suggestions": {
+        get: {
+          tags: ["admin"],
+          summary: "List stored AI moderation suggestions with server-side filters",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "targetType", in: "query", schema: { type: "string", enum: ["report_ticket", "enterprise_verification", "post_review", "other"] } },
+            { name: "riskLevel", in: "query", schema: { type: "string", enum: ["low", "medium", "high"] } },
+            { name: "adminDecision", in: "query", schema: { type: "string", enum: ["pending", "accepted", "modified", "rejected"] } },
+            { name: "queue", in: "query", schema: { type: "string" } },
+            { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/admin/ai-suggestions/generate": {
+        post: {
+          tags: ["admin"],
+          summary: "Generate or refresh an AI moderation suggestion for a supported admin task",
+          security: [{ SessionCookie: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["targetType", "targetId", "task"],
+                  properties: {
+                    targetType: { type: "string", enum: ["report_ticket", "enterprise_verification", "post_review", "other"] },
+                    targetId: { type: "string" },
+                    task: { type: "string", enum: ["summarize_report", "triage_post", "verify_enterprise"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/admin/ai-suggestions/{suggestionId}/decision": {
+        post: {
+          tags: ["admin"],
+          summary: "Store an admin decision for an AI moderation suggestion",
+          security: [{ SessionCookie: [] }],
+          parameters: [{ name: "suggestionId", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["decision"],
+                  properties: {
+                    decision: { type: "string", enum: ["accepted", "rejected", "modified"] },
+                    decisionNote: { type: "string", maxLength: 1000 },
+                  },
+                },
+              },
+            },
+          },
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "403": responses["403"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/admin/audit-logs": {
+        get: {
+          tags: ["admin"],
+          summary: "List audit logs with actor, action, agent-binding, and time filters",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "actorId", in: "query", schema: { type: "string" } },
+            { name: "action", in: "query", schema: { type: "string" } },
+            { name: "agentBindingId", in: "query", schema: { type: "string" } },
+            { name: "dateFrom", in: "query", schema: { type: "string", format: "date-time" } },
+            { name: "dateTo", in: "query", schema: { type: "string", format: "date-time" } },
+            { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
+      "/api/v1/admin/mcp-invoke-audits": {
+        get: {
+          tags: ["admin"],
+          summary: "List MCP invoke audits with tool, status, agent-binding, and time filters",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "tool", in: "query", schema: { type: "string" } },
+            { name: "status", in: "query", schema: { type: "string", enum: ["success", "error"] } },
+            { name: "agentBindingId", in: "query", schema: { type: "string" } },
+            { name: "dateFrom", in: "query", schema: { type: "string", format: "date-time" } },
+            { name: "dateTo", in: "query", schema: { type: "string", format: "date-time" } },
+            { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          ],
+          responses: { "200": responses["200"], "401": responses["401"], "403": responses["403"], "500": responses["500"] },
+        },
+      },
       "/api/v1/admin/reports/{reportId}/resolve": {
         post: {
           tags: ["admin"],
@@ -1919,6 +2130,19 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: { "200": responses["200"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
         },
       },
+      "/api/v1/me/api-keys/{keyId}/usage": {
+        get: {
+          tags: ["me"],
+          summary: "Get 7-day usage summary and recent MCP invocations for one API key (session cookie)",
+          security: [{ SessionCookie: [] }],
+          parameters: [
+            { name: "keyId", in: "path", required: true, schema: { type: "string" } },
+            { name: "days", in: "query", schema: { type: "integer", minimum: 1, maximum: 30, default: 7 } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 100 } },
+          ],
+          responses: { "200": responses["200"], "400": responses["400"], "401": responses["401"], "404": responses["404"], "500": responses["500"] },
+        },
+      },
       "/api/v1/me/webhooks": {
         get: {
           tags: ["me"],
@@ -2119,5 +2343,5 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         },
       },
     },
-  };
+  });
 }

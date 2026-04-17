@@ -243,8 +243,8 @@ export interface ReportTicket {
   createdAt: string;
   resolvedAt?: string;
   resolvedBy?: string;
-  /** Admin API only — heuristic AI triage (v7 P0-11) */
-  adminAi?: AdminAiInsight;
+  /** Admin API only — persisted AI triage record (W7). */
+  adminAi?: AdminAiSuggestionRecord;
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -470,6 +470,29 @@ export interface ApiKeySummary {
 /** Returned only once from create. */
 export interface ApiKeyCreated extends ApiKeySummary {
   secret: string;
+}
+
+export interface ApiKeyUsageSummary {
+  last7dCount: number;
+  last24hCount: number;
+  successCount: number;
+  errorCount: number;
+  avgDurationMs: number;
+  uniqueTools: number;
+  lastUsedAt?: string;
+}
+
+export interface ApiKeyUsageDailyBucket {
+  date: string;
+  count: number;
+  successCount: number;
+  errorCount: number;
+}
+
+export interface ApiKeyUsageSnapshot {
+  summary: ApiKeyUsageSummary;
+  daily: ApiKeyUsageDailyBucket[];
+  recentInvocations: McpInvokeAuditRow[];
 }
 
 // ─── Topics / Leaderboards ────────────────────────────────────────────────────
@@ -713,7 +736,7 @@ export interface SubscriptionPlanInfo {
   apiQuota: number;
 }
 
-/** M-1: Per-user subscription record (Stripe-backed). */
+/** M-1: Per-user subscription record (billing-provider-backed). */
 export type PaymentProviderKind = "stripe" | "alipay" | "wechatpay";
 export type BillingRecordStatus = "pending" | "succeeded" | "failed" | "canceled" | "refunded";
 
@@ -769,6 +792,69 @@ export interface AdminAiInsight {
   labels?: string[];
 }
 
+export type AdminAiSuggestionTargetValue =
+  | "report_ticket"
+  | "enterprise_verification"
+  | "post_review"
+  | "other";
+
+export type AdminAiDecisionValue = "pending" | "accepted" | "rejected" | "modified";
+
+export interface AdminAiSuggestionRecord extends AdminAiInsight {
+  id: string;
+  targetType: AdminAiSuggestionTargetValue;
+  targetId: string;
+  adminDecision: AdminAiDecisionValue;
+  decisionNote?: string;
+  adminUserId?: string;
+  decidedAt?: string;
+  modelProvider?: string;
+  modelName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminDashboardMetric {
+  key:
+    | "wahc"
+    | "ao_rate"
+    | "agent_rejection_rate"
+    | "dau"
+    | "new_users"
+    | "new_posts"
+    | "new_projects"
+    | "active_subscriptions"
+    | "open_reports";
+  label: string;
+  description: string;
+  value: number;
+  delta7d: number;
+  sparkline: number[];
+}
+
+export interface AdminDashboardSnapshot {
+  generatedAt: string;
+  northStars: AdminDashboardMetric[];
+  supportMetrics: AdminDashboardMetric[];
+}
+
+export type SystemAlertSeverity = "info" | "warning" | "critical";
+export type SystemAlertDeliveryStatus = "pending" | "sent" | "skipped" | "failed";
+
+export interface SystemAlertRecord {
+  id: string;
+  kind: string;
+  severity: SystemAlertSeverity;
+  message: string;
+  dedupeKey?: string;
+  metadata?: Record<string, unknown>;
+  deliveryStatus: SystemAlertDeliveryStatus;
+  deliverySummary?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+}
+
 // ─── P4: Enterprise / Embed ───────────────────────────────────────────────────
 
 export interface EnterpriseProfile {
@@ -782,8 +868,8 @@ export interface EnterpriseProfile {
   reviewNote?: string;
   createdAt: string;
   updatedAt: string;
-  /** Admin API only — heuristic AI triage (v7 P0-11) */
-  adminAi?: AdminAiInsight;
+  /** Admin API only — persisted AI triage record (W7). */
+  adminAi?: AdminAiSuggestionRecord;
 }
 
 export interface EnterpriseVerificationApplication {

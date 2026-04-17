@@ -89,7 +89,7 @@ v8 同时推进八条工作线：
 - **W3** Agent 协作总线（角色牌 + 协作日志 + 团队侧 agent 管理 + 跨用户协作受控开通）
 - **W4** 社区主飞轮（Feed 四流 + 画廊曝光权重 + 协作入口前置）
 - **W5** 开发者生态（开发者中心重构 + MCP quick start + API Key 用量 + 交互式文档）
-- **W6** 商业与合规收口（支付宝 / 微信商户 · ICP · AIGC · Pro 与 Team 套餐上线）
+- **W6** 商业与合规收口（支付宝 / 微信商户 · ICP · AIGC · Free / Pro 上线，Team 延后）
 - **W7** 后台治理与 AI 助手（运营仪表盘 + AI 摘要/打标/建议 + 审计面板 + 企业认证辅助）
 - **W8** 基础设施与可观测（Redis · 结构化日志 · 健康检查 · 监控告警 · 回滚 SOP）
 
@@ -323,7 +323,7 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 
 ---
 
-### W5 开发者生态（P0 / P1）
+### W5 开发者生态（P0 / P1）· ✅ 当前版已落地
 
 #### W5-1 开发者中心首页（P0）
 
@@ -334,7 +334,7 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 
 #### W5-2 API 文档（P1）
 
-- `/developers/api-docs` 基于 `lib/openapi-spec.ts` 生成交互式文档（使用 swagger-ui-react 或同等轻量方案）
+- `/developers/api-docs` 基于 `lib/openapi-spec.ts` 生成交互式文档（当前采用仓库内自定义浏览 + Try it，不引入 swagger-ui-react）
 - 每个端点展示 scope 要求 + 限流额度
 
 #### W5-3 API Key 用量（P1）
@@ -346,6 +346,12 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 
 - MCP v2 manifest 暴露 agent 的 capability 元数据（tool + required scope + example）
 - 为后续 v3 预留版本字段
+
+**当前版已交付**：
+- `/developers` 保留三场景 quick start，并新增 protocol status
+- `/developers/api-docs` 可搜索、可切换 auth mode、可对同源 JSON API 执行 Try it
+- `/settings/api-keys` 已展示 7 天 sparkline、摘要统计、最近 100 条 MCP 调用
+- `/api/v1/mcp/v2/manifest` 已新增 manifestVersion / protocolVersion / generatedAt / tool metadata
 
 **验收**：
 - 开发者中心首屏能让一个 Cursor 用户 10 分钟内接入 VibeHub MCP
@@ -363,7 +369,7 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 
 #### W6-2 订阅套餐上线（P0）
 
-- Free / Pro / Team 三档，按 `docs/product-strategy-v8.md` §5.3 定义
+- 当前公开套餐先收口为 Free / Pro 两档，Team 套餐延后到后续商业化阶段
 - 套餐差异在 `/pricing` 页清楚列出
 - 支付成功后立刻写 `BillingRecord` + `UserSubscription.status`
 
@@ -380,12 +386,12 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 
 **验收**：
 - 至少一次真实商户支付成功 + 可见账单
-- Free/Pro/Team 状态真实驱动 quota 生效
+- Free/Pro 状态真实驱动 quota 生效
 - 合规页面（`/privacy` `/terms` `/rules` `/aigc`）全部最终版
 
 ---
 
-### W7 后台治理与 AI 助手（P0 / P1）
+### W7 后台治理与 AI 助手（P0 / P1 · 当前版已完成）
 
 #### W7-1 运营仪表盘（P0）
 
@@ -423,30 +429,37 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 - 审核员一次完成摘要 + 决定 < 30s
 - 所有 AI 建议有决策归属
 
+**当前实现状态**：
+- `/admin/dashboard` 已落地，三北极星与六辅助指标均通过 `lib/admin/metrics.ts` 聚合
+- AI 审核三类任务已接通 `AdminAiSuggestion`，支持 provider + heuristic fallback
+- `/admin/ai-suggestions`、`/admin/audit-logs`、`/admin/mcp-audits` 已支持服务端筛选
+- `/admin/reports`、`/admin/moderation`、`/admin/enterprise` 已支持显式生成与决策闭环
+
 ---
 
-### W8 基础设施与可观测（P0 / P1）
+### W8 基础设施与可观测（P0 / P1 · 当前版已完成）
 
 #### W8-1 Redis 上线（P0）
 
-- Session / CSRF token / 限流状态迁移至 Redis
-- WebSocket pub/sub 通过 Redis adapter 支持多实例
-- 内存 fallback 仅允许 `NODE_ENV=development`
+- 保持签名 cookie session 不变；Redis 承接分布式限流、WS fan-out 和运维 readiness
+- Middleware 仍负责 auth / CSRF / request-id；真正的分布式限流下沉到 Node 路由层
+- WebSocket pub/sub 通过 Redis channel 支持多实例消息与 presence 汇总
+- 生产-like 缺 Redis 时必须在 health / alert 中显式降级，不再静默假装 healthy
 
 #### W8-2 结构化日志（P0）
 
-- 所有 route handler 走 `withRequest` wrapper（requestId / userId / agentBindingId / duration）
-- `console.*` 清零（使用 `logger.*`）
+- 关键路由统一走 request logging wrapper（requestId / path / status / duration）
+- `console.*` 已从运行时代码清零（seed / maintenance scripts 除外）
 
 #### W8-3 健康检查（P0）
 
-- `/api/v1/health` 检查：DB / Redis / SMTP / LLM provider / 支付渠道 sandbox
-- `/api/v1/admin/health` 增强：展示最近告警
+- `/api/v1/health` 已统一检查：DB / Redis / WebSocket / SMTP / payment providers / admin-AI provider
+- `/api/v1/admin/health` 与 `/admin/health` 已展示最近 unresolved alerts
 
 #### W8-4 监控与告警（P1）
 
-- 错误日志 → 告警通道（飞书机器人 webhook 或邮件）
-- 关键错误率（5xx / AI 失败 / Webhook 回调失败）设阈值
+- 站内 `SystemAlert` 已落地，支持 Feishu webhook / email 投递与 dedupe
+- 关键失败路径已接通告警：billing webhook、admin-AI provider、rate-limit memory fallback、5xx request wrapper
 
 #### W8-5 回滚 SOP（P0）
 
@@ -458,6 +471,13 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 - 0 条 `console.*`
 - 告警通道至少一次真实命中测试
 
+**当前实现状态**：
+- 新增统一 Redis client / distributed rate-limit / internal rate-limit route
+- `mcp-user-write-rate-limit` 与 `agent-action-rate-limit` 已走分布式限流路径
+- `ws-server` 已支持 Redis pub/sub fan-out 与跨实例 presence 汇总
+- `SystemAlert` 模型、健康聚合模块和 `/admin/health` recent alerts 已落地
+- `docs/deployment-v7.md` 已升级为 v8 部署 / 回滚 runbook
+
 ---
 
 ## 4. 分阶段（Alpha / Beta / GA）
@@ -468,7 +488,7 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 - W2 `EmptyState` / `ErrorState` / `LoadingSkeleton` / `PageHeader` / `StatCard` / `FormField` / `SectionCard` 落地
 - W3 `TeamAgentMembership` 迁移 + 最基础 CRUD + `/teams/[slug]/agents` MVP
 - W7 仪表盘框架（不含真实聚合）
-- W8 Redis 上线灰度
+- W8 Redis / logging / health 基线落地
 - W6 支付宝 / 微信 sandbox 联调通
 
 ### Phase Beta（v8 中间 1/3）
@@ -479,7 +499,7 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 - W5 开发者中心重构 + API 文档
 - W7 AI 审核三类任务真实跑通
 - W6 至少一条支付渠道真实商户成功跑通一次
-- W8 结构化日志清零 console
+- W8 结构化日志清零 runtime console
 
 ### Phase GA（v8 末 1/3）
 
@@ -489,7 +509,7 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 - W5 API Key 用量 + MCP Developer Access 申请
 - W6 合规定稿：ICP · 法务 · AIGC · 数据跨境条款
 - W7 运营仪表盘三北极星真实聚合
-- W8 告警命中测试
+- W8 告警命中测试与回滚 SOP 演练
 - Q3 完整回归 + RC 演练 + `docs/v7-go-live-checklist.md` 完整勾选
 
 ---
@@ -504,7 +524,7 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 - 画廊 3 tab · 排序由 `score` 驱动
 - Agent：绑定 → 加入团队 → 发角色牌 → 执行任务 → Confirmation → 审计时间线
 - 跨用户 Agent-Agent：队长 agent 建任务 → 队员 agent 领取 → 队员用户 Confirmation → 完成
-- 支付：Free / Pro / Team 三档真实驱动 quota · 至少一条中国渠道真实成功
+- 支付：Free / Pro 两档真实驱动 quota · 至少一条中国渠道真实成功
 - 后台：三北极星 + 六辅助指标可视化 · AI 摘要可采纳
 - `/settings/agents` 显示 binding + 团队参与 + Confirmation pending + 审计 四块
 
@@ -571,12 +591,17 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 按依赖顺序立即推进（支持并行）：
 
 1. 维持 `main` 为 v8 执行主干，冻结已完成的 W1/W2/W3/W4，只允许 fix-forward
-2. 启动 W6（中国支付商务 + 合规）· 这是当前唯一外部时间关键路径
-3. 启动 W5（开发者生态）· `/developers` 与 API docs 是下一波对外可见能力
-4. 启动 W7 · 运营仪表盘与 AI 审核闭环
-5. 启动 W8 · Redis / 健康检查 / 告警 / 回滚 SOP
+2. 维持已完成的 W5/W6 为 fix-forward 范围，不再回头重做开发者中心或公开套餐模型
+3. 收口 W6 外部 blocker：SMTP、真实支付宝商户、微信支付证书/商户（若纳入首发）、ICP/法务/AIGC/跨境条款最终审批
+4. 冻结已完成的 W7，仅允许 fix-forward
+5. 冻结已完成的 W8，仅允许 fix-forward
 
-下一阶段不再回头重复规划 W1~W4，而是进入 W5~W8。
+说明：
+
+- `docs/v8-rc-go-live-rehearsal-2026-04-17.md` 已完成一轮 production-like RC / go-live 演练
+- 结论不是“系统未完成”，而是“正式上线只剩外部条件未补齐”
+
+下一阶段不再回头重复规划 W1~W8，而是并行清掉 W6 的外部上线阻塞，并在外部条件齐备后执行最终 go-live 验证。
 
 ---
 
@@ -588,12 +613,10 @@ MCP 写工具与现有工具（create_team_task / agent_complete_team_task / age
 
 缺失项：
 
+- SMTP 未配置，production 邮箱注册 / 验证链路不可用
 - 中国支付真实商户未跑通
 - 合规定稿（ICP / AIGC / 法务）未完成
-- Redis 拓扑未上线
-- 开发者生态（交互式 API 文档 / 用量视图）未完成
-- 运营仪表盘 + AI 审核闭环未跑通
-- 告警与回滚 SOP 未完成
+- W6 外部依赖仍未完成最终上线核验
 
 v8.0 路线图的存在意义就是关闭上面全部项并验证单位经济为正。
 

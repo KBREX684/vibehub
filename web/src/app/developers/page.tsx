@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
+import { buildMcpV2Manifest } from "@/lib/mcp-v2-tools";
+import { buildOpenApiDocument } from "@/lib/openapi-spec";
 import { PageHeader, CopyButton, Badge } from "@/components/ui";
 
 function baseUrl() {
@@ -48,6 +50,8 @@ export default async function DevelopersPage() {
   const { t } = await getServerTranslator();
 
   const BASE = baseUrl();
+  const openApi = buildOpenApiDocument() as { info?: { version?: string } };
+  const manifest = buildMcpV2Manifest();
 
   const mcpSnippet = `{
   "mcpServers": {
@@ -242,13 +246,13 @@ export default async function DevelopersPage() {
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
                     {t(
                       "developers.v8.scenarios.saas.desc",
-                      "用 OAuth 让 VibeHub 用户授权你的应用；按千次 MCP 写调用计费（P1 开放申请）。"
+                      "用 OAuth 让 VibeHub 用户授权你的应用；MCP Developer Access 当前仍是申请制，不在本轮个人订阅流程里直接开放。"
                     )}
                   </p>
                 </div>
               </div>
               <Badge variant="apple" pill>
-                {t("developers.v8.scenarios.saas.tag", "P1 · 按量计费")}
+                {t("developers.v8.scenarios.saas.tag", "P1 · 申请制")}
               </Badge>
             </div>
 
@@ -257,7 +261,7 @@ export default async function DevelopersPage() {
             <div className="text-xs text-[var(--color-text-tertiary)] leading-relaxed">
               {t(
                 "developers.v8.scenarios.saas.note",
-                "MCP Developer Access 面向 SaaS 型 AI 工具按千次写调用计费，不面向个人用户。个人用户请直接使用 Free / Pro 额度。"
+                "MCP Developer Access 面向 SaaS 型 AI 工具，后续会按量计费。当前只保留能力说明与申请制入口，不面向个人用户直接开通。个人用户请直接使用 Free / Pro 额度。"
               )}
             </div>
           </section>
@@ -272,6 +276,7 @@ export default async function DevelopersPage() {
             </h3>
             <div className="space-y-1">
               {[
+                { href: "/developers/api-docs", label: t("developers.v8.sidebar.openapi_docs", "交互式 API Docs") },
                 { href: abs("/api/v1/openapi.json"), label: t("developers.v8.sidebar.openapi", "OpenAPI 规范") },
                 { href: abs("/api/v1/mcp/v2/manifest"), label: t("developers.v8.sidebar.manifest", "MCP manifest") },
                 { href: "/pricing", label: t("developers.v8.sidebar.pricing", "定价与额度") },
@@ -289,6 +294,30 @@ export default async function DevelopersPage() {
                   <ExternalLink className="w-3 h-3 text-[var(--color-text-muted)]" aria-hidden="true" />
                 </a>
               ))}
+            </div>
+          </section>
+
+          <section className="card p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
+              Protocol status
+            </h3>
+            <div className="space-y-2 text-xs text-[var(--color-text-secondary)]">
+              <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
+                <span>OpenAPI version</span>
+                <code className="font-mono text-[var(--color-text-primary)]">{openApi.info?.version ?? "1.0.0"}</code>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
+                <span>Manifest version</span>
+                <code className="font-mono text-[var(--color-text-primary)]">{manifest.manifestVersion}</code>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
+                <span>Protocol version</span>
+                <code className="font-mono text-[var(--color-text-primary)]">{manifest.protocolVersion}</code>
+              </div>
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
+                <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-tertiary)] mb-1">Generated</div>
+                <div className="font-mono text-[var(--color-text-primary)]">{new Date(manifest.generatedAt).toISOString()}</div>
+              </div>
             </div>
           </section>
 

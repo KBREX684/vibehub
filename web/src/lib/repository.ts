@@ -12,6 +12,7 @@ import { mapPrismaToRepositoryError, RepositoryError } from "@/lib/repository-er
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
 import { generateSecureToken, hashPassword, verifyPassword } from "@/lib/auth-password";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
+import { createApiKeyUsageSnapshot } from "@/lib/api-key-usage";
 import {
   enterpriseProfileSelect,
   sessionEnterpriseFromProfile,
@@ -31,6 +32,7 @@ import {
   mockCollaborationIntents,
   mockCreators,
   mockModerationCases,
+  mockMcpInvokeAudits,
   mockPosts,
   mockProjects,
   mockReportTickets,
@@ -58,6 +60,7 @@ import {
 import type {
   ApiKeyCreated,
   ApiKeySummary,
+  ApiKeyUsageSnapshot,
   AgentBindingSummary,
   AgentActionAuditRow,
   AgentActionStatus,
@@ -1648,6 +1651,34 @@ export async function logMcpInvoke(params: {
   }
 }
 
+function toMcpInvokeAuditRow(row: {
+  id: string;
+  tool: string;
+  userId: string;
+  apiKeyId?: string | null;
+  agentBindingId?: string | null;
+  httpStatus: number;
+  clientIp?: string | null;
+  userAgent?: string | null;
+  errorCode?: string | null;
+  durationMs?: number | null;
+  createdAt: Date | string;
+}): McpInvokeAuditRow {
+  return {
+    id: row.id,
+    tool: row.tool,
+    userId: row.userId,
+    apiKeyId: row.apiKeyId ?? undefined,
+    agentBindingId: row.agentBindingId ?? undefined,
+    httpStatus: row.httpStatus,
+    clientIp: row.clientIp ?? undefined,
+    userAgent: row.userAgent ?? undefined,
+    errorCode: row.errorCode ?? undefined,
+    durationMs: row.durationMs ?? undefined,
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
+  };
+}
+
 /** P2-2: returns false if this idempotency key was already used for the user+tool. */
 const mcpIdempotencyMockKeys = new Set<string>();
 
@@ -1677,39 +1708,115 @@ export async function tryRegisterMcpInvokeIdempotency(params: {
 }
 
 export async function listMcpInvokeAudits(params: {
+  tool?: string;
+  status?: "success" | "error";
+  agentBindingId?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page: number;
   limit: number;
 }): Promise<{ items: McpInvokeAuditRow[]; total: number }> {
   if (useMockData) {
-    return { items: [], total: 0 };
+    const filtered = mockMcpInvokeAudits.filter((item) => {
+      if (params.tool && item.tool !== params.tool) return false;
+      if (params.status === "success" && item.httpStatus >= 400) return false;
+      if (params.status === "error" && item.httpStatus < 400) return false;
+      if (params.agentBindingId && item.agentBindingId !== params.agentBindingId) return false;
+      if (params.dateFrom && new Date(item.createdAt) < new Date(params.dateFrom)) return false;
+      if (params.dateTo && new Date(item.createdAt) > new Date(params.dateTo)) return false;
+      return true;
+    });
+    const pageItems = paginateArray(filtered, params.page, params.limit);
+    return { items: pageItems.items, total: pageItems.pagination.total };
   }
   const prisma = await getPrisma();
   const take = Math.min(Math.max(params.limit, 1), 100);
   const skip = (Math.max(params.page, 1) - 1) * take;
+  const where: Prisma.McpInvokeAuditWhereInput = {
+    ...(params.tool ? { tool: params.tool } : {}),
+    ...(params.agentBindingId ? { agentBindingId: params.agentBindingId } : {}),
+    ...(params.status === "success" ? { httpStatus: { lt: 400 } } : {}),
+    ...(params.status === "error" ? { httpStatus: { gte: 400 } } : {}),
+    ...((params.dateFrom || params.dateTo)
+      ? {
+          createdAt: {
+            ...(params.dateFrom ? { gte: new Date(params.dateFrom) } : {}),
+            ...(params.dateTo ? { lte: new Date(params.dateTo) } : {}),
+          },
+        }
+      : {}),
+  };
   const [rows, total] = await Promise.all([
     prisma.mcpInvokeAudit.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip,
       take,
     }),
-    prisma.mcpInvokeAudit.count(),
+    prisma.mcpInvokeAudit.count({ where }),
   ]);
   return {
-    items: rows.map((r) => ({
-      id: r.id,
-      tool: r.tool,
-      userId: r.userId,
-      apiKeyId: r.apiKeyId ?? undefined,
-      agentBindingId: r.agentBindingId ?? undefined,
-      httpStatus: r.httpStatus,
-      clientIp: r.clientIp ?? undefined,
-      userAgent: r.userAgent ?? undefined,
-      errorCode: r.errorCode ?? undefined,
-      durationMs: r.durationMs ?? undefined,
-      createdAt: r.createdAt.toISOString(),
-    })),
+    items: rows.map((r) => toMcpInvokeAuditRow(r)),
     total,
   };
+}
+
+export async function getApiKeyUsageForUser(params: {
+  userId: string;
+  keyId: string;
+  days?: number;
+  limit?: number;
+}): Promise<ApiKeyUsageSnapshot> {
+  const days = Number.isFinite(params.days) ? Math.trunc(params.days as number) : 7;
+  const limit = Number.isFinite(params.limit) ? Math.trunc(params.limit as number) : 100;
+
+  if (useMockData) {
+    const key = mockApiKeys.find((item) => item.id === params.keyId && item.userId === params.userId);
+    if (!key) {
+      throw new Error("API_KEY_NOT_FOUND");
+    }
+    return createApiKeyUsageSnapshot({
+      rows: [],
+      lastUsedAt: key.lastUsedAt,
+      days,
+      limit,
+    });
+  }
+
+  const prisma = await getPrisma();
+  const key = await prisma.apiKey.findFirst({
+    where: { id: params.keyId, userId: params.userId },
+    select: { id: true, lastUsedAt: true },
+  });
+  if (!key) {
+    throw new Error("API_KEY_NOT_FOUND");
+  }
+
+  const now = new Date();
+  const windowDays = Math.min(Math.max(days || 7, 1), 30);
+  const recentLimit = Math.min(Math.max(limit || 100, 1), 100);
+  const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (windowDays - 1)));
+
+  const [windowRows, recentRows] = await Promise.all([
+    prisma.mcpInvokeAudit.findMany({
+      where: { apiKeyId: params.keyId, userId: params.userId, createdAt: { gte: periodStart } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.mcpInvokeAudit.findMany({
+      where: { apiKeyId: params.keyId, userId: params.userId },
+      orderBy: { createdAt: "desc" },
+      take: recentLimit,
+    }),
+  ]);
+
+  return createApiKeyUsageSnapshot({
+    rows: windowRows.map((row) => toMcpInvokeAuditRow(row)),
+    recentInvocations: recentRows.map((row) => toMcpInvokeAuditRow(row)),
+    lastUsedAt: key.lastUsedAt?.toISOString(),
+    now,
+    days: windowDays,
+    limit: recentLimit,
+  });
 }
 
 export async function listInAppNotifications(params: {
@@ -6291,13 +6398,15 @@ export async function listReportTickets(params: {
     });
     const pageItems = paginateArray(filtered, params.page, params.limit);
     if (!params.forAdmin) return pageItems;
-    const { getOrCreateReportTicketAi } = await import("@/lib/admin-ai");
-    const items = await Promise.all(
-      pageItems.items.map(async (t) => {
-        const ai = await getOrCreateReportTicketAi(t.targetId, t.reason);
-        return { ...t, adminAi: { suggestion: ai.suggestion, riskLevel: ai.riskLevel, confidence: ai.confidence } };
-      })
-    );
+    const { listStoredAdminAiSuggestionsByTargets } = await import("@/lib/admin-ai");
+    const aiMap = await listStoredAdminAiSuggestionsByTargets({
+      targetType: "report_ticket",
+      targetIds: pageItems.items.map((ticket) => ticket.id),
+    });
+    const items = pageItems.items.map((ticket) => ({
+      ...ticket,
+      adminAi: aiMap.get(ticket.id),
+    }));
     return { ...pageItems, items };
   }
 
@@ -6316,13 +6425,15 @@ export async function listReportTickets(params: {
   const base = rows.map(toReportTicketDto);
   let items = base;
   if (params.forAdmin) {
-    const { getOrCreateReportTicketAi } = await import("@/lib/admin-ai");
-    items = await Promise.all(
-      base.map(async (t) => {
-        const ai = await getOrCreateReportTicketAi(t.targetId, t.reason);
-        return { ...t, adminAi: { suggestion: ai.suggestion, riskLevel: ai.riskLevel, confidence: ai.confidence } };
-      })
-    );
+    const { listStoredAdminAiSuggestionsByTargets } = await import("@/lib/admin-ai");
+    const aiMap = await listStoredAdminAiSuggestionsByTargets({
+      targetType: "report_ticket",
+      targetIds: base.map((ticket) => ticket.id),
+    });
+    items = base.map((ticket) => ({
+      ...ticket,
+      adminAi: aiMap.get(ticket.id),
+    }));
   }
 
   return {
@@ -6463,18 +6574,39 @@ export async function resolveReportTicket(params: {
 
 export async function listAuditLogs(params: {
   actorId?: string;
+  action?: string;
+  agentBindingId?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page: number;
   limit: number;
 }): Promise<Paginated<AuditLog>> {
   if (useMockData) {
     const filtered = mockAuditLogs.filter((item) => {
-      return !params.actorId || item.actorId === params.actorId;
+      if (params.actorId && item.actorId !== params.actorId) return false;
+      if (params.action && item.action !== params.action) return false;
+      if (params.agentBindingId && item.agentBindingId !== params.agentBindingId) return false;
+      if (params.dateFrom && new Date(item.createdAt) < new Date(params.dateFrom)) return false;
+      if (params.dateTo && new Date(item.createdAt) > new Date(params.dateTo)) return false;
+      return true;
     });
     return paginateArray(filtered, params.page, params.limit);
   }
 
   const prisma = await getPrisma();
-  const where = params.actorId ? { actorId: params.actorId } : {};
+  const where: Prisma.AuditLogWhereInput = {
+    ...(params.actorId ? { actorId: params.actorId } : {}),
+    ...(params.action ? { action: params.action } : {}),
+    ...(params.agentBindingId ? { agentBindingId: params.agentBindingId } : {}),
+    ...((params.dateFrom || params.dateTo)
+      ? {
+          createdAt: {
+            ...(params.dateFrom ? { gte: new Date(params.dateFrom) } : {}),
+            ...(params.dateTo ? { lte: new Date(params.dateTo) } : {}),
+          },
+        }
+      : {}),
+  };
   const [items, total] = await Promise.all([
     prisma.auditLog.findMany({
       where,

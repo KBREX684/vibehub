@@ -8,7 +8,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
-import { getOrCreateEnterpriseAi } from "@/lib/admin-ai";
+import { listStoredAdminAiSuggestionsByTargets } from "@/lib/admin-ai";
 import type { EnterpriseVerificationStatus } from "@/lib/types";
 
 const ALLOWED_STATUS = new Set<EnterpriseVerificationStatus | "all">([
@@ -20,9 +20,6 @@ const ALLOWED_STATUS = new Set<EnterpriseVerificationStatus | "all">([
 ]);
 
 const reviewBodySchema = z.object({
-  // For the single-profile flow: userId identifies the applicant's profile.
-  // For backward compat the field is named applicationId in the request
-  // but maps to the profile's userId.
   applicationId: z.string().min(1),
   action: z.enum(["approve", "reject"]),
   note: z.string().max(1000).optional(),
@@ -46,27 +43,21 @@ export async function GET(request: Request) {
       );
     }
     const status = rawStatus as EnterpriseVerificationStatus | "all";
-    // Use the profile-based listing (backed by mockEnterpriseProfiles / User table)
     const result = await listEnterpriseProfiles({ status, page, limit });
-    const items = await Promise.all(
-      result.items.map(async (p) => {
-        const ai = await getOrCreateEnterpriseAi({
-          userId: p.userId,
-          organizationName: p.organizationName,
-          organizationWebsite: p.organizationWebsite,
-        });
-        return {
-          ...p,
-          id: p.userId,
-          adminAi: { suggestion: ai.suggestion, riskLevel: ai.riskLevel, confidence: ai.confidence },
-        };
-      })
-    );
+    const aiMap = await listStoredAdminAiSuggestionsByTargets({
+      targetType: "enterprise_verification",
+      targetIds: result.items.map((profile) => profile.userId),
+    });
+    const items = result.items.map((profile) => ({
+      ...profile,
+      id: profile.userId,
+      adminAi: aiMap.get(profile.userId),
+    }));
     return apiSuccess({ ...result, items });
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
+    return apiError(
       {
         code: "ADMIN_ENTERPRISE_VERIFICATIONS_LIST_FAILED",
         message: "Failed to list enterprise verification applications",
@@ -83,7 +74,6 @@ export async function POST(request: Request) {
 
   try {
     const parsed = reviewBodySchema.parse(await request.json());
-    // applicationId = userId of the applicant profile
     const profile = await reviewEnterpriseVerification({
       userId: parsed.applicationId,
       adminUserId: auth.session.userId,
@@ -94,7 +84,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-if (error instanceof z.ZodError) {
+    if (error instanceof z.ZodError) {
       return apiError(
         {
           code: "INVALID_BODY",

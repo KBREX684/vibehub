@@ -132,6 +132,8 @@ export function Footer() {
             {[
               { href: "/privacy", key: "footer.privacy" },
               { href: "/terms", key: "footer.terms" },
+              { href: "/rules", key: "footer.rules" },
+              { href: "/aigc", key: "footer.aigc" },
             ].map((item) => (
               <Link
                 key={item.key}

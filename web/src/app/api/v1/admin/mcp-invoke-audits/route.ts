@@ -14,7 +14,12 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
-    const result = await listMcpInvokeAudits({ page, limit });
+    const tool = url.searchParams.get("tool")?.trim() || undefined;
+    const status = (url.searchParams.get("status")?.trim() || undefined) as "success" | "error" | undefined;
+    const agentBindingId = url.searchParams.get("agentBindingId")?.trim() || undefined;
+    const dateFrom = url.searchParams.get("dateFrom")?.trim() || undefined;
+    const dateTo = url.searchParams.get("dateTo")?.trim() || undefined;
+    const result = await listMcpInvokeAudits({ tool, status, agentBindingId, dateFrom, dateTo, page, limit });
     return apiSuccess({
       ...result,
       pagination: {
@@ -27,7 +32,7 @@ export async function GET(request: Request) {
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
-return apiError(
+    return apiError(
       {
         code: "ADMIN_MCP_AUDITS_FAILED",
         message: "Failed to list MCP invoke audits",

@@ -189,7 +189,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a checkout session for Stripe or China payment sandbox (session cookie) */
+        /** Create a checkout session for Stripe, Alipay, or WeChat Pay (session cookie) */
         post: {
             parameters: {
                 query?: never;
@@ -333,7 +333,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Open Stripe billing portal or China payment manual management entry (session cookie) */
+        /** Open Stripe billing portal or return a manual renewal entry for China-local payment channels (session cookie) */
         post: {
             parameters: {
                 query?: never;
@@ -6301,7 +6301,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get current user's subscription, limits, pricing, and recent billing records (session cookie) */
+        /** Get current user's subscription, quota limits, pricing, and recent billing records (session cookie) */
         get: {
             parameters: {
                 query?: never;
@@ -12972,6 +12972,647 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List stored AI moderation suggestions with server-side filters */
+        get: {
+            parameters: {
+                query?: {
+                    targetType?: "report_ticket" | "enterprise_verification" | "post_review" | "other";
+                    riskLevel?: "low" | "medium" | "high";
+                    adminDecision?: "pending" | "accepted" | "modified" | "rejected";
+                    queue?: string;
+                    page?: number;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai-suggestions/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate or refresh an AI moderation suggestion for a supported admin task */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        targetType: "report_ticket" | "enterprise_verification" | "post_review" | "other";
+                        targetId: string;
+                        /** @enum {string} */
+                        task: "summarize_report" | "triage_post" | "verify_enterprise";
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai-suggestions/{suggestionId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Store an admin decision for an AI moderation suggestion */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    suggestionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        decision: "accepted" | "rejected" | "modified";
+                        decisionNote?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List audit logs with actor, action, agent-binding, and time filters */
+        get: {
+            parameters: {
+                query?: {
+                    actorId?: string;
+                    action?: string;
+                    agentBindingId?: string;
+                    dateFrom?: string;
+                    dateTo?: string;
+                    page?: number;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mcp-invoke-audits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List MCP invoke audits with tool, status, agent-binding, and time filters */
+        get: {
+            parameters: {
+                query?: {
+                    tool?: string;
+                    status?: "success" | "error";
+                    agentBindingId?: string;
+                    dateFrom?: string;
+                    dateTo?: string;
+                    page?: number;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/reports/{reportId}/resolve": {
         parameters: {
             query?: never;
@@ -15351,6 +15992,139 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/api-keys/{keyId}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get 7-day usage summary and recent MCP invocations for one API key (session cookie) */
+        get: {
+            parameters: {
+                query?: {
+                    days?: number;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    keyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: unknown;
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

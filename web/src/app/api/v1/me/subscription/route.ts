@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/repository";
 import { listBillingRecordsForUser } from "@/lib/repositories/billing.repository";
-import { getLimits, TIER_PRICING } from "@/lib/subscription";
+import { getLimits, resolveEntitledTier, TIER_PRICING } from "@/lib/subscription";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { getRequestLogger, serializeError } from "@/lib/logger";
@@ -18,9 +18,10 @@ export async function GET(request: NextRequest) {
       getUserSubscription(auth.user.userId),
       listBillingRecordsForUser(auth.user.userId, 20),
     ]);
-    const limits = getLimits(subscription.tier);
-    const pricing = TIER_PRICING[subscription.tier];
-    return apiSuccess({ subscription, billingRecords, limits, pricing });
+    const effectiveTier = resolveEntitledTier(subscription);
+    const limits = getLimits(effectiveTier);
+    const pricing = TIER_PRICING[effectiveTier];
+    return apiSuccess({ subscription, effectiveTier, billingRecords, limits, pricing });
   } catch (err) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(err);
     if (repositoryErrorResponse) return repositoryErrorResponse;

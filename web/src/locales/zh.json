@@ -96,7 +96,9 @@
     "privacyPolicy": "隐私政策",
     "termsOfService": "服务条款",
     "terms": "服务条款",
-    "privacy": "隐私政策"
+    "privacy": "隐私政策",
+    "rules": "平台规则",
+    "aigc": "AIGC 说明"
   },
   "home": {
     "hero_line1": "构建项目，",

@@ -20,7 +20,7 @@ const PRIMARY_CTA_CLASS =
 const FREE_CTA_CLASS =
   "w-full py-3 border border-[var(--color-border-strong)] text-center font-mono text-sm uppercase tracking-wider hover:bg-[var(--color-bg-surface-hover)] transition-colors mt-auto";
 
-const SANDBOX_BTN_CLASS =
+const ALT_BTN_CLASS =
   "py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[rgba(255,255,255,0.1)] transition-colors";
 
 const RECOMMENDED_TAG_CLASS =
@@ -36,24 +36,28 @@ interface FeatureRow {
 }
 
 const FEATURE_ROWS: FeatureRow[] = [
-  { label: "Browse, post, comment, like, follow", free: true, pro: true },
+  { label: "浏览、发帖、评论、点赞、关注", free: true, pro: true },
   { label: "Projects", free: `${TIER_LIMITS.free.maxProjects}`, pro: "Unlimited" },
-  { label: "Screenshots per project", free: `${TIER_LIMITS.free.maxScreenshots}`, pro: `${TIER_LIMITS.pro.maxScreenshots}` },
-  { label: "Teams", free: `${TIER_LIMITS.free.maxTeams}`, pro: `${TIER_LIMITS.pro.maxTeams}` },
-  { label: "Members per team", free: `${TIER_LIMITS.free.maxTeamMembers}`, pro: `${TIER_LIMITS.pro.maxTeamMembers}` },
-  { label: "API requests / min", free: `${TIER_LIMITS.free.apiRatePerMinute}`, pro: `${TIER_LIMITS.pro.apiRatePerMinute}` },
-  { label: "API keys", free: `${TIER_LIMITS.free.maxApiKeys}`, pro: `${TIER_LIMITS.pro.maxApiKeys}` },
-  { label: "MCP tools", free: "5 basic", pro: "All 9" },
-  { label: "Daily featured project slot", free: false, pro: true },
-  { label: "Pro badge on profile", free: false, pro: true },
-  { label: "Public milestone display", free: false, pro: true },
-  { label: "Priority collaboration matching", free: false, pro: true },
-  { label: "Activity log export", free: false, pro: true },
+  { label: "团队数", free: `${TIER_LIMITS.free.maxTeams}`, pro: `${TIER_LIMITS.pro.maxTeams}` },
+  { label: "每个团队成员上限", free: `${TIER_LIMITS.free.maxTeamMembers}`, pro: `${TIER_LIMITS.pro.maxTeamMembers}` },
+  { label: "API 请求 / 分钟", free: `${TIER_LIMITS.free.apiRatePerMinute}`, pro: `${TIER_LIMITS.pro.apiRatePerMinute}` },
+  { label: "API Key 数", free: `${TIER_LIMITS.free.maxApiKeys}`, pro: `${TIER_LIMITS.pro.maxApiKeys}` },
+  { label: "MCP 工具", free: "基础工具", pro: "全部已开放工具" },
+  { label: "项目曝光权益", free: false, pro: true },
+  { label: "公开里程碑展示", free: false, pro: true },
+  { label: "优先协作匹配", free: false, pro: true },
+  { label: "活动日志导出", free: false, pro: true },
 ];
 
+function providerLabel(provider: PaymentProviderKind) {
+  if (provider === "alipay") return "支付宝";
+  if (provider === "wechatpay") return "微信支付";
+  return "Stripe";
+}
+
 export function PricingCards() {
-  async function startCheckout(tier: SubscriptionTier, paymentProvider: PaymentProviderKind = "stripe") {
-    const toastId = toast.loading(`Preparing ${paymentProvider} checkout...`);
+  async function startCheckout(tier: SubscriptionTier, paymentProvider: PaymentProviderKind) {
+    const toastId = toast.loading(`正在准备 ${providerLabel(paymentProvider)} 结算...`);
     try {
       const res = await apiFetch("/api/v1/billing/checkout", {
         method: "POST",
@@ -65,82 +69,63 @@ export function PricingCards() {
         toast.dismiss(toastId);
         window.location.href = json.data.url;
       } else {
-        toast.error(json.error?.message ?? "Could not start checkout. Please try again.", {
-          id: toastId,
-        });
+        toast.error(json.error?.message ?? "暂时无法发起支付，请稍后再试。", { id: toastId });
       }
     } catch {
-      toast.error("Network error. Please try again.", { id: toastId });
+      toast.error("网络异常，请稍后再试。", { id: toastId });
     }
   }
 
   return (
     <div className="max-w-4xl mx-auto mb-16 animate-fade-in-up">
-      {/* Tier cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] mb-12">
         {TIERS.map((tier) => {
           const pricing = TIER_PRICING[tier];
           const isPro = tier === "pro";
-
           return (
             <div
               key={tier}
-              className={`flex flex-col p-8 md:p-10 transition-colors ${
-                isPro ? TIER_CARD_CLASS_PRO : TIER_CARD_CLASS_FREE
-              }`}
+              className={`flex flex-col p-8 md:p-10 transition-colors ${isPro ? TIER_CARD_CLASS_PRO : TIER_CARD_CLASS_FREE}`}
             >
               <div className="flex-grow flex flex-col">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-semibold tracking-tight m-0">
-                    {pricing.label}
-                  </h2>
-                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>Recommended</span>}
+                  <h2 className="text-2xl font-semibold tracking-tight m-0">{pricing.label}</h2>
+                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>中国主推</span>}
                 </div>
 
                 <div className="mb-6">
                   {pricing.priceMonthly === 0 ? (
-                    <div className="text-5xl font-mono font-bold tracking-tight">
-                      Free
-                    </div>
+                    <div className="text-5xl font-mono font-bold tracking-tight">免费</div>
                   ) : (
                     <div className="flex items-baseline">
-                      <span className="text-2xl font-mono font-medium mr-1">$</span>
+                      <span className="text-2xl font-mono font-medium mr-1">¥</span>
                       <span className="text-5xl font-mono font-bold tracking-tight">{pricing.priceMonthly}</span>
-                      <span className="text-sm font-mono ml-2 opacity-70">/ mo</span>
+                      <span className="text-sm font-mono ml-2 opacity-70">/ 月</span>
                     </div>
                   )}
                 </div>
 
                 <p className={`text-sm mb-8 ${isPro ? "opacity-80" : "text-[var(--color-text-secondary)]"}`}>
                   {isPro
-                    ? "More space, more exposure, and full developer tooling for serious builders."
-                    : "Full community access. Everything you need to start building and sharing."}
+                    ? "更多项目、更多协作空间、更高 API/MCP 限额，以及更强的项目曝光权益。"
+                    : "完整参与社区与协作主链路，先把项目发出来、把队友找起来。"}
                 </p>
 
                 {tier === "free" ? (
                   <Link href="/signup" className={FREE_CTA_CLASS}>
-                    Get Started Free
+                    免费开始
                   </Link>
                 ) : (
                   <div className="mt-auto space-y-3">
-                    <button
-                      className={PRIMARY_CTA_CLASS}
-                      onClick={() => void startCheckout(tier, "stripe")}
-                    >
-                      Upgrade with Stripe
+                    <button className={PRIMARY_CTA_CLASS} onClick={() => void startCheckout(tier, "alipay")}>
+                      使用支付宝升级
                     </button>
                     <div className="grid grid-cols-2 gap-2">
-                      <button
-                        className={SANDBOX_BTN_CLASS}
-                        onClick={() => void startCheckout(tier, "alipay")}
-                      >
-                        Alipay sandbox
+                      <button className={ALT_BTN_CLASS} onClick={() => void startCheckout(tier, "wechatpay")}>
+                        微信支付
                       </button>
-                      <button
-                        className={SANDBOX_BTN_CLASS}
-                        onClick={() => void startCheckout(tier, "wechatpay")}
-                      >
-                        WeChat sandbox
+                      <button className={ALT_BTN_CLASS} onClick={() => void startCheckout(tier, "stripe")}>
+                        海外卡 / Stripe
                       </button>
                     </div>
                   </div>
@@ -151,15 +136,13 @@ export function PricingCards() {
         })}
       </div>
 
-      {/* Feature comparison table */}
       <div className="border border-[var(--color-border)] bg-[var(--color-bg-canvas)] overflow-hidden animate-fade-in-up delay-100">
         <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">Feature Comparison</h3>
+          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">套餐对比</h3>
         </div>
-        
-        {/* Desktop Table Header */}
+
         <div className={COMPARE_HEADER_CLASS}>
-          <span>Feature</span>
+          <span>权益</span>
           <span className="text-center">Free</span>
           <span className="text-center">Pro</span>
         </div>
@@ -168,22 +151,16 @@ export function PricingCards() {
           {FEATURE_ROWS.map((row) => (
             <div key={row.label} className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px] px-6 py-3 text-sm">
               <span className="text-[var(--color-text-secondary)] mb-2 md:mb-0">{row.label}</span>
-              
-              {/* Mobile Labels */}
+
               <div className="flex md:hidden justify-between text-xs font-mono mb-1">
                 <span className="text-[var(--color-text-muted)]">Free</span>
-                <span className="text-[var(--color-text-primary)]">
-                  {row.free === true ? "+" : row.free === false ? "-" : row.free}
-                </span>
+                <span className="text-[var(--color-text-primary)]">{row.free === true ? "+" : row.free === false ? "-" : row.free}</span>
               </div>
               <div className="flex md:hidden justify-between text-xs font-mono">
                 <span className="text-[var(--color-text-muted)]">Pro</span>
-                <span className="text-[var(--color-text-primary)] font-bold">
-                  {row.pro === true ? "+" : row.pro === false ? "-" : row.pro}
-                </span>
+                <span className="text-[var(--color-text-primary)] font-bold">{row.pro === true ? "+" : row.pro === false ? "-" : row.pro}</span>
               </div>
 
-              {/* Desktop Values */}
               <span className="hidden md:block text-center font-mono text-[var(--color-text-secondary)]">
                 {row.free === true ? "+" : row.free === false ? "-" : row.free}
               </span>

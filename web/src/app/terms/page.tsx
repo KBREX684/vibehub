@@ -9,70 +9,52 @@ export default function TermsPage() {
   return (
     <main className="container py-16 max-w-3xl">
       <h1 className="text-3xl font-semibold text-[var(--color-text-primary)] mb-2">Terms of Service</h1>
-      <p className="text-sm text-[var(--color-text-muted)] mb-10">Last updated: April 15, 2026</p>
+      <p className="text-sm text-[var(--color-text-muted)] mb-10">Last updated: April 17, 2026</p>
 
       <div className="prose prose-invert prose-sm max-w-none space-y-8 text-[var(--color-text-secondary)]">
         <section>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Agreement</h2>
+          <p>By accessing or using VibeHub, you agree to these Terms, the Privacy Policy, the Platform Rules, and the current AIGC / Agent policy where applicable.</p>
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Accounts and credentials</h2>
           <p>
-            By accessing or using VibeHub, you agree to these Terms. If you do not agree, please do not use
-            the service.
+            Email sign-in is the primary account method. GitHub can be linked as an auxiliary sign-in method. You are
+            responsible for keeping your mailbox, password, API keys, linked providers, and any Agent credentials
+            secure. You may not share credentials in a way that circumvents the product&apos;s scope, rate, or audit rules.
           </p>
         </section>
         <section>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Use of the service</h2>
           <p>
-            You agree to use VibeHub only for lawful purposes and in a way that does not infringe the rights
-            of others or restrict their use of the platform. You are responsible for content you post and for
-            maintaining the security of your account credentials.
+            You must use VibeHub lawfully and in a manner that does not infringe the rights of others or undermine the
+            safety, reliability, or integrity of the platform. You remain responsible for the content you publish, the
+            teams you operate, and the automation or Agent actions you authorize.
           </p>
         </section>
         <section>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Platform rules</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Rules, automation, and Agent writes</h2>
           <p>
-            You must follow the VibeHub platform rules available at{" "}
-            <a href="/rules" className="text-[var(--color-text-primary)] underline">/rules</a>, including
-            restrictions on harassment, illegal content, impersonation, credential abuse, spam, and malicious
-            automation. We may limit or remove content, access, integrations, or accounts that violate these rules.
+            You must follow the VibeHub platform rules at <a href="/rules" className="text-[var(--color-text-primary)] underline">/rules</a>. Agent or API-driven actions must stay within granted scopes, role boundaries, rate limits, and human-confirmation requirements. High-risk writes may be delayed, rejected, or audited even when a valid API key is presented. See <a href="/aigc" className="text-[var(--color-text-primary)] underline">/aigc</a> for the current AI and Agent policy.
           </p>
         </section>
         <section>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Content</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Billing</h2>
           <p>
-            You retain rights to content you submit. By posting on VibeHub, you grant us a limited license to
-            host, display, and distribute that content as needed to operate the service.
+            VibeHub currently offers Free and Pro as the primary public plans. Stripe is retained for overseas card checkout. China-local payment channels may operate as one-off monthly renewals instead of automatic recurring billing. We may suspend or downgrade paid benefits if payment fails, is refunded, or reaches the end of the purchased access period.
           </p>
         </section>
         <section>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Accounts and linked providers</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Disclaimer and changes</h2>
           <p>
-            Email sign-in is the primary account method. GitHub may be linked as an auxiliary sign-in method for
-            existing accounts. You are responsible for keeping your email inbox and linked provider access secure.
-          </p>
-        </section>
-        <section>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Disclaimer</h2>
-          <p>
-            The service is provided &quot;as is&quot; without warranties of any kind. To the maximum extent
-            permitted by law, we are not liable for indirect or consequential damages arising from your use of
-            VibeHub.
-          </p>
-        </section>
-        <section>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Changes</h2>
-          <p>
-            We may update these Terms from time to time. Continued use of the service after changes constitutes
-            acceptance of the updated Terms.
+            The service is provided on an &ldquo;as is&rdquo; basis. We may update these Terms, pricing, product boundaries, or
+            governance processes from time to time. Continued use after changes take effect constitutes acceptance of
+            the updated terms to the extent permitted by law.
           </p>
         </section>
         <section>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Contact</h2>
-          <p>
-            Questions about these Terms:{" "}
-            <a href="mailto:support@vibehub.dev" className="text-[var(--color-text-primary)] underline">
-              support@vibehub.dev
-            </a>
-          </p>
+          <p>Questions about these Terms: <a href="mailto:support@vibehub.dev" className="text-[var(--color-text-primary)] underline">support@vibehub.dev</a></p>
         </section>
       </div>
     </main>

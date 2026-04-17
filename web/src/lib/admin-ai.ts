@@ -1,11 +1,28 @@
 import { prisma } from "@/lib/db";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
-import type { AdminAiInsight } from "@/lib/types";
+import { mockAdminAiSuggestions, mockEnterpriseProfiles, mockEnterpriseVerificationApplications, mockPosts, mockReportTickets } from "@/lib/data/mock-data";
+import { generateAdminAiSuggestionWithProvider } from "@/lib/admin-ai-provider";
+import type {
+  AdminAiDecisionValue,
+  AdminAiInsight,
+  AdminAiSuggestionRecord,
+  AdminAiSuggestionTargetValue,
+} from "@/lib/types";
 
 const SENSITIVE = /\b(spam|scam|phishing|hack|malware|porn|nsfw)\b/i;
 
-type RiskLevel = "low" | "medium" | "high";
+type RiskLevel = NonNullable<AdminAiInsight["riskLevel"]>;
 type Priority = NonNullable<AdminAiInsight["priority"]>;
+
+interface Paginated<T> {
+  items: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
 function insight(base: {
   suggestion: string;
@@ -16,6 +33,86 @@ function insight(base: {
   labels: string[];
 }): AdminAiInsight {
   return base;
+}
+
+function toAdminAiSuggestionRecord(row: {
+  id: string;
+  targetType: AdminAiSuggestionTargetValue | string;
+  targetId: string;
+  suggestion: string;
+  riskLevel: RiskLevel | string;
+  confidence: number | null;
+  queue?: string | null;
+  priority?: string | null;
+  labels?: unknown;
+  adminDecision: AdminAiDecisionValue | string;
+  adminUserId?: string | null;
+  decisionNote?: string | null;
+  decidedAt?: Date | string | null;
+  modelProvider?: string | null;
+  modelName?: string | null;
+  createdAt: Date | string;
+  updatedAt?: Date | string | null;
+}): AdminAiSuggestionRecord {
+  return {
+    id: row.id,
+    targetType: row.targetType as AdminAiSuggestionTargetValue,
+    targetId: row.targetId,
+    suggestion: row.suggestion,
+    riskLevel: row.riskLevel as RiskLevel,
+    confidence: row.confidence ?? undefined,
+    queue: row.queue ?? undefined,
+    priority: (row.priority as Priority | undefined) ?? "normal",
+    labels: Array.isArray(row.labels)
+      ? row.labels.filter((item): item is string => typeof item === "string")
+      : undefined,
+    adminDecision: row.adminDecision as AdminAiDecisionValue,
+    adminUserId: row.adminUserId ?? undefined,
+    decisionNote: row.decisionNote ?? undefined,
+    decidedAt:
+      row.decidedAt instanceof Date ? row.decidedAt.toISOString() : row.decidedAt ?? undefined,
+    modelProvider: row.modelProvider ?? undefined,
+    modelName: row.modelName ?? undefined,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt:
+      row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt ?? (row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt),
+  };
+}
+
+function paginate<T>(items: T[], page: number, limit: number): Paginated<T> {
+  const safePage = Math.max(1, page);
+  const safeLimit = Math.min(Math.max(limit, 1), 100);
+  const total = items.length;
+  const start = (safePage - 1) * safeLimit;
+  return {
+    items: items.slice(start, start + safeLimit),
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    },
+  };
+}
+
+function matchesDateRange(value: string | Date, dateFrom?: string, dateTo?: string): boolean {
+  const ts = new Date(value).getTime();
+  if (Number.isNaN(ts)) return false;
+  if (dateFrom) {
+    const fromTs = new Date(dateFrom).getTime();
+    if (!Number.isNaN(fromTs) && ts < fromTs) return false;
+  }
+  if (dateTo) {
+    const toTs = new Date(dateTo).getTime();
+    if (!Number.isNaN(toTs) && ts > toTs) return false;
+  }
+  return true;
+}
+
+function normalizeLabels(labels?: string[]): string[] | undefined {
+  if (!labels?.length) return undefined;
+  const next = labels.map((label) => label.trim()).filter(Boolean);
+  return next.length > 0 ? next.slice(0, 12) : undefined;
 }
 
 export function heuristicEnterpriseSummary(payload: {
@@ -187,28 +284,443 @@ export function heuristicContentPatrolReport(input: {
   return lines;
 }
 
-export async function getOrCreateReportTicketAi(targetId: string, reason: string) {
-  const h = heuristicReportSummary({ reason, targetId });
+function buildReportContext(report: { id: string; reason: string; targetId: string; reporterId: string; status: string }) {
+  return [
+    `Reporter: ${report.reporterId}`,
+    `Target: ${report.targetId}`,
+    `Status: ${report.status}`,
+    `Reason: ${report.reason}`,
+  ].join("\n");
+}
+
+function buildPostContext(post: { id: string; title: string; body: string; tags: string[]; reviewStatus?: string; authorId?: string }) {
+  return [
+    `Title: ${post.title}`,
+    `Author: ${post.authorId ?? "unknown"}`,
+    `ReviewStatus: ${post.reviewStatus ?? "pending"}`,
+    `Tags: ${post.tags.join(", ") || "none"}`,
+    `Body:\n${post.body}`,
+  ].join("\n");
+}
+
+function buildEnterpriseContext(input: {
+  userId: string;
+  organizationName: string;
+  organizationWebsite: string;
+  workEmail?: string;
+  useCase?: string;
+  status?: string;
+}) {
+  return [
+    `Applicant: ${input.userId}`,
+    `Organization: ${input.organizationName || "unknown"}`,
+    `Website: ${input.organizationWebsite || "missing"}`,
+    `Work email: ${input.workEmail || "missing"}`,
+    `Status: ${input.status ?? "pending"}`,
+    `Use case: ${input.useCase || "not provided"}`,
+  ].join("\n");
+}
+
+function toStoredRecord(input: {
+  id: string;
+  targetType: AdminAiSuggestionTargetValue;
+  targetId: string;
+  heuristic: AdminAiInsight;
+  adminDecision?: AdminAiDecisionValue;
+  decisionNote?: string;
+  adminUserId?: string;
+  decidedAt?: string;
+  modelProvider?: string;
+  modelName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}): AdminAiSuggestionRecord {
+  return {
+    id: input.id,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    suggestion: input.heuristic.suggestion,
+    riskLevel: input.heuristic.riskLevel,
+    confidence: input.heuristic.confidence,
+    queue: input.heuristic.queue,
+    priority: input.heuristic.priority,
+    labels: normalizeLabels(input.heuristic.labels),
+    adminDecision: input.adminDecision ?? "pending",
+    decisionNote: input.decisionNote,
+    adminUserId: input.adminUserId,
+    decidedAt: input.decidedAt,
+    modelProvider: input.modelProvider,
+    modelName: input.modelName,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+    updatedAt: input.updatedAt ?? input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function mapStoredSuggestion(record: AdminAiSuggestionRecord | undefined, fallback?: AdminAiInsight): AdminAiSuggestionRecord | undefined {
+  if (record) return record;
+  if (!fallback) return undefined;
+  return {
+    id: `preview_${Date.now()}`,
+    targetType: "other",
+    targetId: "preview",
+    suggestion: fallback.suggestion,
+    riskLevel: fallback.riskLevel,
+    confidence: fallback.confidence,
+    queue: fallback.queue,
+    priority: fallback.priority,
+    labels: fallback.labels,
+    adminDecision: "pending",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export async function listAdminAiSuggestions(params: {
+  targetType?: AdminAiSuggestionTargetValue;
+  riskLevel?: RiskLevel;
+  adminDecision?: AdminAiDecisionValue;
+  queue?: string;
+  page: number;
+  limit: number;
+}): Promise<Paginated<AdminAiSuggestionRecord>> {
   if (isMockDataEnabled()) {
-    return { id: null as string | null, ...h };
+    const filtered = mockAdminAiSuggestions.filter((item) => {
+      if (params.targetType && item.targetType !== params.targetType) return false;
+      if (params.riskLevel && item.riskLevel !== params.riskLevel) return false;
+      if (params.adminDecision && item.adminDecision !== params.adminDecision) return false;
+      if (params.queue && item.queue !== params.queue) return false;
+      return true;
+    });
+    filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return paginate(filtered, params.page, params.limit);
   }
-  const existing = await prisma.adminAiSuggestion.findFirst({
-    where: { targetType: "report_ticket", targetId },
-  });
-  if (existing) {
-    return { id: existing.id, ...h, suggestion: existing.suggestion, riskLevel: existing.riskLevel as RiskLevel, confidence: existing.confidence ?? h.confidence };
-  }
-  const row = await prisma.adminAiSuggestion.create({
-    data: {
-      targetType: "report_ticket",
-      targetId,
-      suggestion: h.suggestion,
-      riskLevel: h.riskLevel,
-      confidence: h.confidence,
+
+  const where = {
+    ...(params.targetType ? { targetType: params.targetType } : {}),
+    ...(params.riskLevel ? { riskLevel: params.riskLevel } : {}),
+    ...(params.adminDecision ? { adminDecision: params.adminDecision } : {}),
+    ...(params.queue ? { queue: params.queue } : {}),
+  };
+  const page = Math.max(1, params.page);
+  const limit = Math.min(Math.max(params.limit, 1), 100);
+  const [items, total] = await Promise.all([
+    prisma.adminAiSuggestion.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.adminAiSuggestion.count({ where }),
+  ]);
+
+  return {
+    items: items.map(toAdminAiSuggestionRecord),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     },
-    select: { id: true, suggestion: true, riskLevel: true, confidence: true },
+  };
+}
+
+export async function listStoredAdminAiSuggestionsByTargets(params: {
+  targetType: AdminAiSuggestionTargetValue;
+  targetIds: string[];
+}): Promise<Map<string, AdminAiSuggestionRecord>> {
+  const ids = [...new Set(params.targetIds.filter(Boolean))];
+  if (ids.length === 0) return new Map();
+
+  if (isMockDataEnabled()) {
+    const filtered = mockAdminAiSuggestions.filter(
+      (item) => item.targetType === params.targetType && ids.includes(item.targetId)
+    );
+    return new Map(filtered.map((item) => [item.targetId, item]));
+  }
+
+  const rows = await prisma.adminAiSuggestion.findMany({
+    where: {
+      targetType: params.targetType,
+      targetId: { in: ids },
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
   });
-  return { id: row.id, ...h, suggestion: row.suggestion, riskLevel: row.riskLevel as RiskLevel, confidence: row.confidence ?? h.confidence };
+  const map = new Map<string, AdminAiSuggestionRecord>();
+  for (const row of rows) {
+    if (!map.has(row.targetId)) {
+      map.set(row.targetId, toAdminAiSuggestionRecord(row));
+    }
+  }
+  return map;
+}
+
+export async function getStoredAdminAiSuggestion(params: {
+  targetType: AdminAiSuggestionTargetValue;
+  targetId: string;
+}): Promise<AdminAiSuggestionRecord | null> {
+  if (isMockDataEnabled()) {
+    return (
+      mockAdminAiSuggestions.find(
+        (item) => item.targetType === params.targetType && item.targetId === params.targetId
+      ) ?? null
+    );
+  }
+
+  const row = await prisma.adminAiSuggestion.findFirst({
+    where: {
+      targetType: params.targetType,
+      targetId: params.targetId,
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+  });
+  return row ? toAdminAiSuggestionRecord(row) : null;
+}
+
+async function upsertAdminAiSuggestion(params: {
+  targetType: AdminAiSuggestionTargetValue;
+  targetId: string;
+  insight: AdminAiInsight;
+  modelProvider?: string;
+  modelName?: string;
+}): Promise<AdminAiSuggestionRecord> {
+  const labels = normalizeLabels(params.insight.labels);
+  if (isMockDataEnabled()) {
+    const existing = mockAdminAiSuggestions.find(
+      (item) => item.targetType === params.targetType && item.targetId === params.targetId
+    );
+    const now = new Date().toISOString();
+    if (existing) {
+      existing.suggestion = params.insight.suggestion;
+      existing.riskLevel = params.insight.riskLevel;
+      existing.confidence = params.insight.confidence;
+      existing.queue = params.insight.queue;
+      existing.priority = params.insight.priority ?? "normal";
+      existing.labels = labels;
+      existing.modelProvider = params.modelProvider;
+      existing.modelName = params.modelName;
+      existing.updatedAt = now;
+      existing.adminDecision = "pending";
+      existing.decisionNote = undefined;
+      existing.adminUserId = undefined;
+      existing.decidedAt = undefined;
+      return existing;
+    }
+    const created = toStoredRecord({
+      id: `ai_${Date.now()}`,
+      targetType: params.targetType,
+      targetId: params.targetId,
+      heuristic: { ...params.insight, labels },
+      modelProvider: params.modelProvider,
+      modelName: params.modelName,
+    });
+    mockAdminAiSuggestions.unshift(created);
+    return created;
+  }
+
+  const data = {
+    suggestion: params.insight.suggestion,
+    riskLevel: params.insight.riskLevel,
+    confidence: params.insight.confidence,
+    queue: params.insight.queue,
+    priority: params.insight.priority ?? "normal",
+    labels,
+    adminDecision: "pending" as const,
+    decisionNote: null,
+    adminUserId: null,
+    decidedAt: null,
+    modelProvider: params.modelProvider ?? null,
+    modelName: params.modelName ?? null,
+  };
+  const existing = await prisma.adminAiSuggestion.findFirst({
+    where: { targetType: params.targetType, targetId: params.targetId },
+    select: { id: true },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+  });
+  const row = existing
+    ? await prisma.adminAiSuggestion.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await prisma.adminAiSuggestion.create({
+        data: {
+          targetType: params.targetType,
+          targetId: params.targetId,
+          ...data,
+        },
+      });
+
+  return toAdminAiSuggestionRecord(row);
+}
+
+export async function decideAdminAiSuggestion(params: {
+  suggestionId: string;
+  adminUserId: string;
+  decision: Exclude<AdminAiDecisionValue, "pending">;
+  decisionNote?: string;
+}): Promise<AdminAiSuggestionRecord> {
+  const decisionNote = params.decisionNote?.trim() || undefined;
+
+  if (isMockDataEnabled()) {
+    const existing = mockAdminAiSuggestions.find((item) => item.id === params.suggestionId);
+    if (!existing) throw new Error("ADMIN_AI_SUGGESTION_NOT_FOUND");
+    existing.adminDecision = params.decision;
+    existing.adminUserId = params.adminUserId;
+    existing.decisionNote = decisionNote;
+    existing.decidedAt = new Date().toISOString();
+    existing.updatedAt = existing.decidedAt;
+    return existing;
+  }
+
+  const existing = await prisma.adminAiSuggestion.findUnique({ where: { id: params.suggestionId } });
+  if (!existing) throw new Error("ADMIN_AI_SUGGESTION_NOT_FOUND");
+  const row = await prisma.adminAiSuggestion.update({
+    where: { id: params.suggestionId },
+    data: {
+      adminDecision: params.decision,
+      adminUserId: params.adminUserId,
+      decisionNote: decisionNote ?? null,
+      decidedAt: new Date(),
+    },
+  });
+  return toAdminAiSuggestionRecord(row);
+}
+
+async function resolveAdminAiTarget(params: {
+  task: "summarize_report" | "triage_post" | "verify_enterprise";
+  targetId: string;
+}): Promise<{ targetType: AdminAiSuggestionTargetValue; targetId: string; fallback: AdminAiInsight; context: string }> {
+  if (params.task === "summarize_report") {
+    if (isMockDataEnabled()) {
+      const ticket = mockReportTickets.find((item) => item.id === params.targetId);
+      if (!ticket) throw new Error("REPORT_TICKET_NOT_FOUND");
+      return {
+        targetType: "report_ticket",
+        targetId: ticket.id,
+        fallback: heuristicReportSummary({ reason: ticket.reason, targetId: ticket.id }),
+        context: buildReportContext(ticket),
+      };
+    }
+    const ticket = await prisma.reportTicket.findUnique({
+      where: { id: params.targetId },
+      select: { id: true, targetId: true, reporterId: true, reason: true, status: true },
+    });
+    if (!ticket) throw new Error("REPORT_TICKET_NOT_FOUND");
+    return {
+      targetType: "report_ticket",
+      targetId: ticket.id,
+      fallback: heuristicReportSummary({ reason: ticket.reason, targetId: ticket.id }),
+      context: buildReportContext(ticket),
+    };
+  }
+
+  if (params.task === "triage_post") {
+    if (isMockDataEnabled()) {
+      const post = mockPosts.find((item) => item.id === params.targetId);
+      if (!post) throw new Error("POST_NOT_FOUND");
+      return {
+        targetType: "post_review",
+        targetId: post.id,
+        fallback: heuristicPostReviewSummary({ postId: post.id, title: post.title, body: post.body, tags: post.tags }),
+        context: buildPostContext(post),
+      };
+    }
+    const post = await prisma.post.findUnique({
+      where: { id: params.targetId },
+      select: { id: true, title: true, body: true, tags: true, reviewStatus: true, authorId: true },
+    });
+    if (!post) throw new Error("POST_NOT_FOUND");
+    return {
+      targetType: "post_review",
+      targetId: post.id,
+      fallback: heuristicPostReviewSummary({ postId: post.id, title: post.title, body: post.body, tags: post.tags }),
+      context: buildPostContext(post),
+    };
+  }
+
+  if (isMockDataEnabled()) {
+    const profile =
+      mockEnterpriseProfiles.find((item) => item.userId === params.targetId) ||
+      mockEnterpriseVerificationApplications.find((item) => item.userId === params.targetId);
+    if (!profile) throw new Error("ENTERPRISE_PROFILE_NOT_FOUND");
+    return {
+      targetType: "enterprise_verification",
+      targetId: profile.userId,
+      fallback: heuristicEnterpriseSummary({
+        userId: profile.userId,
+        organizationName: profile.organizationName,
+        organizationWebsite: profile.organizationWebsite,
+      }),
+      context: buildEnterpriseContext({
+        userId: profile.userId,
+        organizationName: profile.organizationName,
+        organizationWebsite: profile.organizationWebsite,
+        workEmail: profile.workEmail,
+        useCase: profile.useCase,
+        status: profile.status,
+      }),
+    };
+  }
+
+  const profile = await prisma.user.findUnique({
+    where: { id: params.targetId },
+    select: {
+      id: true,
+      email: true,
+      enterpriseProfile: {
+        select: {
+          status: true,
+          organization: true,
+          website: true,
+          useCase: true,
+        },
+      },
+    },
+  });
+  if (!profile?.enterpriseProfile) throw new Error("ENTERPRISE_PROFILE_NOT_FOUND");
+  return {
+    targetType: "enterprise_verification",
+    targetId: profile.id,
+    fallback: heuristicEnterpriseSummary({
+      userId: profile.id,
+      organizationName: profile.enterpriseProfile.organization ?? "",
+      organizationWebsite: profile.enterpriseProfile.website ?? "",
+    }),
+    context: buildEnterpriseContext({
+      userId: profile.id,
+      organizationName: profile.enterpriseProfile.organization ?? "",
+      organizationWebsite: profile.enterpriseProfile.website ?? "",
+      workEmail: profile.email,
+      useCase: profile.enterpriseProfile.useCase ?? undefined,
+      status: profile.enterpriseProfile.status,
+    }),
+  };
+}
+
+export async function generateAdminAiSuggestion(params: {
+  task: "summarize_report" | "triage_post" | "verify_enterprise";
+  targetId: string;
+}): Promise<AdminAiSuggestionRecord> {
+  const target = await resolveAdminAiTarget(params);
+  const providerSuggestion = await generateAdminAiSuggestionWithProvider({
+    task: params.task,
+    targetType: target.targetType,
+    targetId: target.targetId,
+    context: target.context,
+  });
+
+  return upsertAdminAiSuggestion({
+    targetType: target.targetType,
+    targetId: target.targetId,
+    insight: providerSuggestion ?? target.fallback,
+    modelProvider: providerSuggestion?.modelProvider ?? (providerSuggestion ? undefined : "heuristic"),
+    modelName: providerSuggestion?.modelName,
+  });
+}
+
+export async function getOrCreateReportTicketAi(targetId: string, reason: string) {
+  const existing = await getStoredAdminAiSuggestion({ targetType: "report_ticket", targetId });
+  if (existing) return existing;
+  return mapStoredSuggestion(undefined, heuristicReportSummary({ reason, targetId }))!;
 }
 
 export async function getOrCreateEnterpriseAi(input: {
@@ -216,27 +728,12 @@ export async function getOrCreateEnterpriseAi(input: {
   organizationName: string;
   organizationWebsite: string;
 }) {
-  const h = heuristicEnterpriseSummary(input);
-  if (isMockDataEnabled()) {
-    return { id: null as string | null, ...h };
-  }
-  const existing = await prisma.adminAiSuggestion.findFirst({
-    where: { targetType: "enterprise_verification", targetId: input.userId },
-  });
-  if (existing) {
-    return { id: existing.id, ...h, suggestion: existing.suggestion, riskLevel: existing.riskLevel as RiskLevel, confidence: existing.confidence ?? h.confidence };
-  }
-  const row = await prisma.adminAiSuggestion.create({
-    data: {
-      targetType: "enterprise_verification",
-      targetId: input.userId,
-      suggestion: h.suggestion,
-      riskLevel: h.riskLevel,
-      confidence: h.confidence,
-    },
-    select: { id: true, suggestion: true, riskLevel: true, confidence: true },
-  });
-  return { id: row.id, ...h, suggestion: row.suggestion, riskLevel: row.riskLevel as RiskLevel, confidence: row.confidence ?? h.confidence };
+  const existing = await getStoredAdminAiSuggestion({ targetType: "enterprise_verification", targetId: input.userId });
+  if (existing) return existing;
+  return mapStoredSuggestion(
+    undefined,
+    heuristicEnterpriseSummary(input)
+  )!;
 }
 
 export async function getOrCreatePostReviewAi(input: {
@@ -245,25 +742,31 @@ export async function getOrCreatePostReviewAi(input: {
   body: string;
   tags: string[];
 }) {
-  const h = heuristicPostReviewSummary(input);
-  if (isMockDataEnabled()) {
-    return { id: null as string | null, ...h };
+  const existing = await getStoredAdminAiSuggestion({ targetType: "post_review", targetId: input.postId });
+  if (existing) return existing;
+  return mapStoredSuggestion(
+    undefined,
+    heuristicPostReviewSummary(input)
+  )!;
+}
+
+export function filterAdminAiSuggestionsInMemory(
+  items: AdminAiSuggestionRecord[],
+  params: {
+    targetType?: AdminAiSuggestionTargetValue;
+    riskLevel?: RiskLevel;
+    adminDecision?: AdminAiDecisionValue;
+    queue?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }
-  const existing = await prisma.adminAiSuggestion.findFirst({
-    where: { targetType: "post_review", targetId: input.postId },
+) {
+  return items.filter((item) => {
+    if (params.targetType && item.targetType !== params.targetType) return false;
+    if (params.riskLevel && item.riskLevel !== params.riskLevel) return false;
+    if (params.adminDecision && item.adminDecision !== params.adminDecision) return false;
+    if (params.queue && item.queue !== params.queue) return false;
+    if (!matchesDateRange(item.createdAt, params.dateFrom, params.dateTo)) return false;
+    return true;
   });
-  if (existing) {
-    return { id: existing.id, ...h, suggestion: existing.suggestion, riskLevel: existing.riskLevel as RiskLevel, confidence: existing.confidence ?? h.confidence };
-  }
-  const row = await prisma.adminAiSuggestion.create({
-    data: {
-      targetType: "post_review",
-      targetId: input.postId,
-      suggestion: h.suggestion,
-      riskLevel: h.riskLevel,
-      confidence: h.confidence,
-    },
-    select: { id: true, suggestion: true, riskLevel: true, confidence: true },
-  });
-  return { id: row.id, ...h, suggestion: row.suggestion, riskLevel: row.riskLevel as RiskLevel, confidence: row.confidence ?? h.confidence };
 }
