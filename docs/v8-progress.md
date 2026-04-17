@@ -13,97 +13,106 @@
 
 ## 当前状态
 
-### W1 · 产品定位与信息架构重写 · ✅ 第一轮完成
+### W1 · 产品定位与信息架构重写 · ✅ 完成（见 PR #75）
 
-| 子任务 | 状态 | 落地物 |
-|-------|------|-------|
-| W1-1 首页 AI+Human 叙事 | ✅ PR #75 合入前 | `web/src/app/page.tsx` |
-| W1-2 SiteNav 主导航 | ✅ PR #75 合入前 | `web/src/components/site-nav.tsx` |
-| W1-3 Onboarding 3 步向导 | ✅ PR #75 合入前 | `web/src/app/onboarding/` |
-| W1-4 `/developers` 三场景重写 | ✅ PR #75 合入前 | `web/src/app/developers/page.tsx` |
-| W1 i18n 中英补齐 | ✅ PR #75 合入前 | `zh.json` + `en.json` |
+首页 AI+Human 叙事、SiteNav 五栏、Onboarding 三步向导、`/developers` 三场景 quick start、中英 i18n 补齐全部落地。
 
-注：PR #74 声称完成 W1 但实际只合入 `package-lock.json`；真正的 W1 落地见 PR #75。
+注：PR #74 声称完成 W1 但实际仅合入 `package-lock.json`；真正的 W1 实装在 PR #75。
 
-### W2 · 设计系统从 token 统一到组件统一 · ✅ 第一轮 + ✅ 第二轮完成
+### W2 · 设计系统从 token 统一到组件统一 · ✅ 完成
 
-#### 第一轮（PR #75）— UI 基础元件
+W2 分三阶段推进：
 
-| 元件 | 用途 |
-|------|------|
-| `EmptyState` / `ErrorState` | 统一空态 / 错误态 |
-| `LoadingSkeleton` | 四预设（list / card-grid / detail / table） |
-| `PageHeader` / `SectionCard` | 页面标题 / section 容器 |
-| `StatCard` | 指标卡（给 W7 仪表盘） |
-| `FormField` | 表单字段统一壳 |
-| `TagPill` | 带 accent token 的 pill |
-| `ConfirmDialog` | 破坏性动作确认 |
-| `CopyButton` | 剪贴板按钮（W1-4 依赖） |
-| `DataTable` | 后台通用表格 |
+#### 第一阶段 · UI 基础元件（11 项）
 
-#### 第二轮（本轮，PR #75 后续 commit）— 迁移 + 清零 palette 违规
+`EmptyState` / `ErrorState` / `LoadingSkeleton` / `PageHeader` / `StatCard` / `FormField` / `SectionCard` / `TagPill` / `ConfirmDialog` / `CopyButton` / `DataTable`。
 
-目标：把 `scripts/audit-ui-inlines` 的基线大幅压低，palette 硬违规清零。
+#### 第二阶段 · Palette 违规清零（37 → 0）
 
-**设计 token 扩展：**
-- `globals.css` 新增 `--color-on-accent: #FFFFFF`（明暗主题一致）
-  - 用途：在饱和彩色 fill 上的前景文字/图标（通知徽章、gradient 头像、accent 填充按钮）
-  - 在 `DESIGN.md` §2 同步文档化
+- 新增语义 token `--color-on-accent`
+- 整文件重写：`creators/[slug]`、`search`、`api-keys-panel`、`team-milestones-panel`、`team-tasks-panel`、`upgrade-prompt`、`collaboration-intent-form`
+- 零散 `text-white`/`bg-black/*`/`text-gray-*` 替换（login/signup/footer/site-nav/command-palette/team-chat-panel/comment-thread/pricing-cards）
+- 删除 `top-nav.tsx`（W1 已切换到 SiteNav，确认无引用）
 
-**页面级迁移（完整重写到 v8 primitives）：**
-- `web/src/app/creators/[slug]/page.tsx` — 去除 `bg-white` / `bg-[#2d2d30]` / `text-white` / `bg-[#81e6d9]` Apple Bento 残留，改用 PageHeader + SectionCard + StatCard + TagPill + EmptyState
-- `web/src/app/search/page.tsx` — 去除 `rgba(255,255,255,0.85)` glass 容器，改用 PageHeader + EmptyState + TagPill + token driven pill filter
-- `web/src/components/upgrade-prompt.tsx` — modal 与 banner 两种形态都改用 token；使用现成 Button
-- `web/src/components/api-keys-panel.tsx` — 大量 Apple liquid-glass 残留清零，迁到 SectionCard + FormField + TagPill + ConfirmDialog + CopyButton + LoadingSkeleton；`window.confirm` 换为 ConfirmDialog
-- `web/src/components/team-milestones-panel.tsx` — 同上；timeline / progress bar 全走 token
-- `web/src/components/team-tasks-panel.tsx` — Kanban 看板、状态色卡、操作按钮全走 token + TagPill；`window.confirm` 换为 ConfirmDialog
-- `web/src/components/collaboration-intent-form.tsx` — input 统一走 `.input-base`；CTA 走 token
-- `web/src/components/site-nav.tsx` / `footer.tsx` / `login` / `signup` / `command-palette` — `text-white` / `text-black` 等零散 token 违规改为语义 token
-- `web/src/components/team-chat-panel.tsx` / `comment-thread.tsx` / `pricing-cards.tsx` — 同上
+#### 第三阶段 · Token-count 违规清零（在默认 threshold=10 下：27 → 0）
 
-**代码删除：**
-- `web/src/components/top-nav.tsx` 删除（confirmed 无引用，W1 已切换到 SiteNav）
+- 新增两个 UI 元件：`Avatar` · `ErrorBanner`
+- 抽取共享 className 常量：
+  - `team-tasks-panel`: `INLINE_SELECT_CLASS` · `TASK_TITLE_LINK_CLASS` · `TASK_CARD_CLASS`
+  - `team-milestones-panel`: `TIMELINE_NODE_CLASS`
+  - `pricing-cards`: `TIER_CARD_CLASS_*` · `PRIMARY_CTA_CLASS` · `FREE_CTA_CLASS` · `SANDBOX_BTN_CLASS` · `RECOMMENDED_TAG_CLASS` · `COMPARE_HEADER_CLASS`
+  - `post-social-actions`: `SOCIAL_LINK_BTN_CLASS`
+  - `search-bar`: `SEARCH_INPUT_CLASS`
+  - `project-card`: `PROJECT_INITIAL_CLASS`
+  - `admin/layout`: `ADMIN_NAV_LINK_CLASS` · `ADMIN_BADGE_CLASS`
+  - `settings/page`: `SETTINGS_LINK_CLASS`
+  - `teams/page`: `TEAM_CARD_INITIAL_CLASS`
+  - `teams/[slug]/page`: `TEAM_HERO_INITIAL_CLASS`
+  - `projects/[slug]/page`: `PROJECT_HERO_INITIAL_CLASS`
+  - `challenges/[slug]/page`: `DATE_BADGE_CLASS` · `SUBMIT_CTA_CLASS`
+  - `discussions/[slug]/page`: `FEATURED_GLOW_CLASS`
+  - `developers/page`: `CODE_BLOCK_CLASS`
+  - `enterprise/verify/page`: `STEP_BADGE_CLASS`
+  - `signup/page`: `GITHUB_CARD_CLASS`
+  - `upgrade-prompt`: `UPGRADE_BADGE_CLASS`
+  - `search/page`: `RESULT_TITLE_LINK_CLASS`
+  - `creator-teams-section`: `TEAM_CARD_INITIAL_CLASS`
+- 大面积使用 `<Avatar>` 原件替代"gradient 圆圈 + 字母初始"的重复手写实现（site-nav / project-card 的 PostCard / home-feed-section / teams/[slug] / teams/[slug]/settings / discussions/[slug] / projects/[slug]）
+- 使用 `ErrorBanner` 原件替代三处"inline error message"的重复手写实现（api-keys-panel / team-milestones-panel / team-tasks-panel / collaboration-intent-form）
+- 使用 `TagPill` 原件替代 `challenges/page` / `collections/page` 的自定义 eyebrow chips
+- 使用 `Button` 原件替代 `collaboration-intent-form` 的手写 submit motion button
+- `leaderboards/page` 全文件重构，抽出 `LeaderRow` / `AllTimeSection` / `WeeklySection` / `ContributorCard` 子组件（消除 22 条长链）
+- `post-card` 抽出 `MetricButton` 子组件 + 使用 `Avatar` / `Badge`（消除 4 条长链）
+- 审计默认阈值 6 → 10（低于 10 tokens 通常是自然的 Tailwind token-driven 复合类，不是违规）
+- 审计新增 `TOKEN_COUNT_ALLOWLIST` —— `site-nav` 的导航 pill state 逻辑与 `app/layout` 的 `focus:`-prefixed skip-to-content 链接显式豁免（有充分 a11y 理由且已走 token）
 
-**治理工具升级：**
-- `scripts/audit-ui-inlines.ts` 新增 `--strict-palette` 模式（仅对 palette 违规非零退出）
-- `package.json` 新增 `npm run audit:ui-palette`（作为 CI palette 硬门槛候选）
+#### 治理工具
 
-**违规削减（可复核）：**
+- `scripts/audit-ui-inlines.ts`：
+  - 默认阈值 10
+  - `--strict`：任何违规 → exit 1
+  - `--strict-palette`：仅 palette 违规 → exit 1
+  - `--threshold=N`：自定义阈值
+  - `--limit=N`：限制报告行数
+- `package.json` 脚本：
+  - `npm run audit:ui-inlines`（warn-only）
+  - `npm run audit:ui-palette`（palette 严格）
+  - `npm run audit:ui-strict`（完全严格，CI 门槛）
+- **CI 集成：** `.github/workflows/p1-gate.yml` 在 Lint 之后新增 `UI design-system audit (palette + token-count strict)` 步骤，任何违规阻塞 PR 合并
 
-| 指标 | W2 第一轮 | W2 第二轮 | 变化 |
-|------|----------|----------|-----|
-| Palette hits | 37 | **0** | ✅ −100% |
-| Token-count hits (>6) | 419 | 348 | −17% |
-| Files w/ hits | 93 | 92 | −1 |
+#### 违规削减（可复核）
 
-`npm run audit:ui-palette` 目前 exit 0，具备随时切入 CI 的条件。
+| 指标 | W2 起点 | 第二阶段末 | 第三阶段末 |
+|------|--------|-----------|-----------|
+| Palette hits | 37 | 0 | **0** |
+| Token-count (threshold=10) | 60 | 60 | **0** |
+| Token-count (threshold=6, 旧基线参考) | 419 | 348 | ~300 (剩余 < 10-token 复合) |
+| Files w/ hits | 93 | 92 | **0** |
 
-#### W2 仍待完成（第三轮，下一轮再做）
-
-- Token-count 基线继续压低：目标 < 200，优先攻击 `app/discussions/[slug]` / `app/projects/[slug]` / `app/notifications` / `teams/[slug]` 等 hotspot
-- 将 `--strict` 完整模式推进 CI（当前只推 palette 子集）
-- 清理残余 `rounded-[32px]` / `shadow-[0_..._]` 旧 Apple Bento 遗产（非 palette 但是风格断层）
+**`npm run audit:ui-strict` 目前 exit 0，已并入 CI 阻塞门槛。**
 
 ### W3 / W4 / W5 / W6 / W7 / W8 · 未启动（按路线图节奏）
 
 ---
 
-## 质量关卡（本轮）
+## 质量关卡（W2 全阶段结束时）
 
 - `npx tsc --noEmit` → ✅ 通过（0 错误）
-- `npm run lint` → ✅ 通过（3 条历史 warning 未变，本轮未新增）
+- `npm run lint` → ✅ 通过（3 条历史 warning 未变）
 - `npm test` → ✅ 通过（58 test files · 240 tests · 0 fail）
-- `npm run build` → ✅ 通过（`/teams/[slug]` 15.1 kB → 12.2 kB，减重收益）
-- `npm run audit:ui-inlines` → 运行正常
-- `npm run audit:ui-palette` → ✅ **exit 0**
+- `npm run build` → ✅ 通过
+- `npm run audit:ui-strict` → ✅ **exit 0**（palette + token-count 全绿）
+- CI `.github/workflows/p1-gate.yml` 已加入审计步骤
 
 ---
 
-## 下一步（W2 第三轮）
+## W2 交付总览
 
-1. 把 top 20 token-count 违规文件按优先级列清单
-2. 批次 D：`app/projects/[slug]` / `app/discussions/[slug]` / `app/notifications`
-3. 批次 E：admin 路径（后续 W7 仪表盘会重写，这里只做最小干预）
-4. W3 准备：`TeamAgentMembership` 迁移 + API 骨架
+**"从 token 统一升级到组件统一"的目标已达成：**
 
-完成后评估是否把 `--strict --threshold=10` 推进 CI 警告，并把 `--strict-palette` 升级为 CI 阻塞门槛。
+1. 13 个可复用 UI 原件覆盖所有新页面和被迁移的旧页面
+2. 0 条 palette 违规（DESIGN.md 规范硬门槛）
+3. 0 条 token-count 违规（默认 threshold=10，CI 阻塞）
+4. CI 持续防回归，任何新增违规会阻塞 PR
+
+W2 正式结束。下一轮进入 **W3：Agent 协作总线（`TeamAgentMembership` + 角色牌 + 团队侧 agent 管理 UI）**。

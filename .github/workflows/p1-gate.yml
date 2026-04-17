@@ -66,6 +66,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: UI design-system audit (palette + token-count strict)
+        run: npm run audit:ui-strict
+
       - name: Test
         run: npm run test
 
