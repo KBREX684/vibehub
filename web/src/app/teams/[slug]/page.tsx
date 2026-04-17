@@ -8,7 +8,7 @@ import { TeamDiscussionsPanel } from "@/components/team-discussions-panel";
 import { TeamActivityTimeline } from "@/components/team-activity-timeline";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug, listTeamMilestones, getGitHubRepoStats } from "@/lib/repository";
-import { Avatar } from "@/components/ui";
+import { Avatar, AvatarStack } from "@/components/ui";
 
 const TEAM_HERO_INITIAL_CLASS =
   "w-16 h-16 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-2xl font-bold text-[var(--color-accent-violet)] border border-[var(--color-border)] shrink-0";
@@ -198,6 +198,16 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
               <Users className="w-4 h-4 text-[var(--color-accent-violet)]" />
               Members ({team.memberCount})
             </h2>
+            <AvatarStack
+              items={team.members.map((member) => ({
+                id: member.userId,
+                initial: member.name.charAt(0),
+                alt: member.name,
+              }))}
+              totalCount={team.memberCount}
+              size="sm"
+              className="mb-4"
+            />
             <div className="space-y-2">
               {team.members.map((m, i) => (
                 <div key={m.userId} className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-elevated)] transition-colors">
