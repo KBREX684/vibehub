@@ -84,49 +84,69 @@
     "privacy": "隐私政策"
   },
   "home": {
-    "versionBadge": "[v1.0.0] 面向一起交付的开发者社区",
-    "heroTitleLine1": "构建项目，",
-    "heroTitleLine2": "找到队友，一起交付。",
-    "heroDescription": "发现开发者项目，加入活跃协作，组建小团队，并在一个地方推动工作进展。VibeHub 为想与其他构建者一起交付的开发者而生。",
-    "exploreProjects": "探索项目",
-    "joinDiscussions": "加入讨论",
-    "statsActiveProjects": "活跃项目",
-    "statsDiscussions": "讨论",
-    "statsActiveTeams": "活跃团队",
-    "statsDeveloperApi": "开发者 API + MCP",
-    "statsLive": "进行中",
-    "valueProjectDiscoveryTitle": "项目发现",
-    "valueProjectDiscoveryDesc": "浏览真实开发者项目、开源工具与活跃构建日志，找到值得关注或协助的方向。",
-    "valueSmallTeamTitle": "小团队交付",
-    "valueSmallTeamDesc": "创建团队、审核入队申请、管理任务与里程碑，以更低摩擦持续推进交付。",
-    "valueCommunityTitle": "活跃社区",
-    "valueCommunityDesc": "分享想法、获取反馈，并把讨论转化为项目、协作意向和真正上线的成果。",
-    "following": "关注动态",
-    "communityFeed": "社区动态",
-    "feedEmpty": "你还没有关注任何人，或你关注的人最近还没有发帖。你可以从创作者主页关注他们，或直接加入最新讨论。",
-    "browseDiscussions": "浏览讨论",
-    "discoverProjects": "发现项目",
-    "noDiscussions": "还没有讨论。来发起第一条吧！",
-    "featuredToday": "今日精选",
-    "projectGallery": "项目画廊",
-    "noProjects": "还没有项目。提交你的第一个项目吧！",
-    "activeTeams": "活跃团队",
-    "membersCount": "{count} 名成员",
-    "stepDiscussTitle": "讨论与分享",
-    "stepDiscussDesc": "分享想法、发布更新，并收集能帮助项目变得更好的信号。",
-    "stepDiscussCta": "浏览讨论",
-    "stepShowcaseTitle": "展示项目",
-    "stepShowcaseDesc": "把想法变成项目页面，让其他开发者可以发现、关注并加入。",
-    "stepShowcaseCta": "探索项目",
-    "stepCoordinateTitle": "协调交付",
-    "stepCoordinateDesc": "审批入队申请、围绕里程碑对齐，并以专注的小团队推进交付。",
-    "stepCoordinateCta": "寻找团队",
-    "stepDeveloperTitle": "开发者工具",
-    "stepDeveloperDesc": "使用 API Keys、OpenAPI 与 MCP 工具，把发现与协作能力接入你的工作流。",
-    "stepDeveloperCta": "进入开发者中心",
-    "ctaTitle": "准备好与其他构建者一起交付了吗？",
-    "ctaDescription": "创建你的个人资料，发布项目，寻找协作者，并在一个开发者优先的流程里把想法推向交付。",
-    "ctaPrimary": "免费开始"
+    "hero_line1": "构建项目，",
+    "hero_line2": "找到队友，一起交付。",
+    "hero_description": "发现开发者项目，加入活跃协作，组建小团队，并在一个地方推动工作进展。VibeHub 为想与其他构建者一起交付的开发者而生。",
+    "cta_discover": "发现项目",
+    "cta_publish": "发布项目",
+    "cta_integrate": "开发者 API",
+    "how_it_works": "使用流程",
+    "value": {
+      "discovery": {
+        "title": "项目发现",
+        "description": "浏览真实开发者项目、开源工具与活跃构建日志，找到值得关注或协助的方向。",
+        "cta": "浏览项目"
+      },
+      "delivery": {
+        "title": "小团队交付",
+        "description": "创建团队、审核入队申请、管理任务与里程碑，以更低摩擦持续推进交付。",
+        "cta": "寻找团队"
+      },
+      "community": {
+        "title": "活跃社区",
+        "description": "分享想法、获取反馈，并把讨论转化为项目、协作意向和真正上线的成果。",
+        "cta": "加入讨论"
+      }
+    },
+    "steps": {
+      "discuss": {
+        "title": "讨论与分享",
+        "description": "分享想法、发布更新，并收集能帮助项目变得更好的信号。",
+        "cta": "浏览讨论"
+      },
+      "showcase": {
+        "title": "展示项目",
+        "description": "把想法变成项目页面，让其他开发者可以发现、关注并加入。",
+        "cta": "探索项目"
+      },
+      "coordinate": {
+        "title": "协调交付",
+        "description": "审批入队申请、围绕里程碑对齐，并以专注的小团队推进交付。",
+        "cta": "寻找团队"
+      },
+      "tools": {
+        "title": "开发者工具",
+        "description": "使用 API Keys、OpenAPI 与 MCP 工具，把发现与协作能力接入你的工作流。",
+        "cta": "进入开发者控制台"
+      }
+    },
+    "cta": {
+      "title": "准备好与其他构建者一起交付了吗？",
+      "description": "创建你的个人资料，发布项目，寻找协作者，并在一个开发者优先的流程里把想法推向交付。",
+      "button": "免费开始"
+    },
+    "feed": {
+      "following": "关注动态",
+      "community": "社区动态",
+      "empty_following": "你还没有关注任何人，或你关注的人最近还没有发帖。",
+      "browse_discussions": "浏览讨论",
+      "discover_projects": "发现项目",
+      "no_discussions": "还没有讨论。来发起第一条吧！",
+      "featured_today": "今日精选",
+      "project_gallery": "项目画廊",
+      "no_projects": "还没有项目。提交你的第一个项目吧！",
+      "active_teams": "活跃团队"
+    }
   },
   "login": {
     "adminRequired": "需要管理员登录",
@@ -237,5 +257,54 @@
   "discussions.new.preview": "预览",
   "discussions.new.write": "编辑",
   "project.readme_tab": "README",
-  "project.overview_tab": "概览"
+  "project.overview_tab": "概览",
+  "developers": {
+    "page_title": "开发者控制台",
+    "page_subtitle": "在一处管理 API 密钥、代理、集成并监控你的开发者资产。",
+    "overview": "总览",
+    "api_keys": "API 密钥",
+    "agents": "代理",
+    "oauth_apps": "OAuth 应用",
+    "automations": "自动化",
+    "reference": "参考文档",
+    "no_assets": "尚无开发者资产",
+    "no_assets_desc": "创建一个 API 密钥以开始构建与 VibeHub 平台的集成。",
+    "quick_links": "快捷操作",
+    "create_api_key": "创建 API 密钥",
+    "register_agent": "注册代理",
+    "register_oauth_app": "注册 OAuth 应用",
+    "create_automation": "创建自动化",
+    "resources": "资源",
+    "openapi_spec": "OpenAPI 规范",
+    "mcp_manifest": "MCP v2 清单"
+  },
+  "project": {
+    "new": {
+      "title": "新项目",
+      "subtitle": "与 VibeHub 社区分享你的项目。",
+      "profile_required_title": "请先完善个人资料",
+      "profile_required_desc": "发布项目前需要创作者资料。设置你的个人资料即可开始——只需一分钟。",
+      "setup_profile": "设置个人资料",
+      "back": "返回发现"
+    }
+  },
+  "team": {
+    "settings": {
+      "title": "团队设置",
+      "subtitle": "管理团队资料、成员、集成与偏好设置。",
+      "overview": "概览",
+      "overview_desc": "保持团队公开资料准确，以便将人们引导至项目、任务或加入申请。",
+      "external_links": "外部链接",
+      "external_links_desc": "保持 GitHub 和聊天链接更新，确保发现页面和团队成员总能找到正确的位置。",
+      "members": "成员与角色",
+      "members_desc": "管理团队成员、邀请协作者并分配角色。",
+      "integrations": "集成",
+      "integrations_desc": "将外部工具和服务连接到你的团队工作流。",
+      "visibility": "可见性与访问",
+      "visibility_desc": "控制谁可以看到和加入你的团队。",
+      "coordination": "协调",
+      "forbidden_title": "访问受限",
+      "forbidden_desc": "只有团队所有者和管理员可以管理团队设置。"
+    }
+  }
 }
