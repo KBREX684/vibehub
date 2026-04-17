@@ -1,6 +1,16 @@
 # VibeHub release notes
 
-Updated: 2026-04-14
+Updated: 2026-04-17
+
+## 2026-04-17 — v8.0 roadmap published
+
+- Published `docs/roadmap-v8.md`, the product-maturity roadmap following the v7.0 RC.
+- Scope centres on closing the v7.0 GA external blockers (SMTP, China payments, ICP, Redis) and upgrading VibeHub from "demo-grade" to "mature SaaS" on first impression.
+- Five parallel workstreams (GA closure / first-paint narrative / community flywheel / developer ecosystem / admin governance) plus three serial quality gates.
+- Explicit non-goals reaffirmed: no challenges, no enterprise workspace rebuild, no multi-agent autonomy, no light-mode, no PWA, no recommendation-model rebuild.
+- `docs/roadmap-current.md` updated to surface v8.0 as the next primary track while keeping the launch-readiness standard as the final gate.
+
+Updated (historical): 2026-04-14
 
 ## Current release baseline
 

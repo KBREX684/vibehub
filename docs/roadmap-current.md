@@ -102,9 +102,25 @@ P0 核心任务：
 ## 配套文档
 
 - 当前主线：`docs/roadmap-current.md`
-- **v7.0 生产化升级总计划：`docs/roadmap-v7.md`**
+- **v8.0 产品化成熟度路线图：`docs/roadmap-v8.md`**（下一轮主规划）
+- v7.0 生产化升级总计划：`docs/roadmap-v7.md`
 - v5.0 路线图（历史存档）：`docs/roadmap-v5.md`
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
 - 仓库整理报告：`docs/repository-cleanup-report.md`
 - 上线就绪标准：`docs/launch-readiness-standard.md`
+
+## v8.0 规划要点（2026-04-17）
+
+v7.0 切出 RC 后，v8.0 目标是把 VibeHub 从"可演示 + 可放量"推进到"可对外公开、看起来就是成熟 SaaS"的阶段：
+
+- 关闭 v7.0 GA 外部阻塞（SMTP / 中国支付商户 / ICP / Redis）
+- 首屏 + 主导航 + onboarding 叙事重构
+- 广场 Feed 四流补齐（关注 / 推荐 / 热度 / 时间）
+- 项目画廊曝光权重、项目协作入口前置
+- Agent 绑定端到端（`/settings/agents` + 独立 API Key + 审计）
+- 管理员运营仪表盘（DAU / 新增 / 讨论 / 项目 / 订阅 / 举报）
+- AI 审核助手三类任务真实落地（建议型，不越权）
+- 视觉系统从"token 一致"收敛到"组件一致"
+
+明细与验收标准见 `docs/roadmap-v8.md`。
