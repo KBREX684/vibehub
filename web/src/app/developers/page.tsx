@@ -75,7 +75,7 @@ export default async function DevelopersPage() {
   -d '{"tool":"search_projects","input":{"query":"ai agent"}}'`;
 
   return (
-    <main className="container max-w-6xl pb-24 pt-8 space-y-10">
+    <main className="container max-w-6xl pb-24 pt-8 space-y-10 animate-fade-in-up">
       <PageHeader
         icon={Terminal}
         eyebrow={t("developers.v8.eyebrow", "开发者中心 · 3 个场景起步")}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Zap, Globe, Link2 } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { Float } from "@/components/ui";
 
 type FooterLink =
   | { kind: "link"; href: string; labelKey: string }
@@ -52,9 +53,11 @@ export function Footer() {
           {/* Brand col */}
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2 font-bold text-base text-[var(--color-text-primary)] mb-3">
-              <span className="w-6 h-6 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
-                <Zap className="w-3.5 h-3.5 text-[var(--color-text-inverse)]" />
-              </span>
+              <Float distance={4} speed={4}>
+                <span className="w-6 h-6 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
+                  <Zap className="w-3.5 h-3.5 text-[var(--color-text-inverse)]" />
+                </span>
+              </Float>
               VibeHub
             </Link>
             <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-xs">

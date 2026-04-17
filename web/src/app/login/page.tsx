@@ -6,6 +6,7 @@ import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 import { getServerTranslator } from "@/lib/i18n";
 import { EmailAuthForms } from "@/components/email-auth-forms";
+import { LoginAuroraBackground } from "@/components/login-aurora-background";
 
 interface Props {
   searchParams: Promise<{ redirect?: string; required?: string; error?: string; verified?: string }>;
@@ -39,8 +40,9 @@ export default async function LoginPage({ searchParams }: Props) {
   const oauthHref = `/api/v1/auth/github?redirect=${encodeURIComponent(redirectTo)}`;
 
   return (
-    <main className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <main className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
+      <LoginAuroraBackground />
+      <div className="relative z-10 w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 font-bold text-xl text-[var(--color-text-primary)]">

@@ -95,5 +95,7 @@ export type { CountUpProps } from "./count-up";
 export { Float } from "./float";
 export type { FloatProps } from "./float";
 
+export { FloatingIcon } from "./floating-icon";
+
 export { StaggerList } from "./stagger-list";
 export type { StaggerListProps } from "./stagger-list";

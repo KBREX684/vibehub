@@ -1,18 +1,16 @@
 import { PricingCards } from "@/components/pricing-cards";
+import { PricingPageHeader } from "@/components/pricing-page-header";
 
 export default function PricingPage() {
   return (
-    <main className="container">
-      <section className="section" style={{ textAlign: "center" }}>
-        <h1 style={{ marginBottom: 8 }}>中国优先的透明定价</h1>
-        <p className="muted">免费注册即可完整参与社区。Pro 月付 ¥29，重点提升协作空间、项目曝光与开发者额度。</p>
-      </section>
+    <main className="container pb-24 pt-8 space-y-12">
+      <PricingPageHeader />
 
       <PricingCards />
 
-      <section className="section" style={{ maxWidth: 760, margin: "0 auto" }}>
-        <h2>常见问题</h2>
-        <div style={{ display: "grid", gap: 16 }}>
+      <section style={{ maxWidth: 760, margin: "0 auto" }} className="space-y-5">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] tracking-tight">常见问题</h2>
+        <div className="grid gap-3">
           {[
             {
               q: "支付宝和微信支付现在是什么状态？",
@@ -39,9 +37,12 @@ export default function PricingPage() {
               a: "企业用户仍然通过普通账号使用产品。企业认证是身份徽章审核，不是独立企业工作台套餐。",
             },
           ].map(({ q, a }) => (
-            <details key={q} className="card" style={{ cursor: "pointer" }}>
-              <summary style={{ fontWeight: 600, padding: "4px 0" }}>{q}</summary>
-              <p className="muted" style={{ marginTop: 8 }}>{a}</p>
+            <details key={q} className="card group cursor-pointer">
+              <summary className="font-semibold text-sm text-[var(--color-text-primary)] p-4 select-none list-none flex items-center justify-between gap-2">
+                {q}
+                <span className="text-[var(--color-text-muted)] text-xs group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <p className="text-sm text-[var(--color-text-secondary)] px-4 pb-4 leading-relaxed">{a}</p>
             </details>
           ))}
         </div>
