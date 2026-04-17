@@ -16,22 +16,18 @@
  */
 import Link from "next/link";
 import { listProjects, listTeams } from "@/lib/repository";
-import { SearchBar } from "@/components/search-bar";
 import { HomeFeedSection } from "@/components/home-feed-section";
+import { HomeHeroClient } from "@/components/home-hero-client";
+import { HomePillarsClient, type PillarItem } from "@/components/home-pillars-client";
+import { HomeCtaFooterClient } from "@/components/home-cta-footer-client";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
 import {
   ArrowRight,
-  MessagesSquare,
-  FolderGit2,
-  Users,
-  Bot,
-  Sparkles,
   Rocket,
   ShieldCheck,
   Eye,
-  Clock,
-  Terminal,
+  Bot,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
@@ -48,137 +44,64 @@ export default async function HomePage() {
   const primaryCTA = session ? "/projects/new" : "/signup";
   const secondaryCTA = session ? "/settings/agents" : "/developers";
 
+  const pillars: PillarItem[] = [
+    {
+      icon: "MessagesSquare",
+      href: "/discussions",
+      title: t("home.v8.pillars.square.title", "广场讨论"),
+      desc: t("home.v8.pillars.square.desc", "在这里产生灵感、发经验、找同行。"),
+      accent: "cyan",
+    },
+    {
+      icon: "FolderGit2",
+      href: "/discover",
+      title: t("home.v8.pillars.gallery.title", "项目画廊"),
+      desc: t("home.v8.pillars.gallery.desc", "让作品被发现、被收藏、被协作。"),
+      accent: "apple",
+    },
+    {
+      icon: "Users",
+      href: "/teams",
+      title: t("home.v8.pillars.teams.title", "团队协作"),
+      desc: t("home.v8.pillars.teams.desc", "陌生开发者也能低摩擦组队共创。"),
+      accent: "violet",
+    },
+    {
+      icon: "Bot",
+      href: "/settings/agents",
+      title: t("home.v8.pillars.agents.title", "Agent 总线"),
+      desc: t("home.v8.pillars.agents.desc", "Cursor、Claude、自建 Agent 都能作为队员参与。"),
+      accent: "success",
+    },
+  ];
+
   return (
     <main className="container pb-24 space-y-20">
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <section
-        id="about"
-        className="pt-14 pb-4 text-center animate-fade-in-up scroll-mt-24"
-      >
-        <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] border border-[var(--color-border)]">
-          <Sparkles className="w-3 h-3 text-[var(--color-accent-cyan)]" aria-hidden="true" />
-          <span className="text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
-            {t("home.v8.eyebrow", "中国中文开发者 · AI+Human 协作网络")}
-          </span>
-        </div>
-
-        <h1 className="text-4xl md:text-6xl font-semibold tracking-[-0.035em] leading-[1.06] mb-5 max-w-3xl mx-auto">
-          <span className="text-[var(--color-text-primary)]">
-            {t("home.v8.hero_line1", "让你的作品被看见，")}
-          </span>
-          <br />
-          <span className="text-[var(--color-text-secondary)]">
-            {t("home.v8.hero_line2", "让你的 Agent 合法进入团队。")}
-          </span>
-        </h1>
-
-        <p className="text-base md:text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto leading-relaxed mb-8">
-          {t(
-            "home.v8.hero_description",
-            "VibeHub 是面向中国中文开发者的协作网络：广场讨论、项目画廊、小团队组队，再加上让 Cursor、Claude、自建 Agent 作为可审计队员参与协作的 Agent 总线。"
-          )}
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
-          <Link
-            href={primaryCTA}
-            className="btn btn-primary px-6 py-2.5 text-sm font-semibold"
-          >
-            <FolderGit2 className="w-4 h-4" aria-hidden="true" />
-            {session
-              ? t("home.v8.cta_primary_authed", "展示我的作品")
-              : t("home.v8.cta_primary_guest", "免费注册，展示作品")}
-          </Link>
-          <Link
-            href={secondaryCTA}
-            className="btn btn-secondary px-6 py-2.5 text-sm font-semibold"
-          >
-            <Bot className="w-4 h-4" aria-hidden="true" />
-            {session
-              ? t("home.v8.cta_secondary_authed", "让我的 Agent 进团队")
-              : t("home.v8.cta_secondary_guest", "给开发者看 Agent 接入")}
-          </Link>
-        </div>
-
-        <div className="max-w-xl mx-auto">
-          <SearchBar />
-        </div>
-      </section>
+      <HomeHeroClient
+        primaryCTA={primaryCTA}
+        secondaryCTA={secondaryCTA}
+        eyebrowText={t("home.v8.eyebrow", "中国中文开发者 · AI+Human 协作网络")}
+        heroLine1={t("home.v8.hero_line1", "让你的作品被看见，")}
+        heroLine2={t("home.v8.hero_line2", "让你的 Agent 合法进入团队。")}
+        heroDescription={t(
+          "home.v8.hero_description",
+          "VibeHub 是面向中国中文开发者的协作网络：广场讨论、项目画廊、小团队组队，再加上让 Cursor、Claude、自建 Agent 作为可审计队员参与协作的 Agent 总线。"
+        )}
+        primaryLabel={
+          session
+            ? t("home.v8.cta_primary_authed", "展示我的作品")
+            : t("home.v8.cta_primary_guest", "免费注册，展示作品")
+        }
+        secondaryLabel={
+          session
+            ? t("home.v8.cta_secondary_authed", "让我的 Agent 进团队")
+            : t("home.v8.cta_secondary_guest", "给开发者看 Agent 接入")
+        }
+      />
 
       {/* ── Four pillars ────────────────────────────────────────────────────── */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up delay-100">
-        {[
-          {
-            icon: MessagesSquare,
-            href: "/discussions",
-            title: t("home.v8.pillars.square.title", "广场讨论"),
-            desc: t(
-              "home.v8.pillars.square.desc",
-              "在这里产生灵感、发经验、找同行。"
-            ),
-            accent: "cyan",
-          },
-          {
-            icon: FolderGit2,
-            href: "/discover",
-            title: t("home.v8.pillars.gallery.title", "项目画廊"),
-            desc: t(
-              "home.v8.pillars.gallery.desc",
-              "让作品被发现、被收藏、被协作。"
-            ),
-            accent: "apple",
-          },
-          {
-            icon: Users,
-            href: "/teams",
-            title: t("home.v8.pillars.teams.title", "团队协作"),
-            desc: t(
-              "home.v8.pillars.teams.desc",
-              "陌生开发者也能低摩擦组队共创。"
-            ),
-            accent: "violet",
-          },
-          {
-            icon: Bot,
-            href: "/settings/agents",
-            title: t("home.v8.pillars.agents.title", "Agent 总线"),
-            desc: t(
-              "home.v8.pillars.agents.desc",
-              "Cursor、Claude、自建 Agent 都能作为队员参与。"
-            ),
-            accent: "success",
-          },
-        ].map(({ icon: Icon, href, title, desc, accent }) => {
-          const accentClass =
-            accent === "cyan"
-              ? "text-[var(--color-accent-cyan)]"
-              : accent === "apple"
-                ? "text-[var(--color-accent-apple)]"
-                : accent === "violet"
-                  ? "text-[var(--color-accent-violet)]"
-                  : "text-[var(--color-success)]";
-          return (
-            <Link
-              key={title}
-              href={href}
-              className="card p-5 group flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] flex items-center justify-center">
-                  <Icon className={`w-4 h-4 ${accentClass}`} aria-hidden="true" />
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" aria-hidden="true" />
-              </div>
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-                {title}
-              </h3>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed m-0">
-                {desc}
-              </p>
-            </Link>
-          );
-        })}
-      </section>
+      <HomePillarsClient pillars={pillars} />
 
       {/* ── Live feed + featured projects ───────────────────────────────────── */}
       <HomeFeedSection session={session} projects={projects} teams={teams} />
@@ -437,44 +360,18 @@ export default async function HomePage() {
       </section>
 
       {/* ── CTA footer ─────────────────────────────────────────────────────── */}
-      <section className="card p-10 text-center border-t-2 border-t-[var(--color-accent-apple)] animate-fade-in-up delay-400">
-        <div className="relative z-10 space-y-4">
-          <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-accent-apple)]">
-            <Clock className="w-3 h-3" aria-hidden="true" />
-            {t("home.v8.cta_footer.eyebrow", "中国大陆优先 · 中文优先")}
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
-            {t(
-              "home.v8.cta_footer.title",
-              "从今天开始，把你的 Agent 带进团队"
-            )}
-          </h2>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-2 max-w-lg mx-auto m-0 leading-relaxed">
-            {t(
-              "home.v8.cta_footer.desc",
-              "免费注册，Pro 月付 ¥29。不烧钱买增长，不替你付 LLM token。"
-            )}
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link
-              href={session ? "/projects/new" : "/signup"}
-              className="btn btn-primary px-7 py-2.5 text-sm font-semibold"
-            >
-              {session
-                ? t("home.v8.cta_footer.primary_authed", "开始发布作品")
-                : t("home.v8.cta_footer.primary_guest", "免费注册")}
-              <ArrowRight className="w-4 h-4" aria-hidden="true" />
-            </Link>
-            <Link
-              href="/developers"
-              className="btn btn-ghost px-6 py-2.5 text-sm font-semibold"
-            >
-              <Terminal className="w-4 h-4" aria-hidden="true" />
-              {t("home.v8.cta_footer.secondary", "给开发者看 Agent 接入")}
-            </Link>
-          </div>
-        </div>
-      </section>
+      <HomeCtaFooterClient
+        eyebrowText={t("home.v8.cta_footer.eyebrow", "中国大陆优先 · 中文优先")}
+        title={t("home.v8.cta_footer.title", "从今天开始，把你的 Agent 带进团队")}
+        description={t("home.v8.cta_footer.desc", "免费注册，Pro 月付 ¥29。不烧钱买增长，不替你付 LLM token。")}
+        primaryLabel={
+          session
+            ? t("home.v8.cta_footer.primary_authed", "开始发布作品")
+            : t("home.v8.cta_footer.primary_guest", "免费注册")
+        }
+        secondaryLabel={t("home.v8.cta_footer.secondary", "给开发者看 Agent 接入")}
+        primaryHref={session ? "/projects/new" : "/signup"}
+      />
     </main>
   );
 }
