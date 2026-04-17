@@ -65,3 +65,35 @@ export type { AvatarStackProps, AvatarStackItem } from "./avatar-stack";
 
 export { ErrorBanner } from "./error-banner";
 export type { ErrorBannerProps, ErrorBannerTone } from "./error-banner";
+
+/* v8 visual-polish: reactbits-inspired animation components */
+
+export { Aurora } from "./aurora";
+export type { AuroraProps } from "./aurora";
+
+export { ShinyText } from "./shiny-text";
+export type { ShinyTextProps } from "./shiny-text";
+
+export { SplitText } from "./split-text";
+export type { SplitTextProps } from "./split-text";
+
+export { GradientText } from "./gradient-text";
+export type { GradientTextProps } from "./gradient-text";
+
+export { SpotlightCard } from "./spotlight-card";
+export type { SpotlightCardProps } from "./spotlight-card";
+
+export { Magnet } from "./magnet";
+export type { MagnetProps } from "./magnet";
+
+export { ClickSpark } from "./click-spark";
+export type { ClickSparkProps } from "./click-spark";
+
+export { CountUp } from "./count-up";
+export type { CountUpProps } from "./count-up";
+
+export { Float } from "./float";
+export type { FloatProps } from "./float";
+
+export { StaggerList } from "./stagger-list";
+export type { StaggerListProps } from "./stagger-list";

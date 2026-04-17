@@ -433,3 +433,138 @@ pre, code {
   border: 1px solid var(--color-border);
   padding: 0.35rem 0.5rem;
 }
+
+/* =========================================
+   Visual Polish — reactbits-inspired animations
+   ========================================= */
+
+/* --- Noise texture overlay (pure CSS, zero JS) --- */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* --- Aurora blobs --- */
+.aurora-blob {
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  filter: blur(80px);
+  will-change: transform;
+  animation: aurora-drift var(--aurora-speed, 8s) ease-in-out infinite alternate;
+}
+
+.aurora-blob-1 {
+  top: -20%;
+  left: -10%;
+  animation-delay: 0s;
+}
+
+.aurora-blob-2 {
+  top: 10%;
+  right: -15%;
+  animation-delay: calc(var(--aurora-speed, 8s) * -0.33);
+  animation-direction: alternate-reverse;
+}
+
+.aurora-blob-3 {
+  bottom: -10%;
+  left: 30%;
+  width: 40%;
+  height: 40%;
+  animation-delay: calc(var(--aurora-speed, 8s) * -0.66);
+}
+
+@keyframes aurora-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(30px, -20px) scale(1.08); }
+  100% { transform: translate(-20px, 15px) scale(0.95); }
+}
+
+/* --- ShinyText shimmer --- */
+.shiny-text {
+  background: linear-gradient(
+    120deg,
+    var(--color-text-secondary) 30%,
+    var(--color-text-primary) 50%,
+    var(--color-text-secondary) 70%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-slide var(--shiny-speed, 3s) ease-in-out infinite;
+}
+
+@keyframes shiny-slide {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+/* --- GradientText --- */
+.gradient-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-animate {
+  animation: gradient-shift var(--gradient-speed, 4s) ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* --- ClickSpark particle burst --- */
+@keyframes click-spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--spark-x), var(--spark-y)) scale(0);
+  }
+}
+
+/* --- Float animation --- */
+.float-animation {
+  animation: float-bob var(--float-speed, 3s) ease-in-out infinite;
+}
+
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(calc(var(--float-distance, 6px) * -1)); }
+}
+
+/* --- prefers-reduced-motion: disable all custom animations --- */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob,
+  .shiny-text,
+  .gradient-text-animate,
+  .float-animation {
+    animation: none !important;
+  }
+  .shiny-text {
+    -webkit-text-fill-color: unset;
+    background: none;
+    color: var(--color-text-secondary);
+  }
+  .gradient-text {
+    -webkit-text-fill-color: unset;
+  }
+  body::before {
+    display: none;
+  }
+}
