@@ -36,11 +36,11 @@ export default async function ApiKeysSettingsPage() {
     <main className="container max-w-3xl pb-24 pt-8 space-y-6">
       <div className="flex items-center gap-2 mb-2">
         <Link
-          href="/"
+          href="/settings"
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Home
+          Settings
         </Link>
         <span className="text-[var(--color-text-muted)]">/</span>
         <span className="text-sm text-[var(--color-text-muted)]">API Keys</span>
