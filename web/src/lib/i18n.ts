@@ -52,7 +52,7 @@ export async function getServerThemePreference(): Promise<ThemeCookie> {
   const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
   const candidate = cookieStore.get(THEME_COOKIE_KEY)?.value;
-  return isThemeCookie(candidate) ? candidate : "system";
+  return isThemeCookie(candidate) ? candidate : "dark";
 }
 
 /** SSR hint for `<html className>` — client ThemeScript refines before paint. */
@@ -71,4 +71,3 @@ export async function getServerTranslator() {
 export function getClientTranslator(language: Lang) {
   return (key: string, fallback?: string) => catalogs[language][key] ?? catalogs.en[key] ?? fallback ?? key;
 }
-

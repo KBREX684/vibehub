@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface AuroraProps {
   /** Primary color — defaults to accent-cyan token */
@@ -13,6 +13,8 @@ export interface AuroraProps {
   className?: string;
   /** Animation speed multiplier (1 = normal). Defaults to 1 */
   speed?: number;
+  /** Disable on mobile widths to protect low-end devices. Defaults to true */
+  disableOnMobile?: boolean;
 }
 
 /**
@@ -26,14 +28,21 @@ export function Aurora({
   opacity = 0.3,
   className = "",
   speed = 1,
+  disableOnMobile = true,
 }: AuroraProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
     const el = containerRef.current;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const mobile = disableOnMobile && window.matchMedia("(max-width: 767px)").matches;
+    setEnabled(!reduced && !mobile);
     if (!el) return;
     el.style.setProperty("--aurora-speed", `${8 / speed}s`);
-  }, [speed]);
+  }, [disableOnMobile, speed]);
+
+  if (!enabled) return null;
 
   return (
     <div

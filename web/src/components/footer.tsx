@@ -104,7 +104,7 @@ export function Footer() {
                       <li key={link.labelKey}>
                         <a
                           href={link.href}
-                          className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                          className="footer-link text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                         >
                           {t(link.labelKey)}
                         </a>
@@ -115,7 +115,7 @@ export function Footer() {
                     <li key={link.href}>
                       <Link
                         href={link.href}
-                        className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        className="footer-link text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                       >
                         {t(link.labelKey)}
                       </Link>
@@ -141,7 +141,7 @@ export function Footer() {
               <Link
                 key={item.key}
                 href={item.href}
-                className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
+                className="footer-link text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
               >
                 {t(item.key)}
               </Link>

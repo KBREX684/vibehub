@@ -13,7 +13,7 @@ export function ThemeScript() {
         if(m) v=decodeURIComponent(m[1]);
       }catch(e){}
     }
-    if(!v) v='system';
+    if(!v) v='dark';
     var d=document.documentElement;
     function setDark(on){ d.classList.toggle('dark',on); d.classList.toggle('light',!on); }
     if(v==='dark') setDark(true);

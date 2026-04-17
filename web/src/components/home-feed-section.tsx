@@ -4,7 +4,7 @@ import { getFollowFeed, listFeaturedProjects, listPosts } from "@/lib/repository
 import type { Project, SessionUser, TeamSummary } from "@/lib/types";
 import { PostCard } from "@/components/post-card";
 import { ProjectCard } from "@/components/project-card";
-import { Avatar } from "@/components/ui";
+import { AnimatedSection, Avatar, BlurText } from "@/components/ui";
 import { getServerTranslator } from "@/lib/i18n";
 
 interface Props {
@@ -79,11 +79,13 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
 
       <div className="lg:col-span-5 space-y-8">
         {featured.length > 0 && (
-          <div className="space-y-4">
+          <AnimatedSection className="space-y-4" delayMs={80}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[var(--color-text-primary)]" />
-                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">{t("home.feed.featured_today")}</h2>
+                <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)]">
+                  {t("home.feed.featured_today")}
+                </BlurText>
               </div>
               <Link href="/discover" className="text-xs text-[var(--color-text-secondary)] hover:underline shrink-0">
                 {t("nav.discover")}
@@ -94,14 +96,16 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
                 <ProjectCard key={project.id} project={project} featured />
               ))}
             </div>
-          </div>
+          </AnimatedSection>
         )}
 
-        <div className="space-y-4">
+        <AnimatedSection className="space-y-4" delayMs={120}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Terminal className="w-4 h-4 text-[var(--color-text-secondary)]" />
-              <h2 className="text-base font-semibold text-[var(--color-text-primary)]">{t("home.feed.project_gallery")}</h2>
+              <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)]">
+                {t("home.feed.project_gallery")}
+              </BlurText>
             </div>
             <Link
               href="/discover"
@@ -120,7 +124,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
               projects.map((project) => <ProjectCard key={project.id} project={project} />)
             )}
           </div>
-        </div>
+        </AnimatedSection>
 
         {teams.length > 0 && (
           <div className="space-y-4">

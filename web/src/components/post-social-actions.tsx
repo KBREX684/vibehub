@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Heart, Bookmark, Share2 } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import { ClickSpark } from "@/components/ui";
 
 const SOCIAL_LINK_BTN_CLASS =
   "flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all";
@@ -111,39 +112,43 @@ export function PostSocialActions({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <button
-        type="button"
-        onClick={toggleLike}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all border ${
-          liked
-            ? "bg-[var(--color-warning-subtle)] text-[var(--color-warning)] border-[rgba(245,158,11,0.3)]"
-            : "text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[rgba(245,158,11,0.3)] hover:text-[var(--color-warning)] hover:bg-[var(--color-warning-subtle)]"
-        } disabled:opacity-50`}
-        aria-label={liked ? "Unlike" : "Like"}
-        aria-pressed={liked}
-        aria-busy={likeLoading}
-      >
-        <Heart className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
-        {likeCount > 0 && <span aria-hidden>{likeCount}</span>}
-        <span>{liked ? "Liked" : "Like"}</span>
-      </button>
+      <ClickSpark color="var(--color-warning)" className="rounded-[var(--radius-pill)]">
+        <button
+          type="button"
+          onClick={toggleLike}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all border ${
+            liked
+              ? "bg-[var(--color-warning-subtle)] text-[var(--color-warning)] border-[var(--color-warning-border-strong)]"
+              : "text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-warning-border-strong)] hover:text-[var(--color-warning)] hover:bg-[var(--color-warning-subtle)]"
+          } disabled:opacity-50`}
+          aria-label={liked ? "Unlike" : "Like"}
+          aria-pressed={liked}
+          aria-busy={likeLoading}
+        >
+          <Heart className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
+          {likeCount > 0 && <span aria-hidden>{likeCount}</span>}
+          <span>{liked ? "Liked" : "Like"}</span>
+        </button>
+      </ClickSpark>
 
-      <button
-        type="button"
-        onClick={toggleBookmark}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all border ${
-          bookmarked
-            ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-hover)] border-[rgba(99,102,241,0.3)]"
-            : "text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[rgba(99,102,241,0.3)] hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)]"
-        } disabled:opacity-50`}
-        aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
-        aria-pressed={bookmarked}
-        aria-busy={bookmarkLoading}
-      >
-        <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? "fill-current" : ""}`} />
-        {bookmarkCount > 0 && <span aria-hidden>{bookmarkCount}</span>}
-        <span>{bookmarked ? "Saved" : "Save"}</span>
-      </button>
+      <ClickSpark color="var(--color-accent-violet)" className="rounded-[var(--radius-pill)]">
+        <button
+          type="button"
+          onClick={toggleBookmark}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all border ${
+            bookmarked
+              ? "bg-[var(--color-primary-subtle)] text-[var(--color-primary-hover)] border-[var(--color-accent-violet-border)]"
+              : "text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-accent-violet-border)] hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)]"
+          } disabled:opacity-50`}
+          aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
+          aria-pressed={bookmarked}
+          aria-busy={bookmarkLoading}
+        >
+          <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? "fill-current" : ""}`} />
+          {bookmarkCount > 0 && <span aria-hidden>{bookmarkCount}</span>}
+          <span>{bookmarked ? "Saved" : "Save"}</span>
+        </button>
+      </ClickSpark>
 
       <button
         type="button"

@@ -32,7 +32,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
 import { buildMcpV2Manifest } from "@/lib/mcp-v2-tools";
 import { buildOpenApiDocument } from "@/lib/openapi-spec";
-import { PageHeader, CopyButton, Badge } from "@/components/ui";
+import { PageHeader, CopyButton, Badge, Particles, AnimatedSection, BlurText } from "@/components/ui";
 
 function baseUrl() {
   const env = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
@@ -103,16 +103,16 @@ export default async function DevelopersPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <div className="lg:col-span-8 space-y-5">
           {/* Scenario 1 */}
-          <section className="card p-6 space-y-4">
+          <AnimatedSection as="section" className="card p-6 space-y-4">
             <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
               <div className="flex items-start gap-3">
-                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-cyan-subtle)] border border-[rgba(34,211,238,0.25)] flex items-center justify-center">
+                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-cyan-subtle)] border border-[var(--color-accent-cyan-border)] flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-[var(--color-accent-cyan)]" aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                  <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                     {t("developers.v8.scenarios.cursor.title", "让 Cursor / Claude 在 VibeHub 里搜项目")}
-                  </h2>
+                  </BlurText>
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
                     {t(
                       "developers.v8.scenarios.cursor.desc",
@@ -141,19 +141,21 @@ export default async function DevelopersPage() {
               <span className="text-[var(--color-text-muted)]">·</span>
               <span>{t("developers.v8.scenarios.cursor.note", "支持 Cursor、Claude Code、OpenClaw、Codex CLI")}</span>
             </div>
-          </section>
+          </AnimatedSection>
 
           {/* Scenario 2 */}
-          <section className="card p-6 space-y-4">
+          <AnimatedSection as="section" className="card p-6 space-y-4 relative overflow-hidden" delayMs={60}>
+            <Particles className="opacity-60" color="var(--color-accent-violet)" count={16} />
+            <div className="relative z-10 space-y-4">
             <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
               <div className="flex items-start gap-3">
-                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-violet-subtle)] border border-[rgba(167,139,250,0.25)] flex items-center justify-center">
+                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-violet-subtle)] border border-[var(--color-accent-violet-border)] flex items-center justify-center">
                   <Bot className="w-5 h-5 text-[var(--color-accent-violet)]" aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                  <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                     {t("developers.v8.scenarios.agent.title", "让你的 Agent 作为队员加入团队")}
-                  </h2>
+                  </BlurText>
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
                     {t(
                       "developers.v8.scenarios.agent.desc",
@@ -230,19 +232,20 @@ export default async function DevelopersPage() {
                 <ExternalLink className="w-3 h-3" aria-hidden="true" />
               </a>
             </div>
-          </section>
+            </div>
+          </AnimatedSection>
 
           {/* Scenario 3 */}
-          <section className="card p-6 space-y-4">
+          <AnimatedSection as="section" className="card p-6 space-y-4" delayMs={120}>
             <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
               <div className="flex items-start gap-3">
-                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-apple-subtle)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center">
+                <div className="shrink-0 w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-apple-subtle)] border border-[var(--color-accent-apple-border)] flex items-center justify-center">
                   <Coins className="w-5 h-5 text-[var(--color-accent-apple)]" aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                  <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                     {t("developers.v8.scenarios.saas.title", "做第三方 Agent / SaaS")}
-                  </h2>
+                  </BlurText>
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
                     {t(
                       "developers.v8.scenarios.saas.desc",
@@ -264,7 +267,7 @@ export default async function DevelopersPage() {
                 "MCP Developer Access 面向 SaaS 型 AI 工具，后续会按量计费。当前只保留能力说明与申请制入口，不面向个人用户直接开通。个人用户请直接使用 Free / Pro 额度。"
               )}
             </div>
-          </section>
+          </AnimatedSection>
         </div>
 
         {/* Sidebar */}

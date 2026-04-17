@@ -83,11 +83,23 @@ export type { GradientTextProps } from "./gradient-text";
 export { SpotlightCard } from "./spotlight-card";
 export type { SpotlightCardProps } from "./spotlight-card";
 
+export { TiltedCard } from "./tilted-card";
+export type { TiltedCardProps } from "./tilted-card";
+
 export { Magnet } from "./magnet";
 export type { MagnetProps } from "./magnet";
 
 export { ClickSpark } from "./click-spark";
 export type { ClickSparkProps } from "./click-spark";
+
+export { Particles } from "./particles";
+export type { ParticlesProps } from "./particles";
+
+export { BlurText } from "./blur-text";
+export type { BlurTextProps } from "./blur-text";
+
+export { AnimatedSection } from "./animated-section";
+export type { AnimatedSectionProps } from "./animated-section";
 
 export { CountUp } from "./count-up";
 export type { CountUpProps } from "./count-up";

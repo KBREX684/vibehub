@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bookmark } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import { ClickSpark } from "@/components/ui";
 
 interface Props {
   projectSlug: string;
@@ -74,17 +75,19 @@ export function ProjectBookmarkButton({
   }
 
   return (
-    <button
-      type="button"
-      className="btn btn-secondary text-sm px-4 py-2 flex items-center gap-1.5"
-      onClick={() => void toggle()}
-      disabled={!interactive || loading}
-      aria-pressed={bookmarked}
-      aria-label={bookmarked ? "Remove bookmark" : "Save project"}
-    >
-      <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? "fill-current" : ""}`} />
-      {bookmarked ? "Saved" : "Save"}
-      <span className="text-xs text-[var(--color-text-muted)]">{count}</span>
-    </button>
+    <ClickSpark color="var(--color-accent-violet)" className="rounded-[var(--radius-md)]">
+      <button
+        type="button"
+        className="btn btn-secondary text-sm px-4 py-2 flex items-center gap-1.5"
+        onClick={() => void toggle()}
+        disabled={!interactive || loading}
+        aria-pressed={bookmarked}
+        aria-label={bookmarked ? "Remove bookmark" : "Save project"}
+      >
+        <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? "fill-current" : ""}`} />
+        {bookmarked ? "Saved" : "Save"}
+        <span className="text-xs text-[var(--color-text-muted)]">{count}</span>
+      </button>
+    </ClickSpark>
   );
 }

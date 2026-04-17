@@ -19,7 +19,7 @@ export function TeamsGridClient({ teams }: { teams: TeamSummary[] }) {
         >
           <SpotlightCard
             className="card p-5 group hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-4 h-full"
-            spotlightColor="rgba(167,139,250,0.06)"
+            spotlightColor="var(--color-spotlight-violet)"
             style={{
               opacity: 0,
               animation: `fade-in-up 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 50}ms forwards`,

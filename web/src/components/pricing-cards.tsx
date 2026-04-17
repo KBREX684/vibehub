@@ -6,25 +6,26 @@ import type { SubscriptionTier } from "@/lib/subscription";
 import type { PaymentProviderKind } from "@/lib/types";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
+import { CountUp } from "@/components/ui";
 
 const TIERS: SubscriptionTier[] = ["free", "pro"];
 
 const TIER_CARD_CLASS_FREE =
   "bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)]";
 const TIER_CARD_CLASS_PRO =
-  "bg-[var(--color-primary)] text-[var(--color-text-inverse)]";
+  "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] ring-1 ring-inset ring-[var(--color-accent-cyan-border)]";
 
 const PRIMARY_CTA_CLASS =
-  "w-full py-3 bg-[var(--color-text-inverse)] text-[var(--color-primary)] border border-[var(--color-text-inverse)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity";
+  "w-full py-3 bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] border border-[var(--color-text-primary)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity";
 
 const FREE_CTA_CLASS =
   "w-full py-3 border border-[var(--color-border-strong)] text-center font-mono text-sm uppercase tracking-wider hover:bg-[var(--color-bg-surface-hover)] transition-colors mt-auto";
 
 const ALT_BTN_CLASS =
-  "py-2 border border-[rgba(255,255,255,0.4)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[rgba(255,255,255,0.1)] transition-colors";
+  "py-2 border border-[var(--color-contrast-border)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[var(--color-contrast-surface-hover)] transition-colors";
 
 const RECOMMENDED_TAG_CLASS =
-  "inline-flex items-center px-2 py-1 border border-[var(--color-text-inverse)] text-[10px] font-mono font-bold uppercase tracking-wider";
+  "inline-flex items-center px-2 py-1 border border-[var(--color-accent-cyan-border)] text-[var(--color-accent-cyan)] text-[10px] font-mono font-bold uppercase tracking-wider";
 
 const COMPARE_HEADER_CLASS =
   "hidden md:grid grid-cols-[1fr_120px_120px] px-6 py-3 border-b border-[var(--color-border)] text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-surface)]";
@@ -99,7 +100,11 @@ export function PricingCards() {
                   ) : (
                     <div className="flex items-baseline">
                       <span className="text-2xl font-mono font-medium mr-1">¥</span>
-                      <span className="text-5xl font-mono font-bold tracking-tight">{pricing.priceMonthly}</span>
+                      <CountUp
+                        end={pricing.priceMonthly}
+                        duration={1100}
+                        className="text-5xl font-mono font-bold tracking-tight"
+                      />
                       <span className="text-sm font-mono ml-2 opacity-70">/ 月</span>
                     </div>
                   )}

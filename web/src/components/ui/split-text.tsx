@@ -26,16 +26,27 @@ export function SplitText({
   triggerOnView = true,
 }: SplitTextProps) {
   const containerRef = useRef<HTMLSpanElement>(null);
-  const [visible, setVisible] = useState(!triggerOnView);
+  const [visible, setVisible] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    if (!triggerOnView) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+
+    if (!triggerOnView) {
+      return;
+    }
     const el = containerRef.current;
     if (!el) return;
 
     /* Respect reduced-motion: show immediately */
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (mq.matches) {
+      setVisible(true);
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    if (rect.top <= window.innerHeight * 0.92 && rect.bottom >= 0) {
       setVisible(true);
       return;
     }
@@ -47,7 +58,7 @@ export function SplitText({
           io.disconnect();
         }
       },
-      { threshold: 0.2 }
+      { threshold: 0.05, rootMargin: "0px 0px -8% 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -63,10 +74,15 @@ export function SplitText({
           aria-hidden="true"
           className="inline-block transition-all duration-500"
           style={{
-            opacity: visible ? 1 : 0,
-            transform: visible ? "translateY(0)" : "translateY(12px)",
-            filter: visible ? "blur(0px)" : "blur(4px)",
-            transitionDelay: `${i * delay}ms`,
+            opacity: triggerOnView ? (visible ? 1 : 0) : 1,
+            transform: triggerOnView ? (visible ? "translateY(0)" : "translateY(12px)") : undefined,
+            filter: triggerOnView ? (visible ? "blur(0px)" : "blur(4px)") : undefined,
+            transitionDelay: triggerOnView ? `${i * delay}ms` : undefined,
+            animation:
+              !triggerOnView && !reducedMotion
+                ? "split-word-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both"
+                : undefined,
+            animationDelay: !triggerOnView && !reducedMotion ? `${i * delay}ms` : undefined,
           }}
         >
           {word}

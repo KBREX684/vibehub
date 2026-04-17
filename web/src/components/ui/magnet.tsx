@@ -23,16 +23,16 @@ export function Magnet({
   const ref = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [coarsePointer, setCoarsePointer] = useState(false);
 
   useEffect(() => {
-    setReducedMotion(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
+    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setCoarsePointer(window.matchMedia("(hover: none), (pointer: coarse)").matches);
   }, []);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (reducedMotion) return;
+      if (reducedMotion || coarsePointer) return;
       const el = ref.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
@@ -42,7 +42,7 @@ export function Magnet({
       const dy = (e.clientY - cy) / (rect.height / 2);
       setOffset({ x: dx * strength, y: dy * strength });
     },
-    [strength, reducedMotion]
+    [strength, reducedMotion, coarsePointer]
   );
 
   const handleMouseLeave = useCallback(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
 export interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Spotlight color. Defaults to a faint white glow */
@@ -18,21 +18,29 @@ export interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement>
 export function SpotlightCard({
   children,
   className = "",
-  spotlightColor = "rgba(255,255,255,0.06)",
+  spotlightColor = "var(--color-spotlight-default)",
   spotlightRadius = 200,
   ...rest
 }: SpotlightCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarse = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+    setEnabled(!reduced && !coarse);
+  }, []);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!enabled) return;
       const rect = cardRef.current?.getBoundingClientRect();
       if (!rect) return;
       setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     },
-    []
+    [enabled]
   );
 
   return (
@@ -43,7 +51,7 @@ export function SpotlightCard({
         className,
       ].join(" ")}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovering(true)}
+      onMouseEnter={() => enabled && setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       {...rest}
     >
@@ -52,7 +60,7 @@ export function SpotlightCard({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-[1] transition-opacity duration-300"
         style={{
-          opacity: isHovering ? 1 : 0,
+          opacity: enabled && isHovering ? 1 : 0,
           background: `radial-gradient(${spotlightRadius}px circle at ${pos.x}px ${pos.y}px, ${spotlightColor}, transparent)`,
         }}
       />

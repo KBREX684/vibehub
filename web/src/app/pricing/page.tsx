@@ -1,5 +1,6 @@
 import { PricingCards } from "@/components/pricing-cards";
 import { PricingPageHeader } from "@/components/pricing-page-header";
+import { AnimatedSection, BlurText } from "@/components/ui";
 
 export default function PricingPage() {
   return (
@@ -8,8 +9,10 @@ export default function PricingPage() {
 
       <PricingCards />
 
-      <section style={{ maxWidth: 760, margin: "0 auto" }} className="space-y-5">
-        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] tracking-tight">常见问题</h2>
+      <AnimatedSection as="section" style={{ maxWidth: 760, margin: "0 auto" }} className="space-y-5" delayMs={120}>
+        <BlurText as="h2" className="text-xl font-semibold text-[var(--color-text-primary)] tracking-tight">
+          常见问题
+        </BlurText>
         <div className="grid gap-3">
           {[
             {
@@ -37,16 +40,20 @@ export default function PricingPage() {
               a: "企业用户仍然通过普通账号使用产品。企业认证是身份徽章审核，不是独立企业工作台套餐。",
             },
           ].map(({ q, a }) => (
-            <details key={q} className="card group cursor-pointer">
+            <details key={q} className="card group cursor-pointer overflow-hidden">
               <summary className="font-semibold text-sm text-[var(--color-text-primary)] p-4 select-none list-none flex items-center justify-between gap-2">
                 {q}
                 <span className="text-[var(--color-text-muted)] text-xs group-open:rotate-180 transition-transform">▾</span>
               </summary>
-              <p className="text-sm text-[var(--color-text-secondary)] px-4 pb-4 leading-relaxed">{a}</p>
+              <div className="grid grid-rows-[0fr] group-open:grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out">
+                <div className="overflow-hidden">
+                  <p className="text-sm text-[var(--color-text-secondary)] px-4 pb-4 leading-relaxed">{a}</p>
+                </div>
+              </div>
             </details>
           ))}
         </div>
-      </section>
+      </AnimatedSection>
     </main>
   );
 }

@@ -62,12 +62,14 @@ export function HomeHeroClient({
             text={heroLine1}
             className="text-[var(--color-text-primary)]"
             delay={60}
+            triggerOnView={false}
           />
           <br />
           <SplitText
             text={heroLine2}
             className="text-[var(--color-text-secondary)]"
             delay={60}
+            triggerOnView={false}
           />
         </h1>
 

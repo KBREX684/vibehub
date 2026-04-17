@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Star, Zap, Users, Flame, Clock3, TrendingUp } from "lucide-react";
 import type { Project } from "@/lib/types";
+import { SpotlightCard, TiltedCard } from "@/components/ui";
 
 const STATUS_COLORS: Record<string, string> = {
   idea: "tag-violet",
@@ -27,8 +28,12 @@ export function ProjectCard({
     ? "Recently updated"
     : updatedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  return (
-    <article className="relative group card transition-colors overflow-hidden">
+  const cardContent = (
+    <SpotlightCard
+      className="relative group card transition-colors overflow-hidden"
+      spotlightColor={featured ? "var(--color-spotlight-violet)" : "var(--color-spotlight-default)"}
+      spotlightRadius={featured ? 240 : 180}
+    >
       {featured && (
         <div className="absolute inset-0 border-2 border-[var(--color-text-primary)] pointer-events-none rounded-[var(--radius-lg)]" />
       )}
@@ -149,6 +154,16 @@ export function ProjectCard({
           ) : null}
         </div>
       </div>
-    </article>
+    </SpotlightCard>
   );
+
+  if (featured) {
+    return (
+      <TiltedCard className="block">
+        {cardContent}
+      </TiltedCard>
+    );
+  }
+
+  return cardContent;
 }

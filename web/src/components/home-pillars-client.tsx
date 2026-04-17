@@ -34,6 +34,13 @@ export interface PillarItem {
 }
 
 export function HomePillarsClient({ pillars }: { pillars: PillarItem[] }) {
+  const spotlightClass: Record<string, string> = {
+    cyan: "var(--color-spotlight-cyan)",
+    apple: "var(--color-spotlight-apple)",
+    violet: "var(--color-spotlight-violet)",
+    success: "var(--color-spotlight-success)",
+  };
+
   return (
     <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up delay-100">
       {pillars.map(({ icon, href, title, desc, accent }) => {
@@ -43,15 +50,7 @@ export function HomePillarsClient({ pillars }: { pillars: PillarItem[] }) {
           <Link key={title} href={href} className="block">
             <SpotlightCard
               className="card p-5 group flex flex-col gap-3 h-full"
-              spotlightColor={
-                accent === "cyan"
-                  ? "rgba(34,211,238,0.08)"
-                  : accent === "apple"
-                    ? "rgba(0,113,227,0.08)"
-                    : accent === "violet"
-                      ? "rgba(167,139,250,0.08)"
-                      : "rgba(52,211,153,0.08)"
-              }
+              spotlightColor={spotlightClass[accent] ?? "var(--color-spotlight-default)"}
             >
               <div className="flex items-center justify-between">
                 <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] flex items-center justify-center">

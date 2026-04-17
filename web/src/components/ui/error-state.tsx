@@ -83,7 +83,7 @@ export function ErrorState({
         className,
       ].join(" ")}
     >
-      <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-error-subtle)] border border-[rgba(248,113,113,0.25)] flex items-center justify-center mb-4">
+      <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-error-subtle)] border border-[var(--color-error-border)] flex items-center justify-center mb-4">
         <Icon className="w-5 h-5 text-[var(--color-error)]" aria-hidden="true" />
       </div>
       <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
