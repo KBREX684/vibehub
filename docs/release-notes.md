@@ -1,6 +1,32 @@
 # VibeHub release notes
 
-Updated: 2026-04-17
+Updated: 2026-04-18
+
+## 2026-04-18 — v9.0 ecosystem upgrade line published
+
+V9.0 formally shifts the product center from "community + team + agent surfaces" to **Team Workspace as the collaboration hub**.
+
+- **New primary roadmap**: `docs/ecosystem-roadmap-v9.0.md`
+- **New execution playbook**: `docs/ecosystem-implementation-plan-v9.0.md`
+- **Updated current index**: `docs/roadmap-current.md` now points to V9.0 as the active line and treats v8 as the shipped baseline
+
+V9.0 keeps the v8 foundation but narrows the next build line around five coordinated capabilities:
+
+- Team Workspace as the core product and future paid anchor
+- Snapshot Capsule as the handoff / rollback unit
+- three-part Collaboration Request instead of prototype-style intent messaging
+- Agent governance extended into workspace and snapshot operations
+- restriction primitives and compliance visibility as China-ready product capabilities
+
+The execution plan is no longer framed by broad version slogans alone. It is split into dependency-ordered subphases:
+
+- `P0-1`, `P0-2`
+- `P1-1`, `P1-2`
+- `P2-1`, `P2-2`
+- `P3-1`, `P3-2`
+- `P4-1`, `P4-2`
+
+Each subphase is expected to land end-to-end: schema, migration, API, OpenAPI, permissions, audit, UI, admin traceability, and checks.
 
 ## 2026-04-17 — v8.0 re-positioning: China-first AI+Human collaboration network
 

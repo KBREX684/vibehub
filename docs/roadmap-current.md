@@ -1,129 +1,112 @@
 # VibeHub Roadmap (Current)
 
-更新日期：2026-04-16
+更新日期：2026-04-18
 
-## 当前战略
+## 当前主线
 
-VibeHub 聚焦三条主线，面向中国国内落地：
+VibeHub 当前正式主线已切换到 **V9.0 Team Workspace 协作中枢**。
 
-1. 社区 → 项目 → 协作意向
-2. 项目 → 团队 → 任务 / 里程碑
-3. 开发者 API / MCP / Agent 接入
+核心定义：
+
+- 不做 IDE
+- 不做 repo 主路径
+- 本地开发不变，云端协作升级
+- Team Workspace 是核心主产品
+- Agent 必须合法、受控、可审计地进入团队
+- 中国化合规与治理不是附录，而是产品能力
+
+## 当前战略结构
+
+V9.0 聚焦四层闭环：
+
+1. 公开发现：讨论区 / 项目画廊 / 创作者主页
+2. 协作入口：三句式合作申请通道
+3. 协作中枢：Team Workspace + Snapshot Capsule
+4. 受控执行：Agent Governance + Restriction + Compliance Visibility
 
 产品定位统一为：
 
-- 开发者优先
-- 小团队优先
-- Free + Pro（支付适配中国路径）
-- 企业能力降级为认证标识，不是主飞轮
-- 中国国内落地优先，合规前置
+- 中国中文开发者优先
+- 2–10 人小团队 / 工作室优先
+- Free + Pro 为现有公开订阅
+- Team Workspace 为下一阶段核心付费锚点
+- 企业能力继续降级为认证与治理辅助，不作为主飞轮
 
-## 主飞轮
+## 当前基线
 
-开发者在广场讨论中产生灵感 → 在项目画廊中展示作品 → 在团队平台中组队协作 → 通过 API/MCP 让 agent 参与执行 → 协作成果反哺社区内容供给。
+V8 已完成并继续沿用的能力：
 
-## 当前阶段：P0 生产落地
+- 广场讨论、项目画廊、团队协作、开发者中心
+- AgentBinding、TeamAgentMembership、AgentActionAudit、AgentConfirmationRequest
+- API Keys、OpenAPI、MCP v2
+- Free / Pro 支付与合规页面
+- 统一设计 token、UI 原件与 i18n 基础设施
 
-当前处于 v7.0 路线图 P0 阶段，目标是从"可演示"推进到"可放量"。
+V9 不推翻这些能力，而是在其上补齐：
 
-P0 核心任务：
+- `WorkspaceArtifact`
+- `SnapshotCapsule`
+- `CollaborationIntent v2`
+- `Restriction` 三原语
+- 数据区域与合规可见化
 
-1. 登录体系重构（邮箱登录 + GitHub 关联）
-2. 企业能力降级为认证标识
-3. Mock 退出生产路径
-4. 中国基础合规框架（隐私政策、用户协议、举报通道、账号注销）
-5. API / 鉴权 / 审计生产基线
-6. 项目画廊 / 广场讨论 / 团队协作主链路收口
-7. 支付抽象层设计（预留支付宝/微信）
-8. 管理员后台治理能力重构 + AI 审核助手 MVP
-9. 部署 / 监控 / 日志 / 回滚最低生产要求
+## 当前阶段
 
-详见 `docs/roadmap-v7.md` 完整路线图。
+当前进入 V9.0 文档化与执行准备阶段，实施将按以下子阶段推进：
 
-## 当前主线能力
-
-### 1. 社区与项目发现
-
-- 讨论区、评论、点赞、收藏、关注
-- 项目展示、搜索、筛选、排行榜
-- 协作意向提交与审核
-
-### 2. 小团队协作
-
-- 团队创建
-- 入队申请与审批
-- 任务板、里程碑、团队聊天
-- 基于成员 / 创建者 / owner 的协作权限
-
-### 3. 开发者工具
-
-- API Keys + scopes
-- OpenAPI 导出与校验
-- MCP v2 manifest / invoke
-- 公开 API 与 embed / oEmbed
-
-## 当前订阅模型
-
-- `free`
-- `pro`
-
-不再存在 `team_pro` 或多档团队订阅。
-
-## 企业能力定位（v7.0 降级）
-
-企业能力降级为"认证标识 + 资料展示字段"：
-
-- `EnterpriseProfile` 仅产出认证徽章
-- 企业工作台入口从主导航移除
-- 后台保留企业认证审核能力
-- `EnterpriseMemberInvite` 模型冻结
-
-平台管理员与 enterprise access 是两条独立权限线：
-
-- `admin`: 平台治理、审核、运维
-- `enterpriseStatus=approved`: 认证标识展示
+- `P0-1` 边界校正与现状止血
+- `P0-2` 设计系统收口与页面骨架统一
+- `P1-1` Workspace 数据层与存储入口
+- `P1-2` Workspace 页面与订阅承接
+- `P2-1` 三句式合作申请迁移
+- `P2-2` Snapshot Capsule MVP
+- `P3-1` Agent × Workspace 读写矩阵
+- `P3-2` 统一活动流与确认流
+- `P4-1` Restriction 三原语与治理拦截
+- `P4-2` 合规可见化与中国化收口
 
 ## 当前验收主链路
 
-1. 登录（邮箱 + GitHub 关联） → 创建 creator profile → 发布项目
-2. 浏览项目 → 提交协作意向 → 审核
-3. 创建团队 → 入队审批 → 任务推进
-4. 创建 API Key → 调用公开 API / MCP
-5. 升级 Pro → 权限与额度生效
+V9.0 的主链路将重构为：
 
-## 明确不做
+1. 用户在广场和项目页被发现
+2. 通过三句式合作申请建立协作连接
+3. 团队进入 Team Workspace 共享资产与快照
+4. Agent 通过受控权限与确认流参与执行
+5. 治理、限制、合规与数据区域能力前台可感知
 
-- 挑战赛（P3 之前不启动）
-- 企业工作台重建
-- 多 agent 自治编排（P2 之后）
-- Light/Dark 主题切换
-- PWA / Service Worker
+## 明确冻结项
+
+V9.0 执行期间，以下方向默认冻结，仅允许修复缺陷与保持兼容：
+
+- OAuth Apps 扩张
+- Automation 新能力
+- Webhook 新能力
+- 外部连接器扩张
+- 团队聊天的新功能扩张
+- IDE / repo / CI 相关任何新主线
+- 新的营销型动效组件引入
 
 ## 配套文档
 
-- 当前主线：`docs/roadmap-current.md`
-- **v8.0 战略底本：`docs/product-strategy-v8.md`**（市场定位 · 差异化 · 商业 · 成本 · 边界）
-- **v8.0 全维度路线图：`docs/roadmap-v8.md`**（八条工作线 · Alpha/Beta/GA）
-- v7.0 生产化升级总计划：`docs/roadmap-v7.md`（历史主线）
-- v5.0 路线图（历史存档）：`docs/roadmap-v5.md`
+- 当前主线索引：`docs/roadmap-current.md`
+- **V9.0 总路线图：`docs/ecosystem-roadmap-v9.0.md`**
+- **V9.0 实施计划书：`docs/ecosystem-implementation-plan-v9.0.md`**
+- v8 战略底本：`docs/product-strategy-v8.md`
+- v8 已落地进度：`docs/v8-progress.md`
+- v8 全维度路线图：`docs/roadmap-v8.md`
+- v7 历史路线图：`docs/roadmap-v7.md`
 - 历史演进：`docs/roadmap-history.md`
 - 发布与整改记录：`docs/release-notes.md`
-- 仓库整理报告：`docs/repository-cleanup-report.md`
 - 上线就绪标准：`docs/launch-readiness-standard.md`
 
-## v8.0 定位要点（2026-04-17 重新立项）
+## V9.0 当前判断
 
-v8.0 不是"再做一轮功能"，而是**把 VibeHub 重立项为"中国中文开发者的 AI+Human 协作网络"**：
+V9.0 不是“再做一轮功能”，而是：
 
-- **市场定位**：中国大陆 · 中文开发者 · VibeCoder + 小团队 + Agent Builder
-- **四条支柱**：广场讨论 · 项目画廊 · 团队协作 · **Agent 协作总线**
-- **唯一壁垒**：AI Agent 在人类团队里是可审计 / 可追溯 / 可被人工驳回的"正式队员"
-  - 人 ↔ 人、人 ↔ Agent、同用户 Agent ↔ Agent、跨用户 Agent ↔ Agent（受控开通）四种协作模式
-  - Agent 永远不自治；所有高风险写入必须走 `AgentConfirmationRequest`
-- **成本守恒**：平台不自营 LLM、不代烧用户 token；国产模型优先；月固定成本 < ¥3100
-- **商业模型**：Free / Pro（¥29/月）为当前公开套餐；Team 作为后续商业化扩展；MCP Developer Access 申请制（P1）
-- **不做项**：挑战赛 · 企业工作台 · Agent 自治 · 自营 LLM · 代码托管 · CI/CD · 海外优先 · 补贴增长
+- 把 `Team` 升格为 `Team Workspace`
+- 把合作意向升级为合规协作通道
+- 把 Agent 治理从“可调用”升级为“可控协作”
+- 把治理与中国化从“后台存在”升级为“用户可感知”
 
-v8.0 GA 十个门槛（摘录）：中国合规完成 · 支付宝/微信任一渠道真实商户跑通 · Redis 上线 · Agent 协作总线（角色牌+协作日志+Confirmation）端到端 · 首屏叙事讲透定位 · 设计系统组件层统一 · 运营仪表盘三北极星（WAHC / AO% / Agent 拒绝率） · AI 审核助手真实闭环 · 成本守恒 · 质量基线。
-
-完整细节见 `docs/product-strategy-v8.md` 与 `docs/roadmap-v8.md`。
+完整细节见 `docs/ecosystem-roadmap-v9.0.md` 与 `docs/ecosystem-implementation-plan-v9.0.md`。
