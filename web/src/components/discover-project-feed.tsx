@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useMemo } from "react";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { ProjectCard } from "@/components/project-card";
 import { useInfinitePageAppend } from "@/hooks/use-infinite-page-append";
 import type { Project } from "@/lib/types";
@@ -32,6 +33,7 @@ export function DiscoverProjectFeed({
   initialPagination,
   paginationModeHref,
 }: DiscoverProjectFeedProps) {
+  const { t } = useLanguage();
   const qsBase = useMemo(() => {
     const sp = new URLSearchParams();
     if (filters.query) sp.set("query", filters.query);
@@ -56,14 +58,14 @@ export function DiscoverProjectFeed({
         error?: { message?: string };
       };
       if (!res.ok || !json.data?.items || !json.data.pagination) {
-        throw new Error(json.error?.message ?? "Failed to load projects");
+        throw new Error(json.error?.message ?? t("discover.load_failed", "Failed to load projects"));
       }
       return {
         items: json.data.items,
         pagination: json.data.pagination,
       };
     },
-    [qsBase]
+    [qsBase, t]
   );
 
   const { items, loading, error, hasMore, sentinelRef } = useInfinitePageAppend({
@@ -90,16 +92,16 @@ export function DiscoverProjectFeed({
 
       <div className="flex flex-col items-center gap-3 pt-2">
         {loading && (
-          <p className="text-xs text-[var(--color-text-muted)]">Loading more…</p>
+          <p className="text-xs text-[var(--color-text-muted)]">{t("discover.loading_more", "Loading more…")}</p>
         )}
         {!hasMore && items.length > 0 && (
-          <p className="text-xs text-[var(--color-text-muted)] m-0">End of results</p>
+          <p className="text-xs text-[var(--color-text-muted)] m-0">{t("discover.end_of_results", "End of results")}</p>
         )}
         <Link
           href={paginationModeHref}
           className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] underline underline-offset-2"
         >
-          Prefer page-by-page navigation?
+          {t("discover.page_navigation", "Prefer page-by-page navigation?")}
         </Link>
       </div>
     </div>

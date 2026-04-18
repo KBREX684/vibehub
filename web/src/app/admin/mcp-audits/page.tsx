@@ -2,6 +2,9 @@ import Link from "next/link";
 import { Cpu } from "lucide-react";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listMcpInvokeAudits } from "@/lib/repository";
+import { TagPill } from "@/components/ui";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -24,6 +27,7 @@ function buildHref(base: Record<string, string | undefined>, overrides: Record<s
 export default async function AdminMcpAuditsPage({ searchParams }: Props) {
   const session = await getAdminSessionForPage();
   if (!session) return null;
+  const language = await getServerLanguage();
 
   const params = await searchParams;
   const tool = readString(params, "tool");
@@ -82,10 +86,10 @@ export default async function AdminMcpAuditsPage({ searchParams }: Props) {
             <article key={item.id} className="card p-4 space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.tool}</p>
-                <span className={`tag ${item.httpStatus >= 400 ? 'tag-red' : 'tag-green'}`}>{item.httpStatus}</span>
+                <TagPill accent={item.httpStatus >= 400 ? "error" : "success"} mono size="sm">{item.httpStatus}</TagPill>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)] m-0">User: {item.userId} · Auth: {item.apiKeyId ? `api_key:${item.apiKeyId}` : 'session'} · Agent: {item.agentBindingId ?? '—'}</p>
-              <p className="text-xs text-[var(--color-text-muted)] m-0">{new Date(item.createdAt).toLocaleString()} · Duration {item.durationMs ?? 'n/a'}ms · {item.clientIp ?? 'unknown ip'}</p>
+              <p className="text-xs text-[var(--color-text-muted)] m-0">{formatLocalizedDateTime(item.createdAt, language)} · Duration {item.durationMs ?? 'n/a'}ms · {item.clientIp ?? 'unknown ip'}</p>
               {item.errorCode ? <p className="text-xs text-[var(--color-error)] m-0">Error: {item.errorCode}</p> : null}
             </article>
           ))

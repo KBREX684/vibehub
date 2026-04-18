@@ -1,6 +1,7 @@
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listUsers } from "@/lib/repository";
 import { Users } from "lucide-react";
+import { TagPill } from "@/components/ui";
 
 export default async function AdminUsersPage() {
   // Layout already guards — this is a defence-in-depth check
@@ -9,10 +10,10 @@ export default async function AdminUsersPage() {
 
   const { items, pagination } = await listUsers({ page: 1, limit: 200 });
 
-  const ROLE_TAG: Record<string, string> = {
-    admin: "tag-red",
-    user:  "tag-blue",
-    guest: "tag",
+  const ROLE_TAG: Record<string, "error" | "info" | "default"> = {
+    admin: "error",
+    user:  "info",
+    guest: "default",
   };
 
   return (
@@ -43,7 +44,7 @@ export default async function AdminUsersPage() {
                 <td className="px-4 py-3 font-medium text-[var(--color-text-primary)]">{u.name}</td>
                 <td className="px-4 py-3 text-[var(--color-text-secondary)]">{u.email}</td>
                 <td className="px-4 py-3">
-                  <span className={`tag ${ROLE_TAG[u.role] ?? "tag"} capitalize`}>{u.role}</span>
+                  <TagPill accent={ROLE_TAG[u.role] ?? "default"} mono size="sm" className="capitalize">{u.role}</TagPill>
                 </td>
               </tr>
             ))}

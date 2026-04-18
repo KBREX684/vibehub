@@ -32,7 +32,8 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
 import { buildMcpV2Manifest } from "@/lib/mcp-v2-tools";
 import { buildOpenApiDocument } from "@/lib/openapi-spec";
-import { PageHeader, CopyButton, Badge, Particles, AnimatedSection, BlurText } from "@/components/ui";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { PageHeader, CopyButton, Badge, AnimatedSection } from "@/components/ui";
 
 function baseUrl() {
   const env = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
@@ -47,7 +48,7 @@ function abs(path: string) {
 
 export default async function DevelopersPage() {
   const session = await getSessionUserFromCookie();
-  const { t } = await getServerTranslator();
+  const { t, language } = await getServerTranslator();
 
   const BASE = baseUrl();
   const openApi = buildOpenApiDocument() as { info?: { version?: string } };
@@ -110,9 +111,9 @@ export default async function DevelopersPage() {
                   <Sparkles className="w-5 h-5 text-[var(--color-accent-cyan)]" aria-hidden="true" />
                 </div>
                 <div>
-                  <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                     {t("developers.v8.scenarios.cursor.title", "让 Cursor / Claude 在 VibeHub 里搜项目")}
-                  </BlurText>
+                  </h2>
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
                     {t(
                       "developers.v8.scenarios.cursor.desc",
@@ -145,7 +146,6 @@ export default async function DevelopersPage() {
 
           {/* Scenario 2 */}
           <AnimatedSection as="section" className="card p-6 space-y-4 relative overflow-hidden" delayMs={60}>
-            <Particles className="opacity-60" color="var(--color-accent-violet)" count={16} />
             <div className="relative z-10 space-y-4">
             <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
               <div className="flex items-start gap-3">
@@ -153,9 +153,9 @@ export default async function DevelopersPage() {
                   <Bot className="w-5 h-5 text-[var(--color-accent-violet)]" aria-hidden="true" />
                 </div>
                 <div>
-                  <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                     {t("developers.v8.scenarios.agent.title", "让你的 Agent 作为队员加入团队")}
-                  </BlurText>
+                  </h2>
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
                     {t(
                       "developers.v8.scenarios.agent.desc",
@@ -243,9 +243,9 @@ export default async function DevelopersPage() {
                   <Coins className="w-5 h-5 text-[var(--color-accent-apple)]" aria-hidden="true" />
                 </div>
                 <div>
-                  <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)] m-0">
+                  <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                     {t("developers.v8.scenarios.saas.title", "做第三方 Agent / SaaS")}
-                  </BlurText>
+                  </h2>
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1 leading-relaxed">
                     {t(
                       "developers.v8.scenarios.saas.desc",
@@ -319,7 +319,7 @@ export default async function DevelopersPage() {
               </div>
               <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
                 <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-tertiary)] mb-1">{t("developers.v8.sidebar.generated")}</div>
-                <div className="font-mono text-[var(--color-text-primary)]">{new Date(manifest.generatedAt).toISOString()}</div>
+                <div className="font-mono text-[var(--color-text-primary)]">{formatLocalizedDateTime(manifest.generatedAt, language)}</div>
               </div>
             </div>
           </section>
@@ -362,7 +362,7 @@ const CODE_BLOCK_CLASS =
 function CodeBlock({ code, language }: { code: string; language: string }) {
   return (
     <div className="relative group">
-      <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-3 right-3 z-10">
         <CopyButton value={code} size="sm" />
       </div>
       <pre className={CODE_BLOCK_CLASS}>

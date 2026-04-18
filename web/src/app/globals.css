@@ -231,27 +231,6 @@ p { line-height: 1.6; color: var(--color-text-secondary); }
   background: var(--color-bg-elevated);
 }
 
-/* === Tags & Badges === */
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.tag-blue, .tag-green, .tag-yellow, .tag-red, .tag-violet, .tag-cyan {
-  background: transparent;
-  color: var(--color-text-primary);
-  border-color: var(--color-border-strong);
-}
-
 /* === Buttons === */
 .btn {
   display: inline-flex;
@@ -346,12 +325,6 @@ pre, code {
   flex-wrap: wrap;
 }
 
-.tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 /* === Section divider === */
 .section-divider {
   height: 1px;
@@ -387,59 +360,6 @@ pre, code {
 .delay-200 { animation-delay: 200ms; }
 .delay-300 { animation-delay: 300ms; }
 .delay-400 { animation-delay: 400ms; }
-
-/* === P3-FE-1: Light theme tokens (html.light) === */
-.light {
-  --color-bg-canvas:          #fafafa;
-  --color-bg-surface:         #ffffff;
-  --color-bg-surface-hover:   #f4f4f5;
-  --color-bg-elevated:        #ffffff;
-  --color-bg-subtle:          rgba(0,0,0,0.03);
-
-  --color-text-primary:       #18181b;
-  --color-text-secondary:     #52525b;
-  --color-text-tertiary:      #71717a;
-  --color-text-inverse:       #fafafa;
-  --color-text-muted:         #a1a1aa;
-  --color-on-accent:          #FFFFFF;
-
-  --color-border:             rgba(0,0,0,0.08);
-  --color-border-subtle:      rgba(0,0,0,0.04);
-  --color-border-strong:      rgba(0,0,0,0.14);
-
-  --color-primary:            #18181b;
-  --color-primary-hover:      #27272a;
-  --color-primary-subtle:     rgba(0,0,0,0.06);
-  --color-surface-overlay:    rgba(0,0,0,0.05);
-  --color-surface-overlay-strong: rgba(0,0,0,0.1);
-  --color-overlay-scrim:      rgba(0,0,0,0.45);
-  --color-admin-bg:           #f5f5f5;
-  --color-contrast-border:    rgba(0,0,0,0.16);
-  --color-contrast-surface-hover: rgba(0,0,0,0.06);
-  --color-success-border:     rgba(52,211,153,0.25);
-  --color-warning-border:     rgba(251,191,36,0.25);
-  --color-warning-border-strong: rgba(251,191,36,0.3);
-  --color-error-border:       rgba(248,113,113,0.25);
-  --color-error-border-strong: rgba(248,113,113,0.35);
-  --color-info-border:        rgba(96,165,250,0.25);
-  --color-accent-apple-border: rgba(0,113,227,0.25);
-  --color-accent-violet-border: rgba(167,139,250,0.25);
-  --color-accent-cyan-border: rgba(34,211,238,0.25);
-  --color-enterprise-border:  rgba(52,211,153,0.25);
-  --color-spotlight-default:  rgba(0,0,0,0.05);
-  --color-spotlight-apple:    rgba(0,113,227,0.1);
-  --color-spotlight-violet:   rgba(167,139,250,0.12);
-  --color-spotlight-cyan:     rgba(34,211,238,0.12);
-  --color-spotlight-success:  rgba(52,211,153,0.1);
-
-  --secondary:                rgba(0,0,0,0.04);
-  --input:                    rgba(0,0,0,0.06);
-  --shadow-modal:             0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06);
-}
-
-.light .btn-primary {
-  color: var(--color-text-inverse);
-}
 
 /* === Markdown (README / previews) === */
 .markdown-body {
@@ -512,7 +432,7 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.035;
+  opacity: 0.02;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;

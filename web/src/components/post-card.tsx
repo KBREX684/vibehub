@@ -14,7 +14,7 @@ type MetricTone = "default" | "warning" | "primary";
  * call site instead of a 10+ token className copy-paste. Still uses
  * design-system tokens; no new colors.
  */
-function MetricButton({
+function MetricPill({
   tone,
   value,
   icon,
@@ -34,14 +34,13 @@ function MetricButton({
         ? "hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)]"
         : "hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]";
   return (
-    <button
-      type="button"
+    <span
       aria-label={ariaLabel}
       className={`inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-xs text-[var(--color-text-muted)] transition-colors ${toneClass}`}
     >
       {icon}
       {!onlyIcon && value !== undefined ? <span>{value}</span> : null}
-    </button>
+    </span>
   );
 }
 
@@ -96,7 +95,7 @@ export function PostCard({
         </div>
         <div className="flex items-center gap-1 relative z-20">
           {post.likeCount > 0 ? (
-            <MetricButton
+            <MetricPill
               tone="warning"
               value={post.likeCount}
               icon={<Heart className="w-3 h-3" aria-hidden="true" />}
@@ -104,14 +103,14 @@ export function PostCard({
             />
           ) : null}
           {post.bookmarkCount > 0 ? (
-            <MetricButton
+            <MetricPill
               tone="primary"
               value={post.bookmarkCount}
               icon={<Bookmark className="w-3 h-3" aria-hidden="true" />}
               ariaLabel={t("post.bookmarks_count", "{count} bookmarks").replace("{count}", String(post.bookmarkCount))}
             />
           ) : null}
-          <MetricButton
+          <MetricPill
             tone="default"
             onlyIcon
             icon={<MessageSquare className="w-3 h-3" aria-hidden="true" />}

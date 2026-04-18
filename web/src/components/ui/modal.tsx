@@ -48,9 +48,11 @@ export function Modal({ open, onClose, size = "md", title, ariaLabel, children, 
 
   // Focus trap: keep keyboard navigation within the open dialog.
   const panelRef = React.useRef<HTMLDivElement>(null);
+  const lastFocusedRef = React.useRef<HTMLElement | null>(null);
   const titleId = React.useId();
   React.useEffect(() => {
     if (!open) return;
+    lastFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
@@ -77,7 +79,10 @@ export function Modal({ open, onClose, size = "md", title, ariaLabel, children, 
       first?.focus();
     }
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      lastFocusedRef.current?.focus();
+    };
   }, [open]);
 
   if (!open) return null;
@@ -88,11 +93,11 @@ export function Modal({ open, onClose, size = "md", title, ariaLabel, children, 
       aria-modal="true"
       aria-label={ariaLabel ?? (typeof title === "string" ? title : "Dialog")}
       aria-labelledby={title ? titleId : undefined}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-4"
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-[var(--color-overlay-scrim)] backdrop-blur-sm"
         aria-hidden="true"
         onClick={onClose}
       />
@@ -101,7 +106,7 @@ export function Modal({ open, onClose, size = "md", title, ariaLabel, children, 
       <div
         ref={panelRef}
         className={[
-          "relative w-full rounded-[var(--radius-2xl)] border border-[var(--color-border-strong)]",
+          "relative my-auto w-full max-h-[min(100dvh-1.5rem,42rem)] rounded-[var(--radius-2xl)] border border-[var(--color-border-strong)]",
           "bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)]",
           "overflow-hidden",
           sizeClasses[size],
@@ -132,7 +137,7 @@ export function Modal({ open, onClose, size = "md", title, ariaLabel, children, 
             <X className="w-4 h-4" />
           </button>
         )}
-        <div className="p-5">{children}</div>
+        <div className="max-h-[calc(min(100dvh-1.5rem,42rem)-4.5rem)] overflow-y-auto overscroll-contain p-5">{children}</div>
       </div>
     </div>
   );

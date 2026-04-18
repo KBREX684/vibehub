@@ -5,6 +5,7 @@ import { AdminAiGenerateButton } from "@/components/admin-ai-generate-button";
 import { AdminAiDecisionActions } from "@/components/admin-ai-decision-actions";
 import { listStoredAdminAiSuggestionsByTargets } from "@/lib/admin-ai";
 import { FileText } from "lucide-react";
+import { TagPill } from "@/components/ui";
 
 export default async function AdminModerationPage() {
   const session = await getAdminSessionForPage();
@@ -40,17 +41,17 @@ export default async function AdminModerationPage() {
             <div key={post.id} className="card p-5 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{post.title}</h3>
-                <span className="tag tag-yellow shrink-0 capitalize">{post.reviewStatus}</span>
+                <TagPill accent="warning" mono size="sm" className="shrink-0 capitalize">{post.reviewStatus}</TagPill>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)] line-clamp-3">{post.body}</p>
-              <div className="tag-row">{post.tags.map((tag) => <span key={tag} className="tag">#{tag}</span>)}</div>
+              <div className="flex flex-wrap gap-1.5">{post.tags.map((tag) => <TagPill key={tag} accent="default" mono size="sm">#{tag}</TagPill>)}</div>
               {post.adminAi ? (
                 <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3 space-y-2">
                   <p className="text-[11px] font-semibold text-[var(--color-text-primary)] m-0">AI suggestion</p>
                   <p className="text-xs text-[var(--color-text-secondary)] m-0">{post.adminAi.suggestion}</p>
                   <p className="text-[10px] text-[var(--color-text-muted)] m-0">Risk: {post.adminAi.riskLevel} · Confidence: {post.adminAi.confidence?.toFixed(2) ?? 'n/a'}</p>
                   <p className="text-[10px] text-[var(--color-text-muted)] m-0">Queue: {post.adminAi.queue ?? 'moderation-standard'} · Priority: {post.adminAi.priority ?? 'normal'} · Decision: {post.adminAi.adminDecision}</p>
-                  {post.adminAi.labels?.length ? <div className="tag-row">{post.adminAi.labels.map((label) => <span key={label} className="tag">{label}</span>)}</div> : null}
+                  {post.adminAi.labels?.length ? <div className="flex flex-wrap gap-1.5">{post.adminAi.labels.map((label) => <TagPill key={label} accent="default" mono size="sm">{label}</TagPill>)}</div> : null}
                   <AdminAiDecisionActions suggestionId={post.adminAi.id} currentDecision={post.adminAi.adminDecision} />
                 </div>
               ) : (

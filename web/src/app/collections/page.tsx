@@ -45,7 +45,7 @@ export default async function CollectionsIndexPage() {
               </p>
 
               <div className="mt-auto pt-5 border-t border-[var(--color-border)] flex items-center justify-between">
-                <span className="tag font-mono text-xs">#{topic.tag}</span>
+                <TagPill accent="default" mono size="sm">#{topic.tag}</TagPill>
                 <div className="flex items-center gap-1 text-[var(--color-accent-cyan)] text-sm font-medium">
                   进入专题 <ArrowRight className="w-3.5 h-3.5" />
                 </div>

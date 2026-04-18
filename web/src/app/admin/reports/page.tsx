@@ -5,10 +5,14 @@ import { listReportTickets } from "@/lib/repository";
 import { AdminReportResolveActions } from "@/components/admin-report-resolve-actions";
 import { AdminAiGenerateButton } from "@/components/admin-ai-generate-button";
 import { AdminAiDecisionActions } from "@/components/admin-ai-decision-actions";
+import { TagPill } from "@/components/ui";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
 export default async function AdminReportsPage() {
   const session = await getAdminSessionForPage();
   if (!session) return null;
+  const language = await getServerLanguage();
 
   const { items, pagination } = await listReportTickets({ status: "all", page: 1, limit: 100, forAdmin: true });
 
@@ -30,7 +34,7 @@ export default async function AdminReportsPage() {
                 <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Report {ticket.id.slice(0, 10)}...</p>
                 <p className="text-xs text-[var(--color-text-muted)] m-0 mt-1">Target post: {ticket.targetId} · Reporter: {ticket.reporterId}</p>
               </div>
-              <span className={`tag ${ticket.status === 'open' ? 'tag-red' : 'tag-green'} capitalize`}>{ticket.status}</span>
+              <TagPill accent={ticket.status === "open" ? "error" : "success"} mono size="sm" className="capitalize">{ticket.status}</TagPill>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] m-0">{ticket.reason}</p>
             {ticket.adminAi ? (
@@ -39,7 +43,13 @@ export default async function AdminReportsPage() {
                 <p className="text-xs text-[var(--color-text-secondary)] m-0">{ticket.adminAi.suggestion}</p>
                 <p className="text-[10px] text-[var(--color-text-muted)] m-0">Risk: {ticket.adminAi.riskLevel} · Confidence: {ticket.adminAi.confidence?.toFixed(2) ?? 'n/a'}</p>
                 <p className="text-[10px] text-[var(--color-text-muted)] m-0">Queue: {ticket.adminAi.queue ?? 'reports-standard'} · Priority: {ticket.adminAi.priority ?? 'normal'} · Decision: {ticket.adminAi.adminDecision}</p>
-                {ticket.adminAi.labels?.length ? <div className="tag-row">{ticket.adminAi.labels.map((label) => <span key={label} className="tag">{label}</span>)}</div> : null}
+                {ticket.adminAi.labels?.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {ticket.adminAi.labels.map((label) => (
+                      <TagPill key={label} accent="default" mono size="sm">{label}</TagPill>
+                    ))}
+                  </div>
+                ) : null}
                 <AdminAiDecisionActions suggestionId={ticket.adminAi.id} currentDecision={ticket.adminAi.adminDecision} />
               </div>
             ) : (
@@ -47,8 +57,8 @@ export default async function AdminReportsPage() {
             )}
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-[var(--color-text-muted)] m-0">
-                Created {new Date(ticket.createdAt).toLocaleString()}
-                {ticket.resolvedAt ? ` · Resolved ${new Date(ticket.resolvedAt).toLocaleString()}` : ""}
+                Created {formatLocalizedDateTime(ticket.createdAt, language)}
+                {ticket.resolvedAt ? ` · Resolved ${formatLocalizedDateTime(ticket.resolvedAt, language)}` : ""}
               </p>
               {ticket.status === "open" ? <AdminReportResolveActions reportId={ticket.id} /> : <span className="text-xs text-[var(--color-text-muted)]">Closed by {ticket.resolvedBy ?? 'admin'}</span>}
             </div>

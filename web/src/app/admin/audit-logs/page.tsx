@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Settings } from "lucide-react";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listAuditLogs } from "@/lib/repository";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -24,6 +26,7 @@ function buildHref(base: Record<string, string | undefined>, overrides: Record<s
 export default async function AdminAuditLogsPage({ searchParams }: Props) {
   const session = await getAdminSessionForPage();
   if (!session) return null;
+  const language = await getServerLanguage();
 
   const params = await searchParams;
   const actorId = readString(params, "actorId");
@@ -80,7 +83,7 @@ export default async function AdminAuditLogsPage({ searchParams }: Props) {
           <tbody className="divide-y divide-[var(--color-border-subtle)]">
             {result.items.map((item) => (
               <tr key={item.id}>
-                <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{new Date(item.createdAt).toLocaleString()}</td>
+                <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{formatLocalizedDateTime(item.createdAt, language)}</td>
                 <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-secondary)]">{item.actorId}</td>
                 <td className="px-4 py-3 text-[var(--color-text-primary)]">{item.action}</td>
                 <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{item.entityType}:{item.entityId}</td>

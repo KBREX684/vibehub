@@ -80,10 +80,10 @@ export function resolveEntitledTier(subscription: SubscriptionEntitlementLike): 
   return end.getTime() > Date.now() ? subscription.tier : "free";
 }
 
-export function formatTierPrice(tier: SubscriptionTier) {
+export function formatTierPrice(tier: SubscriptionTier, language: "en" | "zh" | string = "zh") {
   const pricing = TIER_PRICING[tier];
-  if (pricing.priceMonthly === 0) return "免费";
-  return `¥${pricing.priceMonthly}/月`;
+  if (pricing.priceMonthly === 0) return language === "zh" ? "免费" : "Free";
+  return language === "zh" ? `¥${pricing.priceMonthly}/月` : `¥${pricing.priceMonthly}/mo`;
 }
 
 // ─── Gate helpers ─────────────────────────────────────────────────────────────

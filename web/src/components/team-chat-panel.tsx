@@ -98,7 +98,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       if (!res.ok) {
         if (mountedRef.current) {
           setHistoryState("error");
-          setError("Failed to load chat history");
+          setError(t("team.chat.history_error", "Failed to load chat history."));
         }
         return;
       }
@@ -119,10 +119,10 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     } catch {
       if (mountedRef.current) {
         setHistoryState("error");
-        setError("Unable to load chat history");
+        setError(t("team.chat.history_error", "Failed to load chat history."));
       }
     }
-  }, [teamSlug, isMember, currentUser]);
+  }, [currentUser, isMember, t, teamSlug]);
 
   // WebSocket connection
   const connect = useCallback(async () => {
@@ -139,21 +139,21 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       if (!tokenRes.ok) {
         const payload = await tokenRes.json().catch(() => null);
         setConnState("error");
-        setError(payload?.error?.message ?? "Failed to authorize team chat");
+        setError(payload?.error?.message ?? t("team.chat.error_authorize", "Failed to authorize team chat."));
         return;
       }
       const tokenJson = await tokenRes.json();
       const token = tokenJson?.data?.token as string | undefined;
       if (!token) {
         setConnState("error");
-        setError("Missing chat auth token");
+        setError(t("team.chat.error_missing_token", "Missing chat auth token."));
         return;
       }
       authTokenRef.current = token;
     } catch {
       setConnState("error");
       setUsingRestFallback(true);
-      setError("Unable to authorize chat connection");
+      setError(t("team.chat.error_authorize_connection", "Unable to authorize chat connection."));
       return;
     }
 
@@ -163,7 +163,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     } catch {
       setConnState("error");
       setUsingRestFallback(true);
-      setError("WebSocket not available");
+      setError(t("team.chat.error_connection_unavailable", "Realtime connection is unavailable."));
       return;
     }
     wsRef.current = ws;
@@ -245,10 +245,10 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       if (mountedRef.current) {
         setConnState("error");
         setUsingRestFallback(true);
-        setError("Connection error. Retrying…");
+        setError(t("team.chat.error_retrying", "Connection issue. Retrying…"));
       }
     };
-  }, [teamSlug, currentUser, isMember]);
+  }, [currentUser, isMember, t, teamSlug]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -318,7 +318,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
         .catch(() => {
           if (mountedRef.current) {
             setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-            setError("Failed to send message");
+            setError(t("team.chat.error_send", "Failed to send message."));
           }
         });
     }
@@ -361,7 +361,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
   // ── Main render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="card flex min-h-[24rem] max-h-[min(70vh,36rem)] flex-col overflow-hidden">
+    <div className="card flex min-h-0 max-h-[72vh] flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
@@ -398,10 +398,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       )}
 
       {/* Message list */}
-      <div
-        data-testid="team-chat-messages"
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5"
-      >
+      <div data-testid="team-chat-messages" className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-2.5">
         {historyState === "loading" ? (
           <div className="text-center py-8">
             <p className="text-xs text-[var(--color-text-muted)]">{t("team.chat.loading", "Loading recent messages…")}</p>

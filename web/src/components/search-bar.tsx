@@ -10,14 +10,14 @@ const SEARCH_INPUT_CLASS =
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
+  const canSubmit = query.trim().length >= 2;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
-    if (q.length >= 2) {
+    if (canSubmit) {
       router.push(`/search?q=${encodeURIComponent(q)}`);
     }
   };
@@ -35,22 +35,18 @@ export function SearchBar() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
         placeholder={t("search.placeholder")}
-        className={SEARCH_INPUT_CLASS}
-        style={{
-          borderColor: isFocused ? "var(--color-text-primary)" : undefined,
-        }}
-        aria-label={t("search.label")}
+        className={`${SEARCH_INPUT_CLASS} focus:border-[var(--color-text-primary)]`}
+        aria-label={t("common.search")}
       />
 
       {query.length > 0 && (
         <button
           type="submit"
-          className="absolute right-2 btn btn-primary text-xs px-4 py-2 flex items-center gap-1"
+          disabled={!canSubmit}
+          className="absolute right-2 btn btn-primary text-xs px-4 py-2 flex items-center gap-1 disabled:opacity-100"
         >
-          {t("search.button")}
+          {t("common.search")}
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       )}

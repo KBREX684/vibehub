@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FolderGit2, Bot, Sparkles } from "lucide-react";
-import { Magnet } from "@/components/ui";
 import { SearchBar } from "@/components/search-bar";
 import { ShinyHeroLine } from "@/components/visual/shiny-hero-line";
 
@@ -51,18 +50,14 @@ export function HomeHeroClient({
       </p>
 
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
-        <Magnet strength={5}>
-          <Link href={primaryCTA} className="btn btn-primary px-6 py-2.5 text-sm font-semibold">
-            <FolderGit2 className="w-4 h-4" aria-hidden="true" />
-            {primaryLabel}
-          </Link>
-        </Magnet>
-        <Magnet strength={5}>
-          <Link href={secondaryCTA} className="btn btn-secondary px-6 py-2.5 text-sm font-semibold">
-            <Bot className="w-4 h-4" aria-hidden="true" />
-            {secondaryLabel}
-          </Link>
-        </Magnet>
+        <Link href={primaryCTA} className="btn btn-primary px-6 py-2.5 text-sm font-semibold">
+          <FolderGit2 className="w-4 h-4" aria-hidden="true" />
+          {primaryLabel}
+        </Link>
+        <Link href={secondaryCTA} className="btn btn-secondary px-6 py-2.5 text-sm font-semibold">
+          <Bot className="w-4 h-4" aria-hidden="true" />
+          {secondaryLabel}
+        </Link>
       </div>
 
       <div className="max-w-xl mx-auto">

@@ -11,7 +11,7 @@ export function UpgradePlanCallout({ upgradeReason, className }: Props) {
   const { title, body } = UPGRADE_MESSAGES[upgradeReason];
   return (
     <div
-      className={`rounded-[var(--radius-md)] border border-[rgba(129,230,217,0.35)] bg-[var(--color-primary-subtle)] p-4 text-sm ${className ?? ""}`}
+      className={`rounded-[var(--radius-md)] border border-[var(--color-accent-cyan-border)] bg-[var(--color-primary-subtle)] p-4 text-sm ${className ?? ""}`}
     >
       <p className="font-semibold text-[var(--color-text-primary)] m-0 mb-1">{title}</p>
       <p className="text-[var(--color-text-secondary)] m-0 mb-3 text-xs leading-relaxed">{body}</p>

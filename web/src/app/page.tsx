@@ -32,7 +32,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { AnimatedSection, Badge, BlurText } from "@/components/ui";
+import { AnimatedSection, Badge } from "@/components/ui";
 
 export default async function HomePage() {
   const session = await getSessionUserFromCookie();
@@ -120,9 +120,9 @@ export default async function HomePage() {
             <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-accent-violet)] mb-2">
               {t("home.v8.agent_section.eyebrow", "差异化 · 仅 VibeHub")}
             </div>
-            <BlurText as="h2" className="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
+            <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
               {t("home.v8.agent_section.title", "Agent 是团队里的正式队员")}
-            </BlurText>
+            </h2>
             <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed max-w-2xl m-0 mt-2">
               {t(
                 "home.v8.agent_section.subtitle",
@@ -261,9 +261,9 @@ export default async function HomePage() {
           <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-text-tertiary)] mb-2">
             {t("home.v8.diff.eyebrow", "定位对比")}
           </div>
-          <BlurText as="h2" className="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
+          <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
             {t("home.v8.diff.title", "VibeHub 不是社区、不是看板、不是代码仓库")}
-          </BlurText>
+          </h2>
           <p className="text-sm text-[var(--color-text-secondary)] max-w-2xl m-0 mt-2 leading-relaxed">
             {t(
               "home.v8.diff.subtitle",

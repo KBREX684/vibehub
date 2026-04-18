@@ -74,7 +74,7 @@ export function AdminCollaborationReviewActions({ intentId }: Props) {
         </button>
         <button
           type="button"
-          className="btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[rgba(239,68,68,0.35)] hover:bg-[var(--color-error-subtle)]"
+          className="btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[var(--color-error-border-strong)] hover:bg-[var(--color-error-subtle)]"
           disabled={loading !== null}
           onClick={() => submit("reject")}
         >

@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { Bot, History, ListChecks, MessageSquareText } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { formatLocalizedDateTime } from "@/lib/formatting";
+import { TagPill } from "@/components/ui";
 
 interface Props {
   teamSlug: string;
@@ -116,7 +117,9 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
           {items.map((item) => (
             <div key={item.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="tag text-[10px] uppercase tracking-wide">{item.kind}</span>
+                <TagPill accent="default" mono size="sm" className="uppercase tracking-wide">
+                  {item.kind}
+                </TagPill>
                 <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">{labelForEntry(item)}</p>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">

@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { Users, GitFork } from "lucide-react";
-import { SpotlightCard } from "@/components/ui";
+import { useLanguage } from "@/app/context/LanguageContext";
+import { SpotlightCard, TagPill } from "@/components/ui";
 import type { TeamSummary } from "@/lib/types";
 
 const TEAM_CARD_INITIAL_CLASS =
   "w-10 h-10 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-base font-bold text-[var(--color-accent-violet)] shrink-0";
 
 export function TeamsGridClient({ teams }: { teams: TeamSummary[] }) {
+  const { t } = useLanguage();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {teams.map((team, i) => (
@@ -46,20 +49,20 @@ export function TeamsGridClient({ teams }: { teams: TeamSummary[] }) {
             <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
               <span className="flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" />
-                {team.memberCount} member{team.memberCount !== 1 ? "s" : ""}
+                {t("team.member_count", "{count} members").replace("{count}", String(team.memberCount))}
               </span>
               <span className="flex items-center gap-1">
                 <GitFork className="w-3.5 h-3.5" />
-                {team.projectCount} project{team.projectCount !== 1 ? "s" : ""}
+                {t("team.project_count", "{count} projects").replace("{count}", String(team.projectCount))}
               </span>
             </div>
 
             {/* Links */}
             {(team.githubOrgUrl || team.discordUrl || team.slackUrl) && (
               <div className="flex items-center gap-2 pt-3 border-t border-[var(--color-border-subtle)]">
-                {team.githubOrgUrl && <span className="tag tag-cyan">GitHub</span>}
-                {team.discordUrl && <span className="tag tag-violet">Discord</span>}
-                {team.slackUrl && <span className="tag tag-blue">Slack</span>}
+                {team.githubOrgUrl && <TagPill accent="cyan" mono size="sm">GitHub</TagPill>}
+                {team.discordUrl && <TagPill accent="violet" mono size="sm">Discord</TagPill>}
+                {team.slackUrl && <TagPill accent="info" mono size="sm">Slack</TagPill>}
               </div>
             )}
           </SpotlightCard>

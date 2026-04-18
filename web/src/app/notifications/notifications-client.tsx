@@ -2,29 +2,44 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ArrowRight, Check, CheckCheck } from "lucide-react";
+import {
+  ArrowRight,
+  BellDot,
+  Bot,
+  Bookmark,
+  Check,
+  CheckCheck,
+  CheckCircle2,
+  Heart,
+  MessageSquare,
+  ShieldAlert,
+  Star,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import type { InAppNotification } from "@/lib/types";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { formatLocalizedDateTime } from "@/lib/formatting";
 import { groupNotificationsForDisplay } from "./notification-grouping";
 import { apiFetch } from "@/lib/api-fetch";
 
-const KIND_ICONS: Record<string, string> = {
-  team_join_request: "users",
-  team_join_approved: "check",
-  team_join_rejected: "close",
-  team_task_assigned: "task",
-  team_task_ready_for_review: "review",
-  team_task_reviewed: "check",
-  agent_confirmation_required: "warning",
-  post_commented: "comment",
-  comment_replied: "reply",
-  post_liked: "heart",
-  project_bookmarked: "bookmark",
-  user_followed: "profile",
-  project_intent_received: "collab",
-  post_featured: "star",
-  collaboration_intent_status_update: "collab",
+const KIND_ICONS: Record<string, LucideIcon> = {
+  team_join_request: Users,
+  team_join_approved: CheckCircle2,
+  team_join_rejected: ShieldAlert,
+  team_task_assigned: Users,
+  team_task_ready_for_review: CheckCircle2,
+  team_task_reviewed: CheckCircle2,
+  agent_confirmation_required: Bot,
+  post_commented: MessageSquare,
+  comment_replied: MessageSquare,
+  post_liked: Heart,
+  project_bookmarked: Bookmark,
+  user_followed: UserPlus,
+  project_intent_received: Users,
+  post_featured: Star,
+  collaboration_intent_status_update: Users,
 };
 
 async function patchNotifications(ids?: string[], markAll?: boolean) {
@@ -94,7 +109,7 @@ export function NotificationsClient({
             onClick={markAll}
             disabled={isPending}
             data-testid="notifications-mark-all-read"
-            className="btn btn-ghost text-xs px-3 py-1.5 flex items-center gap-1.5 text-[var(--color-text-secondary)] disabled:opacity-50"
+            className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 disabled:opacity-100"
           >
             <CheckCheck className="w-3.5 h-3.5" />
             {t("notifications.mark_all_read")}
@@ -107,7 +122,7 @@ export function NotificationsClient({
         {displayRows.map((row) => {
           const primaryId = row.ids[0];
           const isUnread = !row.readAt;
-          const icon = KIND_ICONS[row.kind] ?? "notification";
+          const Icon = KIND_ICONS[row.kind] ?? BellDot;
           const date = formatLocalizedDateTime(row.createdAt, language, {
             month: "short",
             day: "numeric",
@@ -124,12 +139,12 @@ export function NotificationsClient({
               key={primaryId}
               className={`card p-4 flex items-start gap-3 transition-all ${
                 isUnread
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]"
+                  ? "border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[inset_3px_0_0_var(--color-primary)]"
                   : "border-[var(--color-border)] bg-[var(--color-bg-surface)]"
               }`}
             >
-              <span className="shrink-0 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[11px] font-mono uppercase text-[var(--color-text-secondary)]">
-                {icon}
+              <span className="shrink-0 flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)]">
+                <Icon className="h-4 w-4" aria-hidden="true" />
               </span>
 
               <div className="flex-1 min-w-0">
@@ -142,7 +157,7 @@ export function NotificationsClient({
                       <button
                         onClick={() => markOne(row.ids)}
                         data-testid={`notification-mark-read-${primaryId}`}
-                        className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-success)] transition-colors"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] transition-colors"
                         title={t("notifications.mark_as_read")}
                         aria-label={t("notifications.mark_as_read")}
                       >

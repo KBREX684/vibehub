@@ -1,5 +1,4 @@
 import type { NextRequest } from "next/server";
-import { z } from "zod";
 import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import {
   getCreatorProfileByUserId,
@@ -13,8 +12,6 @@ import { getRequestLogger, serializeError } from "@/lib/logger";
 import { readJsonObjectBody } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { createCreatorProfileSchema, patchCreatorProfileSchema } from "./profile-schemas";
-
-type _ProfileRouteUsesZod = z.infer<typeof createCreatorProfileSchema>;
 
 function clearableUrl(v: string | undefined): string | undefined {
   if (v === undefined) return undefined;

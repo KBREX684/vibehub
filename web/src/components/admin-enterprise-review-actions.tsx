@@ -46,7 +46,7 @@ export function AdminEnterpriseReviewActions({ applicationId }: { applicationId:
         <button type="button" className="btn btn-primary text-xs px-3 py-1.5" disabled={loading !== null} onClick={() => void submit("approve")}>
           {loading === "approve" ? "Approving..." : "Approve"}
         </button>
-        <button type="button" className="btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[rgba(239,68,68,0.35)] hover:bg-[var(--color-error-subtle)]" disabled={loading !== null} onClick={() => void submit("reject")}>
+        <button type="button" className="btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[var(--color-error-border-strong)] hover:bg-[var(--color-error-subtle)]" disabled={loading !== null} onClick={() => void submit("reject")}>
           {loading === "reject" ? "Rejecting..." : "Reject"}
         </button>
       </div>

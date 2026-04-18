@@ -3,18 +3,13 @@ import { ProjectCard } from "@/components/project-card";
 import { DiscoverProjectFeed } from "@/components/discover-project-feed";
 import { ProjectGalleryOrbitShell } from "@/components/visual/project-gallery-orbit-shell";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { formatLocalizedNumber } from "@/lib/formatting";
+import { getServerTranslator } from "@/lib/i18n";
 import { parsePagination } from "@/lib/pagination";
 import { getProjectFilterFacets, listFeaturedProjects, listProjectFeed, listTeams } from "@/lib/repository";
 import type { ProjectSortOrder, ProjectStatus } from "@/lib/types";
-import { AnimatedSection, BlurText } from "@/components/ui";
+import { AnimatedSection } from "@/components/ui";
 import { Search, Compass, X, SlidersHorizontal, Sparkles, Flame, Clock3, BrainCircuit } from "lucide-react";
-
-const STATUSES: { value: ProjectStatus; label: string }[] = [
-  { value: "idea",     label: "Idea" },
-  { value: "building", label: "Building" },
-  { value: "launched", label: "Launched" },
-  { value: "paused",   label: "Paused" },
-];
 
 function buildHref(
   base: Record<string, string | undefined>,
@@ -39,6 +34,7 @@ interface PageProps {
 
 export default async function DiscoverPage({ searchParams }: PageProps) {
   const sp = await searchParams;
+  const { t, language } = await getServerTranslator();
   const get = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
 
   const query      = get("query")?.trim();
@@ -69,6 +65,12 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   const sort: ProjectSortOrder =
     sortRaw === "hot" || sortRaw === "featured" || sortRaw === "recommended" ? (sortRaw as ProjectSortOrder) : "latest";
   const session = await getSessionUserFromCookie();
+  const statuses: { value: ProjectStatus; label: string }[] = [
+    { value: "idea", label: t("project.status.idea", "Idea") },
+    { value: "building", label: t("project.status.building", "Building") },
+    { value: "launched", label: t("project.status.launched", "Launched") },
+    { value: "paused", label: t("project.status.paused", "Paused") },
+  ];
 
   const [{ items, pagination }, facets, teamsPage, featuredToday] = await Promise.all([
     listProjectFeed({ query, tag, tech, status, team, viewerUserId: session?.userId, sort, page, limit }),
@@ -91,16 +93,23 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   };
 
   const TABS: Array<{ sort: ProjectSortOrder; label: string; icon: typeof Clock3 }> = [
-    { sort: "latest", label: "Latest", icon: Clock3 },
-    { sort: "hot", label: "Weekly Hot", icon: Flame },
-    { sort: "featured", label: "Editorial Picks", icon: Sparkles },
-    { sort: "recommended", label: "Recommended", icon: BrainCircuit },
+    { sort: "latest", label: t("discover.tab_latest", "Latest"), icon: Clock3 },
+    { sort: "hot", label: t("discover.tab_hot", "Weekly Hot"), icon: Flame },
+    { sort: "featured", label: t("discover.tab_featured", "Editorial Picks"), icon: Sparkles },
+    { sort: "recommended", label: t("discover.tab_recommended", "Recommended"), icon: BrainCircuit },
   ];
 
   const selectCls =
     "input-base appearance-none cursor-pointer";
 
   const hasFilters = !!(query || tag || tech || team || statusRaw);
+  const totalLabel = formatLocalizedNumber(pagination.total, language);
+  const currentPageLabel = formatLocalizedNumber(pagination.page, language);
+  const totalPagesLabel = formatLocalizedNumber(pagination.totalPages, language);
+  const resultSummary =
+    pagination.total === 1
+      ? t("discover.results_summary_one", "{count} project found").replace("{count}", totalLabel)
+      : t("discover.results_summary_many", "{count} projects found").replace("{count}", totalLabel);
 
   return (
     <main className="container pb-24 space-y-8 pt-8">
@@ -113,21 +122,21 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)] mb-0.5">
-              Discover Projects
+              {t("discover.title", "Discover Projects")}
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              Explore AI-native tools, agents, and open-source products.
+              {t("discover.subtitle", "Explore AI-native tools, agents, and open-source products.")}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/projects/new" className="btn btn-primary text-sm px-5 py-2 inline-flex">
-            New project
+            {t("discover.new_project", "New project")}
           </Link>
           {hasFilters && (
             <Link href="/discover" className="btn btn-ghost text-sm flex items-center gap-1.5 text-[var(--color-error)]">
               <X className="w-4 h-4" />
-              Clear filters
+              {t("discover.clear_filters", "Clear filters")}
             </Link>
           )}
         </div>
@@ -137,12 +146,14 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
         <AnimatedSection className="space-y-4" delayMs={80}>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[var(--color-featured)]" />
-            <BlurText as="h2" className="text-lg font-semibold text-[var(--color-text-primary)] m-0">
-              Featured today
-            </BlurText>
-            <span className="text-xs text-[var(--color-text-muted)]">Editorial picks — same rail as the home page</span>
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">
+              {t("discover.featured_today", "Featured today")}
+            </h2>
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {t("discover.featured_note", "Editorial picks — same rail as the home page")}
+            </span>
           </div>
-          <ProjectGalleryOrbitShell ariaLabel="Featured projects orbit" items={featuredOrbitItems} />
+          <ProjectGalleryOrbitShell ariaLabel={t("discover.featured_orbit_aria", "Featured projects orbit")} items={featuredOrbitItems} />
         </AnimatedSection>
       )}
 
@@ -166,13 +177,19 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
 
       {sort === "hot" && (
         <div className="card p-4 text-sm text-[var(--color-text-secondary)]">
-          Hot projects rank by saves, collaboration intents, recent updates, creator credit, and editorial picks.
+          {t(
+            "discover.hot_hint",
+            "Hot projects rank by saves, collaboration intents, recent updates, creator credit, and editorial picks."
+          )}
         </div>
       )}
 
       {sort === "recommended" && !session && (
         <div className="card p-4 text-sm text-[var(--color-text-secondary)]">
-          Recommended ranking becomes personalized after sign-in. Anonymous access falls back to a generic relevance order.
+          {t(
+            "discover.recommended_hint",
+            "Recommended ranking becomes personalized after sign-in. Anonymous access falls back to a generic relevance order."
+          )}
         </div>
       )}
 
@@ -187,19 +204,19 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
 
         <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-[var(--color-text-primary)]">
           <SlidersHorizontal className="w-4 h-4 text-[var(--color-primary-hover)]" />
-          Filters
+          {t("discover.filters_title", "Filters")}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Search</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">{t("discover.filter_search", "Search")}</span>
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input
                 className="input-base pl-8"
                 type="search"
                 name="query"
-                placeholder="Keywords..."
+                placeholder={t("discover.search_placeholder", "Keywords...")}
                 defaultValue={query ?? ""}
                 autoComplete="off"
               />
@@ -207,9 +224,9 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Tag</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">{t("discover.filter_tag", "Tag")}</span>
             <select className={selectCls} name="tag" defaultValue={tag ?? ""}>
-              <option value="">All Tags</option>
+              <option value="">{t("discover.all_tags", "All Tags")}</option>
               {facets.tags.map((t) => (
                 <option key={t} value={t}>#{t}</option>
               ))}
@@ -217,9 +234,9 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Tech Stack</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">{t("discover.filter_tech", "Tech Stack")}</span>
             <select className={selectCls} name="tech" defaultValue={tech ?? ""}>
-              <option value="">All Tech</option>
+              <option value="">{t("discover.all_tech", "All Tech")}</option>
               {facets.techStack.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -227,19 +244,19 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Stage</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">{t("discover.filter_stage", "Stage")}</span>
             <select className={selectCls} name="status" defaultValue={statusRaw ?? ""}>
-              <option value="">All Stages</option>
-              {STATUSES.map((s) => (
+              <option value="">{t("discover.all_stages", "All Stages")}</option>
+              {statuses.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Team</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">{t("discover.filter_team", "Team")}</span>
             <select className={selectCls} name="team" defaultValue={team ?? ""}>
-              <option value="">All Teams</option>
+              <option value="">{t("discover.all_teams", "All Teams")}</option>
               {teamsPage.items.map((t) => (
                 <option key={t.slug} value={t.slug}>{t.name}</option>
               ))}
@@ -252,14 +269,14 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             type="submit"
             className="btn btn-primary text-sm px-5 py-2"
           >
-            Apply Filters
+            {t("discover.apply_filters", "Apply Filters")}
           </button>
           <Link
             href="/discover"
             className="btn btn-ghost text-sm px-4 py-2"
           >
             <X className="w-3.5 h-3.5" />
-            Reset
+            {t("discover.reset_filters", "Reset")}
           </Link>
         </div>
       </form>
@@ -267,14 +284,13 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
       {/* Results header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          {pagination.total}{" "}
-          <span className="text-[var(--color-text-muted)] font-normal">
-            project{pagination.total !== 1 ? "s" : ""} found
-          </span>
+          {resultSummary}
         </h2>
         <span className="text-xs text-[var(--color-text-muted)]">
-          Page {pagination.page} / {pagination.totalPages}
-          {!classicPagination && " · Infinite scroll"}
+          {t("discover.page_summary", "Page {current} / {total}")
+            .replace("{current}", currentPageLabel)
+            .replace("{total}", totalPagesLabel)}
+          {!classicPagination && ` · ${t("discover.infinite_scroll", "Infinite scroll")}`}
         </span>
       </div>
 
@@ -285,13 +301,13 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             <Search className="w-6 h-6 text-[var(--color-text-muted)]" />
           </div>
           <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-2">
-            No projects match
+            {t("discover.empty_title", "No projects match")}
           </h3>
           <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-            Try adjusting your filters or search terms.
+            {t("discover.empty_description", "Try adjusting your filters or search terms.")}
           </p>
           <Link href="/discover" className="btn btn-secondary text-sm px-5 py-2 inline-flex">
-            Clear all filters
+            {t("discover.empty_cta", "Clear all filters")}
           </Link>
         </div>
       ) : classicPagination ? (
@@ -303,32 +319,32 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           </div>
 
           {pagination.totalPages > 1 && (
-            <nav className="flex justify-center gap-2 mt-8" aria-label="Pagination">
+            <nav className="flex justify-center gap-2 mt-8" aria-label={t("discover.pagination_aria", "Pagination")}>
               {pagination.page > 1 ? (
                 <Link
                   className="btn btn-secondary text-sm px-5 py-2"
                   href={buildHref(baseFilters, { page: String(pagination.page - 1) }, true)}
                 >
-                  Previous
+                  {t("common.previous", "Previous")}
                 </Link>
               ) : (
-                <span className="btn btn-secondary text-sm px-5 py-2 opacity-40 cursor-not-allowed">
-                  Previous
+                <span className="btn btn-secondary text-sm px-5 py-2 text-[var(--color-disabled-text)] border-[var(--color-disabled-border)] bg-[var(--color-disabled-bg)] cursor-not-allowed">
+                  {t("common.previous", "Previous")}
                 </span>
               )}
               <span className="btn btn-ghost text-sm px-4 py-2 text-[var(--color-text-muted)]">
-                {pagination.page} / {pagination.totalPages}
+                {currentPageLabel} / {totalPagesLabel}
               </span>
               {pagination.page < pagination.totalPages ? (
                 <Link
                   className="btn btn-secondary text-sm px-5 py-2"
                   href={buildHref(baseFilters, { page: String(pagination.page + 1) }, true)}
                 >
-                  Next
+                  {t("common.next", "Next")}
                 </Link>
               ) : (
-                <span className="btn btn-secondary text-sm px-5 py-2 opacity-40 cursor-not-allowed">
-                  Next
+                <span className="btn btn-secondary text-sm px-5 py-2 text-[var(--color-disabled-text)] border-[var(--color-disabled-border)] bg-[var(--color-disabled-bg)] cursor-not-allowed">
+                  {t("common.next", "Next")}
                 </span>
               )}
             </nav>

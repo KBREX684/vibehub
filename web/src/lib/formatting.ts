@@ -45,6 +45,14 @@ export function formatLocalizedTime(
   return new Intl.DateTimeFormat(localeForLanguage(language), options).format(date);
 }
 
+export function formatLocalizedNumber(
+  value: number,
+  language: Lang | string,
+  options?: Intl.NumberFormatOptions
+): string {
+  return new Intl.NumberFormat(localeForLanguage(language), options).format(value);
+}
+
 export function formatRelativeTime(
   value: Date | string | number,
   language: Lang | string

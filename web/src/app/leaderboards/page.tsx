@@ -29,13 +29,13 @@ import {
   Activity,
 } from "lucide-react";
 import { TagPill } from "@/components/ui";
+import { formatLocalizedDate, formatLocalizedNumber } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
-function formatWeekRangeLabel(weekStart: Date): string {
+function formatWeekRangeLabel(weekStart: Date, language: string): string {
   const end = new Date(weekStart.getTime());
   end.setUTCDate(end.getUTCDate() + 6);
-  const fmt = (d: Date) =>
-    `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${String(d.getUTCDate()).padStart(2, "0")}`;
-  return `${fmt(weekStart)} – ${fmt(end)}`;
+  return `${formatLocalizedDate(weekStart, language, { month: "short", day: "numeric" })} – ${formatLocalizedDate(end, language, { month: "short", day: "numeric" })}`;
 }
 
 function addDaysUtc(d: Date, days: number): Date {
@@ -49,9 +49,9 @@ function toWeekParam(weekStart: Date): string {
 }
 
 const RANK_STYLES: Record<number, string> = {
-  0: "bg-[var(--color-warning-subtle)] text-[var(--color-warning)] border-[rgba(251,191,36,0.3)]",
+  0: "bg-[var(--color-warning-subtle)] text-[var(--color-warning)] border-[var(--color-warning-border-strong)]",
   1: "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] border-[var(--color-border)]",
-  2: "bg-[var(--color-accent-violet-subtle)] text-[var(--color-accent-violet)] border-[rgba(167,139,250,0.3)]",
+  2: "bg-[var(--color-accent-violet-subtle)] text-[var(--color-accent-violet)] border-[var(--color-accent-violet-border)]",
 };
 
 const RANK_FALLBACK = "bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] border-[var(--color-border-subtle)]";
@@ -67,6 +67,7 @@ function LeaderRow({
   href,
   title,
   score,
+  language,
   scoreIcon,
   compact = false,
 }: {
@@ -74,6 +75,7 @@ function LeaderRow({
   href: string;
   title: string;
   score: number | string;
+  language?: string;
   scoreIcon?: React.ReactNode;
   compact?: boolean;
 }) {
@@ -90,7 +92,7 @@ function LeaderRow({
       </Link>
       <span className="shrink-0 inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-tertiary)]">
         {scoreIcon}
-        {score}
+        {typeof score === "number" ? formatLocalizedNumber(score, language ?? "en") : score}
       </span>
     </li>
   );
@@ -104,6 +106,7 @@ interface PageProps {
 }
 
 export default async function LeaderboardsPage({ searchParams }: PageProps) {
+  const language = await getServerLanguage();
   const sp = await searchParams;
   const weekRaw = typeof sp.week === "string" ? sp.week : undefined;
   const weekStart = weekRaw?.trim()
@@ -164,7 +167,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
           </Link>
           <div className="flex items-center gap-2 px-3 text-sm font-medium text-[var(--color-text-primary)]">
             <Calendar className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" aria-hidden="true" />
-            {formatWeekRangeLabel(effectiveWeek)}
+            {formatWeekRangeLabel(effectiveWeek, language)}
           </div>
           <Link
             href={`/leaderboards?week=${toWeekParam(nextWeek)}`}
@@ -184,7 +187,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
         </div>
 
         {invalidWeek ? (
-          <p className="mt-4 text-xs text-[var(--color-error)] bg-[var(--color-error-subtle)] inline-block px-3 py-1.5 rounded-[var(--radius-md)] border border-[rgba(248,113,113,0.25)]">
+          <p className="mt-4 text-xs text-[var(--color-error)] bg-[var(--color-error-subtle)] inline-block px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--color-error-border)]">
             Invalid date — showing current week
           </p>
         ) : null}
@@ -209,6 +212,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
                 href={`/discussions/${row.slug}`}
                 title={row.title}
                 score={row.score}
+                language={language}
               />
             ))
           )}
@@ -231,6 +235,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
                 href={`/projects/${row.slug}`}
                 title={row.title}
                 score={row.score}
+                language={language}
               />
             ))
           )}
@@ -259,6 +264,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
               rank={index}
               name={contributionNames[user.userId] ?? user.userId}
               score={user.score}
+              language={language}
             />
           ))}
         </div>
@@ -275,6 +281,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
               href={`/discussions/${row.slug}`}
               title={row.title}
               score={row.commentCount}
+              language={language}
               scoreIcon={<MessageSquare className="w-3 h-3" aria-hidden="true" />}
             />
           ))}
@@ -289,6 +296,7 @@ export default async function LeaderboardsPage({ searchParams }: PageProps) {
               href={`/projects/${row.slug}`}
               title={row.title}
               score={row.intentCount}
+              language={language}
               scoreIcon={<Users className="w-3 h-3" aria-hidden="true" />}
             />
           ))}
@@ -375,10 +383,12 @@ function ContributorCard({
   rank,
   name,
   score,
+  language,
 }: {
   rank: number;
   name: string;
   score: number;
+  language: string;
 }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-colors">
@@ -388,7 +398,7 @@ function ContributorCard({
           {name}
         </div>
         <div className="text-xs font-mono text-[var(--color-text-tertiary)]">
-          {score.toLocaleString()} credits
+          {formatLocalizedNumber(score, language)} credits
         </div>
       </div>
     </div>

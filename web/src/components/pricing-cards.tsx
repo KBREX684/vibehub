@@ -56,7 +56,7 @@ export function PricingCards() {
   const providerLabel = (provider: PaymentProviderKind) => {
     if (provider === "alipay") return t("pricing.provider_alipay", "Alipay");
     if (provider === "wechatpay") return t("pricing.provider_wechat", "WeChat Pay");
-    return "Stripe";
+    return t("pricing.provider_stripe", "Stripe");
   };
 
   async function startCheckout(tier: SubscriptionTier, paymentProvider: PaymentProviderKind) {
@@ -87,6 +87,7 @@ export function PricingCards() {
         {TIERS.map((tier) => {
           const pricing = TIER_PRICING[tier];
           const isPro = tier === "pro";
+          const tierLabel = isPro ? t("pricing.tier_pro", pricing.label) : t("pricing.tier_free", pricing.label);
           return (
             <div
               key={tier}
@@ -94,7 +95,7 @@ export function PricingCards() {
             >
               <div className="flex-grow flex flex-col">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-semibold tracking-tight m-0">{pricing.label}</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight m-0">{tierLabel}</h2>
                   {isPro && <span className={RECOMMENDED_TAG_CLASS}>{t("pricing.recommended", "Recommended")}</span>}
                 </div>
 
@@ -152,23 +153,23 @@ export function PricingCards() {
 
         <div className={COMPARE_HEADER_CLASS}>
           <span>{t("pricing.compare.feature", "Feature")}</span>
-          <span className="text-center">Free</span>
-          <span className="text-center">Pro</span>
+          <span className="text-center">{t("pricing.compare.free", "Free")}</span>
+          <span className="text-center">{t("pricing.compare.pro", "Pro")}</span>
         </div>
 
         <div className="divide-y divide-[var(--color-border)]">
           {FEATURE_ROWS.map((row) => (
             <div key={row.labelKey} className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_120px_120px] px-6 py-3 text-sm">
-              <span className="text-[var(--color-text-secondary)] mb-2 md:mb-0 md:sticky md:left-0 md:z-10 md:bg-[var(--color-bg-canvas)] md:pr-4 md:shadow-[12px_0_18px_-18px_rgba(0,0,0,0.65)]">
+              <span className="text-[var(--color-text-secondary)] mb-2 md:mb-0 md:sticky md:left-0 md:z-10 md:bg-[var(--color-bg-canvas)] md:pr-4">
                 {t(row.labelKey)}
               </span>
 
               <div className="flex md:hidden justify-between text-xs font-mono mb-1">
-                <span className="text-[var(--color-text-muted)]">Free</span>
+                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.free", "Free")}</span>
                 <span className="text-[var(--color-text-primary)]">{row.free === true ? "✓" : row.free === false ? "—" : row.free === "basic" ? t("pricing.compare.basic_tools", "Basic tools") : row.free}</span>
               </div>
               <div className="flex md:hidden justify-between text-xs font-mono">
-                <span className="text-[var(--color-text-muted)]">Pro</span>
+                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.pro", "Pro")}</span>
                 <span className="text-[var(--color-text-primary)] font-bold">{row.pro === true ? "✓" : row.pro === false ? "—" : row.pro === "all" ? t("pricing.compare.all_tools", "All unlocked tools") : row.pro}</span>
               </div>
 

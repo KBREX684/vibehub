@@ -44,7 +44,7 @@ export function PostReportButton({ postSlug }: { postSlug: string }) {
         type="button"
         disabled={busy}
         onClick={() => void submitReport()}
-        className="btn btn-ghost text-xs px-3 py-1.5 border border-[rgba(239,68,68,0.25)] text-[var(--color-error)] hover:bg-[var(--color-error-subtle)]"
+        className="btn btn-ghost text-xs px-3 py-1.5 border border-[var(--color-error-border)] text-[var(--color-error)] hover:bg-[var(--color-error-subtle)]"
       >
         {busy ? "Submitting..." : "Report post"}
       </button>

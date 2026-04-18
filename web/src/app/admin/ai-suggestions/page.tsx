@@ -4,6 +4,9 @@ import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listAdminAiSuggestions } from "@/lib/admin-ai";
 import { AdminAiDecisionActions } from "@/components/admin-ai-decision-actions";
 import type { AdminAiDecisionValue, AdminAiSuggestionTargetValue } from "@/lib/types";
+import { TagPill } from "@/components/ui";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -30,6 +33,7 @@ const RISKS = ["low", "medium", "high"] as const;
 export default async function AdminAiSuggestionsPage({ searchParams }: Props) {
   const session = await getAdminSessionForPage();
   if (!session) return null;
+  const language = await getServerLanguage();
 
   const params = await searchParams;
   const targetType = readString(params, "targetType") as AdminAiSuggestionTargetValue | undefined;
@@ -107,7 +111,7 @@ export default async function AdminAiSuggestionsPage({ searchParams }: Props) {
                   <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.targetType}</p>
                   <p className="text-xs text-[var(--color-text-muted)] m-0 mt-1">Target: {item.targetId}</p>
                 </div>
-                <span className={`tag ${item.riskLevel === "high" ? "tag-red" : item.riskLevel === "medium" ? "tag-yellow" : "tag-green"}`}>{item.riskLevel}</span>
+                <TagPill accent={item.riskLevel === "high" ? "error" : item.riskLevel === "medium" ? "warning" : "success"} mono size="sm">{item.riskLevel}</TagPill>
               </div>
               <p className="text-sm text-[var(--color-text-secondary)] m-0">{item.suggestion}</p>
               <p className="text-[11px] text-[var(--color-text-muted)] m-0">
@@ -116,12 +120,12 @@ export default async function AdminAiSuggestionsPage({ searchParams }: Props) {
               <p className="text-[11px] text-[var(--color-text-muted)] m-0">
                 Decision: {item.adminDecision} · Provider: {item.modelProvider ?? "heuristic"}
                 {item.modelName ? `/${item.modelName}` : ""}
-                {item.decidedAt ? ` · Decided ${new Date(item.decidedAt).toLocaleString()}` : ""}
+                {item.decidedAt ? ` · Decided ${formatLocalizedDateTime(item.decidedAt, language)}` : ""}
               </p>
               {item.labels?.length ? (
-                <div className="tag-row">
+                <div className="flex flex-wrap gap-1.5">
                   {item.labels.map((label) => (
-                    <span key={label} className="tag">{label}</span>
+                    <TagPill key={label} accent="default" mono size="sm">{label}</TagPill>
                   ))}
                 </div>
               ) : null}

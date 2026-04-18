@@ -63,7 +63,7 @@ export function ProjectCollaborationOwnerPanel({ projectSlug, intents, teams }: 
   }
 
   return (
-    <section className="card p-6 border border-[rgba(129,230,217,0.25)]">
+    <section className="card p-6 border border-[var(--color-accent-cyan-border)]">
       <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">Review collaboration intents</h2>
       <p className="text-xs text-[var(--color-text-secondary)] mb-4">
         Approve or reject pending requests. For join intents, you can add the applicant to one of your teams when you approve.
@@ -117,7 +117,7 @@ export function ProjectCollaborationOwnerPanel({ projectSlug, intents, teams }: 
               </button>
               <button
                 type="button"
-                className="btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[rgba(239,68,68,0.35)]"
+                className="btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[var(--color-error-border-strong)]"
                 disabled={loadingId !== null}
                 onClick={() => void review(intent.id, "reject")}
               >

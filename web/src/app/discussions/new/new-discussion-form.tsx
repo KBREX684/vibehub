@@ -3,11 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Plus, X } from "lucide-react";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { apiFetch } from "@/lib/api-fetch";
+import { TagPill } from "@/components/ui";
 import { DiscussionBodyField } from "./discussion-body-field";
 
 export function NewDiscussionForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [title, setTitle]   = useState("");
   const [body, setBody]     = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -34,12 +37,12 @@ export function NewDiscussionForm() {
           body:    JSON.stringify({ title, body, tags }),
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json?.error?.message ?? "Failed to create post");
+        if (!res.ok) throw new Error(json?.error?.message ?? t("discussions.new.create_failed", "Failed to create post."));
         const slug = json?.data?.post?.slug ?? json?.data?.slug;
         if (slug) router.push(`/discussions/${slug}`);
         else router.push("/discussions");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(err instanceof Error ? err.message : t("common.update_failed", "Update failed"));
       }
     });
   }
@@ -49,13 +52,13 @@ export function NewDiscussionForm() {
       {/* Title */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          Title <span className="text-[var(--color-error)]">*</span>
+          {t("discussions.new.field_title", "Title")} <span className="text-[var(--color-error)]">*</span>
         </label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="input-base"
-          placeholder="What do you want to discuss?"
+          placeholder={t("discussions.new.title_placeholder", "What do you want to discuss?")}
           maxLength={200}
           required
           minLength={5}
@@ -68,7 +71,7 @@ export function NewDiscussionForm() {
       {/* Tags */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          Tags (max 5)
+          {t("discussions.new.tags_label", "Tags")} ({t("discussions.new.tags_limit", "max 5")})
         </label>
         <div className="flex items-center gap-2">
           <input
@@ -76,7 +79,7 @@ export function NewDiscussionForm() {
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); }}}
             className="input-base flex-1"
-            placeholder="e.g. nextjs"
+            placeholder={t("discussions.new.tags_placeholder", "e.g. nextjs")}
             maxLength={32}
           />
           <button
@@ -91,7 +94,7 @@ export function NewDiscussionForm() {
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {tags.map((t) => (
-              <span key={t} className="tag flex items-center gap-1">
+              <TagPill key={t} accent="default" mono size="sm" className="flex items-center gap-1">
                 #{t}
                 <button
                   type="button"
@@ -100,14 +103,14 @@ export function NewDiscussionForm() {
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>
-              </span>
+              </TagPill>
             ))}
           </div>
         )}
       </div>
 
       {error && (
-        <div className="px-3 py-2 bg-[var(--color-error-subtle)] border border-[rgba(239,68,68,0.2)] rounded-[var(--radius-md)] text-xs text-[var(--color-error)]">
+        <div className="px-3 py-2 bg-[var(--color-error-subtle)] border border-[var(--color-error-border)] rounded-[var(--radius-md)] text-xs text-[var(--color-error)]">
           {error}
         </div>
       )}
@@ -116,21 +119,21 @@ export function NewDiscussionForm() {
         <button
           type="submit"
           disabled={isPending || !title.trim() || !body.trim()}
-          className="btn btn-primary text-sm px-6 py-2.5 flex items-center gap-2 disabled:opacity-40"
+          className="btn btn-primary text-sm px-6 py-2.5 flex items-center gap-2 disabled:opacity-100"
         >
           <Send className="w-4 h-4" />
-          {isPending ? "Submitting…" : "Submit for Review"}
+          {isPending ? t("discussions.new.submitting", "Submitting…") : t("discussions.new.submit", "Submit for review")}
         </button>
         <button
           type="button"
           onClick={() => window.history.back()}
           className="btn btn-ghost text-sm px-4 py-2.5"
         >
-          Cancel
+          {t("common.cancel", "Cancel")}
         </button>
       </div>
       <p className="text-[10px] text-[var(--color-text-muted)]">
-        Posts enter a moderation queue before appearing publicly.
+        {t("discussions.new.moderation_note", "Posts enter a moderation queue before appearing publicly.")}
       </p>
     </form>
   );

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
+import { getServerTranslator } from "@/lib/i18n";
 import Link from "next/link";
 import {
   ShieldAlert,
@@ -27,23 +28,24 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await getAdminSessionForPage();
+  const { t } = await getServerTranslator();
 
   if (!session) {
     redirect("/login?required=admin");
   }
 
   const NAV = [
-    { href: "/admin", label: "Home", icon: Home },
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/users", label: "Users", icon: Users },
-    { href: "/admin/moderation", label: "Moderation", icon: FileText },
-    { href: "/admin/collaboration", label: "Intents", icon: Link2 },
-    { href: "/admin/enterprise", label: "Enterprise", icon: Building2 },
-    { href: "/admin/reports", label: "Reports", icon: FileText },
-    { href: "/admin/health", label: "Health", icon: HeartPulse },
-    { href: "/admin/ai-suggestions", label: "AI suggestions", icon: Cpu },
-    { href: "/admin/audit-logs", label: "Audit logs", icon: Settings },
-    { href: "/admin/mcp-audits", label: "MCP audits", icon: BarChart2 },
+    { href: "/admin", label: t("admin.layout.home", "Home"), icon: Home },
+    { href: "/admin/dashboard", label: t("admin.layout.dashboard", "Dashboard"), icon: LayoutDashboard },
+    { href: "/admin/users", label: t("admin.layout.users", "Users"), icon: Users },
+    { href: "/admin/moderation", label: t("admin.layout.moderation", "Moderation"), icon: FileText },
+    { href: "/admin/collaboration", label: t("admin.layout.intents", "Intents"), icon: Link2 },
+    { href: "/admin/enterprise", label: t("admin.layout.enterprise", "Enterprise"), icon: Building2 },
+    { href: "/admin/reports", label: t("admin.layout.reports", "Reports"), icon: FileText },
+    { href: "/admin/health", label: t("admin.layout.health", "Health"), icon: HeartPulse },
+    { href: "/admin/ai-suggestions", label: t("admin.layout.ai_suggestions", "AI suggestions"), icon: Cpu },
+    { href: "/admin/audit-logs", label: t("admin.layout.audit_logs", "Audit logs"), icon: Settings },
+    { href: "/admin/mcp-audits", label: t("admin.layout.mcp_audits", "MCP audits"), icon: BarChart2 },
   ];
 
   return (
@@ -52,11 +54,13 @@ export default async function AdminLayout({
         <div className="px-5 py-4 border-b border-[var(--color-border-subtle)]">
           <Link href="/" className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] mb-3">
             <Home className="w-3.5 h-3.5" />
-            Back to site
+            {t("admin.layout.back_to_site", "Back to site")}
           </Link>
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-[var(--color-error)]" />
-            <span className="text-sm font-semibold text-[var(--color-text-primary)]">Admin Console</span>
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+              {t("admin.layout.console", "Admin Console")}
+            </span>
           </div>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">{session.name}</p>
         </div>
@@ -71,7 +75,7 @@ export default async function AdminLayout({
         <div className="px-5 py-3 border-t border-[var(--color-border-subtle)]">
           <span className={ADMIN_BADGE_CLASS}>
             <ShieldAlert className="w-2.5 h-2.5" aria-hidden="true" />
-            Admin
+            {t("admin.layout.badge", "Admin")}
           </span>
         </div>
       </aside>

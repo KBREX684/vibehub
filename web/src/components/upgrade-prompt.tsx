@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { Button } from "@/components/ui";
 
 const UPGRADE_BADGE_CLASS =
-  "w-12 h-12 mx-auto rounded-[var(--radius-lg)] bg-[var(--color-accent-apple-subtle)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center mb-5";
+  "w-12 h-12 mx-auto rounded-[var(--radius-lg)] bg-[var(--color-accent-apple-subtle)] border border-[var(--color-accent-apple-border)] flex items-center justify-center mb-5";
 
 interface Props {
   reason: UpgradeReason;
@@ -66,7 +66,7 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-sm"
+              className="absolute inset-0 bg-[var(--color-overlay-scrim)] backdrop-blur-sm"
               aria-hidden="true"
               onClick={handleDismiss}
             />
@@ -110,10 +110,10 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
     <motion.div
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-accent-apple-subtle)] bg-[var(--color-accent-apple-subtle)] p-3 my-3"
+      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-accent-apple-border)] bg-[var(--color-accent-apple-subtle)] p-3 my-3"
       role="status"
     >
-      <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[rgba(0,113,227,0.25)] flex items-center justify-center shrink-0">
+      <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-accent-apple-border)] flex items-center justify-center shrink-0">
         <Sparkles className="w-4 h-4 text-[var(--color-accent-apple)]" aria-hidden="true" />
       </div>
 

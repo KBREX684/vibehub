@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, startTransition, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LANGUAGE_COOKIE_KEY,
@@ -9,7 +9,9 @@ import {
   type Lang,
   isLang,
 } from "@/lib/i18n";
+
 const STORAGE_KEY = "vibehub-language";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 type LanguageContextType = {
   language: Lang;
@@ -34,6 +36,13 @@ function browserPreferredLanguage(initialLanguage: Lang): Lang {
   return nav.startsWith("zh") ? "zh" : initialLanguage;
 }
 
+function persistLanguage(language: Lang) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY, language);
+  document.documentElement.lang = language;
+  document.cookie = `${LANGUAGE_COOKIE_KEY}=${language}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+}
+
 export function LanguageProvider({
   children,
   initialLanguage = "en",
@@ -47,19 +56,14 @@ export function LanguageProvider({
   useEffect(() => {
     const preferred = browserPreferredLanguage(initialLanguage);
     setLanguageState(preferred);
+    persistLanguage(preferred);
     if (preferred !== initialLanguage) {
-      document.documentElement.lang = preferred;
-      document.cookie = `${LANGUAGE_COOKIE_KEY}=${preferred}; path=/; max-age=31536000; samesite=lax`;
-      router.refresh();
+      startTransition(() => router.refresh());
     }
   }, [initialLanguage, router]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, language);
-      document.documentElement.lang = language;
-      document.cookie = `${LANGUAGE_COOKIE_KEY}=${language}; path=/; max-age=31536000; samesite=lax`;
-    }
+    persistLanguage(language);
   }, [language]);
 
   const value = useMemo<LanguageContextType>(() => {
@@ -69,12 +73,8 @@ export function LanguageProvider({
       setLanguage: (nextLanguage) => {
         if (nextLanguage === language) return;
         setLanguageState(nextLanguage);
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(STORAGE_KEY, nextLanguage);
-          document.documentElement.lang = nextLanguage;
-          document.cookie = `${LANGUAGE_COOKIE_KEY}=${nextLanguage}; path=/; max-age=31536000; samesite=lax`;
-        }
-        router.refresh();
+        persistLanguage(nextLanguage);
+        startTransition(() => router.refresh());
       },
       t: translate,
     };

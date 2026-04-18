@@ -2,10 +2,13 @@ import Link from "next/link";
 import { HeartPulse } from "lucide-react";
 import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { getSystemHealthSnapshot } from "@/lib/system-health";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
 export default async function AdminHealthPage() {
   const session = await getAdminSessionForPage();
   if (!session) return null;
+  const language = await getServerLanguage();
 
   const snapshot = await getSystemHealthSnapshot({ includeRecentAlerts: true });
 
@@ -74,7 +77,7 @@ export default async function AdminHealthPage() {
                 </div>
                 <p className="text-sm text-[var(--color-text-primary)] mt-2 mb-1">{alert.message}</p>
                 <p className="text-xs text-[var(--color-text-secondary)] m-0">
-                  {new Date(alert.createdAt).toLocaleString()} · {alert.deliverySummary ?? "No delivery details"}
+                  {formatLocalizedDateTime(alert.createdAt, language)} · {alert.deliverySummary ?? "No delivery details"}
                 </p>
               </div>
             ))

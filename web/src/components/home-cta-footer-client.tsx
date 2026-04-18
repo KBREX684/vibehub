@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Terminal,
 } from "lucide-react";
-import { GradientText, Magnet } from "@/components/ui";
 
 interface HomeCtaFooterClientProps {
   eyebrowText: string;
@@ -32,24 +31,15 @@ export function HomeCtaFooterClient({
           <Clock className="w-3 h-3" aria-hidden="true" />
           {eyebrowText}
         </div>
-        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight m-0">
-          <GradientText animate speed={5}>
-            {title}
-          </GradientText>
-        </h2>
+        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">{title}</h2>
         <p className="text-sm text-[var(--color-text-secondary)] mb-2 max-w-lg mx-auto m-0 leading-relaxed">
           {description}
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <Magnet strength={6}>
-            <Link
-              href={primaryHref}
-              className="btn btn-primary px-7 py-2.5 text-sm font-semibold"
-            >
-              {primaryLabel}
-              <ArrowRight className="w-4 h-4" aria-hidden="true" />
-            </Link>
-          </Magnet>
+          <Link href={primaryHref} className="btn btn-primary px-7 py-2.5 text-sm font-semibold">
+            {primaryLabel}
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </Link>
           <Link
             href="/developers"
             className="btn btn-ghost px-6 py-2.5 text-sm font-semibold"

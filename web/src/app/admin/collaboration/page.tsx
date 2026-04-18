@@ -4,9 +4,13 @@ import { getAdminSessionForPage } from "@/lib/admin-auth";
 import { listCollaborationIntentsForModeration } from "@/lib/repository";
 import { AdminCollaborationReviewActions } from "@/components/admin-collaboration-review-actions";
 import { ArrowRight, Link2, ShieldAlert } from "lucide-react";
+import { TagPill } from "@/components/ui";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
 export default async function AdminCollaborationQueuePage() {
   const session = await getAdminSessionForPage();
+  const language = await getServerLanguage();
   if (!session) {
     return (
       <main className="container max-w-lg pb-24 pt-8">
@@ -80,17 +84,14 @@ export default async function AdminCollaborationQueuePage() {
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
                   {intent.intentType === "join" ? "Join Request" : "Recruitment Notice"}
                 </h3>
-                <span
-                  className={`tag ${
-                    intent.status === "pending"
-                      ? "tag-blue"
-                      : intent.status === "approved"
-                        ? "tag-green"
-                        : "tag-red"
-                  } capitalize`}
+                <TagPill
+                  accent={intent.status === "pending" ? "info" : intent.status === "approved" ? "success" : "error"}
+                  mono
+                  size="sm"
+                  className="capitalize"
                 >
                   {intent.status}
-                </span>
+                </TagPill>
               </div>
 
               <p className="text-sm text-[var(--color-text-secondary)]">{intent.message}</p>
@@ -105,7 +106,7 @@ export default async function AdminCollaborationQueuePage() {
               ) : (
                 <p className="text-xs text-[var(--color-text-muted)]">
                   Reviewed by {intent.reviewedBy ?? "unknown"} at{" "}
-                  {intent.reviewedAt ? new Date(intent.reviewedAt).toLocaleString() : "N/A"}
+                  {intent.reviewedAt ? formatLocalizedDateTime(intent.reviewedAt, language) : "N/A"}
                 </p>
               )}
             </article>

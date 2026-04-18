@@ -1,6 +1,6 @@
 import { PricingCards } from "@/components/pricing-cards";
 import { PricingPageHeader } from "@/components/pricing-page-header";
-import { AnimatedSection, BlurText } from "@/components/ui";
+import { AnimatedSection } from "@/components/ui";
 import { getServerTranslator } from "@/lib/i18n";
 
 export default async function PricingPage() {
@@ -21,9 +21,9 @@ export default async function PricingPage() {
       <PricingCards />
 
       <AnimatedSection as="section" style={{ maxWidth: 760, margin: "0 auto" }} className="space-y-5" delayMs={120}>
-        <BlurText as="h2" className="text-xl font-semibold text-[var(--color-text-primary)] tracking-tight">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
           {t("pricing.faq.title")}
-        </BlurText>
+        </h2>
         <div className="grid gap-3">
           {faqs.map((faqKey) => (
             <details key={faqKey} className="card group cursor-pointer overflow-hidden">

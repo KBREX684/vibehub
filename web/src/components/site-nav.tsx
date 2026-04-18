@@ -157,7 +157,7 @@ export function SiteNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="relative inline-flex min-w-[6.75rem] items-center justify-center px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-pill)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]"
+                className="relative inline-flex w-[6.8rem] xl:w-[7.1rem] items-center justify-center px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-pill)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]"
                 style={{ color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}
                 aria-current={active ? "page" : undefined}
               >
@@ -181,7 +181,7 @@ export function SiteNav() {
             type="button"
             onClick={openCommandPalette}
             aria-label={t("nav.open_search", "打开搜索")}
-            className="hidden sm:grid min-w-[15.5rem] grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-colors"
+            className="hidden sm:grid w-[15.75rem] grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-colors"
           >
             <Search className="w-3.5 h-3.5" aria-hidden="true" />
             <span className="min-w-0 text-left text-xs truncate">{t("search.placeholder")}</span>
@@ -193,7 +193,7 @@ export function SiteNav() {
             type="button"
             onClick={() => setLanguage(language === "en" ? "zh" : "en")}
             aria-label={t("nav.toggle_language")}
-            className="inline-flex min-w-[4.5rem] items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-colors"
+            className="inline-flex w-[4.75rem] items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-colors"
           >
             <Globe className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{language === "en" ? "EN" : "中"}</span>
@@ -209,7 +209,7 @@ export function SiteNav() {
                 aria-haspopup="menu"
                 aria-expanded={createMenuOpen}
                 aria-controls={createMenuId}
-                className="inline-flex min-w-[7.5rem] items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] text-xs font-semibold border border-[var(--color-text-primary)] hover:opacity-90 transition-opacity"
+                className="inline-flex w-[7.75rem] items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] text-xs font-semibold border border-[var(--color-text-primary)] hover:opacity-90 transition-opacity"
               >
                 <FolderPlus className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{t("nav.quick.create", "创建")}</span>
@@ -258,7 +258,7 @@ export function SiteNav() {
             <Link
               href="/notifications"
               aria-label={t("nav.notifications")}
-              className="relative p-2 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors"
             >
               <Bell className="w-4 h-4" aria-hidden="true" />
               {unreadCount > 0 ? (
@@ -346,7 +346,7 @@ export function SiteNav() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link href="/login" className="btn btn-primary min-w-[6.25rem] justify-center text-sm px-4 py-1.5">
+              <Link href="/login" className="btn btn-primary w-[6.5rem] justify-center text-sm px-4 py-1.5">
                 {t("auth.sign_in")}
               </Link>
             )
@@ -376,58 +376,63 @@ export function SiteNav() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.16 }}
-            className="md:hidden absolute top-full inset-x-0 border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)]/90 backdrop-blur-md shadow-[var(--shadow-modal)]"
+            className="md:hidden absolute top-full inset-x-0 z-[60] border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)] shadow-[var(--shadow-modal)]"
           >
-            <nav aria-label={t("a11y.mobile_navigation", "移动端导航")} className="container py-3 flex max-h-[calc(100vh-3.5rem)] flex-col gap-1 overflow-y-auto">
-              {NAV_LINKS.map((link) => {
-                const active = isActive(link);
-                return (
+            <div className="container py-3">
+              <nav
+                aria-label={t("a11y.mobile_navigation", "移动端导航")}
+                className="relative z-[61] flex max-h-[calc(100vh-5rem)] flex-col gap-1 overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] px-3 py-3 shadow-[var(--shadow-modal)]"
+              >
+                {NAV_LINKS.map((link) => {
+                  const active = isActive(link);
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`px-3 py-2.5 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
+                        active
+                          ? "bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
+                          : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)]"
+                      }`}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {t(link.key)}
+                    </Link>
+                  );
+                })}
+                {user ? (
+                  <>
+                    <div className="border-t border-[var(--color-border)] mt-2 pt-2" />
+                    <div className="grid grid-cols-3 gap-2 px-1">
+                      {createItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setMobileOpen(false)}
+                            className="flex flex-col items-center justify-center gap-1 px-2 py-3 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                          >
+                            <Icon className="w-4 h-4" aria-hidden="true" />
+                            <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+                {!loading && !user ? (
                   <Link
-                    key={link.href}
-                    href={link.href}
+                    href="/login"
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2.5 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
-                      active
-                        ? "bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
-                        : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)]"
-                    }`}
-                    aria-current={active ? "page" : undefined}
+                    className="btn btn-primary w-full mt-2 text-center"
                   >
-                    {t(link.key)}
+                    {t("auth.sign_in")}
                   </Link>
-                );
-              })}
-              {user ? (
-                <>
-                  <div className="border-t border-[var(--color-border)] mt-2 pt-2" />
-                  <div className="grid grid-cols-3 gap-2 px-1">
-                    {createItems.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setMobileOpen(false)}
-                          className="flex flex-col items-center justify-center gap-1 px-2 py-3 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                        >
-                          <Icon className="w-4 h-4" aria-hidden="true" />
-                          <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : null}
-              {!loading && !user ? (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="btn btn-primary w-full mt-2 text-center"
-                >
-                  {t("auth.sign_in")}
-                </Link>
-              ) : null}
-            </nav>
+                ) : null}
+              </nav>
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>

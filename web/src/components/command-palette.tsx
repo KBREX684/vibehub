@@ -39,6 +39,7 @@ export function CommandPalette() {
   const pathname = usePathname();
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -65,11 +66,13 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (!open) return;
+    lastFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     inputRef.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
+      lastFocusedRef.current?.focus();
     };
   }, [open]);
 
@@ -174,7 +177,7 @@ export function CommandPalette() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-start justify-center px-4 py-20">
+    <div className="fixed inset-0 z-[120] flex items-start justify-center px-3 py-4 sm:px-4 sm:py-20">
       <button
         type="button"
         aria-label={t("search.close")}
@@ -185,7 +188,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label={t("search.dialog_label")}
-        className="relative flex w-full max-w-2xl max-h-[min(80vh,44rem)] flex-col overflow-hidden rounded-[24px] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)]"
+        className="relative flex w-full max-w-2xl max-h-[min(100dvh-2rem,44rem)] flex-col overflow-hidden rounded-[20px] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)] sm:rounded-[24px]"
       >
         <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
           <Search className="h-4 w-4 text-[var(--color-text-muted)]" />
@@ -197,13 +200,17 @@ export function CommandPalette() {
             placeholder={t("search.placeholder")}
             className="w-full bg-transparent text-sm text-[var(--color-text-primary)] caret-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
             style={{ colorScheme: "dark" }}
+            aria-controls="command-palette-results"
+            aria-activedescendant={
+              flattenedResults[selectedIndex] ? `command-palette-option-${selectedIndex}` : undefined
+            }
           />
           <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1 text-[10px] text-[var(--color-text-muted)]">
             Esc
           </kbd>
         </div>
 
-        <div className="min-h-0 overflow-y-auto">
+        <div id="command-palette-results" className="min-h-0 overflow-y-auto overscroll-contain">
           {debouncedQuery.length < MIN_QUERY_LENGTH ? (
             <div className="px-5 py-10 text-center">
               <p className="text-sm text-[var(--color-text-secondary)]">
@@ -252,6 +259,7 @@ export function CommandPalette() {
                       return (
                         <li key={`${item.type}-${item.id}`}>
                           <button
+                            id={`command-palette-option-${index}`}
                             type="button"
                             onMouseEnter={() => setSelectedIndex(index)}
                             onClick={() => navigateToResult(item)}

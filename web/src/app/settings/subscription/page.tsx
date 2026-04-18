@@ -4,7 +4,7 @@ import { listBillingRecordsForUser } from "@/lib/repositories/billing.repository
 import { formatTierPrice, getLimits, resolveEntitledTier, TIER_PRICING } from "@/lib/subscription";
 import { getPaymentProviderReadiness } from "@/lib/billing/provider-config";
 import { Badge } from "@/components/ui";
-import { formatLocalizedDate, formatLocalizedDateTime } from "@/lib/formatting";
+import { formatLocalizedDate, formatLocalizedDateTime, formatLocalizedNumber } from "@/lib/formatting";
 import { getServerLanguage, getServerTranslator } from "@/lib/i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -17,7 +17,7 @@ interface Props {
 function providerLabel(provider: string | undefined, t: (key: string, fallback?: string) => string) {
   if (provider === "alipay") return t("pricing.provider_alipay", "Alipay");
   if (provider === "wechatpay") return t("pricing.provider_wechat", "WeChat Pay");
-  if (provider === "stripe") return "Stripe";
+  if (provider === "stripe") return t("pricing.provider_stripe", "Stripe");
   return t("subscription.provider_unlinked", "Not linked");
 }
 
@@ -90,7 +90,7 @@ export default async function SubscriptionPage({ searchParams }: Props) {
           <div>
             <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">{t("subscription.current_plan", "Current plan")}</p>
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{pricing.label}</h2>
-            <p className="text-sm text-[var(--color-text-secondary)]">{formatTierPrice(effectiveTier)}</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">{formatTierPrice(effectiveTier, language)}</p>
           </div>
           <Badge variant={subscription.status === "active" || subscription.status === "trialing" ? "success" : "error"} pill mono size="sm">
             {statusLabel}
@@ -111,7 +111,7 @@ export default async function SubscriptionPage({ searchParams }: Props) {
             <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_api_keys", "API keys")}</p>
           </div>
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
-            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.apiRatePerMinute.toLocaleString()}</p>
+            <p className="text-xl font-bold text-[var(--color-text-primary)]">{formatLocalizedNumber(limits.apiRatePerMinute, language)}</p>
             <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_rate", "API requests / minute")}</p>
           </div>
         </div>

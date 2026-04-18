@@ -8,7 +8,7 @@ import type { AdminAiDecisionValue } from "@/lib/types";
 const DECISIONS: Array<{ value: Exclude<AdminAiDecisionValue, "pending">; label: string; className: string }> = [
   { value: "accepted", label: "Accept", className: "btn btn-primary text-xs px-3 py-1.5" },
   { value: "modified", label: "Mark modified", className: "btn btn-ghost text-xs px-3 py-1.5" },
-  { value: "rejected", label: "Reject", className: "btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[rgba(239,68,68,0.35)] hover:bg-[var(--color-error-subtle)]" },
+  { value: "rejected", label: "Reject", className: "btn btn-ghost text-xs px-3 py-1.5 text-[var(--color-error)] border border-[var(--color-error-border-strong)] hover:bg-[var(--color-error-subtle)]" },
 ];
 
 export function AdminAiDecisionActions({ suggestionId, currentDecision }: { suggestionId: string; currentDecision?: AdminAiDecisionValue }) {

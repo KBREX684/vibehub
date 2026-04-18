@@ -6,6 +6,7 @@ import { listStoredAdminAiSuggestionsByTargets } from "@/lib/admin-ai";
 import { AdminAiGenerateButton } from "@/components/admin-ai-generate-button";
 import { AdminAiDecisionActions } from "@/components/admin-ai-decision-actions";
 import { AdminEnterpriseReviewActions } from "@/components/admin-enterprise-review-actions";
+import { TagPill } from "@/components/ui";
 
 export default async function AdminEnterprisePage() {
   const session = await getAdminSessionForPage();
@@ -36,7 +37,7 @@ export default async function AdminEnterprisePage() {
                 <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.organizationName || 'Unknown organization'}</p>
                 <p className="text-xs text-[var(--color-text-muted)] m-0 mt-1">Applicant: {item.userId} · Website: {item.organizationWebsite || '—'}</p>
               </div>
-              <span className={`tag ${item.status === 'approved' ? 'tag-green' : item.status === 'pending' ? 'tag-yellow' : item.status === 'rejected' ? 'tag-red' : 'tag'} capitalize`}>{item.status}</span>
+              <TagPill accent={item.status === "approved" ? "success" : item.status === "pending" ? "warning" : item.status === "rejected" ? "error" : "default"} mono size="sm" className="capitalize">{item.status}</TagPill>
             </div>
             {item.useCase ? <p className="text-sm text-[var(--color-text-secondary)] m-0">{item.useCase}</p> : null}
             {item.adminAi ? (
@@ -45,7 +46,11 @@ export default async function AdminEnterprisePage() {
                 <p className="text-xs text-[var(--color-text-secondary)] m-0">{item.adminAi.suggestion}</p>
                 <p className="text-[10px] text-[var(--color-text-muted)] m-0">Risk: {item.adminAi.riskLevel} · Confidence: {item.adminAi.confidence?.toFixed(2) ?? 'n/a'}</p>
                 <p className="text-[10px] text-[var(--color-text-muted)] m-0">Queue: {item.adminAi.queue ?? 'enterprise-verification'} · Priority: {item.adminAi.priority ?? 'normal'} · Decision: {item.adminAi.adminDecision}</p>
-                {item.adminAi.labels?.length ? <div className="tag-row">{item.adminAi.labels.map((label) => <span key={label} className="tag">{label}</span>)}</div> : null}
+                {item.adminAi.labels?.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.adminAi.labels.map((label) => <TagPill key={label} accent="default" mono size="sm">{label}</TagPill>)}
+                  </div>
+                ) : null}
                 <AdminAiDecisionActions suggestionId={item.adminAi.id} currentDecision={item.adminAi.adminDecision} />
               </div>
             ) : (

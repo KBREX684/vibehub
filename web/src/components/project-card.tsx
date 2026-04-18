@@ -6,7 +6,7 @@ import { Star, Zap, Users, Flame, Clock3, TrendingUp } from "lucide-react";
 import type { Project } from "@/lib/types";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { formatLocalizedDate } from "@/lib/formatting";
-import { Badge, SpotlightCard, TiltedCard } from "@/components/ui";
+import { Badge, SpotlightCard, TagPill } from "@/components/ui";
 
 const PROJECT_INITIAL_CLASS =
   "w-10 h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 text-base font-mono font-bold text-[var(--color-text-primary)]";
@@ -30,7 +30,7 @@ export function ProjectCard({
       {featured && (
         <>
           <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[var(--color-featured-highlight)]" />
-          <div className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)] shadow-[inset_0_0_0_1px_var(--color-featured-highlight)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--color-primary-subtle),transparent_42%)] opacity-70" />
         </>
       )}
 
@@ -60,15 +60,15 @@ export function ProjectCard({
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-base font-semibold tracking-tight text-[var(--color-text-primary)] leading-tight">
+              <h3 className="text-[1.05rem] font-semibold tracking-tight text-[var(--color-text-primary)] leading-tight">
                 {project.title}
               </h3>
               <div className="flex items-center gap-1.5 shrink-0">
                 {featured && (
-                  <Badge variant="warning" pill mono size="sm">
+                  <TagPill accent="warning" mono size="sm">
                     <Zap className="w-2.5 h-2.5" />
                     {t("project.featured", "Featured")}
-                  </Badge>
+                  </TagPill>
                 )}
                 <Badge
                   variant={
@@ -122,9 +122,9 @@ export function ProjectCard({
         <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-subtle)]">
           <div className="flex flex-wrap items-center gap-2">
             {project.tags.slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="default" pill mono size="sm">
+              <TagPill key={tag} accent="default" mono size="sm">
                 {tag}
-              </Badge>
+              </TagPill>
             ))}
             {project.tags.length > 3 && (
               <span className="text-xs text-[var(--color-text-muted)]">
@@ -166,14 +166,5 @@ export function ProjectCard({
       </div>
     </SpotlightCard>
   );
-
-  if (featured) {
-    return (
-      <TiltedCard className="block">
-        {cardContent}
-      </TiltedCard>
-    );
-  }
-
   return cardContent;
 }

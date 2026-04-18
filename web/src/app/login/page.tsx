@@ -6,7 +6,6 @@ import { sanitizeSameOriginRedirectPath } from "@/lib/redirect-safety";
 import { Zap, GitBranch, Shield, ArrowRight, AlertCircle } from "lucide-react";
 import { getServerTranslator } from "@/lib/i18n";
 import { EmailAuthForms } from "@/components/email-auth-forms";
-import { LoginAuroraBackground } from "@/components/login-aurora-background";
 import { Float } from "@/components/ui";
 
 interface Props {
@@ -32,8 +31,11 @@ export default async function LoginPage({ searchParams }: Props) {
     state_mismatch: t("auth.error.state_mismatch"),
     config_missing: t("auth.error.config_missing"),
     callback_error: t("auth.error.callback_error"),
-    github_email_signup_required: "Create your account with email first, then use GitHub as a linked sign-in method.",
-    verify_failed: "Email verification failed or link expired.",
+    github_email_signup_required: t(
+      "auth.error.github_email_signup_required",
+      "Create your account with email first, then use GitHub as a linked sign-in method."
+    ),
+    verify_failed: t("auth.error.verify_failed", "Email verification failed or link expired."),
   };
   const errorMsg = errorCode ? (ERROR_MESSAGES[errorCode] ?? t("auth.error.default")) : null;
   const verifiedOk = sp.verified === "1";
@@ -42,7 +44,6 @@ export default async function LoginPage({ searchParams }: Props) {
 
   return (
     <main className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-      <LoginAuroraBackground />
       <div className="relative z-10 w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -86,7 +87,7 @@ export default async function LoginPage({ searchParams }: Props) {
           )}
           {verifiedOk && (
             <div className="p-3 text-xs rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-[var(--color-text-secondary)]">
-              Email verified. You can sign in below.
+              {t("auth.verified_ok", "Email verified. You can sign in below.")}
             </div>
           )}
 

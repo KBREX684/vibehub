@@ -4,7 +4,7 @@ import { getFollowFeed, listFeaturedProjects, listPosts } from "@/lib/repository
 import type { Project, SessionUser, TeamSummary } from "@/lib/types";
 import { PostCard } from "@/components/post-card";
 import { ProjectCard } from "@/components/project-card";
-import { AnimatedSection, Avatar, BlurText } from "@/components/ui";
+import { AnimatedSection, Avatar, TagPill } from "@/components/ui";
 import { ProjectGalleryOrbitShell } from "@/components/visual/project-gallery-orbit-shell";
 import { getServerTranslator } from "@/lib/i18n";
 
@@ -73,7 +73,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
           </div>
         ) : feedPosts.length === 0 ? (
           <div className="card p-10 text-center text-[var(--color-text-muted)] text-sm">
-            {t("home.feed.no_discussions", "还没有讨论。来发起第一条吧！")}
+            {t("home.feed.empty_discussions", "还没有讨论。来发起第一条吧！")}
           </div>
         ) : (
           <div className="space-y-3">
@@ -90,9 +90,9 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[var(--color-text-primary)]" />
-                <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)]">
+                <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                   {t("home.feed.featured_today", "今日精选")}
-                </BlurText>
+                </h2>
               </div>
               <Link href="/discover" className="text-xs text-[var(--color-text-secondary)] hover:underline shrink-0">
                 {t("nav.discover")}
@@ -109,9 +109,9 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Terminal className="w-4 h-4 text-[var(--color-text-secondary)]" />
-              <BlurText as="h2" className="text-base font-semibold text-[var(--color-text-primary)]">
+              <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">
                 {t("home.feed.project_gallery", "项目画廊")}
-              </BlurText>
+              </h2>
             </div>
             <Link
               href="/discover"
@@ -160,9 +160,9 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{team.name}</span>
-                      <span className="tag tag-green shrink-0">
-                        {team.memberCount} {team.memberCount !== 1 ? t("teams.membersPlural") : t("teams.memberSingular")}
-                      </span>
+                      <TagPill accent="success" mono size="sm" className="shrink-0">
+                        {t("team.member_count", "{count} members").replace("{count}", String(team.memberCount))}
+                      </TagPill>
                     </div>
                     {team.mission && (
                       <p className="text-xs text-[var(--color-text-muted)] line-clamp-1">{team.mission}</p>

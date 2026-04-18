@@ -6,10 +6,14 @@ import { listAdminAiSuggestions } from "@/lib/admin-ai";
 import { getAdminDashboardSnapshot } from "@/lib/admin/metrics";
 import { StatCard } from "@/components/ui/stat-card";
 import { AdminMetricSparkline } from "@/components/admin-metric-sparkline";
+import { TagPill } from "@/components/ui";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage } from "@/lib/i18n";
 
 export default async function AdminDashboardPage() {
   const session = await getAdminSessionForPage();
   if (!session) return null;
+  const language = await getServerLanguage();
 
   const [snapshot, openReports, pendingAi] = await Promise.all([
     getAdminDashboardSnapshot(),
@@ -27,7 +31,7 @@ export default async function AdminDashboardPage() {
         <p className="text-sm text-[var(--color-text-secondary)] m-0">
           North-star collaboration metrics, support signals, and pending queues for moderators.
         </p>
-        <p className="text-xs text-[var(--color-text-muted)] m-0">Generated {new Date(snapshot.generatedAt).toLocaleString()}</p>
+        <p className="text-xs text-[var(--color-text-muted)] m-0">Generated {formatLocalizedDateTime(snapshot.generatedAt, language)}</p>
       </section>
 
       <section className="space-y-3">
@@ -87,9 +91,9 @@ export default async function AdminDashboardPage() {
                 <article key={ticket.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{ticket.id.slice(0, 10)}…</p>
-                    <span className={`tag ${ticket.adminAi?.riskLevel === "high" ? "tag-red" : ticket.adminAi?.riskLevel === "medium" ? "tag-yellow" : "tag"}`}>
+                    <TagPill accent={ticket.adminAi?.riskLevel === "high" ? "error" : ticket.adminAi?.riskLevel === "medium" ? "warning" : "default"} mono size="sm">
                       {ticket.adminAi?.riskLevel ?? "open"}
-                    </span>
+                    </TagPill>
                   </div>
                   <p className="text-xs text-[var(--color-text-secondary)] m-0">{ticket.reason}</p>
                   {ticket.adminAi ? <p className="text-[11px] text-[var(--color-text-muted)] m-0">{ticket.adminAi.suggestion}</p> : null}
@@ -115,7 +119,7 @@ export default async function AdminDashboardPage() {
                 <article key={item.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.targetType}</p>
-                    <span className={`tag ${item.riskLevel === "high" ? "tag-red" : item.riskLevel === "medium" ? "tag-yellow" : "tag-green"}`}>{item.riskLevel}</span>
+                    <TagPill accent={item.riskLevel === "high" ? "error" : item.riskLevel === "medium" ? "warning" : "success"} mono size="sm">{item.riskLevel}</TagPill>
                   </div>
                   <p className="text-xs text-[var(--color-text-secondary)] m-0">Queue: {item.queue ?? "admin-review"} · Priority: {item.priority ?? "normal"}</p>
                   <p className="text-[11px] text-[var(--color-text-muted)] m-0">{item.suggestion}</p>

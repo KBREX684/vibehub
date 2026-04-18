@@ -530,7 +530,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                               {t.title}
                             </Link>
                           </div>
-                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <div className="flex flex-col gap-1 opacity-100 transition-opacity">
                             <button
                               type="button"
                               onClick={() => void reorderTask(t.id, "up")}
