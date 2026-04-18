@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { MessageSquare, Heart, Bookmark, Star } from "lucide-react";
 import type { Post } from "@/lib/types";
+import { useLanguage } from "@/app/context/LanguageContext";
+import { formatLocalizedDate } from "@/lib/formatting";
 import { Avatar, Badge, SpotlightCard } from "@/components/ui";
 
 type MetricTone = "default" | "warning" | "primary";
@@ -45,22 +47,13 @@ function MetricButton({
 
 export function PostCard({
   post,
-  truncateBody,
   detailHref,
 }: {
   post: Post;
-  truncateBody?: number;
   detailHref?: string;
 }) {
-  const body =
-    truncateBody && post.body.length > truncateBody
-      ? `${post.body.slice(0, truncateBody).trim()}…`
-      : post.body;
-
-  const date = new Date(post.createdAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const { language, t } = useLanguage();
+  const date = formatLocalizedDate(post.createdAt, language, { month: "short", day: "numeric" });
 
   const inner = (
     <SpotlightCard className="card group transition-colors p-5" spotlightRadius={180}>
@@ -78,27 +71,27 @@ export function PostCard({
           <span className="text-xs text-[var(--color-text-muted)]">· {date}</span>
         </div>
         {post.featuredAt ? (
-          <Badge variant="warning" pill>
+          <Badge variant="warning" pill mono size="sm">
             <Star className="w-2.5 h-2.5" aria-hidden="true" />
-            Featured
+            {t("post.featured", "Featured")}
           </Badge>
         ) : null}
       </div>
 
-      <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-1.5 line-clamp-2 leading-snug group-hover:underline transition-colors">
+      <h3 className="text-base font-semibold tracking-tight text-[var(--color-text-primary)] mb-1.5 line-clamp-2 leading-snug group-hover:underline transition-colors">
         {post.title}
       </h3>
 
       <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed mb-3">
-        {body}
+        {post.body}
       </p>
 
       <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-subtle)]">
-        <div className="tag-row">
+        <div className="flex flex-wrap items-center gap-2">
           {post.tags.slice(0, 3).map((tag) => (
-            <span key={tag} className="tag">
+            <Badge key={tag} variant="default" pill mono size="sm">
               {tag}
-            </span>
+            </Badge>
           ))}
         </div>
         <div className="flex items-center gap-1 relative z-20">
@@ -107,7 +100,7 @@ export function PostCard({
               tone="warning"
               value={post.likeCount}
               icon={<Heart className="w-3 h-3" aria-hidden="true" />}
-              ariaLabel={`${post.likeCount} likes`}
+              ariaLabel={t("post.likes_count", "{count} likes").replace("{count}", String(post.likeCount))}
             />
           ) : null}
           {post.bookmarkCount > 0 ? (
@@ -115,14 +108,14 @@ export function PostCard({
               tone="primary"
               value={post.bookmarkCount}
               icon={<Bookmark className="w-3 h-3" aria-hidden="true" />}
-              ariaLabel={`${post.bookmarkCount} bookmarks`}
+              ariaLabel={t("post.bookmarks_count", "{count} bookmarks").replace("{count}", String(post.bookmarkCount))}
             />
           ) : null}
           <MetricButton
             tone="default"
             onlyIcon
             icon={<MessageSquare className="w-3 h-3" aria-hidden="true" />}
-            ariaLabel="Open discussion"
+            ariaLabel={t("notifications.open_post", "Open post")}
           />
         </div>
       </div>

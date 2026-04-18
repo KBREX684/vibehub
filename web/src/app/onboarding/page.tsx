@@ -26,92 +26,61 @@ export default async function OnboardingPage() {
     <main className="container max-w-3xl pb-24 pt-10">
       <OnboardingWizard
         labels={{
-          title: t("onboarding.title", "欢迎来到 VibeHub"),
-          subtitle: t(
-            "onboarding.subtitle",
-            "花 1 分钟完成三步，平台会根据你填的信息把合适的讨论、项目和队友推给你。"
-          ),
+          title: t("onboarding.title"),
+          subtitle: t("onboarding.subtitle"),
           stepOf: (current: number, total: number) =>
-            t("onboarding.step_of", "第 {{current}} / {{total}} 步")
+            t("onboarding.step_of")
               .replace("{{current}}", String(current))
               .replace("{{total}}", String(total)),
-          skip: t("onboarding.skip", "跳过"),
-          skipAll: t("onboarding.skip_all", "全部跳过"),
-          back: t("onboarding.back", "上一步"),
-          next: t("onboarding.next", "下一步"),
-          done: t("onboarding.done", "完成"),
+          skip: t("onboarding.skip"),
+          skipAll: t("onboarding.skip_all"),
+          back: t("onboarding.back"),
+          next: t("onboarding.next"),
+          done: t("onboarding.done"),
           s1: {
-            heading: t("onboarding.s1.heading", "介绍你自己"),
-            sub: t(
-              "onboarding.s1.sub",
-              "让同行知道你是谁、擅长什么。资料可随时在「设置」里修改。"
-            ),
-            nickname: t("onboarding.s1.nickname", "昵称"),
-            nicknameHint: t(
-              "onboarding.s1.nicknameHint",
-              "将显示在讨论、项目卡、团队页。"
-            ),
-            headline: t("onboarding.s1.headline", "一句话介绍"),
-            headlineHint: t(
-              "onboarding.s1.headlineHint",
-              "例如：一个做 AI 开发者工具的独立开发者。不超过 60 个字。"
-            ),
-            interestsLabel: t("onboarding.s1.interests", "擅长领域"),
-            interestsHint: t(
-              "onboarding.s1.interestsHint",
-              "至少选 1 个，最多 3 个；用于推荐流初始化。"
-            ),
+            heading: t("onboarding.s1.heading"),
+            sub: t("onboarding.s1.sub"),
+            nickname: t("onboarding.s1.nickname"),
+            nicknameHint: t("onboarding.s1.nicknameHint"),
+            nicknamePlaceholder: t("onboarding.s1.nicknamePlaceholder"),
+            headline: t("onboarding.s1.headline"),
+            headlineHint: t("onboarding.s1.headlineHint"),
+            headlinePlaceholder: t("onboarding.s1.headlinePlaceholder"),
+            interestsLabel: t("onboarding.s1.interests"),
+            interestsHint: t("onboarding.s1.interestsHint"),
           },
           s2: {
-            heading: t("onboarding.s2.heading", "你的 AI 工具栈"),
-            sub: t(
-              "onboarding.s2.sub",
-              "告诉我们你常用哪些 AI 编码工具，我们会在你完成绑定时给出针对性的 quick start。"
-            ),
-            note: t(
-              "onboarding.s2.note",
-              "此步骤不会自动创建任何 Agent 绑定 —— 绑定必须你主动去「我的 Agent」操作。"
-            ),
+            heading: t("onboarding.s2.heading"),
+            sub: t("onboarding.s2.sub"),
+            note: t("onboarding.s2.note"),
           },
           s3: {
-            heading: t("onboarding.s3.heading", "第一件事"),
-            sub: t(
-              "onboarding.s3.sub",
-              "选一件今天想做的事，我们把你带到该页面。你也可以直接跳过，进入首页。"
-            ),
-            postTitle: t("onboarding.s3.post.title", "发一条讨论"),
-            postDesc: t(
-              "onboarding.s3.post.desc",
-              "把今天学到的一个 AI+代码方法写成一条讨论。"
-            ),
-            projectTitle: t("onboarding.s3.project.title", "建一个项目"),
-            projectDesc: t(
-              "onboarding.s3.project.desc",
-              "把正在做的作品发布出来，让同行看到。"
-            ),
-            agentTitle: t("onboarding.s3.agent.title", "绑定我的第一个 Agent"),
-            agentDesc: t(
-              "onboarding.s3.agent.desc",
-              "让 Cursor / Claude / 自建 Agent 作为队员参与协作。"
-            ),
+            heading: t("onboarding.s3.heading"),
+            sub: t("onboarding.s3.sub"),
+            postTitle: t("onboarding.s3.post.title"),
+            postDesc: t("onboarding.s3.post.desc"),
+            projectTitle: t("onboarding.s3.project.title"),
+            projectDesc: t("onboarding.s3.project.desc"),
+            agentTitle: t("onboarding.s3.agent.title"),
+            agentDesc: t("onboarding.s3.agent.desc"),
           },
           tags: {
-            frontend: t("onboarding.tags.frontend", "前端"),
-            backend: t("onboarding.tags.backend", "后端"),
-            ai: t("onboarding.tags.ai", "AI / Agent"),
-            infra: t("onboarding.tags.infra", "基础设施"),
-            mobile: t("onboarding.tags.mobile", "移动端"),
-            game: t("onboarding.tags.game", "游戏 / 交互"),
-            design: t("onboarding.tags.design", "产品 / 设计"),
-            research: t("onboarding.tags.research", "研究 / 论文"),
+            frontend: t("onboarding.tags.frontend"),
+            backend: t("onboarding.tags.backend"),
+            ai: t("onboarding.tags.ai"),
+            infra: t("onboarding.tags.infra"),
+            mobile: t("onboarding.tags.mobile"),
+            game: t("onboarding.tags.game"),
+            design: t("onboarding.tags.design"),
+            research: t("onboarding.tags.research"),
           },
           tools: {
-            cursor: t("onboarding.tools.cursor", "Cursor"),
-            claude: t("onboarding.tools.claude", "Claude Code"),
-            openclaw: t("onboarding.tools.openclaw", "OpenClaw"),
-            codex: t("onboarding.tools.codex", "Codex CLI"),
-            custom: t("onboarding.tools.custom", "自建 Agent"),
-            none: t("onboarding.tools.none", "暂不使用"),
+            cursor: t("onboarding.tools.cursor"),
+            claude: t("onboarding.tools.claude"),
+            openclaw: t("onboarding.tools.openclaw"),
+            codex: t("onboarding.tools.codex"),
+            custom: t("onboarding.tools.custom"),
+            none: t("onboarding.tools.none"),
           },
         }}
       />

@@ -106,7 +106,7 @@ export function CommandPalette() {
           error?: { message?: string };
         };
         if (!response.ok) {
-          throw new Error(json.error?.message ?? "Search failed");
+          throw new Error(json.error?.message ?? "");
         }
         setResults(json.data?.results ?? []);
         setSelectedIndex(0);
@@ -114,14 +114,14 @@ export function CommandPalette() {
       .catch((err) => {
         if ((err as Error).name === "AbortError") return;
         setResults([]);
-        setError(err instanceof Error ? err.message : "Search failed");
+        setError(err instanceof Error && err.message ? err.message : t("search.request_failed", "Search is unavailable right now."));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
 
     return () => controller.abort();
-  }, [debouncedQuery, open]);
+  }, [debouncedQuery, open, t]);
 
   const groupedResults = useMemo(() => {
     return SECTIONS.map((section) => ({
@@ -178,14 +178,14 @@ export function CommandPalette() {
       <button
         type="button"
         aria-label={t("search.close")}
-        className="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-sm"
+        className="absolute inset-0 bg-[var(--color-overlay-scrim)] backdrop-blur-sm"
         onClick={closePalette}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t("search.dialog_label")}
-        className="relative w-full max-w-2xl overflow-hidden rounded-[24px] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)]"
+        className="relative flex w-full max-w-2xl max-h-[min(80vh,44rem)] flex-col overflow-hidden rounded-[24px] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-modal)]"
       >
         <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
           <Search className="h-4 w-4 text-[var(--color-text-muted)]" />
@@ -203,7 +203,7 @@ export function CommandPalette() {
           </kbd>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto">
+        <div className="min-h-0 overflow-y-auto">
           {debouncedQuery.length < MIN_QUERY_LENGTH ? (
             <div className="px-5 py-10 text-center">
               <p className="text-sm text-[var(--color-text-secondary)]">

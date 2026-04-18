@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/app/context/AuthContext";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { apiFetch } from "@/lib/api-fetch";
+import { formatLocalizedDateTime } from "@/lib/formatting";
 import { MarkdownDocument } from "@/components/markdown-document";
 
 // ─── API helpers ─────────────────────────────────────────────────────────────
@@ -33,7 +35,7 @@ async function apiPost(url: string, body: unknown) {
     body:    JSON.stringify(body),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json?.error?.message ?? "Request failed");
+  if (!res.ok) throw new Error(json?.error?.message ?? "");
   return json?.data;
 }
 
@@ -44,7 +46,7 @@ async function apiPatch(url: string, body: unknown) {
     body:    JSON.stringify(body),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json?.error?.message ?? "Request failed");
+  if (!res.ok) throw new Error(json?.error?.message ?? "");
   return json?.data;
 }
 
@@ -52,7 +54,7 @@ async function apiDelete(url: string) {
   const res = await apiFetch(url, { method: "DELETE" });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(json?.error?.message ?? "Delete failed");
+    throw new Error(json?.error?.message ?? "");
   }
 }
 
@@ -79,12 +81,13 @@ interface CommentInputProps {
 }
 
 function CommentInput({
-  placeholder = "Write a comment…",
+  placeholder,
   onSubmit,
   onCancel,
   autoFocus,
   submitTestId,
 }: CommentInputProps) {
+  const { t } = useLanguage();
   const [body, setBody]         = useState("");
   const [error, setError]       = useState<string | null>(null);
   const [isPending, start]      = useTransition();
@@ -98,7 +101,7 @@ function CommentInput({
         await onSubmit(text);
         setBody("");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to submit");
+        setError(err instanceof Error && err.message ? err.message : t("comments.submit_failed", "Unable to submit right now."))
       }
     });
   }
@@ -113,7 +116,7 @@ function CommentInput({
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("comments.write", "Write a comment")}
         rows={3}
         autoFocus={autoFocus}
         maxLength={2000}
@@ -130,7 +133,7 @@ function CommentInput({
           className="btn btn-primary text-xs px-4 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
         >
           <Send className="w-3 h-3" />
-          {isPending ? "Posting…" : "Post"}
+          {isPending ? t("comments.posting", "Posting…") : t("comments.post", "Post")}
         </button>
         {onCancel && (
           <button
@@ -138,7 +141,7 @@ function CommentInput({
             onClick={onCancel}
             className="btn btn-ghost text-xs px-3 py-1.5"
           >
-            Cancel
+            {t("common.cancel", "Cancel")}
           </button>
         )}
         <span className="text-[10px] text-[var(--color-text-muted)] ml-auto">
@@ -168,6 +171,7 @@ function CommentCard({
   onReplyAdded, onEdited, onDeleted,
   isReply = false, depth = 0,
 }: CommentCardProps) {
+  const { language, t } = useLanguage();
   const [showReply, setShowReply]   = useState(false);
   const [editing, setEditing]       = useState(false);
   const [editBody, setEditBody]     = useState(comment.body);
@@ -180,7 +184,7 @@ function CommentCard({
   const canEdit  = isAuthor;
   const canDelete = isAuthor || isAdmin;
 
-  const date = new Date(comment.createdAt).toLocaleDateString("en-US", {
+  const date = formatLocalizedDateTime(comment.createdAt, language, {
     month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
@@ -204,7 +208,7 @@ function CommentCard({
         onEdited(comment.id, text);
         setEditing(false);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Edit failed");
+        setError(err instanceof Error && err.message ? err.message : t("comments.edit_failed", "Unable to save your edit right now."));
       }
     });
   }
@@ -217,7 +221,7 @@ function CommentCard({
         onDeleted(comment.id, comment.parentCommentId);
         setConfirm(false);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Delete failed");
+        setError(err instanceof Error && err.message ? err.message : t("comments.delete_failed", "Unable to delete this comment right now."));
         setConfirm(false);
       }
     });
@@ -243,13 +247,13 @@ function CommentCard({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             {!isReply && depth < 1 && (
               <button
                 onClick={() => setShowReply((v) => !v)}
                 data-testid={`comment-reply-${comment.id}`}
                 className="p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary-subtle)] transition-colors"
-                title="Reply"
+                title={t("comments.reply", "Reply")}
               >
                 <CornerDownRight className="w-3.5 h-3.5" />
               </button>
@@ -259,7 +263,7 @@ function CommentCard({
                 onClick={() => { setEditing(true); setEditBody(comment.body); }}
                 data-testid={`comment-edit-${comment.id}`}
                 className="p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] hover:bg-[var(--color-accent-cyan-subtle)] transition-colors"
-                title="Edit"
+                title={t("comments.edit", "Edit")}
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -269,7 +273,7 @@ function CommentCard({
                 onClick={() => setConfirm(true)}
                 data-testid={`comment-delete-${comment.id}`}
                 className="p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-subtle)] transition-colors"
-                title="Delete"
+                title={t("comments.delete", "Delete")}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -299,10 +303,10 @@ function CommentCard({
                 className="btn btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-40"
               >
                 <Check className="w-3 h-3" />
-                {isPending ? "Saving…" : "Save"}
+                {isPending ? t("comments.saving", "Saving…") : t("common.save", "Save")}
               </button>
               <button onClick={() => setEditing(false)} className="btn btn-ghost text-xs px-3 py-1.5">
-                <X className="w-3 h-3" /> Cancel
+                <X className="w-3 h-3" /> {t("common.cancel", "Cancel")}
               </button>
             </div>
           </div>
@@ -315,18 +319,18 @@ function CommentCard({
 
         {/* Delete confirm */}
         {confirmDelete && (
-          <div className="mt-2 p-3 bg-[var(--color-error-subtle)] border border-[rgba(239,68,68,0.2)] rounded-[var(--radius-md)] flex items-center gap-2">
-            <p className="text-xs text-[var(--color-error)] flex-1">Delete this comment?</p>
+          <div className="mt-2 p-3 bg-[var(--color-error-subtle)] border border-[var(--color-error-border)] rounded-[var(--radius-md)] flex items-center gap-2">
+            <p className="text-xs text-[var(--color-error)] flex-1">{t("comments.delete_confirm", "Delete this comment?")}</p>
             <button
               onClick={handleDelete}
               disabled={isPending}
               data-testid={`comment-confirm-delete-${comment.id}`}
               className="btn text-xs px-3 py-1 bg-[var(--color-error)] text-[var(--color-on-accent)] disabled:opacity-40"
             >
-              {isPending ? "…" : "Delete"}
+              {isPending ? "…" : t("comments.delete", "Delete")}
             </button>
             <button onClick={() => setConfirm(false)} className="btn btn-ghost text-xs px-2 py-1">
-              Cancel
+              {t("common.cancel", "Cancel")}
             </button>
           </div>
         )}
@@ -340,7 +344,7 @@ function CommentCard({
       {showReply && (
         <div className="ml-8 mt-3">
           <CommentInput
-            placeholder="Write a reply…"
+            placeholder={t("comments.write_reply", "Write a reply")}
             onSubmit={handleReply}
             onCancel={() => setShowReply(false)}
             autoFocus
@@ -382,6 +386,7 @@ export function CommentThread({
   /** slug of the post — used for the /api/v1/posts/[slug]/comments endpoint */
   postSlug: string;
 }) {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>(initial);
 
@@ -437,7 +442,7 @@ export function CommentThread({
         <div className="card p-10 text-center">
           <MessageSquare className="w-8 h-8 text-[var(--color-text-muted)] mx-auto mb-3 opacity-50" />
           <p className="text-sm text-[var(--color-text-secondary)]">
-            No comments yet. Be the first!
+            {t("comments.empty", "No comments yet. Start the conversation.")}
           </p>
         </div>
       ) : (
@@ -462,7 +467,7 @@ export function CommentThread({
             <Avatar name={user.name} />
             <div className="flex-1">
               <CommentInput
-                placeholder="Add a comment…"
+                placeholder={t("comments.add", "Add a comment")}
                 onSubmit={addRoot}
                 submitTestId="comment-submit-root"
               />
@@ -473,9 +478,9 @@ export function CommentThread({
             <LogIn className="w-5 h-5 text-[var(--color-text-muted)]" />
             <p className="text-sm text-[var(--color-text-secondary)]">
               <Link href="/login" className="text-[var(--color-primary-hover)] hover:underline font-medium">
-                Sign in
+                {t("auth.sign_in", "Sign in")}
               </Link>{" "}
-              to join the discussion.
+              {t("comments.sign_in_hint", "to join the discussion.")}
             </p>
           </div>
         )}

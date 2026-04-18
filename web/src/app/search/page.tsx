@@ -2,20 +2,16 @@ import { unifiedSearch } from "@/lib/repository";
 import Link from "next/link";
 import { Search, Hash, Box, User, Briefcase, MessageSquare } from "lucide-react";
 import { SearchHighlight } from "@/components/search-highlight";
-import { Button, EmptyState, PageHeader, TagPill } from "@/components/ui";
+import { Button, EmptyState, PageHeader, Badge } from "@/components/ui";
+import { getServerTranslator } from "@/lib/i18n";
 
 const RESULT_TITLE_LINK_CLASS =
-  "text-base font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-accent-apple)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-sm)]";
+  "text-base font-semibold tracking-tight text-[var(--color-text-primary)] hover:text-[var(--color-accent-apple)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-sm)]";
 
 interface Props {
   searchParams: Promise<{ q?: string; type?: string }>;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  post: "Discussion",
-  project: "Project",
-  creator: "Creator",
-};
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   post: <MessageSquare className="w-4 h-4" aria-hidden="true" />,
   project: <Briefcase className="w-4 h-4" aria-hidden="true" />,
@@ -23,6 +19,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default async function SearchPage({ searchParams }: Props) {
+  const { t } = await getServerTranslator();
   const { q = "", type } = await searchParams;
   const validTypes = ["post", "project", "creator"] as const;
   type SearchType = (typeof validTypes)[number];
@@ -30,19 +27,26 @@ export default async function SearchPage({ searchParams }: Props) {
 
   const qTrim = q.trim();
   const results = qTrim.length >= 2 ? await unifiedSearch(qTrim, resolvedType) : [];
+  const typeLabels: Record<SearchType, string> = {
+    post: t("search.type_post", "Discussion"),
+    project: t("search.type_project", "Project"),
+    creator: t("search.type_creator", "Creator"),
+  };
+  const subtitle =
+    qTrim.length >= 2
+      ? t("search.results_subtitle", "Found {count} results for “{query}”.")
+          .replace("{count}", String(results.length))
+          .replace("{query}", qTrim)
+      : qTrim.length > 0
+        ? t("search.min_query_page", "Type at least 2 characters to search. Matches are highlighted in results.")
+        : t("search.page_hint", "Use the global search to find projects, discussions, and creators across VibeHub.");
 
   return (
     <main className="container pb-24 pt-8 space-y-6">
       <PageHeader
         icon={Search}
-        title="Search"
-        subtitle={
-          qTrim.length >= 2
-            ? `Found ${results.length} result${results.length === 1 ? "" : "s"} for \u201c${qTrim}\u201d`
-            : qTrim.length > 0
-              ? "Type at least 2 characters to search. Matches are highlighted in results."
-              : "Use the header search (⌘K on desktop). Results cover discussions, projects and creators."
-        }
+        title={t("search.page_title", "Search")}
+        subtitle={subtitle}
         actions={
           qTrim.length >= 2 ? (
             <div className="inline-flex p-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] border border-[var(--color-border)]">
@@ -55,7 +59,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 }`}
                 aria-current={!resolvedType ? "page" : undefined}
               >
-                <Box className="w-3.5 h-3.5" aria-hidden="true" /> All
+                <Box className="w-3.5 h-3.5" aria-hidden="true" /> {t("search.type_all", "All")}
               </Link>
               {validTypes.map((t) => (
                 <Link
@@ -68,7 +72,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   }`}
                   aria-current={resolvedType === t ? "page" : undefined}
                 >
-                  {TYPE_ICONS[t]} {TYPE_LABELS[t]}
+                  {TYPE_ICONS[t]} {typeLabels[t]}
                 </Link>
               ))}
             </div>
@@ -79,18 +83,18 @@ export default async function SearchPage({ searchParams }: Props) {
       {qTrim.length === 0 ? (
         <EmptyState
           icon={Search}
-          title="Search the platform"
-          description="Open the global search (⌘K on desktop), or jump to Discover or Discussions from the nav."
+          title={t("search.empty_title", "Search the platform")}
+          description={t("search.empty_description", "Use the global search to find projects, discussions, and creators, or jump into browse pages from the navigation.")}
           action={
             <div className="flex gap-2 justify-center">
               <Link href="/discover">
                 <Button variant="primary" size="sm">
-                  Discover projects
+                  {t("search.empty_cta_projects", "Discover projects")}
                 </Button>
               </Link>
               <Link href="/discussions">
                 <Button variant="secondary" size="sm">
-                  Browse discussions
+                  {t("search.empty_cta_discussions", "Browse discussions")}
                 </Button>
               </Link>
             </div>
@@ -100,19 +104,19 @@ export default async function SearchPage({ searchParams }: Props) {
       ) : qTrim.length < 2 ? (
         <EmptyState
           icon={Search}
-          title="Keep typing"
-          description="Short queries are noisy. Add one more character."
+          title={t("search.keep_typing_title", "Keep typing")}
+          description={t("search.keep_typing_description", "Short queries are noisy. Add one more character.")}
           block
         />
       ) : results.length === 0 ? (
         <EmptyState
           icon={Search}
-          title="No results"
-          description={`We couldn’t find anything matching “${qTrim}”. Try another keyword or clear the type filter.`}
+          title={t("search.no_results_title", "No results")}
+          description={t("search.no_results_page", "We couldn’t find anything matching “{query}”. Try another keyword or clear the type filter.").replace("{query}", qTrim)}
           action={
             <Link href="/discover">
               <Button variant="primary" size="sm">
-                Browse Discover
+                {t("search.empty_cta_projects", "Discover projects")}
               </Button>
             </Link>
           }
@@ -123,9 +127,9 @@ export default async function SearchPage({ searchParams }: Props) {
           {results.map((item) => (
             <article key={`${item.type}-${item.id}`} className="card p-5 space-y-3">
               <div className="flex items-center gap-3 flex-wrap">
-                <TagPill accent="default" size="sm">
-                  {TYPE_ICONS[item.type]} {TYPE_LABELS[item.type]}
-                </TagPill>
+                <Badge variant="default" pill mono size="sm">
+                  {TYPE_ICONS[item.type]} {typeLabels[item.type as SearchType]}
+                </Badge>
                 <Link
                   href={`/${item.type === "post" ? "discussions" : item.type === "creator" ? "creators" : "projects"}/${item.slug}`}
                   className={RESULT_TITLE_LINK_CLASS}
@@ -141,9 +145,9 @@ export default async function SearchPage({ searchParams }: Props) {
               {item.tags && item.tags.length > 0 ? (
                 <div className="flex flex-wrap gap-2 pt-3 border-t border-[var(--color-border-subtle)]">
                   {item.tags.slice(0, 5).map((tag) => (
-                    <TagPill key={tag} accent="default" size="sm" mono>
+                    <Badge key={tag} variant="default" pill mono size="sm">
                       <Hash className="w-3 h-3" aria-hidden="true" /> {tag}
-                    </TagPill>
+                    </Badge>
                   ))}
                 </div>
               ) : null}

@@ -16,7 +16,7 @@ import { getTeamBySlug } from "@/lib/repository";
 import { TeamLinksSettingsForm } from "@/components/team-links-settings-form";
 import { TeamOverviewSettingsForm } from "@/components/team-overview-settings-form";
 import { getServerTranslator } from "@/lib/i18n";
-import { Avatar, AvatarStack } from "@/components/ui";
+import { Avatar, AvatarStack, Badge } from "@/components/ui";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -42,7 +42,7 @@ export default async function TeamSettingsPage({ params }: Props) {
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)]"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to team
+          {t("team.back_to_team", "Back to team")}
         </Link>
         <div className="card p-8 text-center space-y-3">
           <div className="w-14 h-14 rounded-[var(--radius-xl)] bg-[var(--color-bg-elevated)] flex items-center justify-center mx-auto border border-[var(--color-border)]">
@@ -58,7 +58,7 @@ export default async function TeamSettingsPage({ params }: Props) {
             href={`/teams/${encodeURIComponent(slug)}`}
             className="btn btn-secondary text-sm px-5 py-2 inline-flex"
           >
-            Back to team
+            {t("team.back_to_team", "Back to team")}
           </Link>
         </div>
       </main>
@@ -72,7 +72,7 @@ export default async function TeamSettingsPage({ params }: Props) {
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to team
+        {t("team.back_to_team", "Back to team")}
       </Link>
 
       {/* Page header */}
@@ -135,9 +135,9 @@ export default async function TeamSettingsPage({ params }: Props) {
               {t("team.settings.visibility_desc")}
             </p>
             <div className="flex items-center gap-3 p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)]">
-              <span className="tag">Public</span>
+              <Badge variant="default" pill mono size="sm">{t("common.public", "Public")}</Badge>
               <span className="text-xs text-[var(--color-text-muted)]">
-                This team is visible to all users and accepts join requests.
+                {t("team.settings.visibility_public_hint", "This team is visible to all users and accepts join requests.")}
               </span>
             </div>
           </section>
@@ -153,7 +153,7 @@ export default async function TeamSettingsPage({ params }: Props) {
             </p>
             <div className="p-6 rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] text-center">
               <p className="text-xs text-[var(--color-text-muted)] m-0">
-                No integrations configured yet. Connect GitHub, CI/CD, or notification services to your team workflow.
+                {t("team.settings.integrations_empty", "No integrations configured yet. Connect GitHub, CI/CD, or notification services to your team workflow.")}
               </p>
             </div>
           </section>
@@ -185,16 +185,18 @@ export default async function TeamSettingsPage({ params }: Props) {
                   <div className="min-w-0 flex items-center gap-2">
                     <Avatar tone="neutral" size="sm" initial={member.name.charAt(0)} alt={member.name} />
                     <div className="min-w-0">
-                      <p className="text-[var(--color-text-primary)] font-medium truncate m-0 text-xs">{member.name}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)] truncate m-0">{member.email}</p>
-                    </div>
-                  </div>
-                  <span className="tag capitalize shrink-0 text-[10px]">{member.role}</span>
+                  <p className="text-[var(--color-text-primary)] font-medium truncate m-0 text-xs">{member.name}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)] truncate m-0">{member.email}</p>
+                </div>
+              </div>
+                  <Badge variant={member.role === "owner" ? "violet" : "default"} pill mono size="sm" className="shrink-0 text-[10px] capitalize">
+                    {member.role}
+                  </Badge>
                 </div>
               ))}
               {team.members.length > MEMBERS_PREVIEW_LIMIT && (
                 <p className="text-xs text-[var(--color-text-muted)] text-center pt-1 m-0">
-                  +{team.members.length - MEMBERS_PREVIEW_LIMIT} more members
+                  {t("team.settings.more_members", "+{count} more members").replace("{count}", String(team.members.length - MEMBERS_PREVIEW_LIMIT))}
                 </p>
               )}
             </div>
@@ -216,15 +218,15 @@ export default async function TeamSettingsPage({ params }: Props) {
             <div className="grid gap-2">
               <Link href={`/teams/${encodeURIComponent(team.slug)}`} className="btn btn-ghost justify-start text-xs py-2">
                 <FolderKanban className="w-3.5 h-3.5" />
-                Tasks & milestones
+                {t("team.settings.tasks_and_milestones", "Tasks & milestones")}
               </Link>
               <Link href={`/teams/${encodeURIComponent(team.slug)}`} className="btn btn-ghost justify-start text-xs py-2">
                 <MessageSquareText className="w-3.5 h-3.5" />
-                Discussions & chat
+                {t("team.settings.discussions_and_chat", "Discussions & chat")}
               </Link>
               <Link href={`/discover?team=${encodeURIComponent(team.slug)}`} className="btn btn-ghost justify-start text-xs py-2">
                 <FolderKanban className="w-3.5 h-3.5" />
-                Team projects
+                {t("team.settings.team_projects", "Team projects")}
               </Link>
             </div>
           </section>

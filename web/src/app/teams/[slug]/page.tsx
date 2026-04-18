@@ -9,6 +9,8 @@ import { TeamActivityTimeline } from "@/components/team-activity-timeline";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug, listTeamMilestones, getGitHubRepoStats } from "@/lib/repository";
 import { Avatar, AvatarStack } from "@/components/ui";
+import { Badge } from "@/components/ui";
+import { getServerTranslator } from "@/lib/i18n";
 
 const TEAM_HERO_INITIAL_CLASS =
   "w-16 h-16 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--color-accent-violet-subtle)] to-[var(--color-primary-subtle)] flex items-center justify-center text-2xl font-bold text-[var(--color-accent-violet)] border border-[var(--color-border)] shrink-0";
@@ -33,6 +35,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const query = (await searchParams) ?? {};
   const activeTab = query.tab === "activity" ? "activity" : "overview";
+  const { t } = await getServerTranslator();
   const session = await getSessionUserFromCookie();
   const team = await getTeamBySlug(slug, session?.userId ?? null);
 
@@ -61,7 +64,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Teams
+        {t("team.back_to_teams", "Back to teams")}
       </Link>
 
       {/* Hero */}
@@ -88,11 +91,11 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
               <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--color-text-muted)]">
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
-                  {team.memberCount} member{team.memberCount !== 1 ? "s" : ""}
+                  {t("team.member_count", "{count} members").replace("{count}", String(team.memberCount))}
                 </span>
                 <span className="flex items-center gap-1">
                   <GitFork className="w-3.5 h-3.5" />
-                  {team.projectCount} project{team.projectCount !== 1 ? "s" : ""}
+                  {t("team.project_count", "{count} projects").replace("{count}", String(team.projectCount))}
                 </span>
                 {githubStats && (
                   <>
@@ -105,7 +108,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
                       {githubStats.forks}
                     </span>
                     {githubStats.language && (
-                      <span className="tag">{githubStats.language}</span>
+                      <Badge variant="default" pill mono size="sm">{githubStats.language}</Badge>
                     )}
                   </>
                 )}
@@ -142,7 +145,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
                 className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
               >
                 <Bot className="w-3 h-3" aria-hidden="true" />
-                Agent bus
+                {t("team.agent_bus", "Agent bus")}
               </Link>
               {canManageTeam && (
                 <Link
@@ -150,7 +153,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
                   className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
                 >
                   <Settings2 className="w-3 h-3" aria-hidden="true" />
-                  Team settings
+                  {t("team.settings_link", "Team settings")}
                 </Link>
               )}
             </div>
@@ -168,7 +171,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
               : "bg-[var(--color-bg-canvas)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
           }`}
         >
-          Overview
+          {t("team.overview", "Overview")}
         </Link>
         <Link
           href={`/teams/${encodeURIComponent(team.slug)}?tab=activity`}
@@ -179,7 +182,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
               : "bg-[var(--color-bg-canvas)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
           }`}
         >
-          Activity
+          {t("team.activity", "Activity")}
         </Link>
       </section>
 
@@ -196,7 +199,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
           <section className="card p-5">
             <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
               <Users className="w-4 h-4 text-[var(--color-accent-violet)]" />
-              Members ({team.memberCount})
+              {t("team.members_title", "Members ({count})").replace("{count}", String(team.memberCount))}
             </h2>
             <AvatarStack
               items={team.members.map((member) => ({
@@ -217,9 +220,9 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
                     <div className="text-sm font-medium text-[var(--color-text-primary)]">{m.name}</div>
                     <div className="text-xs text-[var(--color-text-muted)]">{m.email}</div>
                   </div>
-                  <span className={`tag ${m.role === "owner" ? "tag-violet" : ""} capitalize`}>
+                  <Badge variant={m.role === "owner" ? "violet" : "default"} pill mono size="sm">
                     {m.role}
-                  </span>
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -230,13 +233,13 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
                 <GitFork className="w-4 h-4 text-[var(--color-primary-hover)]" />
-                Team Projects ({team.projectCount})
+                {t("team.projects_title", "Team projects ({count})").replace("{count}", String(team.projectCount))}
               </h2>
               <Link
                 href={`/discover?team=${encodeURIComponent(team.slug)}`}
                 className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1"
               >
-                Browse all
+                {t("common.browse_all", "Browse all")}
                 <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
@@ -260,7 +263,7 @@ export default async function TeamDetailPage({ params, searchParams }: Props) {
               </div>
             ) : (
               <p className="text-xs text-[var(--color-text-muted)] py-4 text-center">
-                No projects yet. Create a project and link it to this team.
+                {t("team.projects_empty", "No projects yet. Create a project and link it to this team.")}
               </p>
             )}
           </section>

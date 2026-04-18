@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ProjectCard } from "@/components/project-card";
 import { DiscoverProjectFeed } from "@/components/discover-project-feed";
+import { ProjectGalleryOrbitShell } from "@/components/visual/project-gallery-orbit-shell";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { parsePagination } from "@/lib/pagination";
 import { getProjectFilterFacets, listFeaturedProjects, listProjectFeed, listTeams } from "@/lib/repository";
@@ -75,6 +76,12 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
     listTeams({ page: 1, limit: 100 }),
     listFeaturedProjects(),
   ]);
+  const featuredOrbitItems = featuredToday.map((project) => ({
+    id: project.id,
+    slug: project.slug,
+    title: project.title,
+    imageUrl: project.screenshots[0] || project.logoUrl,
+  }));
 
   const baseFilters: Record<string, string | undefined> = {
     query, tag, tech, team,
@@ -135,11 +142,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </BlurText>
             <span className="text-xs text-[var(--color-text-muted)]">Editorial picks — same rail as the home page</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-grid">
-            {featuredToday.map((p) => (
-              <ProjectCard key={p.id} project={p} featured />
-            ))}
-          </div>
+          <ProjectGalleryOrbitShell ariaLabel="Featured projects orbit" items={featuredOrbitItems} />
         </AnimatedSection>
       )}
 

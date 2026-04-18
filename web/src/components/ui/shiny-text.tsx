@@ -1,9 +1,7 @@
 "use client";
 
-export interface ShinyTextProps {
+export interface ShinyTextProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
-  /** Extra CSS classes */
-  className?: string;
   /** Animation speed in seconds. Defaults to 3 */
   speed?: number;
 }
@@ -17,13 +15,17 @@ export function ShinyText({
   children,
   className = "",
   speed = 3,
+  style,
+  ...rest
 }: ShinyTextProps) {
   return (
     <span
+      {...rest}
       className={["shiny-text", className].join(" ")}
       style={
         {
           "--shiny-speed": `${speed}s`,
+          ...style,
         } as React.CSSProperties
       }
     >

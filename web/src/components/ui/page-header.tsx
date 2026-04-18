@@ -43,7 +43,7 @@ export function PageHeader({
               {eyebrow}
             </div>
           ) : null}
-          <h1 className="text-xl sm:text-2xl font-semibold text-[var(--color-text-primary)] m-0 leading-tight truncate">
+          <h1 className="text-xl sm:text-2xl font-semibold text-[var(--color-text-primary)] m-0 leading-tight text-balance break-words">
             {title}
           </h1>
           {subtitle ? (

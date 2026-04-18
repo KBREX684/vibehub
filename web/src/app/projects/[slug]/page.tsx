@@ -35,7 +35,9 @@ import {
   Pencil,
 } from "lucide-react";
 import { ProjectReadmeSection } from "@/components/project-readme-section";
-import { Avatar } from "@/components/ui";
+import { Avatar, Badge } from "@/components/ui";
+import { getServerLanguage, getServerTranslator } from "@/lib/i18n";
+import { formatLocalizedDate, formatRelativeTime } from "@/lib/formatting";
 
 const PROJECT_HERO_INITIAL_CLASS =
   "w-24 h-24 md:w-32 md:h-32 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--color-primary-subtle)] to-[var(--color-accent-cyan-subtle)] flex items-center justify-center text-4xl font-bold text-[var(--color-primary-hover)] border border-[var(--color-border)]";
@@ -44,19 +46,9 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const d = Math.floor(diff / 86400000);
-  if (d === 0) return "today";
-  if (d === 1) return "yesterday";
-  if (d < 7) return `${d} days ago`;
-  if (d < 30) return `${Math.floor(d / 7)}w ago`;
-  if (d < 365) return `${Math.floor(d / 30)}mo ago`;
-  return `${Math.floor(d / 365)}y ago`;
-}
-
 export default async function ProjectDetailPage({ params }: Props) {
   const { slug } = await params;
+  const [{ t }, language] = await Promise.all([getServerTranslator(), getServerLanguage()]);
   const project = await getProjectBySlug(slug);
 
   if (!project) notFound();
@@ -90,39 +82,51 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   const related = relatedProjects.items.filter((p) => p.id !== project.id).slice(0, 3);
 
-  const STATUS_COLOR: Record<string, string> = {
-    idea:     "tag-violet",
-    building: "tag-blue",
-    launched: "tag-green",
-    paused:   "tag",
+  const STATUS_COLOR: Record<string, "violet" | "cyan" | "success" | "default"> = {
+    idea: "violet",
+    building: "cyan",
+    launched: "success",
+    paused: "default",
   };
 
   const STATUS_LABEL: Record<string, string> = {
-    idea:     "💡 Idea",
-    building: "🏗 Building",
-    launched: "🚀 Launched",
-    paused:   "⏸ Paused",
+    idea: t("project.status.idea", "Idea"),
+    building: t("project.status.building", "Building"),
+    launched: t("project.status.launched", "Launched"),
+    paused: t("project.status.paused", "Paused"),
   };
 
   const activeCollabCount = approvedIntents.pagination.total;
   const primaryCollaborationAction = project.team
     ? {
         href: session ? `/teams/${project.team.slug}#join-team` : `/login?redirect=${encodeURIComponent(`/teams/${project.team.slug}`)}`,
-        label: `Apply to join ${project.team.name}`,
-        description: "This project already runs inside a team. Join the team first, then participate in tasks and discussions.",
+        label: t("project.collaboration.apply_to_join", "Apply to join {team}").replace("{team}", project.team.name),
+        description: t(
+          "project.collaboration.team_join_description",
+          "This project already runs inside a team. Join the team first, then participate in tasks and discussions."
+        ),
       }
     : isProjectOwner
       ? {
           href: "/teams/new",
-          label: "Start a team",
-          description: "Link this project to a team so collaboration can move from intent into real execution.",
+          label: t("project.collaboration.start_team", "Start a team"),
+          description: t(
+            "project.collaboration.start_team_description",
+            "Link this project to a team so collaboration can move from intent into real execution."
+          ),
         }
       : {
           href: session ? "#project-collaboration-intent" : `/login?redirect=${encodeURIComponent(`/projects/${project.slug}`)}`,
-          label: "Join collaboration",
+          label: t("project.collaboration.join", "Join collaboration"),
           description: activeCollabCount > 0
-            ? `There are already ${activeCollabCount} active collaborator${activeCollabCount !== 1 ? "s" : ""}. Add your intent and the owner can route you into the right team.`
-            : "No team is linked yet. Submit your intent to join or help start the first collaboration thread.",
+            ? t(
+                "project.collaboration.active_description",
+                "There are already {count} active collaborators. Add your intent and the owner can route you into the right team."
+              ).replace("{count}", String(activeCollabCount))
+            : t(
+                "project.collaboration.no_team_description",
+                "No team is linked yet. Submit your intent to join or help start the first collaboration thread."
+              ),
         };
 
   return (
@@ -134,7 +138,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Discover
+        {t("project.back_to_discover", "Back to Discover")}
       </Link>
 
       {/* Hero */}
@@ -164,20 +168,24 @@ export default async function ProjectDetailPage({ params }: Props) {
           {/* Info */}
           <div className="flex flex-col gap-4 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`tag ${STATUS_COLOR[project.status] ?? "tag"}`}>
+              <Badge variant={STATUS_COLOR[project.status] ?? "default"} pill mono size="sm">
                 {STATUS_LABEL[project.status] ?? project.status}
-              </span>
+              </Badge>
               {project.openSource && (
-                <span className="tag tag-green">Open Source</span>
+                <Badge variant="success" pill mono size="sm">
+                  {t("project.open_source", "Open source")}
+                </Badge>
               )}
               {project.license && (
-                <span className="tag">{project.license}</span>
+                <Badge variant="default" pill mono size="sm">
+                  {project.license}
+                </Badge>
               )}
               {activeCollabCount > 0 && (
-                <span className="tag tag-cyan flex items-center gap-1">
+                <Badge variant="cyan" pill mono size="sm">
                   <Users className="w-2.5 h-2.5" />
-                  {activeCollabCount} collaborator{activeCollabCount !== 1 ? "s" : ""}
-                </span>
+                  {t("project.collaboration.active_count", "{count} collaborators").replace("{count}", String(activeCollabCount))}
+                </Badge>
               )}
             </div>
 
@@ -193,7 +201,7 @@ export default async function ProjectDetailPage({ params }: Props) {
             <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--color-text-muted)]">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                Updated {relativeTime(project.updatedAt)}
+                {t("common.updated", "Updated")} {formatRelativeTime(project.updatedAt, language)}
               </span>
               {project.team && (
                 <span className="flex items-center gap-1">
@@ -206,9 +214,9 @@ export default async function ProjectDetailPage({ params }: Props) {
               {creatorProfile && (
                 <span className="flex items-center gap-1">
                   <BookOpen className="w-3 h-3" />
-                  By{" "}
+                  {t("project.by_creator", "By")}{" "}
                   <Link href={`/creators/${creatorProfile.slug}`} className="text-[var(--color-primary-hover)] hover:underline ml-0.5">
-                    {creatorProfile.headline?.split(" ").slice(0, 3).join(" ") ?? "Creator"}
+                    {creatorProfile.headline?.split(" ").slice(0, 3).join(" ") ?? t("project.creator_fallback", "Creator")}
                   </Link>
                 </span>
               )}
@@ -218,7 +226,7 @@ export default async function ProjectDetailPage({ params }: Props) {
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="space-y-1">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-muted)] m-0">
-                    Collaboration
+                    {t("project.collaboration.title", "Collaboration")}
                   </p>
                   <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
                     {primaryCollaborationAction.label}
@@ -257,7 +265,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                   className="btn btn-primary text-sm px-4 py-2 flex items-center gap-1.5"
                 >
                   <Globe className="w-3.5 h-3.5" />
-                  Live Demo
+                  {t("project.live_demo", "Live demo")}
                 </a>
               )}
               <ProjectBookmarkButton
@@ -275,7 +283,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                   className="btn btn-secondary text-sm px-4 py-2 flex items-center gap-1.5"
                 >
                   <GitBranch className="w-3.5 h-3.5" />
-                  Repository
+                  {t("project.repository", "Repository")}
                 </a>
               )}
               {project.websiteUrl && (
@@ -286,7 +294,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                   className="btn btn-ghost text-sm px-4 py-2 flex items-center gap-1.5"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  Website
+                  {t("project.website", "Website")}
                 </a>
               )}
               {canEditProject && (
@@ -295,7 +303,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                   className="btn btn-secondary text-sm px-4 py-2 flex items-center gap-1.5"
                 >
                   <Pencil className="w-3.5 h-3.5" />
-                  Edit project
+                  {t("project.edit", "Edit project")}
                 </Link>
               )}
               <ShareProjectButton
@@ -345,11 +353,13 @@ export default async function ProjectDetailPage({ params }: Props) {
                 <div>
                   <h3 className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
                     <Code2 className="w-3.5 h-3.5" />
-                    Tech Stack
+                    {t("project.tech_stack", "Tech stack")}
                   </h3>
-                  <div className="tag-row">
+                  <div className="flex flex-wrap gap-2">
                     {project.techStack.map((tech) => (
-                      <Link key={tech} href={`/discover?tech=${encodeURIComponent(tech)}`} className="tag tag-blue hover:opacity-80 transition-opacity">{tech}</Link>
+                      <Link key={tech} href={`/discover?tech=${encodeURIComponent(tech)}`} className="hover:opacity-80 transition-opacity">
+                        <Badge variant="cyan" pill mono size="sm">{tech}</Badge>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -357,9 +367,11 @@ export default async function ProjectDetailPage({ params }: Props) {
 
               {project.tags && project.tags.length > 0 && (
                 <div className={project.techStack?.length ? "mt-5 pt-5 border-t border-[var(--color-border-subtle)]" : ""}>
-                  <div className="tag-row">
+                  <div className="flex flex-wrap gap-2">
                     {project.tags.map((tag) => (
-                      <Link key={tag} href={`/discover?tag=${encodeURIComponent(tag)}`} className="tag hover:opacity-80 transition-opacity">#{tag}</Link>
+                      <Link key={tag} href={`/discover?tag=${encodeURIComponent(tag)}`} className="hover:opacity-80 transition-opacity">
+                        <Badge variant="default" pill mono size="sm">#{tag}</Badge>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -372,13 +384,13 @@ export default async function ProjectDetailPage({ params }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-4 h-4 text-[var(--color-primary-hover)]" />
               <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
-                Join or Recruit
+                {t("project.collaboration.section_title", "Join or recruit")}
               </h2>
             </div>
             <p className="text-xs text-[var(--color-text-secondary)] mb-5">
               {activeCollabCount > 0
-                ? `This project has ${activeCollabCount} active collaborator${activeCollabCount !== 1 ? "s" : ""}. Submit your intent to join or recruit contributors.`
-                : "Be the first to join this project or post a recruitment notice."}
+                ? t("project.collaboration.section_active", "This project has {count} active collaborators. Submit your intent to join or recruit contributors.").replace("{count}", String(activeCollabCount))
+                : t("project.collaboration.section_empty", "There are no active collaboration intents yet. Submit yours to join or recruit contributors.")}
             </p>
             <CollaborationIntentForm projectSlug={project.slug} />
           </section>
@@ -400,16 +412,18 @@ export default async function ProjectDetailPage({ params }: Props) {
             <section className="card p-6">
               <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-[var(--color-warning)]" />
-                Active Collaborators
+                {t("project.collaboration.active_title", "Active collaborators")}
               </h2>
               <div className="space-y-3">
                 {approvedIntents.items.map((intent) => (
                   <div key={intent.id} className="p-4 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                        {intent.intentType === "join" ? "Team Member" : "Recruiter"}
+                        {intent.intentType === "join"
+                          ? t("project.collaboration.intent_join", "Team member")
+                          : t("project.collaboration.intent_recruit", "Recruiter")}
                       </span>
-                      <span className="tag tag-green capitalize">{intent.status}</span>
+                      <Badge variant="success" pill mono size="sm">{intent.status}</Badge>
                     </div>
                     <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">{intent.message}</p>
                   </div>
@@ -423,7 +437,7 @@ export default async function ProjectDetailPage({ params }: Props) {
             <section className="card p-6">
               <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-[var(--color-accent-cyan)]" />
-                Related Projects
+                {t("project.related_title", "Related projects")}
               </h2>
               <div className="space-y-2">
                 {related.map((p) => (
@@ -454,10 +468,10 @@ export default async function ProjectDetailPage({ params }: Props) {
             <aside className="card p-5">
               <div className="flex items-center gap-2 mb-3">
                 <BookOpen className="w-4 h-4 text-[var(--color-primary-hover)]" />
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Creator</h3>
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("project.creator_title", "Creator")}</h3>
               </div>
               <div className="flex items-start gap-3">
-                <Avatar tone="cyan" size="lg" initial={creatorProfile.headline.charAt(0)} alt={creatorProfile.headline} />
+                <Avatar tone="neutral" size="lg" initial={creatorProfile.headline.charAt(0)} alt={creatorProfile.headline} />
                 <div className="min-w-0">
                   <Link href={`/creators/${creatorProfile.slug}`} className="text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-primary-hover)] transition-colors">
                     {creatorProfile.headline}
@@ -467,16 +481,16 @@ export default async function ProjectDetailPage({ params }: Props) {
                     <div className="flex items-center gap-1 mt-2">
                       <Zap className="w-3 h-3 text-[var(--color-warning)]" />
                       <span className="text-xs text-[var(--color-text-muted)]">
-                        Credit score: <strong className="text-[var(--color-warning)]">{creatorCredit.score}</strong>
+                        {t("project.credit_score", "Credit score")}: <strong className="text-[var(--color-warning)]">{creatorCredit.score}</strong>
                       </span>
                     </div>
                   )}
                 </div>
               </div>
               {creatorProfile.skills.length > 0 && (
-                <div className="tag-row mt-3">
+                <div className="flex flex-wrap gap-2 mt-3">
                   {creatorProfile.skills.slice(0, 4).map((s) => (
-                    <span key={s} className="tag text-[10px]">{s}</span>
+                    <Badge key={s} variant="default" pill mono size="sm">{s}</Badge>
                   ))}
                 </div>
               )}
@@ -488,7 +502,7 @@ export default async function ProjectDetailPage({ params }: Props) {
             <aside className="card p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Target className="w-4 h-4 text-[var(--color-primary-hover)]" />
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Roadmap</h3>
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("project.roadmap_title", "Roadmap")}</h3>
               </div>
               <div className="space-y-4">
                 {publicMilestones.map((ms) => (
@@ -497,8 +511,8 @@ export default async function ProjectDetailPage({ params }: Props) {
                       <span className="text-xs font-medium text-[var(--color-text-primary)]">{ms.title}</span>
                       <span className="text-xs text-[var(--color-text-muted)]">
                         {ms.completed
-                          ? "Done ✓"
-                          : new Date(ms.targetDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          ? t("project.roadmap_done", "Done")
+                          : formatLocalizedDate(ms.targetDate, language, { month: "short", day: "numeric" })}
                       </span>
                     </div>
                     {ms.description && (
@@ -530,45 +544,49 @@ export default async function ProjectDetailPage({ params }: Props) {
 	          <aside className="card p-5">
 	            <div className="flex items-center justify-between gap-3 mb-4">
 	              <div>
-	                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Recent collaboration signals</h3>
+	                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("project.signals_title", "Recent collaboration signals")}</h3>
 	                <p className="text-xs text-[var(--color-text-muted)] mt-1 mb-0">
-	                  {engagementSnapshot.bookmarkCount} saves total
-	                  {engagementSnapshot.recentBookmarkDelta > 0 ? ` · +${engagementSnapshot.recentBookmarkDelta} this week` : ""}
+	                  {t("project.bookmark_total", "{count} saves total").replace("{count}", String(engagementSnapshot.bookmarkCount))}
+	                  {engagementSnapshot.recentBookmarkDelta > 0
+                      ? ` · ${t("project.saves_this_week", "+{count} saves this week").replace("{count}", String(engagementSnapshot.recentBookmarkDelta))}`
+                      : ""}
 	                </p>
 	              </div>
-	              <span className="tag tag-cyan">{activeCollabCount} intents</span>
+	              <Badge variant="cyan" pill mono size="sm">
+                  {t("project.collaboration.intent_count", "{count} intents").replace("{count}", String(activeCollabCount))}
+                </Badge>
 	            </div>
 	            <div className="space-y-4">
 	              <div>
-	                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)] mb-2">Recent bookmarkers</p>
+	                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)] mb-2">{t("project.recent_bookmarkers", "Recent bookmarkers")}</p>
 	                {engagementSnapshot.recentBookmarkers.length > 0 ? (
 	                  <div className="flex flex-wrap gap-2">
 	                    {engagementSnapshot.recentBookmarkers.map((bookmark) => (
-	                      <span key={`${bookmark.userId}-${bookmark.name}`} className="tag">
+	                      <Badge key={`${bookmark.userId}-${bookmark.name}`} variant="default" pill mono size="sm">
 	                        {bookmark.name}
-	                      </span>
+	                      </Badge>
 	                    ))}
 	                  </div>
 	                ) : (
-	                  <p className="text-xs text-[var(--color-text-secondary)] m-0">No one has bookmarked this project yet.</p>
+	                  <p className="text-xs text-[var(--color-text-secondary)] m-0">{t("project.no_bookmarkers", "No one has bookmarked this project yet.")}</p>
 	                )}
 	              </div>
 	              <div>
-	                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)] mb-2">Recent collaboration intents</p>
+	                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)] mb-2">{t("project.recent_intents", "Recent collaboration intents")}</p>
 	                {engagementSnapshot.recentCollaborationIntents.length > 0 ? (
 	                  <div className="space-y-2">
 	                    {engagementSnapshot.recentCollaborationIntents.map((intent) => (
 	                      <div key={intent.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3">
 	                        <div className="flex items-center justify-between gap-2">
 	                          <span className="text-xs font-medium text-[var(--color-text-primary)]">{intent.applicantName}</span>
-	                          <span className="tag text-[10px] capitalize">{intent.intentType}</span>
+	                          <Badge variant="default" pill mono size="sm">{intent.intentType}</Badge>
 	                        </div>
 	                        <p className="text-xs text-[var(--color-text-secondary)] mt-2 mb-0 line-clamp-2">{intent.message}</p>
 	                      </div>
 	                    ))}
 	                  </div>
 	                ) : (
-	                  <p className="text-xs text-[var(--color-text-secondary)] m-0">No collaboration intents yet.</p>
+	                  <p className="text-xs text-[var(--color-text-secondary)] m-0">{t("project.no_intents", "No collaboration intents yet.")}</p>
 	                )}
 	              </div>
 	            </div>
@@ -578,17 +596,17 @@ export default async function ProjectDetailPage({ params }: Props) {
           <aside className="card p-5 bg-[var(--color-bg-elevated)]">
             <div className="flex items-center gap-2 mb-3 text-[var(--color-accent-cyan)]">
               <Terminal className="w-4 h-4" />
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Agent Queryable</h3>
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("developers.agent_readable", "Agent readable")}</h3>
             </div>
             <p className="text-xs text-[var(--color-text-muted)] mb-3">
-              This project is available via MCP v2 — query it from any AI agent with read access.
+              {t("project.mcp_description", "This project is available via MCP v2 and can be queried from any AI agent with read access.")}
             </p>
             <pre className="code-block text-xs text-[var(--color-text-secondary)] overflow-x-auto">
               {JSON.stringify(mcpToolExample, null, 2)}
             </pre>
             <div className="mt-3 flex items-center gap-2">
               <a href="/api/v1/mcp/v2/manifest" target="_blank" rel="noreferrer" className="text-xs text-[var(--color-accent-cyan)] hover:underline">
-                View MCP manifest →
+                {t("developers.mcp_manifest", "MCP manifest")} →
               </a>
             </div>
           </aside>

@@ -3,6 +3,9 @@ import { getUserSubscription } from "@/lib/repository";
 import { listBillingRecordsForUser } from "@/lib/repositories/billing.repository";
 import { formatTierPrice, getLimits, resolveEntitledTier, TIER_PRICING } from "@/lib/subscription";
 import { getPaymentProviderReadiness } from "@/lib/billing/provider-config";
+import { Badge } from "@/components/ui";
+import { formatLocalizedDate, formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerLanguage, getServerTranslator } from "@/lib/i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CreditCard, Sparkles, Shield, ArrowRight, Receipt } from "lucide-react";
@@ -11,19 +14,15 @@ interface Props {
   searchParams: Promise<{ success?: string; portal?: string; provider?: string }>;
 }
 
-function formatDate(value?: string) {
-  if (!value) return null;
-  return new Date(value).toLocaleDateString("zh-CN");
-}
-
-function providerLabel(provider?: string) {
-  if (provider === "alipay") return "支付宝";
-  if (provider === "wechatpay") return "微信支付";
+function providerLabel(provider: string | undefined, t: (key: string, fallback?: string) => string) {
+  if (provider === "alipay") return t("pricing.provider_alipay", "Alipay");
+  if (provider === "wechatpay") return t("pricing.provider_wechat", "WeChat Pay");
   if (provider === "stripe") return "Stripe";
-  return "未绑定";
+  return t("subscription.provider_unlinked", "Not linked");
 }
 
 export default async function SubscriptionPage({ searchParams }: Props) {
+  const [{ t }, language] = await Promise.all([getServerTranslator(), getServerLanguage()]);
   const session = await getSessionUserFromCookie();
   if (!session) {
     redirect("/login?redirect=/settings/subscription");
@@ -40,15 +39,19 @@ export default async function SubscriptionPage({ searchParams }: Props) {
   const isPaid = effectiveTier === "pro";
   const statusLabel =
     subscription.status === "active"
-      ? "有效"
+      ? t("subscription.status_active", "Active")
       : subscription.status === "trialing"
-        ? "试用中"
+        ? t("subscription.status_trialing", "Trialing")
         : subscription.status === "past_due"
-          ? "待处理"
-          : "已取消";
+          ? t("subscription.status_past_due", "Past due")
+          : t("subscription.status_canceled", "Canceled");
   const activeProvider = isPaid ? (subscription.paymentProvider ?? "stripe") : undefined;
   const activeProviderReadiness = activeProvider ? getPaymentProviderReadiness(activeProvider) : null;
-  const periodLabel = activeProvider && activeProvider !== "stripe" ? "当前权益截止" : subscription.cancelAtPeriodEnd ? "取消生效日" : "下次扣费日";
+  const periodLabel = activeProvider && activeProvider !== "stripe"
+    ? t("subscription.current_period_end", "Current access ends")
+    : subscription.cancelAtPeriodEnd
+      ? t("subscription.cancel_effective", "Cancellation effective on")
+      : t("subscription.next_billing_date", "Next billing date");
 
   return (
     <main className="container max-w-3xl pb-24 pt-8 space-y-6">
@@ -57,27 +60,27 @@ export default async function SubscriptionPage({ searchParams }: Props) {
           <CreditCard className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">订阅与账单</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">查看当前套餐、支付渠道、权益额度和最近账单</p>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">{t("subscription.title", "Subscription & billing")}</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t("subscription.subtitle", "Review your current plan, payment channel, usage limits, and recent billing history.")}</p>
         </div>
       </section>
 
       {success === "1" ? (
-        <div className="card p-4 border-[rgba(34,197,94,0.35)] bg-[var(--color-success-subtle)]">
-          <p className="text-sm font-semibold text-[var(--color-success)]">订阅状态已更新</p>
-          <p className="text-xs text-[var(--color-text-secondary)] mt-1">支付成功后，新的额度和协作权益已经写回到当前账户。</p>
+        <div className="card p-4 border-[var(--color-border-strong)] bg-[var(--color-success-subtle)]">
+          <p className="text-sm font-semibold text-[var(--color-success)]">{t("subscription.updated_title", "Subscription updated")}</p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">{t("subscription.updated_body", "Your new limits and collaboration entitlements are now active on this account.")}</p>
         </div>
       ) : null}
 
       {portal === "manual" ? (
-        <div className="card p-4 border-[rgba(59,130,246,0.35)] bg-[var(--color-primary-subtle)]">
-          <p className="text-sm font-semibold text-[var(--color-primary-hover)]">当前渠道使用手动续费/人工处理</p>
+        <div className="card p-4 border-[var(--color-border-strong)] bg-[var(--color-primary-subtle)]">
+          <p className="text-sm font-semibold text-[var(--color-primary-hover)]">{t("subscription.manual_title", "This payment channel uses manual renewal")}</p>
           <p className="text-xs text-[var(--color-text-secondary)] mt-1">
             {provider === "alipay"
-              ? "支付宝按单次月付续期，不提供独立 portal。需要续费时重新发起一次结算。"
+              ? t("subscription.manual_alipay", "Alipay renews on a one-time monthly checkout and does not provide a separate billing portal. Start a new checkout when you need to renew.")
               : provider === "wechatpay"
-                ? "微信支付按单次月付续期，不提供独立 portal。需要续费时重新发起一次结算。"
-                : "当前没有可打开的自助账单管理入口。"}
+                ? t("subscription.manual_wechat", "WeChat Pay renews on a one-time monthly checkout and does not provide a separate billing portal. Start a new checkout when you need to renew.")
+                : t("subscription.manual_fallback", "There is no self-serve billing portal for the current provider.")}
           </p>
         </div>
       ) : null}
@@ -85,49 +88,51 @@ export default async function SubscriptionPage({ searchParams }: Props) {
       <section className="card p-6 space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">当前套餐</p>
+            <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">{t("subscription.current_plan", "Current plan")}</p>
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{pricing.label}</h2>
             <p className="text-sm text-[var(--color-text-secondary)]">{formatTierPrice(effectiveTier)}</p>
           </div>
-          <span className={`tag ${subscription.status === "active" || subscription.status === "trialing" ? "tag-green" : "tag-red"}`}>{statusLabel}</span>
+          <Badge variant={subscription.status === "active" || subscription.status === "trialing" ? "success" : "error"} pill mono size="sm">
+            {statusLabel}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
             <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxTeams === Infinity ? "∞" : limits.maxTeams}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">团队数</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_teams", "Teams")}</p>
           </div>
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
             <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxProjects === Infinity ? "∞" : limits.maxProjects}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">项目数</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_projects", "Projects")}</p>
           </div>
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
             <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxApiKeys === Infinity ? "∞" : limits.maxApiKeys}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">API Key 数</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_api_keys", "API keys")}</p>
           </div>
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
             <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.apiRatePerMinute.toLocaleString()}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">API 请求 / 分钟</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_rate", "API requests / minute")}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="p-4 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
-            <p className="text-xs text-[var(--color-text-muted)] m-0">支付渠道</p>
-            <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-2 mb-0">{providerLabel(activeProvider)}</p>
+            <p className="text-xs text-[var(--color-text-muted)] m-0">{t("subscription.provider", "Payment provider")}</p>
+            <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-2 mb-0">{providerLabel(activeProvider, t)}</p>
             <p className="text-xs text-[var(--color-text-secondary)] mt-2 mb-0">
               {activeProviderReadiness
                 ? activeProviderReadiness.notes[0]
-                : "免费用户无需绑定支付渠道。"}
+                : t("subscription.free_provider_note", "Free users do not need a linked payment provider.")}
             </p>
           </div>
           <div className="p-4 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
             <p className="text-xs text-[var(--color-text-muted)] m-0">{periodLabel}</p>
-            <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-2 mb-0">{formatDate(subscription.currentPeriodEnd) ?? "未开始计费"}</p>
+            <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-2 mb-0">{subscription.currentPeriodEnd ? formatLocalizedDate(subscription.currentPeriodEnd, language) : t("subscription.not_started", "Not started yet")}</p>
             <p className="text-xs text-[var(--color-text-secondary)] mt-2 mb-0">
               {activeProvider && activeProvider !== "stripe"
-                ? "中国支付渠道当前按单次月付续期，不自动代扣。"
-                : "Stripe 保留给海外银行卡支付与自助账单管理。"}
+                ? t("subscription.cn_renewal_note", "China payment providers currently renew through one-time monthly checkout rather than automatic recurring billing.")
+                : t("subscription.stripe_note", "Stripe remains available for international card billing and self-serve portal management.")}
             </p>
           </div>
         </div>
@@ -135,7 +140,7 @@ export default async function SubscriptionPage({ searchParams }: Props) {
         <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
           <p className="text-xs text-[var(--color-text-secondary)] flex items-center gap-2 m-0">
             <Shield className="w-3.5 h-3.5 text-[var(--color-accent-cyan)]" />
-            企业认证与订阅解耦。企业认证仍是身份徽章审核，不是单独的企业工作台套餐。
+            {t("subscription.enterprise_note", "Enterprise verification is separate from billing. It remains an identity badge review process rather than a standalone workspace plan.")}
           </p>
         </div>
       </section>
@@ -143,29 +148,29 @@ export default async function SubscriptionPage({ searchParams }: Props) {
       <section className="card p-5">
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 mb-3">
           <Sparkles className="w-4 h-4 text-[var(--color-primary-hover)]" />
-          套餐操作
+          {t("subscription.actions", "Plan actions")}
         </h3>
         <div className="flex flex-wrap gap-2">
           {effectiveTier === "free" ? (
             <Link href="/pricing" className="btn btn-primary text-sm px-4 py-2 inline-flex items-center gap-1.5">
-              升级到 Pro
+              {t("subscription.upgrade_to_pro", "Upgrade to Pro")}
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           ) : activeProvider === "stripe" ? (
             <form action="/api/v1/billing/portal" method="POST">
               <button type="submit" className="btn btn-secondary text-sm px-4 py-2">
-                管理 Stripe 账单 / 取消续费
+                {t("subscription.manage_stripe", "Manage Stripe billing / cancel renewal")}
               </button>
             </form>
           ) : (
             <form action="/api/v1/billing/portal" method="POST">
               <button type="submit" className="btn btn-secondary text-sm px-4 py-2">
-                查看续费说明
+                {t("subscription.view_renewal_guide", "View renewal guide")}
               </button>
             </form>
           )}
           <Link href="/pricing" className="btn btn-ghost text-sm px-4 py-2">
-            查看套餐对比
+            {t("subscription.compare_plans", "Compare plans")}
           </Link>
         </div>
       </section>
@@ -173,10 +178,10 @@ export default async function SubscriptionPage({ searchParams }: Props) {
       <section className="card p-5 space-y-4">
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
           <Receipt className="w-4 h-4 text-[var(--color-primary-hover)]" />
-          最近账单
+          {t("subscription.recent_billing", "Recent billing")}
         </h3>
         {billingRecords.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-secondary)] m-0">还没有账单记录。</p>
+          <p className="text-sm text-[var(--color-text-secondary)] m-0">{t("subscription.no_billing", "No billing records yet.")}</p>
         ) : (
           <div className="space-y-3">
             {billingRecords.map((record) => {
@@ -186,15 +191,15 @@ export default async function SubscriptionPage({ searchParams }: Props) {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0 capitalize">
-                        {providerLabel(record.paymentProvider)} · {record.status}
+                        {providerLabel(record.paymentProvider, t)} · {record.status}
                       </p>
                       <p className="text-xs text-[var(--color-text-muted)] m-0 mt-1">
-                        {(record.amountCents / 100).toFixed(2)} {record.currency} · {new Date(record.createdAt).toLocaleString("zh-CN")}
+                        {(record.amountCents / 100).toFixed(2)} {record.currency} · {formatLocalizedDateTime(record.createdAt, language)}
                       </p>
                     </div>
                     {isSandbox ? (
                       <Link href={`/checkout/sandbox?record=${encodeURIComponent(record.id)}`} className="btn btn-ghost text-xs px-3 py-1.5">
-                        打开沙箱
+                        {t("subscription.open_sandbox", "Open sandbox")}
                       </Link>
                     ) : null}
                   </div>
@@ -202,7 +207,7 @@ export default async function SubscriptionPage({ searchParams }: Props) {
                     <p className="text-xs text-[var(--color-text-secondary)] mt-2 mb-0">{record.description}</p>
                   ) : null}
                   {record.failureReason ? (
-                    <p className="text-xs text-[var(--color-danger)] mt-2 mb-0">{record.failureReason}</p>
+                    <p className="text-xs text-[var(--color-error)] mt-2 mb-0">{record.failureReason}</p>
                   ) : null}
                 </div>
               );

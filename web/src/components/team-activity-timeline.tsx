@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { TeamActivityLogEntry } from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
 import { Bot, History, ListChecks, MessageSquareText } from "lucide-react";
+import { useLanguage } from "@/app/context/LanguageContext";
+import { formatLocalizedDateTime } from "@/lib/formatting";
 
 interface Props {
   teamSlug: string;
@@ -28,14 +30,15 @@ function labelForEntry(item: TeamActivityLogEntry): string {
 }
 
 export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = false }: Props) {
+  const { language, t } = useLanguage();
   const [interactive, setInteractive] = useState(false);
   const [items, setItems] = useState<TeamActivityLogEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | TeamActivityLogEntry["kind"]>("all");
   const emptyMessage =
     filter === "all"
-      ? "No recorded team activity yet."
-      : `No ${filter} events recorded yet.`;
+      ? t("team.timeline.empty_all", "No recorded team activity yet.")
+      : t("team.timeline.empty_kind", "No {kind} events recorded yet.").replace("{kind}", filter);
 
   const load = useCallback(async () => {
     if (!currentUserId) return;
@@ -49,15 +52,15 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
       );
       const json = (await response.json()) as { data?: { items?: TeamActivityLogEntry[] }; error?: { message?: string } };
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to load activity timeline");
+        setMessage(json.error?.message ?? t("team.timeline.load_failed", "Failed to load the activity timeline."));
         setItems([]);
         return;
       }
       setItems(json.data?.items ?? []);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error && error.message ? error.message : t("team.timeline.load_failed", "Failed to load the activity timeline."));
     }
-  }, [currentUserId, filter, fullWidth, teamSlug]);
+  }, [currentUserId, filter, fullWidth, t, teamSlug]);
 
   useEffect(() => {
     setInteractive(true);
@@ -70,11 +73,11 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
   return (
     <section className={`card p-5 space-y-4 ${fullWidth ? "min-h-[28rem]" : ""}`}>
       <div className="flex items-center gap-2">
-        <History className="w-4 h-4 text-[var(--color-warning)]" />
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Team timeline</h2>
+          <History className="w-4 h-4 text-[var(--color-warning)]" />
+          <div>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("team.timeline.title", "Team timeline")}</h2>
           <p className="text-xs text-[var(--color-text-secondary)] m-0">
-            Task changes, structured discussions, and agent actions in one filtered stream.
+            {t("team.timeline.subtitle", "Task changes, structured discussions, and agent actions in one filtered stream.")}
           </p>
         </div>
       </div>
@@ -93,13 +96,13 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
-              {label}
+              {t(`team.timeline.filter_${value}`, label)}
             </button>
           ))}
         </div>
       ) : null}
       {!currentUserId ? (
-        <p className="text-sm text-[var(--color-text-secondary)] m-0">Join the team to inspect the activity timeline.</p>
+        <p className="text-sm text-[var(--color-text-secondary)] m-0">{t("team.timeline.sign_in_required", "Join the team to inspect the activity timeline.")}</p>
       ) : items.length === 0 ? (
         <div
           key={filter}
@@ -117,13 +120,13 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
                 <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">{labelForEntry(item)}</p>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">
-                {item.actorName ?? item.actorId} · {new Date(item.createdAt).toLocaleString()}
+                {item.actorName ?? item.actorId} · {formatLocalizedDateTime(item.createdAt, language)}
               </p>
             </div>
           ))}
         </div>
       )}
-      {message ? <p className="text-sm text-[var(--color-danger)] m-0">{message}</p> : null}
+      {message ? <p className="text-sm text-[var(--color-error)] m-0">{message}</p> : null}
     </section>
   );
 }

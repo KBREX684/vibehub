@@ -40,8 +40,10 @@ export interface OnboardingLabels {
     sub: string;
     nickname: string;
     nicknameHint: string;
+    nicknamePlaceholder: string;
     headline: string;
     headlineHint: string;
+    headlinePlaceholder: string;
     interestsLabel: string;
     interestsHint: string;
   };
@@ -212,7 +214,7 @@ export function OnboardingWizard({ labels }: { labels: OnboardingLabels }) {
             <FormField label={labels.s1.nickname} hint={labels.s1.nicknameHint} required>
               <input
                 className="input-base"
-                placeholder="Alice"
+                placeholder={labels.s1.nicknamePlaceholder}
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 maxLength={30}
@@ -221,7 +223,7 @@ export function OnboardingWizard({ labels }: { labels: OnboardingLabels }) {
             <FormField label={labels.s1.headline} hint={labels.s1.headlineHint}>
               <input
                 className="input-base"
-                placeholder={labels.s1.headlineHint.split("，")[0] ?? ""}
+                placeholder={labels.s1.headlinePlaceholder}
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
                 maxLength={60}
@@ -239,7 +241,7 @@ export function OnboardingWizard({ labels }: { labels: OnboardingLabels }) {
                       type="button"
                       onClick={() => toggleInterest(key)}
                       aria-pressed={active}
-                      className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-pill)]"
+                      className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-pill)]"
                     >
                       <TagPill accent={active ? "apple" : "default"} className="cursor-pointer">
                         {active ? (

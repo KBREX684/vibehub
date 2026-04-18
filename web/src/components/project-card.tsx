@@ -4,14 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { Star, Zap, Users, Flame, Clock3, TrendingUp } from "lucide-react";
 import type { Project } from "@/lib/types";
-import { SpotlightCard, TiltedCard } from "@/components/ui";
-
-const STATUS_COLORS: Record<string, string> = {
-  idea: "tag-violet",
-  building: "tag-blue",
-  launched: "tag-green",
-  paused: "tag",
-};
+import { useLanguage } from "@/app/context/LanguageContext";
+import { formatLocalizedDate } from "@/lib/formatting";
+import { Badge, SpotlightCard, TiltedCard } from "@/components/ui";
 
 const PROJECT_INITIAL_CLASS =
   "w-10 h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 text-base font-mono font-bold text-[var(--color-text-primary)]";
@@ -23,10 +18,8 @@ export function ProjectCard({
   project: Project;
   featured?: boolean;
 }) {
-  const updatedAt = new Date(project.updatedAt);
-  const updatedLabel = Number.isNaN(updatedAt.getTime())
-    ? "Recently updated"
-    : updatedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const { language, t } = useLanguage();
+  const updatedLabel = formatLocalizedDate(project.updatedAt, language, { month: "short", day: "numeric" });
 
   const cardContent = (
     <SpotlightCard
@@ -35,7 +28,10 @@ export function ProjectCard({
       spotlightRadius={featured ? 240 : 180}
     >
       {featured && (
-        <div className="absolute inset-0 border-2 border-[var(--color-text-primary)] pointer-events-none rounded-[var(--radius-lg)]" />
+        <>
+          <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[var(--color-featured-highlight)]" />
+          <div className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)] shadow-[inset_0_0_0_1px_var(--color-featured-highlight)]" />
+        </>
       )}
 
       <Link
@@ -64,19 +60,33 @@ export function ProjectCard({
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] leading-tight truncate">
+              <h3 className="text-base font-semibold tracking-tight text-[var(--color-text-primary)] leading-tight">
                 {project.title}
               </h3>
               <div className="flex items-center gap-1.5 shrink-0">
                 {featured && (
-                  <span className="tag tag-yellow flex items-center gap-1">
+                  <Badge variant="warning" pill mono size="sm">
                     <Zap className="w-2.5 h-2.5" />
-                    Featured
-                  </span>
+                    {t("project.featured", "Featured")}
+                  </Badge>
                 )}
-                <span className={`tag ${STATUS_COLORS[project.status] ?? "tag"} capitalize`}>
-                  {project.status}
-                </span>
+                <Badge
+                  variant={
+                    project.status === "idea"
+                      ? "violet"
+                      : project.status === "building"
+                        ? "info"
+                        : project.status === "launched"
+                          ? "success"
+                          : "default"
+                  }
+                  pill
+                  mono
+                  size="sm"
+                  className="capitalize"
+                >
+                  {t(`project.status.${project.status}`, project.status)}
+                </Badge>
               </div>
             </div>
             {project.team && (
@@ -110,11 +120,11 @@ export function ProjectCard({
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-subtle)]">
-          <div className="tag-row">
+          <div className="flex flex-wrap items-center gap-2">
             {project.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="tag">
+              <Badge key={tag} variant="default" pill mono size="sm">
                 {tag}
-              </span>
+              </Badge>
             ))}
             {project.tags.length > 3 && (
               <span className="text-xs text-[var(--color-text-muted)]">
@@ -144,12 +154,12 @@ export function ProjectCard({
         <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-[var(--color-text-muted)]">
           <span className="inline-flex items-center gap-1">
             <Clock3 className="w-3 h-3" />
-            Updated {updatedLabel}
+            {t("common.updated", "Updated")} {updatedLabel}
           </span>
           {typeof project.recentBookmarkDelta === "number" && project.recentBookmarkDelta > 0 ? (
             <span className="inline-flex items-center gap-1 text-[var(--color-success)]">
               <TrendingUp className="w-3 h-3" />
-              +{project.recentBookmarkDelta} saves this week
+              {t("project.saves_this_week", "+{count} saves this week").replace("{count}", String(project.recentBookmarkDelta))}
             </span>
           ) : null}
         </div>

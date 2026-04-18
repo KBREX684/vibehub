@@ -2,15 +2,11 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/app/context/LanguageContext";
 import type { Project, ProjectStatus } from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
 
-const STATUSES: { value: ProjectStatus; label: string }[] = [
-  { value: "idea", label: "Idea" },
-  { value: "building", label: "Building" },
-  { value: "launched", label: "Launched" },
-  { value: "paused", label: "Paused" },
-];
+const STATUSES: ProjectStatus[] = ["idea", "building", "launched", "paused"];
 
 function joinList(items: string[]): string {
   return items.join(", ");
@@ -29,6 +25,7 @@ interface Props {
 
 export function EditProjectForm({ project }: Props) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [title, setTitle] = useState(project.title);
   const [oneLiner, setOneLiner] = useState(project.oneLiner);
   const [description, setDescription] = useState(project.description);
@@ -61,14 +58,14 @@ export function EditProjectForm({ project }: Props) {
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
         setSyncStatus("error");
-        setMessage(json.error?.message ?? "README sync failed");
+        setMessage(json.error?.message ?? t("project.form.edit.syncReadmeFailed"));
         return;
       }
       setSyncStatus("idle");
       router.refresh();
     } catch (err) {
       setSyncStatus("error");
-      setMessage(err instanceof Error ? err.message : String(err));
+      setMessage(err instanceof Error ? err.message : t("project.form.edit.syncReadmeFailed"));
     }
   }
 
@@ -100,14 +97,14 @@ export function EditProjectForm({ project }: Props) {
       const json = (await res.json()) as { data?: { slug?: string }; error?: { message?: string } };
       if (!res.ok) {
         setFormStatus("error");
-        setMessage(json.error?.message ?? "Update failed");
+        setMessage(json.error?.message ?? t("project.form.edit.failed"));
         return;
       }
       const nextSlug = json.data?.slug ?? project.slug;
       window.location.assign(`/projects/${encodeURIComponent(nextSlug)}`);
     } catch (err) {
       setFormStatus("error");
-      setMessage(err instanceof Error ? err.message : String(err));
+      setMessage(err instanceof Error ? err.message : t("project.form.edit.failed"));
     }
   }
 
@@ -121,13 +118,14 @@ export function EditProjectForm({ project }: Props) {
   return (
     <form onSubmit={onSubmit} className="card p-6 space-y-5">
       <p className="text-xs text-[var(--color-text-muted)] m-0">
-        Slug <span className="font-mono text-[var(--color-text-secondary)]">{project.slug}</span> is generated when the
-        project is created and cannot be changed here.
+        {t("project.form.edit.slugHintPrefix")}{" "}
+        <span className="font-mono text-[var(--color-text-secondary)]">{project.slug}</span>{" "}
+        {t("project.form.edit.slugHintSuffix")}
       </p>
 
       <div className="space-y-1.5">
         <label htmlFor="project-edit-title" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          Title <span className="text-[var(--color-error)]">*</span>
+          {t("project.form.edit.titleLabel")} <span className="text-[var(--color-error)]">*</span>
         </label>
         <input
           id="project-edit-title"
@@ -143,7 +141,7 @@ export function EditProjectForm({ project }: Props) {
 
       <div className="space-y-1.5">
         <label htmlFor="project-edit-one-liner" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          One-liner <span className="text-[var(--color-error)]">*</span>
+          {t("project.form.edit.oneLinerLabel")} <span className="text-[var(--color-error)]">*</span>
         </label>
         <input
           id="project-edit-one-liner"
@@ -159,7 +157,7 @@ export function EditProjectForm({ project }: Props) {
 
       <div className="space-y-1.5">
         <label htmlFor="project-edit-description" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          Description <span className="text-[var(--color-error)]">*</span>
+          {t("project.form.edit.descriptionLabel")} <span className="text-[var(--color-error)]">*</span>
         </label>
         <textarea
           id="project-edit-description"
@@ -171,12 +169,14 @@ export function EditProjectForm({ project }: Props) {
           minLength={20}
           rows={6}
         />
-        <p className="text-[10px] text-[var(--color-text-muted)]">{description.length} characters (min 20)</p>
+        <p className="text-[10px] text-[var(--color-text-muted)]">
+          {t("project.form.edit.descriptionCount").replace("{count}", String(description.length))}
+        </p>
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="project-edit-readme" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          README (Markdown, optional)
+          {t("project.form.edit.readmeLabel")}
         </label>
         <textarea
           id="project-edit-readme"
@@ -194,10 +194,10 @@ export function EditProjectForm({ project }: Props) {
               disabled={!isHydrated || syncStatus === "loading"}
               onClick={() => void syncReadmeFromGitHub()}
             >
-              {syncStatus === "loading" ? "Syncing…" : "Sync from GitHub"}
+              {syncStatus === "loading" ? t("project.form.edit.syncingReadme") : t("project.form.edit.syncReadme")}
             </button>
             <span className="text-[10px] text-[var(--color-text-muted)]">
-              Fetches default branch README.md via raw.githubusercontent.com
+              {t("project.form.edit.syncReadmeHint")}
             </span>
           </div>
         ) : null}
@@ -205,60 +205,60 @@ export function EditProjectForm({ project }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Status</label>
+          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.edit.statusLabel")}</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as ProjectStatus)}
             className="input-base appearance-none cursor-pointer"
             disabled={formDisabled}
           >
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
+            {STATUSES.map((statusValue) => (
+              <option key={statusValue} value={statusValue}>
+                {t(`project.status.${statusValue}`)}
               </option>
             ))}
           </select>
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Demo URL</label>
+          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.edit.demoUrlLabel")}</label>
           <input
             value={demoUrl}
             onChange={(e) => setDemoUrl(e.target.value)}
             className="input-base"
             type="url"
             disabled={formDisabled}
-            placeholder="Clear to remove"
+            placeholder={t("project.form.edit.demoUrlPlaceholder")}
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">GitHub repository URL</label>
+          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.edit.repoUrlLabel")}</label>
           <input
             value={repoUrl}
             onChange={(e) => setRepoUrl(e.target.value)}
             className="input-base"
             type="url"
             disabled={formDisabled}
-            placeholder="https://github.com/org/repo"
+            placeholder={t("project.form.edit.repoUrlPlaceholder")}
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Website URL</label>
+          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.edit.websiteUrlLabel")}</label>
           <input
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             className="input-base"
             type="url"
             disabled={formDisabled}
-            placeholder="https://example.com"
+            placeholder={t("project.form.edit.websiteUrlPlaceholder")}
           />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Tech stack</label>
+        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.edit.techStackLabel")}</label>
         <textarea
           value={techStackInput}
           onChange={(e) => setTechStackInput(e.target.value)}
@@ -269,7 +269,7 @@ export function EditProjectForm({ project }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Tags</label>
+        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.edit.tagsLabel")}</label>
         <textarea
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
@@ -286,10 +286,10 @@ export function EditProjectForm({ project }: Props) {
           disabled={formDisabled}
           onClick={() => void submitProjectUpdate()}
         >
-          {formStatus === "loading" ? "Saving…" : "Save changes"}
+          {formStatus === "loading" ? t("project.form.edit.submitting") : t("project.form.edit.submit")}
         </button>
         <button type="button" className="btn btn-secondary text-sm px-5 py-2" onClick={() => router.back()}>
-          Cancel
+          {t("project.form.edit.cancel")}
         </button>
       </div>
 

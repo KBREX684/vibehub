@@ -15,6 +15,8 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
   /** Renders as a pill (full rounded) vs subtle rounded rect */
   pill?: boolean;
+  mono?: boolean;
+  size?: "sm" | "md";
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
@@ -32,6 +34,8 @@ const variantClasses: Record<BadgeVariant, string> = {
 export function Badge({
   variant = "default",
   pill = false,
+  mono = false,
+  size = "md",
   className = "",
   children,
   ...rest
@@ -39,7 +43,9 @@ export function Badge({
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 border px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 border",
+        mono ? "font-mono" : "font-medium",
+        size === "sm" ? "px-2 py-0.5 text-[0.65rem]" : "px-2.5 py-0.5 text-xs",
         pill ? "rounded-[var(--radius-pill)]" : "rounded-[var(--radius-sm)]",
         variantClasses[variant],
         className,

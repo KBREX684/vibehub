@@ -1,24 +1,12 @@
 "use client";
 
-/**
- * v8 W2 — migrated off the legacy palette (white glass / emerald green / amber
- * / fee2e2 red chips) to tokenized primitives.
- *
- * Structure preserved: milestone list with inline "New milestone" form,
- * progress slider, visibility toggle, reopen/complete/delete actions.
- * What changed is only how each surface is rendered:
- *   - Section wrapper → SectionCard
- *   - Sign-in state → SectionCard + Button
- *   - Timeline items → token-driven cards on dark surfaces
- *   - Empty state → EmptyState primitive
- *   - Delete confirm → ConfirmDialog
- *   - Error banner → token-driven inline callout
- */
-
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/app/context/LanguageContext";
+import { apiFetch } from "@/lib/api-fetch";
 import { isDevDemoAuth } from "@/lib/dev-demo";
+import { formatLocalizedDate } from "@/lib/formatting";
 import { motion, AnimatePresence } from "framer-motion";
 import type { TeamMilestone } from "@/lib/types";
 import {
@@ -31,7 +19,6 @@ import {
   Globe,
   Lock,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api-fetch";
 import {
   Button,
   ConfirmDialog,
@@ -53,6 +40,7 @@ interface Props {
 
 export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
   const router = useRouter();
+  const { language, t } = useLanguage();
   const [items, setItems] = useState<TeamMilestone[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -75,28 +63,28 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
         error?: { message?: string };
       };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Failed to load milestones");
+        setMsg(json.error?.message ?? t("team.milestones.errors.load", "Failed to load milestones"));
         setItems([]);
         return;
       }
       setItems(json.data?.milestones ?? []);
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
-  }, [teamSlug]);
+  }, [t, teamSlug]);
 
   useEffect(() => {
     if (currentUserId) void load();
   }, [currentUserId, load]);
 
-  async function createMilestone(e: FormEvent) {
-    e.preventDefault();
+  async function createMilestone(event: FormEvent) {
+    event.preventDefault();
     setMsg(null);
     try {
-      const [y, mo, d] = targetDate.split("-").map(Number);
-      const targetIso = new Date(Date.UTC(y, mo - 1, d, 12, 0, 0, 0)).toISOString();
+      const [year, month, day] = targetDate.split("-").map(Number);
+      const targetIso = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)).toISOString();
       const body: Record<string, unknown> = {
         title: title.trim(),
         targetDate: targetIso,
@@ -110,7 +98,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
       });
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Create failed");
+        setMsg(json.error?.message ?? t("team.milestones.errors.create", "Failed to create milestone"));
         return;
       }
       setTitle("");
@@ -119,8 +107,8 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
       setIsFormOpen(false);
       await load();
       router.refresh();
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -138,13 +126,13 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
       );
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Update failed");
+        setMsg(json.error?.message ?? t("team.milestones.errors.update", "Failed to update milestone"));
         return;
       }
       await load();
       router.refresh();
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -157,13 +145,13 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
       );
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Delete failed");
+        setMsg(json.error?.message ?? t("team.milestones.errors.delete", "Failed to delete milestone"));
         return;
       }
       await load();
       router.refresh();
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -171,20 +159,20 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
     return (
       <SectionCard
         icon={Target}
-        title="Milestones"
-        description="Log in to view and manage team milestones."
+        title={t("team.milestones.title", "Milestones")}
+        description={t("team.milestones.sign_in_description", "Sign in to view and manage team milestones.")}
       >
         <div className="flex justify-center">
           {isDevDemoAuth() ? (
             <a href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}>
               <Button variant="apple" size="md">
-                Demo login
+                {t("dev.demo.login_cta", "Demo login")}
               </Button>
             </a>
           ) : (
             <Link href={`/login?redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}>
               <Button variant="apple" size="md">
-                Sign in
+                {t("auth.sign_in", "Sign in")}
               </Button>
             </Link>
           )}
@@ -196,18 +184,20 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
   return (
     <SectionCard
       icon={Target}
-      title="Milestones"
+      title={t("team.milestones.title", "Milestones")}
       actions={
         <Button
           variant={isFormOpen ? "ghost" : "secondary"}
           size="sm"
-          onClick={() => setIsFormOpen((v) => !v)}
+          onClick={() => setIsFormOpen((value) => !value)}
         >
           <Plus
             className={`w-3.5 h-3.5 transition-transform ${isFormOpen ? "rotate-45" : ""}`}
             aria-hidden="true"
           />
-          {isFormOpen ? "Cancel" : "New milestone"}
+          {isFormOpen
+            ? t("common.cancel", "Cancel")
+            : t("team.milestones.new", "New milestone")}
         </Button>
       }
     >
@@ -218,42 +208,48 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
             animate={{ opacity: 1, height: "auto", marginBottom: 20 }}
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             className="overflow-hidden"
-            onSubmit={(ev) => void createMilestone(ev)}
+            onSubmit={(event) => void createMilestone(event)}
           >
             <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <FormField label="Title" required>
+                <FormField label={t("team.milestones.form.title", "Title")} required>
                   <input
                     className="input-base"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(event) => setTitle(event.target.value)}
                     required
                     maxLength={200}
-                    placeholder="e.g., MVP Launch"
+                    placeholder={t("team.milestones.form.title_placeholder", "e.g., MVP launch")}
                   />
                 </FormField>
-                <FormField label="Target date" required>
+                <FormField label={t("team.milestones.form.target_date", "Target date")} required>
                   <input
                     className="input-base"
                     type="date"
                     value={targetDate}
-                    onChange={(e) => setTargetDate(e.target.value)}
+                    onChange={(event) => setTargetDate(event.target.value)}
                     required
                   />
                 </FormField>
               </div>
-              <FormField label="Description" hint="What defines success for this milestone?">
+              <FormField
+                label={t("team.milestones.form.description", "Description")}
+                hint={t(
+                  "team.milestones.form.description_hint",
+                  "What defines success for this milestone?"
+                )}
+              >
                 <textarea
                   className="input-base resize-none"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(event) => setDescription(event.target.value)}
                   rows={2}
                   maxLength={2000}
                 />
               </FormField>
               <div className="flex justify-end">
                 <Button variant="primary" size="sm" type="submit">
-                  Create milestone
+                  {t("team.milestones.form.submit", "Create milestone")}
                 </Button>
               </div>
             </div>
@@ -268,16 +264,19 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
       ) : items.length === 0 ? (
         <EmptyState
           icon={Target}
-          title="No milestones yet"
-          description="Add a first milestone to give the team a clear target."
+          title={t("team.milestones.empty_title", "No milestones yet")}
+          description={t(
+            "team.milestones.empty_description",
+            "Add a first milestone to give the team a clear target."
+          )}
         />
       ) : (
         <ol className="relative pl-5 md:pl-7 border-l border-[var(--color-border)] space-y-6">
-          {items.map((m, index) => {
-            const isDone = m.completed;
+          {items.map((milestone, index) => {
+            const isDone = milestone.completed;
             return (
               <motion.li
-                key={m.id}
+                key={milestone.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30, delay: index * 0.05 }}
@@ -308,35 +307,43 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                             : "text-[var(--color-text-primary)]"
                         }`}
                       >
-                        {m.title}
+                        {milestone.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
                         <span className="inline-flex items-center gap-1.5">
                           <Calendar className="w-3 h-3" aria-hidden="true" />
-                          Target:{" "}
-                          {new Date(m.targetDate).toLocaleDateString(undefined, {
+                          {t("team.milestones.target", "Target")}{" "}
+                          {formatLocalizedDate(milestone.targetDate, language, {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
                           })}
                         </span>
-                        <span className="inline-block w-1 h-1 rounded-full bg-[var(--color-border-strong)]" aria-hidden="true" />
+                        <span
+                          className="inline-block w-1 h-1 rounded-full bg-[var(--color-border-strong)]"
+                          aria-hidden="true"
+                        />
                         <button
                           type="button"
                           onClick={() =>
-                            void patchMilestone(m.id, {
-                              visibility: m.visibility === "public" ? "team_only" : "public",
+                            void patchMilestone(milestone.id, {
+                              visibility: milestone.visibility === "public" ? "team_only" : "public",
                             })
                           }
-                          className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-pill)]"
+                          className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)] rounded-[var(--radius-pill)]"
                         >
-                          <TagPill accent={m.visibility === "public" ? "success" : "default"} size="sm">
-                            {m.visibility === "public" ? (
+                          <TagPill
+                            accent={milestone.visibility === "public" ? "success" : "default"}
+                            size="sm"
+                          >
+                            {milestone.visibility === "public" ? (
                               <Globe className="w-3 h-3" aria-hidden="true" />
                             ) : (
                               <Lock className="w-3 h-3" aria-hidden="true" />
                             )}
-                            {m.visibility === "public" ? "Public" : "Internal"}
+                            {milestone.visibility === "public"
+                              ? t("team.milestones.public", "Public")
+                              : t("team.milestones.internal", "Internal")}
                           </TagPill>
                         </button>
                       </div>
@@ -346,14 +353,18 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                       <Button
                         variant={isDone ? "ghost" : "secondary"}
                         size="sm"
-                        onClick={() => void patchMilestone(m.id, { completed: !isDone })}
+                        onClick={() =>
+                          void patchMilestone(milestone.id, { completed: !isDone })
+                        }
                       >
-                        {isDone ? "Reopen" : "Complete"}
+                        {isDone
+                          ? t("team.milestones.reopen", "Reopen")
+                          : t("team.milestones.complete", "Complete")}
                       </Button>
                       <button
                         type="button"
-                        onClick={() => setDeleteTarget(m)}
-                        aria-label="Delete milestone"
+                        onClick={() => setDeleteTarget(milestone)}
+                        aria-label={t("team.milestones.delete", "Delete milestone")}
                         className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-tertiary)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-subtle)] transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
@@ -361,7 +372,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                     </div>
                   </div>
 
-                  {m.description ? (
+                  {milestone.description ? (
                     <p
                       className={`text-sm leading-relaxed mb-4 m-0 ${
                         isDone
@@ -369,20 +380,21 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                           : "text-[var(--color-text-secondary)]"
                       }`}
                     >
-                      {m.description}
+                      {milestone.description}
                     </p>
                   ) : null}
 
-                  {/* Progress */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[var(--color-text-tertiary)] font-medium">Progress</span>
+                      <span className="text-[var(--color-text-tertiary)] font-medium">
+                        {t("team.milestones.progress", "Progress")}
+                      </span>
                       <span
                         className={`font-mono ${
                           isDone ? "text-[var(--color-success)]" : "text-[var(--color-accent-apple)]"
                         }`}
                       >
-                        {m.progress}%
+                        {milestone.progress}%
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
@@ -395,7 +407,7 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                               : "var(--color-accent-apple)",
                           }}
                           initial={{ width: 0 }}
-                          animate={{ width: `${m.progress}%` }}
+                          animate={{ width: `${milestone.progress}%` }}
                           transition={{ type: "spring", stiffness: 50, damping: 15 }}
                         />
                       </div>
@@ -405,12 +417,12 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
                           min={0}
                           max={100}
                           step={5}
-                          value={m.progress}
-                          onChange={(e) =>
-                            void patchMilestone(m.id, { progress: Number(e.target.value) })
+                          value={milestone.progress}
+                          onChange={(event) =>
+                            void patchMilestone(milestone.id, { progress: Number(event.target.value) })
                           }
                           className="w-24 accent-[var(--color-accent-apple)]"
-                          aria-label="Milestone progress"
+                          aria-label={t("team.milestones.progress_aria", "Milestone progress")}
                         />
                       ) : null}
                     </div>
@@ -424,14 +436,17 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete milestone?"
+        title={t("team.milestones.delete_confirm_title", "Delete milestone?")}
         description={
           deleteTarget
-            ? `This will permanently remove "${deleteTarget.title}". This action cannot be undone.`
+            ? t(
+                "team.milestones.delete_confirm_description",
+                'This will permanently remove "{title}". This action cannot be undone.'
+              ).replace("{title}", deleteTarget.title)
             : undefined
         }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        confirmLabel={t("common.delete", "Delete")}
+        cancelLabel={t("common.cancel", "Cancel")}
         tone="destructive"
         onClose={() => setDeleteTarget(null)}
         onConfirm={async () => {

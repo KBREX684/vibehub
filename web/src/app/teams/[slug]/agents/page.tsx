@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Bot, ShieldCheck } from "lucide-react";
 import { getSessionUserFromCookie } from "@/lib/auth";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { getServerTranslator, getServerLanguage } from "@/lib/i18n";
 import {
   getTeamBySlug,
   listTeamAgentMemberships,
@@ -36,6 +38,10 @@ export default async function TeamAgentsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const [{ t }, language] = await Promise.all([
+    getServerTranslator(),
+    getServerLanguage(),
+  ]);
   const session = await getSessionUserFromCookie();
   if (!session) {
     redirect(`/login?redirect=${encodeURIComponent(`/teams/${slug}/agents`)}`);
@@ -50,14 +56,17 @@ export default async function TeamAgentsPage({
       <main className="container pb-24 pt-6">
         <ErrorState
           kind="forbidden"
-          title="Team members only"
-          description="Agent bus visibility is limited to people who are already part of this team."
+          title={t("team.agents.members_only_title", "Team members only")}
+          description={t(
+            "team.agents.members_only_description",
+            "Agent visibility is limited to people who are already part of this team."
+          )}
           action={
             <Link
               href={`/teams/${team.slug}`}
               className="btn btn-secondary text-sm px-4 py-2"
             >
-              Back to team
+              {t("team.back_to_team", "Back to team")}
             </Link>
           }
           block
@@ -87,39 +96,57 @@ export default async function TeamAgentsPage({
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-        Back to {team.name}
+        {t("team.back_to_team", "Back to team")} {team.name}
       </Link>
 
       <PageHeader
         icon={Bot}
-        eyebrow="AI + HUMAN TEAM"
-        title={`Agents in ${team.name}`}
+        eyebrow={t("team.agents.eyebrow", "AI + HUMAN TEAM")}
+        title={t("team.agents.title", "Agents in {team}").replace("{team}", team.name)}
         subtitle={
           canManage
-            ? "Add, revoke, or reassign role cards. Writes always flow through the confirmation queue."
-            : "Everyone on this team can see which agents are participating and what they have been doing."
+            ? t(
+                "team.agents.manage_subtitle",
+                "Add, revoke, or reassign role cards. Writes always flow through the confirmation queue."
+              )
+            : t(
+                "team.agents.view_subtitle",
+                "Everyone on this team can see which agents are participating and what they have been doing."
+              )
         }
         actions={
           <TagPill accent="violet" size="md">
             <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
-            {memberships.filter((m) => m.active).length} active
+            {t("team.agents.active_count", "{count} active").replace(
+              "{count}",
+              String(memberships.filter((m) => m.active).length)
+            )}
           </TagPill>
         }
       />
 
       <SectionCard
         icon={Bot}
-        title="Agent roster"
-        description="Each row represents an AgentBinding granted a role card in this team. Owner is the human responsible for the binding."
+        title={t("team.agents.roster_title", "Agent roster")}
+        description={t(
+          "team.agents.roster_description",
+          "Each row represents an AgentBinding granted a role card in this team. Owner is the human responsible for the binding."
+        )}
       >
         {memberships.length === 0 ? (
           <EmptyState
             icon={Bot}
-            title="No agents in this team yet"
+            title={t("team.agents.empty_title", "No agents in this team yet")}
             description={
               canManage
-                ? "Add your first agent by picking one of your AgentBindings in the dialog below."
-                : "A team owner or admin can bring agents in from their AgentBinding list."
+                ? t(
+                    "team.agents.empty_manage_description",
+                    "Add your first agent by picking one of your AgentBindings in the dialog below."
+                  )
+                : t(
+                    "team.agents.empty_view_description",
+                    "A team owner or admin can bring agents in from their AgentBinding list."
+                  )
             }
           />
         ) : null}
@@ -132,11 +159,14 @@ export default async function TeamAgentsPage({
 
       <SectionCard
         icon={ShieldCheck}
-        title="Recent agent activity"
-        description="Last 25 audit entries across all agents in this team (newest first)."
+        title={t("team.agents.activity_title", "Recent agent activity")}
+        description={t(
+          "team.agents.activity_description",
+          "Last 25 audit entries across all agents in this team (newest first)."
+        )}
       >
         {recentAudits.items.length === 0 ? (
-          <EmptyState title="No agent activity yet" />
+          <EmptyState title={t("team.agents.no_activity", "No agent activity yet")} />
         ) : (
           <ul className="divide-y divide-[var(--color-border-subtle)]">
             {recentAudits.items.map((row) => (
@@ -161,7 +191,8 @@ export default async function TeamAgentsPage({
                     </span>
                     {row.taskId ? (
                       <>
-                        {" on task "}
+                        {" "}
+                        {t("team.agents.on_task", "on task")}{" "}
                         <span className="font-mono text-xs text-[var(--color-text-secondary)]">
                           {row.taskId}
                         </span>
@@ -169,7 +200,7 @@ export default async function TeamAgentsPage({
                     ) : null}
                   </p>
                   <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-0.5">
-                    {new Date(row.createdAt).toLocaleString()}
+                    {formatLocalizedDateTime(row.createdAt, language)}
                   </p>
                 </div>
               </li>

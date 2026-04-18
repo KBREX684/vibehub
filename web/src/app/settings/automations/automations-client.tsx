@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { apiFetch } from "@/lib/api-fetch";
 import { WEBHOOK_EVENT_NAMES } from "@/lib/webhook-events";
 import type { AgentBindingSummary, AutomationWorkflowRunSummary, AutomationWorkflowSummary } from "@/lib/types";
@@ -22,6 +23,7 @@ const ACTION_EXAMPLES = {
 const ACTION_TYPES = Object.keys(ACTION_EXAMPLES) as Array<keyof typeof ACTION_EXAMPLES>;
 
 export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindingSummary[] }) {
+  const { t } = useLanguage();
   const [workflows, setWorkflows] = useState<AutomationWorkflowSummary[]>([]);
   const [runs, setRuns] = useState<AutomationWorkflowRunSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
       parsedFilter = filterJson.trim() ? (JSON.parse(filterJson) as Record<string, unknown>) : undefined;
       parsedConfig = JSON.parse(configJson) as Record<string, unknown>;
     } catch {
-      toast.error("Filter/config JSON is invalid");
+      toast.error(t("automations.invalidJson"));
       return;
     }
     const res = await apiFetch("/api/v1/me/automations", {
@@ -85,10 +87,10 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
     });
     const json = (await res.json()) as { error?: { message?: string } };
     if (!res.ok) {
-      toast.error(json.error?.message ?? "Failed to create automation");
+      toast.error(json.error?.message ?? t("automations.createFailed"));
       return;
     }
-    toast.success("Automation created");
+    toast.success(t("automations.created"));
     setName("");
     setDescription("");
     setFilterJson("{}");
@@ -104,7 +106,7 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
     });
     const json = (await res.json()) as { error?: { message?: string } };
     if (!res.ok) {
-      toast.error(json.error?.message ?? "Failed to update automation");
+      toast.error(json.error?.message ?? t("automations.updateFailed"));
       return;
     }
     void refresh();
@@ -117,22 +119,22 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
     });
     const json = (await res.json()) as { error?: { message?: string } };
     if (!res.ok) {
-      toast.error(json.error?.message ?? "Failed to delete automation");
+      toast.error(json.error?.message ?? t("automations.deleteFailed"));
       return;
     }
-    toast.success("Automation deleted");
+    toast.success(t("automations.deleted"));
     void refresh();
   }
 
   return (
     <div className="space-y-8">
       <form onSubmit={createWorkflow} className="card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">New automation</h2>
-        <input className="input-base" value={name} onChange={(e) => setName(e.target.value)} placeholder="Automation name" required />
-        <textarea className="input-base min-h-20" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("automations.newTitle")}</h2>
+        <input className="input-base" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("automations.namePlaceholder")} required />
+        <textarea className="input-base min-h-20" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("automations.descriptionPlaceholder")} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <label className="space-y-1">
-            <span className="text-xs text-[var(--color-text-muted)]">Trigger event</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{t("automations.triggerEvent")}</span>
             <select className="input-base" value={triggerEvent} onChange={(e) => setTriggerEvent(e.target.value as typeof triggerEvent)}>
               {WEBHOOK_EVENT_NAMES.map((eventName) => (
                 <option key={eventName} value={eventName}>{eventName}</option>
@@ -140,16 +142,16 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
             </select>
           </label>
           <label className="space-y-1">
-            <span className="text-xs text-[var(--color-text-muted)]">Agent binding</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{t("automations.agentBinding")}</span>
             <select className="input-base" value={agentBindingId} onChange={(e) => setAgentBindingId(e.target.value)}>
-              <option value="">None</option>
+              <option value="">{t("automations.none")}</option>
               {agentBindings.map((binding) => (
                 <option key={binding.id} value={binding.id}>{binding.label}</option>
               ))}
             </select>
           </label>
           <label className="space-y-1">
-            <span className="text-xs text-[var(--color-text-muted)]">Action</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{t("automations.action")}</span>
             <select className="input-base" value={actionType} onChange={(e) => setActionType(e.target.value as keyof typeof ACTION_EXAMPLES)}>
               {actionOptions.map((option) => (
                 <option key={option} value={option}>{option}</option>
@@ -158,22 +160,22 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
           </label>
         </div>
         <label className="space-y-1">
-          <span className="text-xs text-[var(--color-text-muted)]">Payload filter JSON</span>
+          <span className="text-xs text-[var(--color-text-muted)]">{t("automations.payloadFilter")}</span>
           <textarea className="input-base min-h-20 font-mono text-xs" value={filterJson} onChange={(e) => setFilterJson(e.target.value)} />
         </label>
         <label className="space-y-1">
-          <span className="text-xs text-[var(--color-text-muted)]">Step config JSON</span>
+          <span className="text-xs text-[var(--color-text-muted)]">{t("automations.stepConfig")}</span>
           <textarea className="input-base min-h-48 font-mono text-xs" value={configJson} onChange={(e) => setConfigJson(e.target.value)} />
         </label>
-        <button type="submit" className="btn btn-primary w-fit">Create automation</button>
+        <button type="submit" className="btn btn-primary w-fit">{t("automations.create")}</button>
       </form>
 
       <section className="card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Active automations</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("automations.activeTitle")}</h2>
         {loading ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">Loading…</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("automations.loading")}</p>
         ) : workflows.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">No automations yet.</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("automations.empty")}</p>
         ) : (
           <ul className="list-none m-0 p-0 space-y-4">
             {workflows.map((workflow) => (
@@ -185,15 +187,15 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
                   </div>
                   <div className="flex items-center gap-2">
                     <button type="button" className="btn btn-secondary text-xs" onClick={() => toggleWorkflow(workflow)}>
-                      {workflow.active ? "Disable" : "Enable"}
+                      {workflow.active ? t("automations.disable") : t("automations.enable")}
                     </button>
                     <button type="button" className="btn btn-ghost text-xs text-[var(--color-error)]" onClick={() => removeWorkflow(workflow)}>
-                      Delete
+                      {t("automations.delete")}
                     </button>
                   </div>
                 </div>
                 {workflow.description && <p className="text-sm text-[var(--color-text-secondary)] m-0">{workflow.description}</p>}
-                {workflow.agentBindingLabel && <p className="text-xs text-[var(--color-text-muted)] m-0">Agent: {workflow.agentBindingLabel}</p>}
+                {workflow.agentBindingLabel && <p className="text-xs text-[var(--color-text-muted)] m-0">{t("automations.agentLabel")}: {workflow.agentBindingLabel}</p>}
                 <ul className="list-none m-0 p-0 space-y-2">
                   {workflow.steps.map((step) => (
                     <li key={step.id} className="rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] px-3 py-2">
@@ -209,9 +211,9 @@ export function AutomationsClient({ agentBindings }: { agentBindings: AgentBindi
       </section>
 
       <section className="card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Recent runs</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("automations.recentRuns")}</h2>
         {runs.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">No automation runs yet.</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("automations.recentRunsEmpty")}</p>
         ) : (
           <ul className="list-none m-0 p-0 space-y-3">
             {runs.map((run) => (

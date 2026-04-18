@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PostCard } from "@/components/post-card";
 import { ProjectCard } from "@/components/project-card";
+import { Badge } from "@/components/ui";
+import { getServerTranslator } from "@/lib/i18n";
 import { getTopicDiscovery } from "@/lib/repository";
 import { Layers, MessageSquare, FolderGit2 } from "lucide-react";
 
@@ -11,6 +13,7 @@ interface PageProps {
 
 export default async function CollectionTopicPage({ params }: PageProps) {
   const { slug } = await params;
+  const { t } = await getServerTranslator();
   const discovery = await getTopicDiscovery(slug);
 
   if (!discovery) {
@@ -23,7 +26,9 @@ export default async function CollectionTopicPage({ params }: PageProps) {
     <main className="container pb-24">
       <div className="py-10 border-b border-[var(--color-border)] mb-10">
         <p className="text-xs text-[var(--color-text-muted)] mb-3">
-          <Link href="/collections" className="inline-link">专题集合</Link>
+          <Link href="/collections" className="inline-link">
+            {t("collections.index_title")}
+          </Link>
           {" "}/ {topic.title}
         </p>
         <div className="flex items-center gap-3 mb-2">
@@ -33,23 +38,28 @@ export default async function CollectionTopicPage({ params }: PageProps) {
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">{topic.title}</h1>
         </div>
         <p className="text-sm text-[var(--color-text-secondary)] mb-3">{topic.description}</p>
-        <span className="tag">#{topic.tag}</span>
+        <Badge variant="default" pill mono size="sm">
+          #{topic.tag}
+        </Badge>
       </div>
 
       <section className="mb-12">
         <div className="flex items-center gap-2 mb-6">
           <MessageSquare className="w-4 h-4 text-[var(--color-accent-cyan)]" />
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">讨论</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">
+            {t("collections.discussions")}
+          </h2>
         </div>
         {posts.items.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">该标签下暂无已通过审核的讨论帖。</p>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            {t("collections.no_posts")}
+          </p>
         ) : (
           <div className="space-y-4">
             {posts.items.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
-                truncateBody={220}
                 detailHref={`/discussions#${post.slug}`}
               />
             ))}
@@ -60,10 +70,14 @@ export default async function CollectionTopicPage({ params }: PageProps) {
       <section>
         <div className="flex items-center gap-2 mb-6">
           <FolderGit2 className="w-4 h-4 text-[var(--color-accent-cyan)]" />
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">项目</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] m-0">
+            {t("collections.projects")}
+          </h2>
         </div>
         {projects.items.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">该标签下暂无项目。</p>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            {t("collections.no_projects")}
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.items.map((project) => (

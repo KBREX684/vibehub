@@ -22,6 +22,7 @@ import {
 } from "@/lib/api-key-scopes";
 import { apiFetch } from "@/lib/api-fetch";
 import { isDevDemoAuth } from "@/lib/dev-demo";
+import { formatLocalizedDate, formatLocalizedDateTime } from "@/lib/formatting";
 import type {
   AgentBindingSummary,
   ApiKeyCreated,
@@ -32,6 +33,7 @@ import type {
 import type { UpgradeReason } from "@/lib/subscription";
 import { ApiKeyUsageSparkline } from "@/components/api-key-usage-sparkline";
 import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
+import { useLanguage } from "@/app/context/LanguageContext";
 import {
   Button,
   ConfirmDialog,
@@ -53,6 +55,7 @@ interface Props {
 }
 
 export function ApiKeysPanel({ currentUserId }: Props) {
+  const { language, t } = useLanguage();
   const [keys, setKeys] = useState<ApiKeySummary[]>([]);
   const [agentBindings, setAgentBindings] = useState<AgentBindingSummary[]>([]);
   const [usageByKey, setUsageByKey] = useState<Record<string, ApiKeyUsageSnapshot>>({});
@@ -92,7 +95,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
             error?: { message?: string };
           };
           if (!res.ok || !json.data?.usage) {
-            throw new Error(json.error?.message ?? `Failed to load usage for ${key.label}`);
+            throw new Error(json.error?.message ?? t("apiKeys.loadUsageFailed"));
           }
           return [key.id, json.data.usage] as const;
         })
@@ -104,7 +107,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     } finally {
       setLoadingUsage(false);
     }
-  }, []);
+  }, [t]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,7 +126,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         error?: { message?: string };
       };
       if (!keysRes.ok) {
-        setMsg(keysJson.error?.message ?? "Failed to load keys");
+        setMsg(keysJson.error?.message ?? t("apiKeys.loadFailed"));
         setKeys([]);
         setUsageByKey({});
         return;
@@ -131,7 +134,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
       const nextKeys = keysJson.data?.keys ?? [];
       setKeys(nextKeys);
       if (!bindingsRes.ok) {
-        setMsg(bindingsJson.error?.message ?? "Failed to load agents");
+        setMsg(bindingsJson.error?.message ?? t("apiKeys.loadAgentsFailed"));
         setAgentBindings([]);
       } else {
         setAgentBindings(bindingsJson.data?.bindings ?? []);
@@ -142,7 +145,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [loadUsage]);
+  }, [loadUsage, t]);
 
   useEffect(() => {
     if (currentUserId) {
@@ -171,7 +174,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
         error?: { message?: string; details?: { upgradeReason?: UpgradeReason } };
       };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Create failed");
+        setMsg(json.error?.message ?? t("apiKeys.createFailed"));
         setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
@@ -194,7 +197,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
       });
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Revoke failed");
+        setMsg(json.error?.message ?? t("apiKeys.revokeFailed"));
         return;
       }
       await load();
@@ -205,18 +208,22 @@ export function ApiKeysPanel({ currentUserId }: Props) {
 
   if (!currentUserId) {
     return (
-      <SectionCard icon={Key} title="Authentication required" description="Please sign in to manage your API keys and access tokens.">
+      <SectionCard
+        icon={Key}
+        title={t("apiKeys.authRequiredTitle")}
+        description={t("apiKeys.authRequiredDesc")}
+      >
         <div className="flex justify-center">
           {isDevDemoAuth() ? (
             <a href="/api/v1/auth/demo-login?role=user&redirect=/settings/api-keys">
               <Button variant="apple" size="md">
-                Demo login
+                {t("apiKeys.demoLogin")}
               </Button>
             </a>
           ) : (
             <Link href="/login?redirect=%2Fsettings%2Fapi-keys">
               <Button variant="apple" size="md">
-                Sign in
+                {t("apiKeys.signIn")}
               </Button>
             </Link>
           )}
@@ -229,24 +236,24 @@ export function ApiKeysPanel({ currentUserId }: Props) {
     <div className="space-y-6">
       <SectionCard
         icon={Key}
-        title="API keys"
-        description="Use these keys to authenticate scripts, integrations, or AI agents. Each key is scoped. Bearer access is subject to per-key rate limits."
+        title={t("apiKeys.pageTitle")}
+        description={t("apiKeys.pageDescription")}
       />
 
       <SectionCard
         icon={Plus}
-        title="Create new key"
-        description="Label the key, choose scopes, and optionally link it to one of your agent bindings for attribution."
+        title={t("apiKeys.createTitle")}
+        description={t("apiKeys.createDescription")}
       >
         <form onSubmit={(ev) => void createKey(ev)} className="space-y-4">
-          <FormField label="Key label" required>
+          <FormField label={t("apiKeys.label")} required>
             <input
               className="input-base"
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               required
               maxLength={80}
-              placeholder="e.g., Production Agent, CI/CD Pipeline"
+              placeholder={t("apiKeys.labelPlaceholder")}
             />
           </FormField>
 
@@ -254,16 +261,16 @@ export function ApiKeysPanel({ currentUserId }: Props) {
             label={
               <span className="inline-flex items-center gap-1.5">
                 <Bot className="w-3.5 h-3.5" aria-hidden="true" />
-                Linked agent
+                {t("apiKeys.linkedAgent")}
               </span>
             }
             hint={
               <>
-                Link the key to a named agent so MCP and API audits stay attributable. Manage agents in{" "}
+                {t("apiKeys.linkedAgentHintPrefix")}{" "}
                 <Link href="/settings/agents" className="underline hover:text-[var(--color-text-primary)]">
-                  Settings
+                  {t("apiKeys.linkedAgentHintLink")}
                 </Link>
-                .
+                {t("apiKeys.linkedAgentHintSuffix")}
               </>
             }
           >
@@ -272,11 +279,11 @@ export function ApiKeysPanel({ currentUserId }: Props) {
               value={selectedAgentBindingId}
               onChange={(event) => setSelectedAgentBindingId(event.target.value)}
             >
-              <option value="">No linked agent</option>
+              <option value="">{t("apiKeys.noLinkedAgent")}</option>
               {agentBindings.map((binding) => (
                 <option key={binding.id} value={binding.id}>
                   {binding.label} · {binding.agentType}
-                  {!binding.active ? " (paused)" : ""}
+                  {!binding.active ? ` (${t("apiKeys.paused")})` : ""}
                 </option>
               ))}
             </select>
@@ -286,7 +293,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
             label={
               <span className="inline-flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5" aria-hidden="true" />
-                Scopes & permissions
+                {t("apiKeys.scopes")}
               </span>
             }
           >
@@ -297,12 +304,12 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                   checked
                   disabled
                   className="h-3.5 w-3.5 accent-[var(--color-accent-apple)]"
-                  aria-label="Required base scope"
+                  aria-label={t("apiKeys.requiredBaseScope")}
                 />
                 <code className="text-xs font-mono rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] border border-[var(--color-border-subtle)] px-1.5 py-0.5">
                   {API_KEY_SCOPE_READ_PUBLIC}
                 </code>
-                <span className="text-xs text-[var(--color-text-tertiary)]">(required base scope)</span>
+                <span className="text-xs text-[var(--color-text-tertiary)]">({t("apiKeys.requiredBaseScope")})</span>
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3 border-t border-[var(--color-border-subtle)]">
@@ -331,7 +338,7 @@ export function ApiKeysPanel({ currentUserId }: Props) {
           </FormField>
 
           <Button variant="primary" size="md" type="submit">
-            Generate secret key
+            {t("apiKeys.generate")}
           </Button>
         </form>
 
@@ -346,10 +353,10 @@ export function ApiKeysPanel({ currentUserId }: Props) {
               <div className="rounded-[var(--radius-lg)] border border-[var(--color-warning-subtle)] bg-[var(--color-warning-subtle)] p-4">
                 <div className="flex items-center gap-2 mb-2 text-[var(--color-warning)]">
                   <AlertCircle className="w-4 h-4" aria-hidden="true" />
-                  <h4 className="text-sm font-semibold m-0">Save this key now</h4>
+                  <h4 className="text-sm font-semibold m-0">{t("apiKeys.saveNow")}</h4>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3 leading-relaxed">
-                  For your security, this secret key will only be shown once. You will not be able to see it again after leaving this page.
+                  {t("apiKeys.secretShownOnce")}
                 </p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 p-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-canvas)] text-[var(--color-accent-cyan)] font-mono text-xs break-all">
@@ -368,16 +375,16 @@ export function ApiKeysPanel({ currentUserId }: Props) {
 
       <SectionCard
         icon={Key}
-        title="Active keys"
-        description="All keys issued to this account. Expand any key to inspect the last 7 days of usage and the latest 100 MCP calls."
+        title={t("apiKeys.activeTitle")}
+        description={t("apiKeys.activeDescription")}
       >
         {loading && keys.length === 0 ? (
           <LoadingSkeleton preset="list" count={3} />
         ) : keys.length === 0 ? (
           <EmptyState
             icon={Key}
-            title="No API keys yet"
-            description="Create one above to start calling the platform via MCP or OpenAPI."
+            title={t("apiKeys.emptyTitle")}
+            description={t("apiKeys.emptyDescription")}
           />
         ) : (
           <div className="space-y-3">
@@ -411,16 +418,16 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                         <strong className="text-sm font-semibold text-[var(--color-text-primary)]">{key.label}</strong>
                         {key.revokedAt ? (
                           <TagPill accent="default" size="sm" mono>
-                            revoked
+                            {t("apiKeys.revoked")}
                           </TagPill>
                         ) : (
                           <TagPill accent="success" size="sm" mono>
-                            active
+                            {t("apiKeys.active")}
                           </TagPill>
                         )}
                         {key.agentBinding ? (
                           <TagPill accent="violet" size="sm">
-                            agent · {key.agentBinding.label}
+                            {t("apiKeys.agentLinked")} · {key.agentBinding.label}
                           </TagPill>
                         ) : null}
                       </div>
@@ -430,12 +437,16 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[var(--color-text-tertiary)]">
                         <span className="inline-flex items-center gap-1.5">
                           <Clock className="w-3 h-3" aria-hidden="true" />
-                          Created: {formatDate(key.createdAt)}
+                          {t("apiKeys.created")}: {formatLocalizedDate(key.createdAt, language, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
                         </span>
                         {usage?.summary.lastUsedAt && !key.revokedAt ? (
                           <span className="inline-flex items-center gap-1.5">
                             <Sparkles className="w-3 h-3" aria-hidden="true" />
-                            Last used: {formatDateTime(usage.summary.lastUsedAt)}
+                            {t("apiKeys.lastUsed")}: {formatLocalizedDateTime(usage.summary.lastUsedAt, language)}
                           </span>
                         ) : null}
                       </div>
@@ -448,12 +459,12 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                         onClick={() => setExpandedKeyId((current) => (current === key.id ? null : key.id))}
                       >
                         {expanded ? <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />}
-                        {expanded ? "Hide usage" : "View usage"}
+                        {expanded ? t("apiKeys.hideUsage") : t("apiKeys.viewUsage")}
                       </Button>
                       {!key.revokedAt ? (
                         <Button variant="destructive" size="sm" onClick={() => setRevokeTarget(key)}>
                           <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                          Revoke
+                          {t("apiKeys.revoke")}
                         </Button>
                       ) : null}
                     </div>
@@ -461,15 +472,15 @@ export function ApiKeysPanel({ currentUserId }: Props) {
 
                   <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_180px] gap-4 pt-3 border-t border-[var(--color-border-subtle)]">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <UsageMetric label="7d calls" value={usage?.summary.last7dCount ?? 0} />
-                      <UsageMetric label="24h calls" value={usage?.summary.last24hCount ?? 0} />
-                      <UsageMetric label="Errors" value={usage?.summary.errorCount ?? 0} />
-                      <UsageMetric label="Tools" value={usage?.summary.uniqueTools ?? 0} />
+                      <UsageMetric label={t("apiKeys.metric7d")} value={usage?.summary.last7dCount ?? 0} />
+                      <UsageMetric label={t("apiKeys.metric24h")} value={usage?.summary.last24hCount ?? 0} />
+                      <UsageMetric label={t("apiKeys.metricErrors")} value={usage?.summary.errorCount ?? 0} />
+                      <UsageMetric label={t("apiKeys.metricTools")} value={usage?.summary.uniqueTools ?? 0} />
                     </div>
                     <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-3">
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">Last 7 days</span>
-                        {loadingUsage && !usage ? <span className="text-[11px] text-[var(--color-text-muted)]">Loading…</span> : null}
+                        <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">{t("apiKeys.last7d")}</span>
+                        {loadingUsage && !usage ? <span className="text-[11px] text-[var(--color-text-muted)]">{t("apiKeys.loading")}</span> : null}
                       </div>
                       {usage ? <ApiKeyUsageSparkline daily={usage.daily} /> : <div className="h-10 rounded bg-[var(--color-bg-elevated)]" />}
                     </div>
@@ -489,15 +500,15 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                     <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-4 space-y-4">
                       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
                         <div>
-                          <h4 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Recent MCP invocations</h4>
-                          <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1">Last 100 calls with client-side filtering by tool and success state.</p>
+                          <h4 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("apiKeys.recentInvocationsTitle")}</h4>
+                          <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-1">{t("apiKeys.recentInvocationsDescription")}</p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
                           <input
                             className="input-base min-w-[180px]"
                             value={toolFilters[key.id] ?? ""}
                             onChange={(event) => setToolFilters((current) => ({ ...current, [key.id]: event.target.value }))}
-                            placeholder="Filter by tool"
+                            placeholder={t("apiKeys.filterTool")}
                           />
                           <select
                             className="input-base"
@@ -509,9 +520,9 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                               }))
                             }
                           >
-                            <option value="all">All statuses</option>
-                            <option value="success">Success only</option>
-                            <option value="error">Errors only</option>
+                            <option value="all">{t("apiKeys.allStatuses")}</option>
+                            <option value="success">{t("apiKeys.successOnly")}</option>
+                            <option value="error">{t("apiKeys.errorsOnly")}</option>
                           </select>
                         </div>
                       </div>
@@ -521,13 +532,13 @@ export function ApiKeysPanel({ currentUserId }: Props) {
                       ) : filteredInvocations.length === 0 ? (
                         <EmptyState
                           icon={Sparkles}
-                          title="No matching invocations"
-                          description="This key has no MCP calls matching the current filters yet."
+                          title={t("apiKeys.noMatchingInvocations")}
+                          description={t("apiKeys.noMatchingInvocationsDesc")}
                         />
                       ) : (
                         <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                           {filteredInvocations.map((row) => (
-                            <InvocationRow key={row.id} row={row} />
+                            <InvocationRow key={row.id} row={row} language={language} t={t} />
                           ))}
                         </div>
                       )}
@@ -542,14 +553,14 @@ export function ApiKeysPanel({ currentUserId }: Props) {
 
       <ConfirmDialog
         open={revokeTarget !== null}
-        title="Revoke API key?"
+        title={t("apiKeys.revokeTitle")}
         description={
           revokeTarget
-            ? `This will immediately invalidate "${revokeTarget.label}". Any integrations using it will stop working. This action cannot be undone.`
+            ? t("apiKeys.revokeDescription").replace("{label}", revokeTarget.label)
             : undefined
         }
-        confirmLabel="Revoke"
-        cancelLabel="Cancel"
+        confirmLabel={t("apiKeys.revokeConfirm")}
+        cancelLabel={t("apiKeys.revokeCancel")}
         tone="destructive"
         onClose={() => setRevokeTarget(null)}
         onConfirm={async () => {
@@ -570,7 +581,15 @@ function UsageMetric({ label, value }: { label: string; value: number | string }
   );
 }
 
-function InvocationRow({ row }: { row: McpInvokeAuditRow }) {
+function InvocationRow({
+  row,
+  language,
+  t,
+}: {
+  row: McpInvokeAuditRow;
+  language: string;
+  t: (key: string, fallback?: string) => string;
+}) {
   const ok = row.httpStatus < 400;
   return (
     <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-3">
@@ -581,31 +600,13 @@ function InvocationRow({ row }: { row: McpInvokeAuditRow }) {
           </TagPill>
           <code className="text-xs font-mono text-[var(--color-text-primary)] truncate">{row.tool}</code>
         </div>
-        <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatDateTime(row.createdAt)}</span>
+        <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatLocalizedDateTime(row.createdAt, language)}</span>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-text-secondary)]">
-        <span>duration: {typeof row.durationMs === "number" ? `${row.durationMs} ms` : "n/a"}</span>
-        <span>status: {ok ? "success" : row.errorCode ?? "error"}</span>
-        {row.agentBindingId ? <span>agent linked</span> : null}
+        <span>{t("apiKeys.duration")}: {typeof row.durationMs === "number" ? `${row.durationMs} ms` : t("apiKeys.na")}</span>
+        <span>{t("apiKeys.status")}: {ok ? t("apiKeys.success") : row.errorCode ?? t("apiKeys.error")}</span>
+        {row.agentBindingId ? <span>{t("apiKeys.agentLinkedShort")}</span> : null}
       </div>
     </div>
   );
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

@@ -15,11 +15,12 @@
  * `zh.json` / `en.json`, which keeps us honest during partial translation).
  */
 import Link from "next/link";
-import { listProjects, listTeams } from "@/lib/repository";
+import { listProjectFeed, listTeams } from "@/lib/repository";
 import { HomeFeedSection } from "@/components/home-feed-section";
 import { HomeHeroClient } from "@/components/home-hero-client";
 import { HomePillarsClient, type PillarItem } from "@/components/home-pillars-client";
 import { HomeCtaFooterClient } from "@/components/home-cta-footer-client";
+import { HeroThreadsBackdrop } from "@/components/visual/hero-threads-backdrop";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
 import {
@@ -37,7 +38,7 @@ export default async function HomePage() {
   const session = await getSessionUserFromCookie();
   const { t } = await getServerTranslator();
   const [{ items: projects }, { items: teams }] = await Promise.all([
-    listProjects({ page: 1, limit: 6 }),
+    listProjectFeed({ page: 1, limit: 6, sort: "hot", viewerUserId: session?.userId }),
     listTeams({ page: 1, limit: 3 }),
   ]);
 
@@ -78,27 +79,33 @@ export default async function HomePage() {
   return (
     <main className="container pb-24 space-y-20">
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <HomeHeroClient
-        primaryCTA={primaryCTA}
-        secondaryCTA={secondaryCTA}
-        eyebrowText={t("home.v8.eyebrow", "中国中文开发者 · AI+Human 协作网络")}
-        heroLine1={t("home.v8.hero_line1", "让你的作品被看见，")}
-        heroLine2={t("home.v8.hero_line2", "让你的 Agent 合法进入团队。")}
-        heroDescription={t(
-          "home.v8.hero_description",
-          "VibeHub 是面向中国中文开发者的协作网络：广场讨论、项目画廊、小团队组队，再加上让 Cursor、Claude、自建 Agent 作为可审计队员参与协作的 Agent 总线。"
-        )}
-        primaryLabel={
-          session
-            ? t("home.v8.cta_primary_authed", "展示我的作品")
-            : t("home.v8.cta_primary_guest", "免费注册，展示作品")
-        }
-        secondaryLabel={
-          session
-            ? t("home.v8.cta_secondary_authed", "让我的 Agent 进团队")
-            : t("home.v8.cta_secondary_guest", "给开发者看 Agent 接入")
-        }
-      />
+      <section
+        id="about"
+        className="relative overflow-hidden pt-14 pb-4 text-center scroll-mt-24 rounded-[var(--radius-3xl)] isolate"
+      >
+        <HeroThreadsBackdrop />
+        <HomeHeroClient
+          primaryCTA={primaryCTA}
+          secondaryCTA={secondaryCTA}
+          eyebrowText={t("home.v8.eyebrow", "中国中文开发者 · AI+Human 协作网络")}
+          heroLine1={t("home.v8.hero_line1", "让你的作品被看见，")}
+          heroLine2={t("home.v8.hero_line2", "让你的 Agent 合法进入团队。")}
+          heroDescription={t(
+            "home.v8.hero_description",
+            "VibeHub 是面向中国中文开发者的协作网络：广场讨论、项目画廊、小团队组队，再加上让 Cursor、Claude、自建 Agent 作为可审计队员参与协作的 Agent 总线。"
+          )}
+          primaryLabel={
+            session
+              ? t("home.v8.cta_primary_authed", "展示我的作品")
+              : t("home.v8.cta_primary_guest", "免费注册，展示作品")
+          }
+          secondaryLabel={
+            session
+              ? t("home.v8.cta_secondary_authed", "让我的 Agent 进团队")
+              : t("home.v8.cta_secondary_guest", "给开发者看 Agent 接入")
+          }
+        />
+      </section>
 
       {/* ── Four pillars ────────────────────────────────────────────────────── */}
       <HomePillarsClient pillars={pillars} />

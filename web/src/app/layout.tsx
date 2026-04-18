@@ -32,7 +32,7 @@ export default async function RootLayout({
   const themePref = await getServerThemePreference();
   const { t } = await getServerTranslator();
   return (
-    <html lang={language} className={htmlClassForThemePreference(themePref)} suppressHydrationWarning>
+    <html lang={language} className={htmlClassForThemePreference()} suppressHydrationWarning>
       <body className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col">
         <ThemeScript />
         <AuthProvider>

@@ -30,15 +30,11 @@ import {
   Shield,
   Key,
   User,
-  Sun,
-  Moon,
-  Monitor,
   Bot,
   Users,
   MessageSquarePlus,
   FolderPlus,
 } from "lucide-react";
-import { useTheme } from "@/app/context/ThemeContext";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { openCommandPalette } from "@/components/command-palette";
@@ -67,7 +63,6 @@ const NAV_LINKS: NavLink[] = [
 export function SiteNav() {
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
-  const { theme, setTheme } = useTheme();
   const { user, loading, logout, unreadCount } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -145,8 +140,8 @@ export function SiteNav() {
           className="flex items-center gap-2 shrink-0 font-semibold text-[15px] tracking-tight text-[var(--color-text-primary)]"
           aria-label="VibeHub"
         >
-          <span className="w-7 h-7 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
-            <Zap className="w-4 h-4 text-[var(--color-text-inverse)]" aria-hidden="true" />
+          <span className="w-7 h-7 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] flex items-center justify-center shadow-[inset_0_1px_0_var(--color-featured-highlight)]">
+            <Zap className="w-4 h-4 text-[var(--color-text-primary)]" aria-hidden="true" />
           </span>
           <span>VibeHub</span>
         </Link>
@@ -162,7 +157,7 @@ export function SiteNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="relative px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-pill)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]"
+                className="relative inline-flex min-w-[6.75rem] items-center justify-center px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-pill)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]"
                 style={{ color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}
                 aria-current={active ? "page" : undefined}
               >
@@ -186,10 +181,10 @@ export function SiteNav() {
             type="button"
             onClick={openCommandPalette}
             aria-label={t("nav.open_search", "打开搜索")}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-colors"
+            className="hidden sm:grid min-w-[15.5rem] grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-colors"
           >
             <Search className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="text-xs">{t("search.placeholder")}</span>
+            <span className="min-w-0 text-left text-xs truncate">{t("search.placeholder")}</span>
             <kbd className="hidden lg:inline text-[10px] bg-[var(--color-bg-elevated)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">⌘K</kbd>
           </button>
 
@@ -198,21 +193,10 @@ export function SiteNav() {
             type="button"
             onClick={() => setLanguage(language === "en" ? "zh" : "en")}
             aria-label={t("nav.toggle_language")}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-colors"
+            className="inline-flex min-w-[4.5rem] items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-colors"
           >
             <Globe className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{language === "en" ? "EN" : "中"}</span>
-          </button>
-
-          {/* Theme toggle (kept as existing capability; v8 does not introduce light-mode assets) */}
-          <button
-            type="button"
-            onClick={() => setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light")}
-            aria-label={t("nav.theme_cycle")}
-            title={`${t("nav.theme_light")} / ${t("nav.theme_dark")} / ${t("nav.theme_system")}`}
-            className="flex items-center justify-center p-2 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-colors"
-          >
-            {theme === "light" ? <Sun className="w-4 h-4" /> : theme === "dark" ? <Moon className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
           </button>
 
           {/* Quick-create menu (logged-in only) */}
@@ -225,7 +209,7 @@ export function SiteNav() {
                 aria-haspopup="menu"
                 aria-expanded={createMenuOpen}
                 aria-controls={createMenuId}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-text-inverse)] text-xs font-semibold hover:bg-[var(--color-primary-hover)] transition-colors"
+                className="inline-flex min-w-[7.5rem] items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] text-xs font-semibold border border-[var(--color-text-primary)] hover:opacity-90 transition-opacity"
               >
                 <FolderPlus className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{t("nav.quick.create", "创建")}</span>
@@ -299,7 +283,7 @@ export function SiteNav() {
                   aria-label={t("nav.user_menu", "打开用户菜单")}
                   className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] transition-colors"
                 >
-                  <Avatar tone="violet" size="sm" initial={user.name?.charAt(0) || "U"} alt={user.name} />
+                  <Avatar tone="neutral" size="sm" initial={user.name?.charAt(0) || "U"} alt={user.name} />
                   <span className="hidden sm:block text-sm font-medium text-[var(--color-text-primary)] max-w-[100px] truncate">
                     {user.name}
                   </span>
@@ -362,7 +346,7 @@ export function SiteNav() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link href="/login" className="btn btn-primary text-sm px-4 py-1.5">
+              <Link href="/login" className="btn btn-primary min-w-[6.25rem] justify-center text-sm px-4 py-1.5">
                 {t("auth.sign_in")}
               </Link>
             )
@@ -388,13 +372,13 @@ export function SiteNav() {
         {mobileOpen ? (
           <motion.div
             id={mobileMenuId}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)]"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.16 }}
+            className="md:hidden absolute top-full inset-x-0 border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)]/90 backdrop-blur-md shadow-[var(--shadow-modal)]"
           >
-            <nav aria-label={t("a11y.mobile_navigation", "移动端导航")} className="container py-3 flex flex-col gap-1">
+            <nav aria-label={t("a11y.mobile_navigation", "移动端导航")} className="container py-3 flex max-h-[calc(100vh-3.5rem)] flex-col gap-1 overflow-y-auto">
               {NAV_LINKS.map((link) => {
                 const active = isActive(link);
                 return (

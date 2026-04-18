@@ -14,7 +14,6 @@ export default async function NotificationsPage() {
   }
 
   const items = await listInAppNotifications({ userId: session.userId, limit: 80 });
-  const unreadCount = items.filter((n) => !n.readAt).length;
 
   return (
     <main className="container max-w-3xl pb-24 pt-8 space-y-6">
@@ -25,9 +24,7 @@ export default async function NotificationsPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-[var(--color-text-primary)]">{t("notifications.title")}</h1>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              {unreadCount} {t("notifications.unread")}
-            </p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("notifications.summary")}</p>
           </div>
         </div>
       </div>

@@ -10,6 +10,9 @@ import type {
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
 import { Bot, Plus, Trash2, RefreshCw, Check, X, ShieldCheck, Clock3, Users } from "lucide-react";
+import { useLanguage } from "@/app/context/LanguageContext";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { Badge } from "@/components/ui";
 
 const TEAM_MEMBERSHIP_CHIP_CLASS =
   "inline-flex items-center gap-1 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] rounded-[var(--radius-pill)] px-2 py-0.5 border border-[var(--color-border-subtle)]";
@@ -25,6 +28,7 @@ interface ApiResponse {
 }
 
 export function AgentsClient() {
+  const { language, t } = useLanguage();
   const [bindings, setBindings] = useState<AgentBindingSummary[]>([]);
   const [teamsByBinding, setTeamsByBinding] = useState<
     Record<string, TeamAgentMembershipSummary[]>
@@ -51,7 +55,7 @@ export function AgentsClient() {
       const confirmationsJson = (await confirmationsResponse.json()) as ApiResponse;
       const auditsJson = (await auditsResponse.json()) as ApiResponse;
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to load agents");
+        setMessage(json.error?.message ?? t("settings.agents.load_failed"));
         setBindings([]);
         return;
       }
@@ -82,12 +86,12 @@ export function AgentsClient() {
       );
       setTeamsByBinding(teamsMap);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error ? error.message : t("settings.agents.load_failed"));
       setBindings([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -110,7 +114,7 @@ export function AgentsClient() {
       });
       const json = (await response.json()) as ApiResponse;
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to create agent binding");
+        setMessage(json.error?.message ?? t("settings.agents.create_failed"));
         return;
       }
       setLabel("");
@@ -118,7 +122,7 @@ export function AgentsClient() {
       setDescription("");
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error ? error.message : t("settings.agents.create_failed"));
     } finally {
       setSaving(false);
     }
@@ -135,17 +139,17 @@ export function AgentsClient() {
       });
       const json = (await response.json()) as ApiResponse;
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to update agent binding");
+        setMessage(json.error?.message ?? t("settings.agents.update_failed"));
         return;
       }
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error ? error.message : t("settings.agents.update_failed"));
     }
   }
 
   async function removeBinding(bindingId: string) {
-    if (!confirm("Delete this agent binding? Linked API keys will be detached.")) return;
+    if (!confirm(t("settings.agents.delete_confirm"))) return;
     setMessage(null);
     try {
       const response = await apiFetch(`/api/v1/me/agent-bindings/${encodeURIComponent(bindingId)}`, {
@@ -154,12 +158,12 @@ export function AgentsClient() {
       });
       const json = (await response.json()) as ApiResponse;
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to delete agent binding");
+        setMessage(json.error?.message ?? t("settings.agents.delete_failed"));
         return;
       }
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error ? error.message : t("settings.agents.delete_failed"));
     }
   }
 
@@ -174,12 +178,12 @@ export function AgentsClient() {
       });
       const json = (await response.json()) as ApiResponse;
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to update confirmation request");
+        setMessage(json.error?.message ?? t("settings.agents.confirmation_failed"));
         return;
       }
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error ? error.message : t("settings.agents.confirmation_failed"));
     }
   }
 
@@ -187,52 +191,52 @@ export function AgentsClient() {
     <div className="space-y-6">
       <section className="card p-5 space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">Register agent identity</h2>
+          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">{t("settings.agents.register_title")}</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 mb-0">
-            Use a stable label for each external agent or workflow. API keys can then be linked to one agent binding for audit and MCP attribution.
+            {t("settings.agents.register_subtitle")}
           </p>
         </div>
         <form onSubmit={(event) => void createBinding(event)} className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2 md:col-span-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Label</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{t("common.label")}</span>
             <input
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] px-3 py-2 text-sm"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
               maxLength={80}
-              placeholder="Support triage agent"
+              placeholder={t("settings.agents.label_placeholder")}
               required
             />
           </label>
           <label className="space-y-2 md:col-span-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Agent type</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{t("settings.agents.agent_type")}</span>
             <input
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] px-3 py-2 text-sm"
               value={agentType}
               onChange={(event) => setAgentType(event.target.value)}
               maxLength={40}
-              placeholder="openai"
+              placeholder={t("settings.agents.agent_type_placeholder")}
               required
             />
           </label>
           <label className="space-y-2 md:col-span-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Description</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{t("common.description")}</span>
             <textarea
               className="min-h-24 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] px-3 py-2 text-sm"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               maxLength={280}
-              placeholder="Handles backlog triage, report summarization, and MCP read tools."
+              placeholder={t("settings.agents.description_placeholder")}
             />
           </label>
           <div className="md:col-span-2 flex items-center gap-3">
             <button type="submit" disabled={saving} className="btn btn-primary text-sm px-4 py-2 inline-flex items-center gap-2 disabled:opacity-60">
               <Plus className="w-4 h-4" />
-              {saving ? "Creating..." : "Create binding"}
+              {saving ? t("common.creating") : t("settings.agents.create_binding")}
             </button>
             <button type="button" onClick={() => void load()} className="btn btn-ghost text-sm px-4 py-2 inline-flex items-center gap-2">
               <RefreshCw className="w-4 h-4" />
-              Refresh
+              {t("common.refresh")}
             </button>
           </div>
         </form>
@@ -240,16 +244,16 @@ export function AgentsClient() {
 
       <section className="card p-5 space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">Bound agents</h2>
+          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">{t("settings.agents.bound_title")}</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 mb-0">
-            Active bindings can be attached to API keys. Deleting a binding detaches existing keys but does not revoke them.
+            {t("settings.agents.bound_subtitle")}
           </p>
         </div>
         {loading ? (
-          <p className="text-sm text-[var(--color-text-secondary)] m-0">Loading agents...</p>
+          <p className="text-sm text-[var(--color-text-secondary)] m-0">{t("settings.agents.loading")}</p>
         ) : bindings.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
-            No agent bindings yet.
+            {t("settings.agents.empty")}
           </div>
         ) : (
           <div className="space-y-3">
@@ -267,18 +271,20 @@ export function AgentsClient() {
                           <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{binding.label}</p>
                           <p className="text-xs text-[var(--color-text-secondary)] m-0">{binding.agentType}</p>
                         </div>
-                        <span className={`badge ${binding.active ? "badge-green" : "badge-neutral"}`}>{binding.active ? "Active" : "Paused"}</span>
+                        <Badge variant={binding.active ? "success" : "default"} pill mono size="sm">
+                          {binding.active ? t("common.active") : t("common.paused")}
+                        </Badge>
                       </div>
                       {binding.description ? <p className="text-sm text-[var(--color-text-secondary)] mb-0">{binding.description}</p> : null}
-                      <p className="text-xs text-[var(--color-text-muted)] mb-0">Updated {new Date(binding.updatedAt).toLocaleString()}</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mb-0">{t("common.updated")} {formatLocalizedDateTime(binding.updatedAt, language)}</p>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <button type="button" onClick={() => void toggleBinding(binding)} className="btn btn-secondary text-xs px-3 py-1.5">
-                        {binding.active ? "Pause" : "Resume"}
+                        {binding.active ? t("common.pause") : t("common.resume")}
                       </button>
                       <button type="button" onClick={() => void removeBinding(binding.id)} className="btn btn-ghost text-xs px-3 py-1.5 inline-flex items-center gap-1.5 text-[var(--color-danger)]">
                         <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                        Delete
+                        {t("common.delete")}
                       </button>
                     </div>
                   </div>
@@ -286,7 +292,7 @@ export function AgentsClient() {
                     <div className="mt-3 pt-3 border-t border-[var(--color-border-subtle)] flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1 text-xs text-[var(--color-text-tertiary)]">
                         <Users className="w-3 h-3" aria-hidden="true" />
-                        In teams:
+                        {t("settings.agents.in_teams")}
                       </span>
                       {teamMemberships.map((m) => (
                         <Link
@@ -297,7 +303,7 @@ export function AgentsClient() {
                           <span className="font-medium">{m.teamName ?? m.teamSlug ?? m.teamId}</span>
                           <span className="font-mono text-[var(--color-text-tertiary)]">· {m.role}</span>
                           {!m.active ? (
-                            <span className="text-[var(--color-text-muted)]">(paused)</span>
+                            <span className="text-[var(--color-text-muted)]">({t("common.paused").toLowerCase()})</span>
                           ) : null}
                         </Link>
                       ))}
@@ -312,14 +318,14 @@ export function AgentsClient() {
 
       <section className="card p-5 space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">Pending confirmations</h2>
+          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">{t("settings.agents.pending_title")}</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 mb-0">
-            High-risk or final review actions requested by agent-bound API keys stop here until a human confirms them.
+            {t("settings.agents.pending_subtitle")}
           </p>
         </div>
         {confirmations.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
-            No pending confirmation requests.
+            {t("settings.agents.pending_empty")}
           </div>
         ) : (
           <div className="space-y-3">
@@ -329,7 +335,7 @@ export function AgentsClient() {
                   <div>
                     <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.action}</p>
                     <p className="text-xs text-[var(--color-text-secondary)] m-0">
-                      {item.teamSlug ? `/${item.teamSlug}` : "No team"}{item.taskTitle ? ` · ${item.taskTitle}` : ""}
+                      {item.teamSlug ? `/${item.teamSlug}` : t("settings.agents.no_team")}{item.taskTitle ? ` · ${item.taskTitle}` : ""}
                     </p>
                   </div>
                   <span className="badge badge-yellow inline-flex items-center gap-1">
@@ -339,16 +345,16 @@ export function AgentsClient() {
                 </div>
                 {item.reason ? <p className="text-sm text-[var(--color-text-secondary)] m-0">{item.reason}</p> : null}
                 <p className="text-xs text-[var(--color-text-muted)] m-0">
-                  Requested {new Date(item.createdAt).toLocaleString()}
+                  {t("settings.agents.requested")} {formatLocalizedDateTime(item.createdAt, language)}
                 </p>
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => void decideConfirmation(item.id, "approved")} className="btn btn-primary text-xs px-3 py-1.5 inline-flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5" />
-                    Approve
+                    {t("common.approve")}
                   </button>
                   <button type="button" onClick={() => void decideConfirmation(item.id, "rejected")} className="btn btn-ghost text-xs px-3 py-1.5 inline-flex items-center gap-1.5 text-[var(--color-danger)]">
                     <X className="w-3.5 h-3.5" />
-                    Reject
+                    {t("common.reject")}
                   </button>
                 </div>
               </article>
@@ -359,14 +365,14 @@ export function AgentsClient() {
 
       <section className="card p-5 space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">Recent agent audit</h2>
+          <h2 className="text-base font-semibold text-[var(--color-text-primary)] m-0">{t("settings.agents.audit_title")}</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 mb-0">
-            Every bound agent action is logged independently from the main audit log.
+            {t("settings.agents.audit_subtitle")}
           </p>
         </div>
         {audits.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
-            No recorded agent actions yet.
+            {t("settings.agents.audit_empty")}
           </div>
         ) : (
           <div className="space-y-3">
@@ -378,11 +384,11 @@ export function AgentsClient() {
                     <div>
                       <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.action}</p>
                       <p className="text-xs text-[var(--color-text-secondary)] m-0">
-                        Outcome: {item.outcome}{item.taskId ? ` · Task ${item.taskId}` : ""}
+                        {t("settings.agents.outcome")}: {item.outcome}{item.taskId ? ` · ${t("settings.agents.task")} ${item.taskId}` : ""}
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs text-[var(--color-text-muted)]">{new Date(item.createdAt).toLocaleString()}</span>
+                  <span className="text-xs text-[var(--color-text-muted)]">{formatLocalizedDateTime(item.createdAt, language)}</span>
                 </div>
               </article>
             ))}
@@ -390,7 +396,7 @@ export function AgentsClient() {
         )}
       </section>
 
-      {message ? <p className="text-sm text-[var(--color-danger)] m-0">{message}</p> : null}
+      {message ? <p className="text-sm text-[var(--color-error)] m-0">{message}</p> : null}
     </div>
   );
 }

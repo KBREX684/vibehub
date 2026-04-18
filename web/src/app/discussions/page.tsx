@@ -4,6 +4,7 @@ import { DiscussionsPostFeed } from "@/components/discussions-post-feed";
 import { getFollowFeed, getRecommendedPostFeed, listPosts } from "@/lib/repository";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import type { PostSortOrder } from "@/lib/types";
+import { getServerTranslator } from "@/lib/i18n";
 import {
   MessageSquare,
   Flame,
@@ -34,6 +35,7 @@ function buildDiscussionsHref(opts: {
 
 export default async function DiscussionsPage({ searchParams }: Props) {
   const params = await searchParams;
+  const { t } = await getServerTranslator();
   const sort = (
     ["recent", "hot", "following", "recommended", "featured"].includes(params.sort || "")
       ? params.sort
@@ -52,36 +54,36 @@ export default async function DiscussionsPage({ searchParams }: Props) {
   const { items, pagination } = feedResult;
 
   const TABS = [
-    { sort: "recent" as const, icon: Clock, label: "Recent" },
-    { sort: "hot" as const, icon: Flame, label: "Hot" },
-    { sort: "following" as const, icon: Users, label: "Following" },
-    { sort: "recommended" as const, icon: Sparkles, label: "Recommended" },
+    { sort: "recent" as const, icon: Clock, label: t("discussions.sort_recent", "Recent") },
+    { sort: "hot" as const, icon: Flame, label: t("discussions.sort_hot", "Hot") },
+    { sort: "following" as const, icon: Users, label: t("discussions.sort_following", "Following") },
+    { sort: "recommended" as const, icon: Sparkles, label: t("discussions.sort_recommended", "Recommended") },
   ];
   const FEED_META: Record<PostSortOrder, { description: string; emptyTitle: string; emptyBody: string }> = {
     recent: {
-      description: "Latest approved threads across the square.",
-      emptyTitle: "No recent discussions",
-      emptyBody: "No approved threads have been published yet.",
+      description: t("discussions.feed_recent_description", "Latest approved threads across the square."),
+      emptyTitle: t("discussions.feed_recent_empty_title", "No recent discussions"),
+      emptyBody: t("discussions.feed_recent_empty_body", "No approved threads have been published yet."),
     },
     hot: {
-      description: "Momentum ranking using likes, comments, bookmarks, and recency decay.",
-      emptyTitle: "Nothing is trending yet",
-      emptyBody: "Hot picks appear here once discussions start collecting real engagement.",
+      description: t("discussions.feed_hot_description", "Momentum ranking using likes, comments, bookmarks, and recency decay."),
+      emptyTitle: t("discussions.feed_hot_empty_title", "Nothing is trending yet"),
+      emptyBody: t("discussions.feed_hot_empty_body", "Hot picks appear here once discussions start collecting real engagement."),
     },
     following: {
-      description: "Only creators you follow, ordered by newest activity.",
-      emptyTitle: "Your following feed is empty",
-      emptyBody: "Follow creators from profile pages and their latest posts will show up here.",
+      description: t("discussions.feed_following_description", "Only creators you follow, ordered by newest activity."),
+      emptyTitle: t("discussions.feed_following_empty_title", "Your following feed is empty"),
+      emptyBody: t("discussions.feed_following_empty_body", "Follow creators from profile pages and their latest posts will show up here."),
     },
     recommended: {
-      description: "Interest-based recommendations from your recent interaction graph. No LLM ranking.",
-      emptyTitle: "No recommendations yet",
-      emptyBody: "Like, bookmark, or author a few posts first and this feed will become personalized.",
+      description: t("discussions.feed_recommended_description", "Interest-based recommendations from your recent interaction graph. No LLM ranking."),
+      emptyTitle: t("discussions.feed_recommended_empty_title", "No recommendations yet"),
+      emptyBody: t("discussions.feed_recommended_empty_body", "Like, bookmark, or author a few posts first and this feed will become personalized."),
     },
     featured: {
-      description: "Editorially featured discussions.",
-      emptyTitle: "No featured discussions yet",
-      emptyBody: "Featured discussions appear here after review.",
+      description: t("discussions.feed_featured_description", "Editorially featured discussions."),
+      emptyTitle: t("discussions.feed_featured_empty_title", "No featured discussions yet"),
+      emptyBody: t("discussions.feed_featured_empty_body", "Featured discussions appear here after review."),
     },
   };
   const activeMeta = FEED_META[sort];
@@ -101,7 +103,11 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
               {pagination.total} active threads
-              {authorId ? " · Filtered by author" : personalizedFeed ? " · Personalized view" : " · Share knowledge, ask questions"}
+              {authorId
+                ? ` · ${t("discussions.filtered_by_author", "Filtered by author")}`
+                : personalizedFeed
+                  ? ` · ${t("discussions.personalized_view", "Personalized view")}`
+                  : ` · ${t("discussions.default_subtitle", "Share knowledge, ask questions")}`}
             </p>
             <p className="text-xs text-[var(--color-text-muted)] mt-1 mb-0">
               {activeMeta.description}
@@ -134,7 +140,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
             className="btn btn-primary text-sm px-4 py-1.5 flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
-            New Discussion
+            {t("discussions.new_cta", "New discussion")}
           </Link>
         </div>
       </section>
@@ -142,13 +148,15 @@ export default async function DiscussionsPage({ searchParams }: Props) {
       {personalizedFeed && !session ? (
         <div className="card p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Sign in to unlock personalized feeds</h2>
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
+              {t("discussions.personalized_signin_title", "Sign in to unlock personalized feeds")}
+            </h2>
             <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">
-              Following shows creators you follow. Recommended uses your own activity and saved interests.
+              {t("discussions.personalized_signin_body", "Following shows creators you follow. Recommended uses your own activity and saved interests.")}
             </p>
           </div>
           <Link href={`/login?redirect=${encodeURIComponent(`/discussions?sort=${sort}`)}`} className="btn btn-primary text-sm px-4 py-2 inline-flex items-center gap-1.5">
-            Sign in
+            {t("common.sign_in", "Sign in")}
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -172,7 +180,6 @@ export default async function DiscussionsPage({ searchParams }: Props) {
               <PostCard
                 key={post.id}
                 post={post}
-                truncateBody={160}
                 detailHref={`/discussions/${post.slug}`}
               />
             ))}
@@ -185,7 +192,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
                   href={buildDiscussionsHref({ sort, authorId, page: page - 1, classicPagination: true })}
                   className="btn btn-secondary text-sm px-5 py-2"
                 >
-                  Previous
+                  {t("common.previous", "Previous")}
                 </Link>
               )}
               <span className="btn btn-ghost text-sm px-4 py-2 text-[var(--color-text-muted)]">
@@ -196,7 +203,7 @@ export default async function DiscussionsPage({ searchParams }: Props) {
                   href={buildDiscussionsHref({ sort, authorId, page: page + 1, classicPagination: true })}
                   className="btn btn-secondary text-sm px-5 py-2"
                 >
-                  Next
+                  {t("common.next", "Next")}
                 </Link>
               )}
             </nav>

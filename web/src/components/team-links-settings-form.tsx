@@ -3,13 +3,14 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-fetch";
+import { useLanguage } from "@/app/context/LanguageContext";
 
 const FIELDS = [
-  { key: "discordUrl", label: "Discord invite URL" },
-  { key: "telegramUrl", label: "Telegram group URL" },
-  { key: "slackUrl", label: "Slack workspace / channel URL" },
-  { key: "githubOrgUrl", label: "GitHub organization URL" },
-  { key: "githubRepoUrl", label: "GitHub repository URL" },
+  { key: "discordUrl", labelKey: "team.settings.field_discordUrl" },
+  { key: "telegramUrl", labelKey: "team.settings.field_telegramUrl" },
+  { key: "slackUrl", labelKey: "team.settings.field_slackUrl" },
+  { key: "githubOrgUrl", labelKey: "team.settings.field_githubOrgUrl" },
+  { key: "githubRepoUrl", labelKey: "team.settings.field_githubRepoUrl" },
 ] as const;
 
 type LinkKey = (typeof FIELDS)[number]["key"];
@@ -29,6 +30,7 @@ interface Props {
 
 export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [values, setValues] = useState<Record<LinkKey, string>>({
     discordUrl: initial.discordUrl ?? "",
     telegramUrl: initial.telegramUrl ?? "",
@@ -58,11 +60,11 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
         setStatus("error");
-        setMessage(json.error?.message ?? "Update failed");
+        setMessage(json.error?.message ?? t("common.update_failed"));
         return;
       }
       setStatus("success");
-      setMessage("Links saved.");
+      setMessage(t("team.settings.links_saved"));
       router.refresh();
     } catch (err) {
       setStatus("error");
@@ -73,13 +75,14 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
   return (
     <form onSubmit={onSubmit} className="card p-6 space-y-5">
       <p className="text-xs text-[var(--color-text-muted)] m-0">
-        Use full <code className="text-[var(--color-text-secondary)]">https://</code> links. These are shown on the
-        team page and reused by project, GitHub, and community discovery surfaces. Leave blank to clear a field.
+        {t("team.settings.links_hint_prefix", "Use full")}{" "}
+        <code className="text-[var(--color-text-secondary)]">https://</code>{" "}
+        {t("team.settings.links_hint_suffix", "links. These are shown on the team page and reused by project, GitHub, and community discovery surfaces. Leave blank to clear a field.")}
       </p>
-      {FIELDS.map(({ key, label }) => (
+      {FIELDS.map(({ key, labelKey }) => (
         <div key={key} className="space-y-1.5">
           <label htmlFor={`team-link-${key}`} className="text-xs font-semibold text-[var(--color-text-secondary)]">
-            {label}
+            {t(labelKey)}
           </label>
           <input
             id={`team-link-${key}`}
@@ -94,10 +97,10 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
       ))}
       <div className="flex flex-wrap gap-3 pt-2">
         <button type="submit" className="btn btn-primary text-sm px-5 py-2" disabled={status === "loading"}>
-          {status === "loading" ? "Saving..." : "Save links"}
+          {status === "loading" ? t("common.saving") : t("team.settings.save_links")}
         </button>
         <button type="button" className="btn btn-secondary text-sm px-5 py-2" onClick={() => router.push(`/teams/${encodeURIComponent(teamSlug)}`)}>
-          Back to team
+          {t("team.back_to_team")}
         </button>
       </div>
       {message ? (

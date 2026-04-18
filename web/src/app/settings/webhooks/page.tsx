@@ -17,9 +17,9 @@ export default async function WebhooksSettingsPage() {
           <Webhook className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">Webhooks</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">{t("settings.webhooks_heading")}</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 m-0">
-            {t("settings.webhooks_desc", "Receive signed JSON payloads for events you subscribe to.")}
+            {t("settings.webhooks_desc")}
           </p>
         </div>
       </div>

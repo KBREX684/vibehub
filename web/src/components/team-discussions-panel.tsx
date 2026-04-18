@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { TeamDiscussion } from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
 import { MessageSquarePlus } from "lucide-react";
+import { useLanguage } from "@/app/context/LanguageContext";
+import { formatLocalizedDateTime } from "@/lib/formatting";
+import { Button } from "@/components/ui";
 
 interface Props {
   teamSlug: string;
@@ -11,6 +14,7 @@ interface Props {
 }
 
 export function TeamDiscussionsPanel({ teamSlug, currentUserId }: Props) {
+  const { language, t } = useLanguage();
   const [items, setItems] = useState<TeamDiscussion[]>([]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -27,17 +31,17 @@ export function TeamDiscussionsPanel({ teamSlug, currentUserId }: Props) {
       });
       const json = (await response.json()) as { data?: { items?: TeamDiscussion[] }; error?: { message?: string } };
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to load team discussions");
+        setMessage(json.error?.message ?? t("team.discussions.load_failed", "Failed to load team discussions"));
         setItems([]);
         return;
       }
       setItems(json.data?.items ?? []);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error ? error.message : t("team.discussions.load_failed", "Failed to load team discussions"));
     } finally {
       setLoading(false);
     }
-  }, [currentUserId, teamSlug]);
+  }, [currentUserId, t, teamSlug]);
 
   useEffect(() => {
     void load();
@@ -55,14 +59,14 @@ export function TeamDiscussionsPanel({ teamSlug, currentUserId }: Props) {
       });
       const json = (await response.json()) as { error?: { message?: string } };
       if (!response.ok) {
-        setMessage(json.error?.message ?? "Failed to create discussion");
+        setMessage(json.error?.message ?? t("team.discussions.create_failed", "Failed to create discussion"));
         return;
       }
       setTitle("");
       setBody("");
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(error instanceof Error ? error.message : t("team.discussions.create_failed", "Failed to create discussion"));
     }
   }
 
@@ -71,8 +75,12 @@ export function TeamDiscussionsPanel({ teamSlug, currentUserId }: Props) {
       <div className="flex items-center gap-2">
         <MessageSquarePlus className="w-4 h-4 text-[var(--color-featured)]" />
         <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Team discussions</h2>
-          <p className="text-xs text-[var(--color-text-secondary)] m-0">Structured threads for planning, decisions, and review notes.</p>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
+            {t("team.discussions.title", "Team discussions")}
+          </h2>
+          <p className="text-xs text-[var(--color-text-secondary)] m-0">
+            {t("team.discussions.subtitle", "Structured threads for planning, decisions, and review notes.")}
+          </p>
         </div>
       </div>
 
@@ -83,7 +91,7 @@ export function TeamDiscussionsPanel({ teamSlug, currentUserId }: Props) {
             onChange={(event) => setTitle(event.target.value)}
             maxLength={120}
             required
-            placeholder="Start a discussion title"
+            placeholder={t("team.discussions.title_placeholder", "Start a discussion title")}
             className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] px-3 py-2 text-sm"
           />
           <textarea
@@ -91,19 +99,23 @@ export function TeamDiscussionsPanel({ teamSlug, currentUserId }: Props) {
             onChange={(event) => setBody(event.target.value)}
             maxLength={4000}
             required
-            placeholder="Capture the decision, open questions, or review context."
+            placeholder={t("team.discussions.body_placeholder", "Capture the decision, open questions, or review context.")}
             className="min-h-28 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] px-3 py-2 text-sm"
           />
-          <button type="submit" className="btn btn-primary text-sm px-4 py-2">Post discussion</button>
+          <Button type="submit" className="text-sm px-4 py-2">
+            {t("team.discussions.post", "Post discussion")}
+          </Button>
         </form>
       ) : (
-        <p className="text-sm text-[var(--color-text-secondary)] m-0">Join the team to read and write structured discussions.</p>
+        <p className="text-sm text-[var(--color-text-secondary)] m-0">
+          {t("team.discussions.sign_in_hint", "Join the team to read and write structured discussions.")}
+        </p>
       )}
 
-      {loading ? <p className="text-sm text-[var(--color-text-secondary)] m-0">Loading discussions...</p> : null}
+      {loading ? <p className="text-sm text-[var(--color-text-secondary)] m-0">{t("team.discussions.loading", "Loading discussions...")}</p> : null}
       {!loading && items.length === 0 ? (
         <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
-          No team discussions yet.
+          {t("team.discussions.empty", "No team discussions yet.")}
         </div>
       ) : null}
       <div className="space-y-3">
@@ -111,10 +123,14 @@ export function TeamDiscussionsPanel({ teamSlug, currentUserId }: Props) {
           <article key={item.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] p-4 space-y-2">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.title}</h3>
-              <span className="text-[11px] text-[var(--color-text-muted)]">{new Date(item.updatedAt).toLocaleString()}</span>
+              <span className="text-[11px] text-[var(--color-text-muted)]">
+                {formatLocalizedDateTime(item.updatedAt, language)}
+              </span>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] whitespace-pre-wrap m-0">{item.body}</p>
-            <p className="text-xs text-[var(--color-text-muted)] m-0">By {item.authorName}</p>
+            <p className="text-xs text-[var(--color-text-muted)] m-0">
+              {t("common.by", "By")} {item.authorName}
+            </p>
           </article>
         ))}
       </div>

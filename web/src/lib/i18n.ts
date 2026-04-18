@@ -49,16 +49,11 @@ export function isThemeCookie(value: string | undefined | null): value is ThemeC
 
 /** P3-FE-1: theme for initial HTML class (client script refines before paint). */
 export async function getServerThemePreference(): Promise<ThemeCookie> {
-  const { cookies } = await import("next/headers");
-  const cookieStore = await cookies();
-  const candidate = cookieStore.get(THEME_COOKIE_KEY)?.value;
-  return isThemeCookie(candidate) ? candidate : "dark";
+  return "dark";
 }
 
 /** SSR hint for `<html className>` — client ThemeScript refines before paint. */
-export function htmlClassForThemePreference(pref: ThemeCookie): string {
-  if (pref === "dark") return "dark";
-  if (pref === "light") return "light";
+export function htmlClassForThemePreference(): string {
   return "dark";
 }
 

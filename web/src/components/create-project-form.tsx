@@ -2,17 +2,13 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/app/context/LanguageContext";
 import type { ProjectStatus } from "@/lib/types";
 import type { UpgradeReason } from "@/lib/subscription";
 import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
 import { apiFetch } from "@/lib/api-fetch";
 
-const STATUSES: { value: ProjectStatus; label: string }[] = [
-  { value: "idea", label: "Idea" },
-  { value: "building", label: "Building" },
-  { value: "launched", label: "Launched" },
-  { value: "paused", label: "Paused" },
-];
+const STATUSES: ProjectStatus[] = ["idea", "building", "launched", "paused"];
 
 function parseList(raw: string): string[] {
   return raw
@@ -23,6 +19,7 @@ function parseList(raw: string): string[] {
 
 export function CreateProjectForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [title, setTitle] = useState("");
   const [oneLiner, setOneLiner] = useState("");
   const [description, setDescription] = useState("");
@@ -72,14 +69,14 @@ export function CreateProjectForm() {
       };
       if (!res.ok || !json.data?.slug) {
         setFormStatus("error");
-        setMessage(json.error?.message ?? "Could not create project");
+        setMessage(json.error?.message ?? t("project.form.create.failed"));
         setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
       window.location.assign(`/projects/${encodeURIComponent(json.data.slug)}`);
     } catch (err) {
       setFormStatus("error");
-      setMessage(err instanceof Error ? err.message : String(err));
+      setMessage(err instanceof Error ? err.message : t("project.form.create.failed"));
     }
   }
 
@@ -94,7 +91,7 @@ export function CreateProjectForm() {
     <form onSubmit={onSubmit} className="card p-6 space-y-5">
       <div className="space-y-1.5">
         <label htmlFor="project-new-title" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          Title <span className="text-[var(--color-error)]">*</span>
+          {t("project.form.create.titleLabel")} <span className="text-[var(--color-error)]">*</span>
         </label>
         <input
           id="project-new-title"
@@ -105,13 +102,13 @@ export function CreateProjectForm() {
           required
           minLength={3}
           maxLength={120}
-          placeholder="Ship-ready name"
+          placeholder={t("project.form.create.titlePlaceholder")}
         />
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="project-new-one-liner" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          One-liner <span className="text-[var(--color-error)]">*</span>
+          {t("project.form.create.oneLinerLabel")} <span className="text-[var(--color-error)]">*</span>
         </label>
         <input
           id="project-new-one-liner"
@@ -122,13 +119,13 @@ export function CreateProjectForm() {
           required
           minLength={5}
           maxLength={200}
-          placeholder="What it does in one sentence"
+          placeholder={t("project.form.create.oneLinerPlaceholder")}
         />
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="project-new-description" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          Description <span className="text-[var(--color-error)]">*</span>
+          {t("project.form.create.descriptionLabel")} <span className="text-[var(--color-error)]">*</span>
         </label>
         <textarea
           id="project-new-description"
@@ -139,14 +136,16 @@ export function CreateProjectForm() {
           required
           minLength={20}
           rows={6}
-          placeholder="Problem, approach, stack, and what you want from collaborators (min 20 characters)."
+          placeholder={t("project.form.create.descriptionPlaceholder")}
         />
-        <p className="text-[10px] text-[var(--color-text-muted)]">{description.length} characters (min 20)</p>
+        <p className="text-[10px] text-[var(--color-text-muted)]">
+          {t("project.form.create.descriptionCount").replace("{count}", String(description.length))}
+        </p>
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="project-new-readme" className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          README (Markdown, optional)
+          {t("project.form.create.readmeLabel")}
         </label>
         <textarea
           id="project-new-readme"
@@ -155,60 +154,60 @@ export function CreateProjectForm() {
           className="input-base resize-y min-h-[120px] font-mono text-xs"
           disabled={formDisabled}
           rows={5}
-          placeholder={"## Getting started\n```bash\nnpm install\n```"}
+          placeholder={t("project.form.create.readmePlaceholder")}
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Status</label>
+          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.create.statusLabel")}</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as ProjectStatus)}
             className="input-base appearance-none cursor-pointer"
             disabled={formDisabled}
           >
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
+            {STATUSES.map((statusValue) => (
+              <option key={statusValue} value={statusValue}>
+                {t(`project.status.${statusValue}`)}
               </option>
             ))}
           </select>
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Demo URL (optional)</label>
+          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.create.demoUrlLabel")}</label>
           <input
             value={demoUrl}
             onChange={(e) => setDemoUrl(e.target.value)}
             className="input-base"
             type="url"
             disabled={formDisabled}
-            placeholder="https://"
+            placeholder={t("project.form.create.demoUrlPlaceholder")}
           />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Tech stack</label>
+        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.create.techStackLabel")}</label>
         <textarea
           value={techStackInput}
           onChange={(e) => setTechStackInput(e.target.value)}
           className="input-base resize-none"
           disabled={formDisabled}
           rows={2}
-          placeholder="Comma or newline separated, e.g. Next.js, PostgreSQL"
+          placeholder={t("project.form.create.techStackPlaceholder")}
         />
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Tags</label>
+        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("project.form.create.tagsLabel")}</label>
         <textarea
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
           className="input-base resize-none"
           disabled={formDisabled}
           rows={2}
-          placeholder="Comma or newline separated, e.g. agent, open-source"
+          placeholder={t("project.form.create.tagsPlaceholder")}
         />
       </div>
 
@@ -219,10 +218,10 @@ export function CreateProjectForm() {
           disabled={formDisabled}
           onClick={() => void submitProject()}
         >
-          {formStatus === "loading" ? "Creating…" : "Create project"}
+          {formStatus === "loading" ? t("project.form.create.submitting") : t("project.form.create.submit")}
         </button>
         <button type="button" className="btn btn-secondary text-sm px-5 py-2" onClick={() => router.back()}>
-          Cancel
+          {t("project.form.create.cancel")}
         </button>
       </div>
 

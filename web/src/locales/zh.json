@@ -4,7 +4,33 @@
     "description": "面向开发者的项目、团队与 API 原生协作社区。"
   },
   "search": {
-    "placeholder": "搜索项目、讨论、创作者..."
+    "placeholder": "搜索项目、讨论、创作者...",
+    "close": "关闭搜索",
+    "dialog_label": "全局搜索",
+    "loading": "搜索中…",
+    "tip_prefix": "提示：",
+    "tip_suffix": "可在任意页面打开搜索。",
+    "min_query": "至少输入 {count} 个字符后开始搜索。",
+    "section_projects": "项目",
+    "section_discussions": "讨论",
+    "section_creators": "创作者",
+    "no_results_prefix": "没有找到相关结果：",
+    "page_title": "搜索",
+    "results_subtitle": "“{query}” 共找到 {count} 条结果。",
+    "min_query_page": "至少输入 2 个字符后开始搜索，匹配内容会在结果中高亮。",
+    "page_hint": "使用全局搜索查找项目、讨论与创作者。",
+    "type_all": "全部",
+    "type_post": "讨论",
+    "type_project": "项目",
+    "type_creator": "创作者",
+    "empty_title": "搜索平台内容",
+    "empty_description": "使用全局搜索查找项目、讨论与创作者，或直接进入浏览页面。",
+    "empty_cta_projects": "发现项目",
+    "empty_cta_discussions": "浏览讨论",
+    "keep_typing_title": "继续输入",
+    "keep_typing_description": "太短的关键词噪音较大，再输入一个字符。",
+    "no_results_title": "没有结果",
+    "no_results_page": "没有找到与“{query}”相关的内容。请更换关键词或清除筛选条件。"
   },
   "common": {
     "search": "搜索",
@@ -13,11 +39,44 @@
     "explore": "探索",
     "open": "打开",
     "save": "保存",
-    "loading": "加载中...",
+    "loading": "加载中…",
     "cancel": "取消",
     "continueWithGithub": "使用 GitHub 继续",
     "backToHome": "返回首页",
-    "comingSoon": "即将推出"
+    "comingSoon": "即将推出",
+    "updated": "更新于",
+    "language_label": "语言",
+    "sign_in": "登录",
+    "sign_out": "退出登录",
+    "settings": "设置",
+    "profile": "个人资料",
+    "admin": "管理后台",
+    "api_keys": "API 密钥",
+    "notifications": "通知",
+    "copy": "复制",
+    "copied": "已复制",
+    "by": "作者",
+    "previous": "上一页",
+    "next": "下一页",
+    "refresh": "刷新",
+    "creating": "创建中...",
+    "disable": "停用",
+    "enable": "启用",
+    "delete": "删除",
+    "approve": "批准",
+    "reject": "拒绝",
+    "pause": "暂停",
+    "resume": "恢复",
+    "active": "启用中",
+    "paused": "已暂停",
+    "public": "公开",
+    "browse_all": "查看全部",
+    "label": "名称",
+    "description": "说明",
+    "update_failed": "更新失败",
+    "saving": "保存中...",
+    "add": "添加",
+    "remove": "移除"
   },
   "app": {
     "name": "VibeHub",
@@ -80,25 +139,27 @@
     "discussions": "社区讨论",
     "teams": "团队",
     "leaderboards": "排行榜",
-    "apiKeys": "API 密钥",
-    "openapi": "OpenAPI 文档",
+    "apiKeys": "API Key",
+    "openapi": "OpenAPI",
     "pricing": "定价",
     "radarWorkspace": "雷达工作台",
-    "about": "关于我们",
+    "about": "关于 VibeHub",
     "blog": "博客",
     "careers": "招聘",
     "contact": "联系我们",
     "github": "GitHub",
     "twitter": "X / Twitter",
     "website": "官网",
-    "tagline": "面向 Vibe Coding 开发者的顶尖协作与展示平台。",
+    "tagline": "面向中文开发者的项目协作与开发者工作流平台。",
     "allRightsReserved": "保留所有权利。",
     "privacyPolicy": "隐私政策",
     "termsOfService": "服务条款",
     "terms": "服务条款",
     "privacy": "隐私政策",
     "rules": "平台规则",
-    "aigc": "AIGC 说明"
+    "aigc": "AIGC 说明",
+    "docs": "API 文档",
+    "rights": "保留所有权利。"
   },
   "home": {
     "hero_line1": "构建项目，",
@@ -160,6 +221,7 @@
       "discover_projects": "发现项目",
       "no_discussions": "还没有讨论。来发起第一条吧！",
       "featured_today": "今日精选",
+      "project_orbit_aria": "项目预览环带",
       "project_gallery": "项目画廊",
       "no_projects": "还没有项目。提交你的第一个项目吧！",
       "active_teams": "活跃团队"
@@ -214,7 +276,18 @@
     "emptyTitle": "暂时没有通知",
     "emptyDescription": "加入一个团队或提交协作意向后，你会在这里收到提醒。",
     "openPost": "打开帖子",
-    "openTeam": "打开团队"
+    "openTeam": "打开团队",
+    "unread_count": "{count} 条未读",
+    "mark_all_read": "全部标记为已读",
+    "mark_as_read": "标记为已读",
+    "open_post": "打开讨论",
+    "open_team": "打开团队",
+    "open_confirmation_queue": "打开确认队列",
+    "empty_description": "这里会显示与项目、团队、协作和系统相关的更新。",
+    "summary": "与你的项目、团队、讨论和系统事件相关的更新会显示在这里。",
+    "unread": "未读",
+    "empty_title": "暂时没有通知",
+    "empty_body": "当有人回复、分配任务、发起协作或请求你确认时，更新会显示在这里。"
   },
   "notFound": {
     "title": "页面未找到",
@@ -260,7 +333,64 @@
     "notificationsSystem": "产品与系统",
     "notificationsSaved": "偏好已保存。",
     "webhooksTitle": "Webhooks",
-    "webhooksDesc": "带 HMAC 签名的出站 HTTPS Webhook。"
+    "webhooksDesc": "带 HMAC 签名的出站 HTTPS Webhook。",
+    "oauth": {
+      "create_failed": "创建 OAuth 应用失败",
+      "created": "OAuth 应用已创建",
+      "update_failed": "更新 OAuth 应用失败",
+      "delete_failed": "删除 OAuth 应用失败",
+      "deleted": "OAuth 应用已删除",
+      "new_app": "新建 OAuth 应用",
+      "app_name": "应用名称",
+      "description": "说明这个集成的用途",
+      "redirect_placeholder": "每行填写一个回调地址",
+      "scopes": "权限范围",
+      "create": "创建 OAuth 应用",
+      "client_secret": "Client secret",
+      "client_secret_once": "只显示一次，请立即保存。",
+      "registered_apps": "已注册应用",
+      "empty": "当前还没有 OAuth 应用。",
+      "redirect_uris": "回调地址"
+    },
+    "agents": {
+      "load_failed": "加载 Agent 失败",
+      "create_failed": "创建 Agent 绑定失败",
+      "update_failed": "更新 Agent 绑定失败",
+      "delete_confirm": "删除这个 Agent 绑定？已关联的 API Key 会被解绑，但不会自动吊销。",
+      "delete_failed": "删除 Agent 绑定失败",
+      "confirmation_failed": "更新确认请求失败",
+      "register_title": "登记 Agent 身份",
+      "register_subtitle": "为每个外部 Agent 或工作流使用稳定的名称。之后可以把 API Key 绑定到这个 Agent，用于审计和 MCP 归因。",
+      "label_placeholder": "客服分诊 Agent",
+      "agent_type": "Agent 类型",
+      "agent_type_placeholder": "openai",
+      "description_placeholder": "负责 backlog 分诊、举报摘要和 MCP 只读工具。",
+      "create_binding": "创建绑定",
+      "bound_title": "已绑定 Agent",
+      "bound_subtitle": "启用中的绑定可以关联到 API Key。删除绑定只会解除关联，不会自动吊销现有 Key。",
+      "loading": "正在加载 Agent…",
+      "empty": "当前还没有 Agent 绑定。",
+      "in_teams": "所在团队：",
+      "pending_title": "待确认请求",
+      "pending_subtitle": "由 Agent 绑定 API Key 发起的高风险动作或最终评审会先停在这里，等待人工确认。",
+      "pending_empty": "当前没有待确认请求。",
+      "no_team": "未关联团队",
+      "requested": "申请时间",
+      "audit_title": "最近 Agent 审计",
+      "audit_subtitle": "每个 Agent 绑定的动作都会独立记录，不会混入主审计日志。",
+      "audit_empty": "当前还没有 Agent 动作记录。",
+      "outcome": "结果",
+      "task": "任务"
+    },
+    "sign_in": "登录",
+    "profile_heading": "个人资料设置",
+    "profile_subtitle": "管理你的公开资料、外链和协作偏好。",
+    "public_profile_url": "公开主页地址：",
+    "create_profile_first": "先创建个人资料，才能获得公开主页地址。",
+    "account_heading": "账号",
+    "account_subtitle": "管理邮箱登录、关联账号、密码与账号删除。",
+    "webhooks_heading": "Webhooks",
+    "webhooks_desc": "接收你订阅事件的已签名 JSON 回调。"
   },
   "a11y": {
     "skip_to_content": "跳转到主要内容",
@@ -276,8 +406,14 @@
   "discussions.new.subtitle": "分享一个想法、提出一个聚焦问题，或先提交一条待审核的更新。",
   "discussions.new.preview": "预览",
   "discussions.new.write": "编辑",
+  "discussions.feed.load_failed": "加载讨论失败",
+  "discussions.feed.loading_more": "正在加载更多…",
+  "discussions.feed.end_of_results": "已经到底了",
+  "discussions.feed.page_navigation": "更喜欢分页浏览？",
   "project.readme_tab": "README",
   "project.overview_tab": "概览",
+  "creator.posts_title": "讨论",
+  "creator.posts_view": "在讨论区查看",
   "developers": {
     "page_title": "开发者控制台",
     "page_subtitle": "在一处管理 API 密钥、代理、集成并监控你的开发者资产。",
@@ -296,7 +432,20 @@
     "create_automation": "创建自动化",
     "resources": "资源",
     "openapi_spec": "OpenAPI 规范",
-    "mcp_manifest": "MCP v2 清单"
+    "mcp_manifest": "MCP v2 清单",
+    "agent_readable": "Agent 可读",
+    "agent_readable_discussion": "这条讨论可通过",
+    "agent_readable_suffix": "在 MCP v2 中查询。",
+    "v8": {
+      "sidebar": {
+        "openapi_docs": "交互式 API 文档",
+        "protocol_status": "协议状态",
+        "openapi_version": "OpenAPI 版本",
+        "manifest_version": "Manifest 版本",
+        "protocol_version": "协议版本",
+        "generated": "生成时间"
+      }
+    }
   },
   "project": {
     "new": {
@@ -306,6 +455,105 @@
       "profile_required_desc": "发布项目前需要创作者资料。设置你的个人资料即可开始——只需一分钟。",
       "setup_profile": "设置个人资料",
       "back": "返回发现"
+    },
+    "featured": "精选",
+    "status": {
+      "idea": "构思中",
+      "building": "开发中",
+      "launched": "已上线",
+      "paused": "已暂停"
+    },
+    "saves_this_week": "本周新增 {count} 次收藏",
+    "back_to_discover": "返回发现页",
+    "open_source": "开源",
+    "by_creator": "来自",
+    "creator_fallback": "创作者",
+    "live_demo": "在线演示",
+    "repository": "代码仓库",
+    "website": "项目网站",
+    "edit": "编辑项目",
+    "tech_stack": "技术栈",
+    "creator_title": "创作者",
+    "credit_score": "信用分",
+    "roadmap_title": "路线图",
+    "roadmap_done": "已完成",
+    "signals_title": "最近协作信号",
+    "bookmark_total": "累计 {count} 次收藏",
+    "recent_bookmarkers": "最近收藏者",
+    "no_bookmarkers": "还没有人收藏这个项目。",
+    "recent_intents": "最近协作意向",
+    "no_intents": "还没有协作意向。",
+    "mcp_description": "这个项目已经通过 MCP v2 暴露，可供具备读取权限的 AI Agent 查询。",
+    "related_title": "相关项目",
+    "collaboration": {
+      "title": "协作",
+      "apply_to_join": "申请加入 {team}",
+      "team_join_description": "这个项目已经在团队内运行。先加入团队，再参与任务和讨论。",
+      "start_team": "创建团队",
+      "start_team_description": "把项目关联到团队后，协作才能从意向进入真实执行。",
+      "join": "加入协作",
+      "active_description": "当前已有 {count} 位活跃协作者。提交你的协作意向后，项目所有者可以把你引导到合适的团队。",
+      "no_team_description": "当前还没有关联团队。提交意向，加入协作，或帮助发起第一次协作。",
+      "active_count": "{count} 位协作者",
+      "section_title": "加入或招募",
+      "section_active": "这个项目当前已有 {count} 位活跃协作者。提交你的意向，加入协作或招募贡献者。",
+      "section_empty": "当前还没有活跃协作意向。提交你的意向，加入协作或招募贡献者。",
+      "active_title": "活跃协作者",
+      "intent_join": "团队成员",
+      "intent_recruit": "招募方",
+      "intent_count": "{count} 条意向"
+    },
+    "form": {
+      "create": {
+        "title": "创建项目",
+        "submit": "创建项目",
+        "submitting": "正在创建项目…",
+        "cancel": "取消",
+        "failed": "暂时无法创建项目。",
+        "titleLabel": "项目名称",
+        "oneLinerLabel": "一句话介绍",
+        "descriptionLabel": "项目说明",
+        "readmeLabel": "README（Markdown，可选）",
+        "statusLabel": "项目状态",
+        "demoUrlLabel": "演示地址",
+        "techStackLabel": "技术栈",
+        "tagsLabel": "标签",
+        "titlePlaceholder": "项目名称",
+        "oneLinerPlaceholder": "用一句话说明项目做什么",
+        "descriptionPlaceholder": "说明问题、方案、技术栈，以及你希望协作者如何参与。",
+        "readmePlaceholder": "## 快速开始\n```bash\nnpm install\n```",
+        "demoUrlPlaceholder": "https://",
+        "techStackPlaceholder": "使用逗号或换行分隔，例如 Next.js, PostgreSQL",
+        "tagsPlaceholder": "使用逗号或换行分隔，例如 agent, open-source",
+        "descriptionCount": "{count} 个字符（至少 20 个）"
+      },
+      "edit": {
+        "slugHintPrefix": "Slug",
+        "slugHintSuffix": "会在创建项目时自动生成，不能在这里修改。",
+        "title": "编辑项目",
+        "submit": "保存修改",
+        "submitting": "正在保存…",
+        "cancel": "取消",
+        "failed": "暂时无法保存项目。",
+        "titleLabel": "项目名称",
+        "oneLinerLabel": "一句话介绍",
+        "descriptionLabel": "项目说明",
+        "readmeLabel": "README（Markdown，可选）",
+        "syncReadme": "从 GitHub 同步",
+        "syncingReadme": "正在同步…",
+        "syncReadmeHint": "会通过 raw.githubusercontent.com 拉取默认分支的 README.md。",
+        "syncReadmeFailed": "README 同步失败。",
+        "statusLabel": "项目状态",
+        "demoUrlLabel": "演示地址",
+        "repoUrlLabel": "GitHub 仓库地址",
+        "websiteUrlLabel": "项目官网",
+        "techStackLabel": "技术栈",
+        "tagsLabel": "标签",
+        "demoUrlPlaceholder": "留空即可移除",
+        "repoUrlPlaceholder": "https://github.com/org/repo",
+        "websiteUrlPlaceholder": "https://example.com",
+        "descriptionCount": "{count} 个字符（至少 20 个）"
+      }
     }
   },
   "team": {
@@ -324,12 +572,196 @@
       "visibility_desc": "控制谁可以看到和加入你的团队。",
       "coordination": "协调",
       "forbidden_title": "访问受限",
-      "forbidden_desc": "只有团队所有者和管理员可以管理团队设置。"
+      "forbidden_desc": "只有团队所有者和管理员可以管理团队设置。",
+      "visibility_public_hint": "这个团队对所有用户可见，并接受加入申请。",
+      "integrations_empty": "当前还没有配置集成。可以接入 GitHub、CI/CD 或通知服务。",
+      "more_members": "还有 {count} 位成员",
+      "tasks_and_milestones": "任务与里程碑",
+      "discussions_and_chat": "讨论与聊天",
+      "team_projects": "团队项目",
+      "save_links": "保存链接",
+      "links_saved": "链接已保存。",
+      "links_hint_prefix": "请使用完整的",
+      "links_hint_suffix": "链接。这些地址会展示在团队页，并复用到项目、GitHub 和社区发现等入口。留空可清除该字段。",
+      "field_discordUrl": "Discord 邀请链接",
+      "field_telegramUrl": "Telegram 群组链接",
+      "field_slackUrl": "Slack 工作区 / 频道链接",
+      "field_githubOrgUrl": "GitHub 组织链接",
+      "field_githubRepoUrl": "GitHub 仓库链接"
+    },
+    "chat": {
+      "title": "团队聊天",
+      "sign_in_required": "登录后可访问团队聊天。",
+      "join_required": "加入团队后即可参与聊天。",
+      "capacity_title": "聊天已达上限",
+      "capacity_desc": "当前聊天室人数已满，请稍后再试。",
+      "online_count": "{count} 人在线",
+      "live": "实时",
+      "connecting": "连接中…",
+      "offline": "离线",
+      "rest_fallback": "实时通道暂不可用，消息将通过备用通道发送。",
+      "loading": "正在加载最近消息…",
+      "history_error": "加载聊天记录失败。",
+      "empty": "还没有消息，先发一句打个招呼。",
+      "sending": "发送中…",
+      "placeholder": "输入消息",
+      "send": "发送消息",
+      "retention": "消息保留 30 天。"
+    },
+    "back_to_team": "返回团队",
+    "back_to_teams": "返回团队列表",
+    "agent_bus": "Agent 总线",
+    "settings_link": "团队设置",
+    "overview": "概览",
+    "activity": "动态",
+    "members_title": "成员（{count}）",
+    "projects_title": "团队项目（{count}）",
+    "projects_empty": "当前还没有团队项目。先创建项目并把它关联到这个团队。",
+    "member_count": "{count} 位成员",
+    "project_count": "{count} 个项目",
+    "discussions": {
+      "title": "团队讨论",
+      "subtitle": "用于规划、决策和评审记录的结构化讨论串。",
+      "title_placeholder": "输入讨论标题",
+      "body_placeholder": "记录这次决策、待讨论的问题或评审上下文。",
+      "post": "发布讨论",
+      "sign_in_hint": "加入团队后即可阅读和发布结构化讨论。",
+      "loading": "正在加载团队讨论…",
+      "empty": "当前还没有团队讨论。",
+      "load_failed": "加载团队讨论失败",
+      "create_failed": "创建讨论失败"
+    },
+    "task_comments": {
+      "title": "任务评论",
+      "placeholder": "记录进展、评审意见或当前阻塞。",
+      "post": "发布评论",
+      "empty": "当前还没有评论。",
+      "activity_title": "任务动态",
+      "activity_empty": "当前还没有任务动态。",
+      "load_failed": "加载任务评论失败",
+      "activity_failed": "加载任务动态失败",
+      "create_failed": "发表评论失败"
+    },
+    "task": {
+      "status": {
+        "todo": "待办",
+        "doing": "进行中",
+        "done": "已完成"
+      },
+      "no_description": "暂无描述。",
+      "assignee": "负责人",
+      "unassigned": "未分配",
+      "milestone": "里程碑",
+      "created_by": "创建者"
+    },
+    "agents": {
+      "eyebrow": "AI + HUMAN TEAM",
+      "title": "{team} 的 Agent",
+      "manage_subtitle": "你可以为团队添加、移除或调整 Agent 角色卡。高风险写入仍会进入人工确认队列。",
+      "view_subtitle": "团队成员都可以查看当前有哪些 Agent 在参与协作，以及它们最近执行了什么动作。",
+      "active_count": "{count} 个启用中",
+      "roster_title": "Agent 名单",
+      "roster_description": "每一行代表一个已加入当前团队的 AgentBinding，以及它对应的角色卡和归属用户。",
+      "empty_title": "这个团队还没有 Agent",
+      "empty_manage_description": "你可以从自己的 AgentBinding 中挑选一个，作为团队里的第一个 Agent。",
+      "empty_view_description": "团队 owner 或 admin 可以把自己的 AgentBinding 添加进来。",
+      "activity_title": "最近 Agent 活动",
+      "activity_description": "展示这个团队中所有 Agent 最近 25 条审计记录，按时间倒序排列。",
+      "no_activity": "暂时还没有 Agent 活动",
+      "on_task": "关联任务",
+      "members_only_title": "仅团队成员可见",
+      "members_only_description": "只有已经加入这个团队的成员，才能查看团队中的 Agent 协作情况。",
+      "owner_label": "归属用户：",
+      "granted_by": "授权人",
+      "last_action": "最近动作",
+      "status_active": "启用中",
+      "status_paused": "已暂停",
+      "add_agent": "添加 Agent",
+      "pause": "暂停",
+      "resume": "恢复",
+      "remove_from_team": "从团队中移除 Agent",
+      "change_role_for": "修改 {agent} 的角色",
+      "dialog_title": "添加 Agent 到团队",
+      "dialog_description": "从你的 AgentBinding 中选择一个，并为它指定在团队里的角色卡。",
+      "binding_label": "Agent 绑定",
+      "binding_hint": "这里只显示属于你的绑定。已经加入本团队的 Agent 会被隐藏。",
+      "pick_agent": "选择一个 Agent…",
+      "no_eligible_title": "没有可添加的 Agent 绑定",
+      "no_eligible_description": "请先在设置中的“我的 Agent”创建一个绑定，或先移除已有团队成员资格。",
+      "role_card_label": "角色卡",
+      "role_card_hint": "后续仍然可以调整。",
+      "confirmation_notice": "Agent 不会在没有人工确认的情况下执行高风险写入。所有高风险动作仍会进入确认队列。",
+      "remove_title": "要把这个 Agent 移出团队吗？",
+      "remove_description": "这会立即撤销 “{agent}” 在当前团队中的资格，但不会删除底层 AgentBinding。审计记录会被保留。",
+      "errors": {
+        "reload": "重新加载 Agent 失败",
+        "load_bindings": "加载你的 Agent 绑定失败",
+        "select_binding": "请选择要添加的 Agent 绑定",
+        "add": "添加 Agent 失败",
+        "update": "更新 Agent 失败",
+        "remove": "移除 Agent 失败"
+      },
+      "roles": {
+        "reader": "读者",
+        "reader_description": "只读访问",
+        "commenter": "评论者",
+        "commenter_description": "可阅读并添加评论",
+        "executor": "执行者",
+        "executor_description": "可领取并完成任务（需确认）",
+        "reviewer": "审阅者",
+        "reviewer_description": "可提供任务审阅意见",
+        "coordinator": "协调者",
+        "coordinator_description": "可创建并分配任务（仅 owner/admin）"
+      }
+    },
+    "milestones": {
+      "title": "里程碑",
+      "sign_in_description": "登录后可查看和管理团队里程碑。",
+      "new": "新建里程碑",
+      "empty_title": "还没有里程碑",
+      "empty_description": "先添加一个里程碑，为团队明确当前阶段目标。",
+      "target": "目标时间",
+      "public": "公开",
+      "internal": "仅团队内可见",
+      "reopen": "重新打开",
+      "complete": "标记完成",
+      "delete": "删除里程碑",
+      "progress": "进度",
+      "progress_aria": "里程碑进度",
+      "delete_confirm_title": "删除这个里程碑？",
+      "delete_confirm_description": "这会永久删除 “{title}”，且无法撤销。",
+      "form": {
+        "title": "标题",
+        "title_placeholder": "例如：MVP 上线",
+        "target_date": "目标日期",
+        "description": "说明",
+        "description_hint": "这个里程碑完成时，团队应该达到什么结果？",
+        "submit": "创建里程碑"
+      },
+      "errors": {
+        "load": "加载里程碑失败",
+        "create": "创建里程碑失败",
+        "update": "更新里程碑失败",
+        "delete": "删除里程碑失败"
+      }
+    },
+    "form": {
+      "title": "创建团队",
+      "subtitle": "为协作、任务推进和 Agent 参与建立一个长期工作组。",
+      "name": "团队名称",
+      "slug": "团队地址标识",
+      "slugHint": "仅支持小写字母、数字和连字符。",
+      "slugPlaceholder": "my-squad",
+      "mission": "团队使命",
+      "missionPlaceholder": "这个团队想要解决什么问题、交付什么成果？",
+      "submit": "创建团队",
+      "submitting": "正在创建团队…",
+      "createFailed": "暂时无法创建团队。"
     }
   },
   "onboarding": {
     "title": "欢迎来到 VibeHub",
-    "subtitle": "花 1 分钟完成三步，平台会根据你填的信息把合适的讨论、项目和队友推给你。",
+    "subtitle": "花一分钟完成三步，我们会把更合适的讨论、项目和协作对象展示给你。",
     "step_of": "第 {{current}} / {{total}} 步",
     "skip": "跳过",
     "skip_all": "全部跳过",
@@ -338,33 +770,35 @@
     "done": "完成",
     "s1": {
       "heading": "介绍你自己",
-      "sub": "让同行知道你是谁、擅长什么。资料可随时在「设置」里修改。",
-      "nickname": "昵称",
-      "nicknameHint": "将显示在讨论、项目卡、团队页。",
+      "sub": "让其他开发者知道你是谁、在做什么。相关资料后续都可以在设置中修改。",
+      "nickname": "显示名称",
+      "nicknameHint": "会展示在讨论、项目卡片和团队页面中。",
       "headline": "一句话介绍",
-      "headlineHint": "例如：一个做 AI 开发者工具的独立开发者。不超过 60 个字。",
-      "interests": "擅长领域",
-      "interestsHint": "至少选 1 个，最多 3 个；用于推荐流初始化。"
+      "headlineHint": "例如：正在做 AI 开发者工具的独立开发者。控制在 60 个字以内。",
+      "interests": "关注方向",
+      "interestsHint": "至少选择 1 个，最多 3 个。系统会用这些信息初始化推荐内容。",
+      "nicknamePlaceholder": "Alice",
+      "headlinePlaceholder": "正在做 AI 工作流工具的独立开发者"
     },
     "s2": {
       "heading": "你的 AI 工具栈",
-      "sub": "告诉我们你常用哪些 AI 编码工具，我们会在你完成绑定时给出针对性的 quick start。",
-      "note": "此步骤不会自动创建任何 Agent 绑定 —— 绑定必须你主动去「我的 Agent」操作。"
+      "sub": "告诉我们你常用哪些编码工具，我们会在你绑定 Agent 时给出更合适的开发者接入引导。",
+      "note": "这一步不会自动创建 Agent 绑定。绑定动作始终由你在「我的 Agent」里主动发起。"
     },
     "s3": {
-      "heading": "第一件事",
-      "sub": "选一件今天想做的事，我们把你带到该页面。你也可以直接跳过，进入首页。",
+      "heading": "选择你的第一步",
+      "sub": "选择你今天最想先完成的一件事。你也可以直接跳过，先回到首页。",
       "post": {
-        "title": "发一条讨论",
-        "desc": "把今天学到的一个 AI+代码方法写成一条讨论。"
+        "title": "发起一条讨论",
+        "desc": "分享一个方法、经验或问题，和其他开发者开始交流。"
       },
       "project": {
-        "title": "建一个项目",
-        "desc": "把正在做的作品发布出来，让同行看到。"
+        "title": "发布一个项目",
+        "desc": "把你正在做的产品或作品公开出来，让同行看到。"
       },
       "agent": {
         "title": "绑定我的第一个 Agent",
-        "desc": "让 Cursor / Claude / 自建 Agent 作为队员参与协作。"
+        "desc": "把 Cursor、Claude 或你自己的 Agent 接入真实协作流程。"
       }
     },
     "tags": {
@@ -396,10 +830,22 @@
     "cta_secondary_guest": "给开发者看 Agent 接入",
     "cta_secondary_authed": "让我的 Agent 进团队",
     "pillars": {
-      "square": { "title": "广场讨论", "desc": "在这里产生灵感、发经验、找同行。" },
-      "gallery": { "title": "项目画廊", "desc": "让作品被发现、被收藏、被协作。" },
-      "teams": { "title": "团队协作", "desc": "陌生开发者也能低摩擦组队共创。" },
-      "agents": { "title": "Agent 总线", "desc": "Cursor、Claude、自建 Agent 都能作为队员参与。" }
+      "square": {
+        "title": "广场讨论",
+        "desc": "在这里产生灵感、发经验、找同行。"
+      },
+      "gallery": {
+        "title": "项目画廊",
+        "desc": "让作品被发现、被收藏、被协作。"
+      },
+      "teams": {
+        "title": "团队协作",
+        "desc": "陌生开发者也能低摩擦组队共创。"
+      },
+      "agents": {
+        "title": "Agent 总线",
+        "desc": "Cursor、Claude、自建 Agent 都能作为队员参与。"
+      }
     },
     "agent_section": {
       "eyebrow": "差异化 · 仅 VibeHub",
@@ -411,16 +857,37 @@
     },
     "agent_roles": {
       "role_card": "角色牌",
-      "reader": { "title": "Reader", "desc": "读取任务、讨论、聊天。默认角色，无写入权限。" },
-      "executor": { "title": "Executor", "desc": "可领取任务并标记完成，写入需要人工 Confirmation。" },
-      "reviewer": { "title": "Reviewer", "desc": "提交审查意见，明确标注 AI 建议，不做最终裁决。" }
+      "reader": {
+        "title": "Reader",
+        "desc": "读取任务、讨论、聊天。默认角色，无写入权限。"
+      },
+      "executor": {
+        "title": "Executor",
+        "desc": "可领取任务并标记完成，写入需要人工 Confirmation。"
+      },
+      "reviewer": {
+        "title": "Reviewer",
+        "desc": "提交审查意见，明确标注 AI 建议，不做最终裁决。"
+      }
     },
     "how": {
       "eyebrow": "4 步跑通人机协作",
-      "s1": { "title": "绑定 Agent", "desc": "在「我的 Agent」里为 Cursor / Claude / 自建 agent 发放独立 API Key。" },
-      "s2": { "title": "加入团队", "desc": "团队 owner 给 Agent 发「角色牌」：Reader / Executor / Reviewer / Coordinator。" },
-      "s3": { "title": "参与任务", "desc": "Agent 读取任务、领取任务、提交审查，所有写入进入确认队列。" },
-      "s4": { "title": "人工兜底", "desc": "高风险动作由你本人批准，全链路留有审计日志，随时可撤回。" }
+      "s1": {
+        "title": "绑定 Agent",
+        "desc": "在「我的 Agent」里为 Cursor / Claude / 自建 agent 发放独立 API Key。"
+      },
+      "s2": {
+        "title": "加入团队",
+        "desc": "团队 owner 给 Agent 发「角色牌」：Reader / Executor / Reviewer / Coordinator。"
+      },
+      "s3": {
+        "title": "参与任务",
+        "desc": "Agent 读取任务、领取任务、提交审查，所有写入进入确认队列。"
+      },
+      "s4": {
+        "title": "人工兜底",
+        "desc": "高风险动作由你本人批准，全链路留有审计日志，随时可撤回。"
+      }
     },
     "diff": {
       "eyebrow": "定位对比",
@@ -434,11 +901,21 @@
         "feishu": "飞书 / 钉钉"
       },
       "row": {
-        "agent": { "dim": "Agent 作为队员" },
-        "teaming": { "dim": "面向陌生开发者的组队" },
-        "mcp": { "dim": "内容对 AI 可读 (MCP)" },
-        "china": { "dim": "中国大陆落地 + 支付" },
-        "projects": { "dim": "项目展示与协作意向" }
+        "agent": {
+          "dim": "Agent 作为队员"
+        },
+        "teaming": {
+          "dim": "面向陌生开发者的组队"
+        },
+        "mcp": {
+          "dim": "内容对 AI 可读 (MCP)"
+        },
+        "china": {
+          "dim": "中国大陆落地 + 支付"
+        },
+        "projects": {
+          "dim": "项目展示与协作意向"
+        }
       }
     },
     "cta_footer": {
@@ -468,9 +945,18 @@
         "title": "让你的 Agent 作为队员加入团队",
         "desc": "每个 Agent 通过独立 API Key 认证；写入需要人工 Confirmation；高风险动作永不自治。",
         "tag": "写入 · 需 Confirmation",
-        "bullet1": { "title": "角色牌", "desc": "Reader / Commenter / Executor / Reviewer / Coordinator" },
-        "bullet2": { "title": "可审计", "desc": "全链路写入 AgentActionAudit 与 AgentConfirmationRequest" },
-        "bullet3": { "title": "scope 收窄", "desc": "每个 Key 继承用户权限，再按需裁减，永不超越" },
+        "bullet1": {
+          "title": "角色牌",
+          "desc": "Reader / Commenter / Executor / Reviewer / Coordinator"
+        },
+        "bullet2": {
+          "title": "可审计",
+          "desc": "全链路写入 AgentActionAudit 与 AgentConfirmationRequest"
+        },
+        "bullet3": {
+          "title": "scope 收窄",
+          "desc": "每个 Key 继承用户权限，再按需裁减，永不超越"
+        },
         "cta_manage": "去「我的 Agent」",
         "cta_openapi": "查看 OpenAPI 规范"
       },
@@ -497,5 +983,442 @@
   },
   "nav.v8_markers": {
     "preserved": "保留 v8 占位"
+  },
+  "post": {
+    "featured": "精选",
+    "likes_count": "{count} 次点赞",
+    "bookmarks_count": "{count} 次收藏"
+  },
+  "pricing": {
+    "checkout_preparing": "正在准备 {provider} 结算…",
+    "checkout_failed": "当前无法发起支付，请稍后再试。",
+    "network_error": "网络异常，请稍后再试。",
+    "recommended": "当前推荐",
+    "free_price": "免费",
+    "per_month": "/ 月",
+    "pro_description": "获得更多项目位、更多协作空间、更高 API 与 MCP 限额，以及更强的项目曝光权益。",
+    "free_description": "先发布项目、参与讨论、组建团队，再按需要升级。",
+    "free_cta": "免费开始",
+    "upgrade_alipay": "使用支付宝升级",
+    "upgrade_wechat": "微信支付",
+    "upgrade_stripe": "海外卡 / Stripe",
+    "compare_title": "套餐对比",
+    "compare": {
+      "feature": "权益",
+      "community": "浏览、发帖、评论、互动与关注",
+      "projects": "项目数",
+      "teams": "团队数",
+      "team_members": "每个团队成员上限",
+      "api_rate": "API 请求 / 分钟",
+      "api_keys": "API 密钥数",
+      "mcp_tools": "MCP 工具",
+      "feature_project": "项目曝光权益",
+      "publish_milestones": "公开里程碑",
+      "priority_match": "优先协作匹配",
+      "export_logs": "活动日志导出",
+      "basic_tools": "基础工具",
+      "all_tools": "全部已开放工具"
+    },
+    "provider_alipay": "支付宝",
+    "provider_wechat": "微信支付",
+    "header": {
+      "title": "面向中文开发者的透明定价",
+      "description": "免费注册即可完整参与社区。Pro 月付 ¥29，重点提升协作容量、项目曝光和开发者额度。"
+    },
+    "faq": {
+      "title": "常见问题",
+      "alipay_q": "支付宝和微信支付目前是什么状态？",
+      "alipay_a": "支付宝是中国市场的主推结算入口，微信支付并行接入。如果缺少正式商户配置，系统会明确提示未配置，而不是伪造成功支付。",
+      "stripe_q": "Stripe 还保留吗？",
+      "stripe_a": "保留。Stripe 主要用于海外银行卡支付和自助账单管理，不再作为中国用户的默认支付路径。",
+      "plans_q": "为什么目前只有 Free 和 Pro？",
+      "plans_a": "当前正式上线聚焦个人开发者和小团队协作，因此公开套餐先收敛为 Free / Pro。Team 方案属于后续商业化阶段。",
+      "renewal_q": "中国支付会自动续费吗？",
+      "renewal_a": "当前中国支付按单次月度续期处理，不默认自动代扣。到期后可再次发起续费；Stripe 仍保留自动续费与账单 portal 能力。",
+      "mcp_q": "MCP Developer Access 现在能直接开通吗？",
+      "mcp_a": "还不能。当前仍是申请制能力，不属于这轮个人订阅流程的标准入口。",
+      "enterprise_q": "企业用户应该如何使用 VibeHub？",
+      "enterprise_a": "企业用户仍通过普通账号使用产品。企业认证提供的是身份徽章与审核流程，不是独立的企业工作台套餐。"
+    }
+  },
+  "comments": {
+    "post": "发布",
+    "posting": "发布中…",
+    "write": "写下评论",
+    "write_reply": "写下回复",
+    "reply": "回复",
+    "edit": "编辑",
+    "delete": "删除",
+    "saving": "保存中…",
+    "delete_confirm": "确定删除这条评论吗？",
+    "empty": "还没有评论，先开始这段对话。",
+    "add": "添加评论",
+    "sign_in_hint": "后即可参与讨论。",
+    "submit_failed": "当前无法提交，请稍后再试。",
+    "edit_failed": "当前无法保存修改，请稍后再试。",
+    "delete_failed": "当前无法删除评论，请稍后再试。",
+    "title": "评论",
+    "count": "{count} 条评论"
+  },
+  "discussions": {
+    "back": "返回讨论区",
+    "browse_tags": "浏览标签",
+    "related": "相关讨论",
+    "sort_recent": "最新",
+    "sort_hot": "热门",
+    "sort_following": "关注",
+    "sort_recommended": "推荐",
+    "feed_recent_description": "广场中最新通过审核的讨论。",
+    "feed_recent_empty_title": "还没有最新讨论",
+    "feed_recent_empty_body": "当前还没有已发布的公开讨论。",
+    "feed_hot_description": "按点赞、评论、收藏和时间衰减计算的热度排序。",
+    "feed_hot_empty_title": "还没有正在升温的讨论",
+    "feed_hot_empty_body": "当讨论开始获得真实互动后，这里会出现热门内容。",
+    "feed_following_description": "只显示你已关注创作者的最新讨论。",
+    "feed_following_empty_title": "你的关注流还是空的",
+    "feed_following_empty_body": "先去关注一些创作者，他们的新讨论就会出现在这里。",
+    "feed_recommended_description": "基于你的互动和兴趣信号推荐的讨论，不使用 LLM 排序。",
+    "feed_recommended_empty_title": "暂时还没有推荐内容",
+    "feed_recommended_empty_body": "先点赞、收藏或发布一些讨论，这里才会逐渐个性化。",
+    "feed_featured_description": "编辑精选讨论。",
+    "feed_featured_empty_title": "还没有精选讨论",
+    "feed_featured_empty_body": "精选讨论会在审核后显示在这里。",
+    "filtered_by_author": "按作者筛选",
+    "personalized_view": "个性化视图",
+    "default_subtitle": "分享知识，提出问题",
+    "new_cta": "发起讨论",
+    "personalized_signin_title": "登录后查看个性化讨论流",
+    "personalized_signin_body": "关注流会显示你关注的创作者；推荐流会根据你的互动和兴趣生成。"
+  },
+  "subscription": {
+    "title": "订阅与账单",
+    "subtitle": "查看当前套餐、支付渠道、额度上限与最近账单记录。",
+    "status_active": "有效",
+    "status_trialing": "试用中",
+    "status_past_due": "待处理",
+    "status_canceled": "已取消",
+    "current_period_end": "当前权益截止",
+    "cancel_effective": "取消生效日",
+    "next_billing_date": "下次扣费日",
+    "provider_unlinked": "未绑定",
+    "updated_title": "订阅状态已更新",
+    "updated_body": "新的额度和协作权益已经写回到当前账户。",
+    "manual_title": "当前支付渠道使用手动续费",
+    "manual_alipay": "支付宝按单次月付续期，不提供独立账单入口。需要续费时重新发起结算。",
+    "manual_wechat": "微信支付按单次月付续期，不提供独立账单入口。需要续费时重新发起结算。",
+    "manual_fallback": "当前支付渠道没有自助账单管理入口。",
+    "current_plan": "当前套餐",
+    "limit_teams": "团队数",
+    "limit_projects": "项目数",
+    "limit_api_keys": "API Key 数",
+    "limit_rate": "API 请求 / 分钟",
+    "provider": "支付渠道",
+    "free_provider_note": "免费用户无需绑定支付渠道。",
+    "not_started": "尚未开始",
+    "cn_renewal_note": "中国支付渠道当前按单次月付续期，不支持自动代扣。",
+    "stripe_note": "Stripe 保留给海外银行卡支付与自助账单管理。",
+    "enterprise_note": "企业认证与订阅解耦。企业认证仍是身份徽章审核，不是独立工作台套餐。",
+    "actions": "套餐操作",
+    "upgrade_to_pro": "升级到 Pro",
+    "manage_stripe": "管理 Stripe 账单 / 取消续费",
+    "view_renewal_guide": "查看续费说明",
+    "compare_plans": "查看套餐对比",
+    "recent_billing": "最近账单",
+    "no_billing": "当前还没有账单记录。",
+    "open_sandbox": "打开沙箱"
+  },
+  "credit": {
+    "title": "贡献积分",
+    "refresh_title": "重新计算积分",
+    "top_contributor": "高贡献成员",
+    "active_contributor": "活跃贡献者",
+    "rising_member": "上升中的成员",
+    "getting_started": "刚刚开始",
+    "updated_at": "最近更新",
+    "tasks_completed": "完成任务",
+    "milestones_hit": "达成里程碑",
+    "projects_created": "创建项目",
+    "comments_authored": "发表评论",
+    "intents_approved": "通过的协作意向",
+    "posts_authored": "发布讨论"
+  },
+  "collections": {
+    "index_title": "专题集合",
+    "discussions": "讨论",
+    "projects": "项目",
+    "no_posts": "该专题下暂时还没有已审核通过的讨论。",
+    "no_projects": "该专题下暂时还没有项目。"
+  },
+  "legal": {
+    "common": {
+      "lastUpdated": "最近更新：2026 年 4 月 18 日",
+      "contact": "联系我们",
+      "contactBody": "如需咨询法务、隐私或合规事项，请联系 support@vibehub.dev。"
+    },
+    "privacy": {
+      "metaTitle": "隐私政策 - VibeHub",
+      "metaDescription": "说明 VibeHub 如何处理个人信息、治理流程、第三方处理方与留存策略。",
+      "title": "隐私政策",
+      "sections": {
+        "overview": {
+          "title": "概述",
+          "body": "VibeHub 提供开发者讨论、项目发现、团队协作和协议化接入能力。本政策说明我们会收集哪些信息、为什么处理这些信息、保存多久，以及在运行服务所必需时会有哪些第三方参与处理。"
+        },
+        "collect": {
+          "title": "我们收集的信息",
+          "body": "我们会收集你主动提供的账号资料，例如邮箱、显示名、加密后的密码、关联的 GitHub 身份、个人资料、项目内容、讨论内容、团队记录、API Key、审计日志、账单记录和企业认证申请。为了保证服务安全和稳定，我们还会收集请求标识、IP 地址、浏览器信息、治理元数据，以及 webhook 或 MCP 调用记录等技术信号。"
+        },
+        "use": {
+          "title": "我们如何使用这些数据",
+          "body": "这些数据用于用户认证、协作功能交付、内容推荐、平台治理、滥用调查、账单处理、审计留痕和法定义务履行。我们不会出售个人信息。"
+        },
+        "ai": {
+          "title": "AI、Agent 与治理处理",
+          "body": "VibeHub 可能使用 AI 辅助能力来摘要举报、建议审核标签或生成运营洞察。这些能力只提供建议，不自动做出处罚、封禁、企业认证或高风险 Agent 写入决定。相关最终决策仍由人工完成。详见 /aigc。"
+        },
+        "crossBorder": {
+          "title": "跨境处理与第三方处理方",
+          "body": "我们的正式生产目标是“中国大陆优先”。根据你的账号配置或生产依赖，GitHub OAuth、代码托管、邮件发送、支付通道和用户自带模型供应商等场景仍可能涉及跨境处理。最终生产依赖会在 go-live 和合规清单中逐项确认。"
+        },
+        "retention": {
+          "title": "留存与删除",
+          "body": "账号所有者可以在设置页发起删除。对于用户拥有的内容，我们会尽可能从在线服务中删除或解除关联；但为满足安全、账务、滥用处理和法律义务，部分审计、账单或治理证据可能按政策或法律要求保留。"
+        }
+      }
+    },
+    "terms": {
+      "metaTitle": "服务条款 - VibeHub",
+      "metaDescription": "说明你使用 VibeHub 时适用的服务条款。",
+      "title": "服务条款",
+      "sections": {
+        "agreement": {
+          "title": "协议说明",
+          "body": "当你访问或使用 VibeHub，即表示你同意遵守本服务条款、隐私政策、平台规则以及适用时的 AIGC / Agent 使用说明。"
+        },
+        "accounts": {
+          "title": "账号与凭据",
+          "body": "邮箱登录是主要账号方式，GitHub 可作为辅助登录方式。你需要妥善保管邮箱、密码、API Key、关联账号和任何 Agent 凭据，不得通过共享凭据绕过平台的权限范围、限流规则或审计机制。"
+        },
+        "use": {
+          "title": "服务使用",
+          "body": "你必须以合法方式使用 VibeHub，不得侵害他人权利，也不得破坏平台的安全性、可靠性和完整性。你仍需对自己发布的内容、运营的团队以及授权执行的自动化或 Agent 行为负责。"
+        },
+        "automation": {
+          "title": "规则、自动化与 Agent 写入",
+          "body": "你必须遵守 /rules 中的规则。Agent 或 API 驱动的行为必须处于授权 scope、角色边界、限流和人工确认要求之内。即使携带有效 API Key，高风险写入也可能被延迟、驳回或纳入审计。详见 /aigc。"
+        },
+        "billing": {
+          "title": "计费与订阅",
+          "body": "VibeHub 当前公开提供 Free 与 Pro 两档。Stripe 保留用于海外银行卡支付。中国本地支付通道当前可能以按次月度续期的方式运行，而非默认自动续费。若支付失败、退款或订阅到期，对应权益可能被暂停、降级或回收。"
+        },
+        "changes": {
+          "title": "免责声明与更新",
+          "body": "本服务按“现状”提供。我们可能根据产品、价格、治理流程或法律要求更新这些条款。若法律允许，你在更新生效后继续使用服务，即视为接受更新后的条款。"
+        }
+      }
+    },
+    "rules": {
+      "metaTitle": "平台规则 - VibeHub",
+      "metaDescription": "说明 VibeHub 的内容、行为、自动化与安全底线。",
+      "title": "平台规则",
+      "sections": {
+        "respect": {
+          "title": "尊重交流",
+          "body": "禁止骚扰、仇恨言论、威胁、开盒、定向攻击等行为。可以直接讨论观点，但不能针对人发起攻击。"
+        },
+        "identity": {
+          "title": "真实身份与归属",
+          "body": "不得冒充其他个人、团队或企业。只能声明你真实拥有或被授权代表的作品、代码、截图、域名和资质。"
+        },
+        "malicious": {
+          "title": "禁止恶意内容",
+          "body": "不得上传或传播恶意程序、钓鱼页面、凭据窃取工具、利用包，或任何旨在造成未授权损害的内容。"
+        },
+        "spam": {
+          "title": "禁止垃圾信息与操纵排名",
+          "body": "不得刷屏、伪造互动、批量骚扰用户，或操纵排名、推荐、协作意向、认证流程和账单流程。"
+        },
+        "automation": {
+          "title": "自动化、MCP 与 Agent 使用",
+          "body": "API Key、MCP 工具、工作流和 Agent 必须在授权 scope、角色边界和限流之内使用。不得绕过确认队列、冒充他人，或使用自动化直接执行需要人工确认的高风险操作。"
+        },
+        "moderation": {
+          "title": "举报、审核与 AI 辅助",
+          "body": "用户可以举报内容和行为。管理员可以结合举报、企业认证申请、审计轨迹和 AI 建议做出治理决定，但 AI 建议本身不会自动成为处罚结果。"
+        },
+        "aigc": {
+          "title": "AIGC 透明度",
+          "body": "如果你以可能误导他人的方式使用了 AI 生成或高度 AI 辅助内容，平台可以要求你说明作者身份、来源或编辑责任。详见 /aigc。"
+        },
+        "enforcement": {
+          "title": "违规处理",
+          "body": "对于违反规则或造成重大法律、安全、运营风险的行为，我们可以采取提醒、限流、删除内容、暂停账号、撤销 API 权限、拒绝认证、取消权益或终止服务等措施。"
+        }
+      }
+    },
+    "aigc": {
+      "metaTitle": "AIGC 与 Agent 使用说明 - VibeHub",
+      "metaDescription": "说明 VibeHub 如何处理 AI 生成内容、推荐、Agent 写入与审核辅助。",
+      "title": "AIGC 与 Agent 使用说明",
+      "sections": {
+        "role": {
+          "title": "平台内 AI 的角色边界",
+          "body": "VibeHub 当前将 AI 用于治理、摘要、审核建议和协作辅助，不把平台定位成代写作品或无限生成内容的产品。推荐流主要基于互动与标签信号，不依赖黑箱式 LLM 排序。"
+        },
+        "userModels": {
+          "title": "用户自带模型",
+          "body": "用户可以绑定自己的模型密钥，通过 Agent、MCP 或外部工具访问 VibeHub。平台不会替用户支付推理费用，也不会默认把用户流量路由到跨境模型。涉及此类供应商时，合规责任由用户自行确认。"
+        },
+        "agentWrites": {
+          "title": "Agent 写入与人工确认",
+          "body": "Agent 在团队内执行写操作时必须受角色、scope、审计与人工确认约束。高风险动作不会因为来自 Agent 就被自动放行。"
+        },
+        "labeling": {
+          "title": "AIGC 标记与审核",
+          "body": "对于明显 AI 生成、批量自动化或可能误导他人的内容，平台保留标记、限流、下架或要求补充说明的权利。管理员可以参考 AI 建议，但最终治理决定仍由人工做出。"
+        },
+        "recommendation": {
+          "title": "推荐与可解释性",
+          "body": "当前推荐流主要基于兴趣标签、关注关系、点赞、收藏与近期互动，不采用不可解释的 LLM 生成排序。在可行范围内，我们会继续保留可说明的推荐信号。"
+        },
+        "compliance": {
+          "title": "合规与备案",
+          "body": "AIGC、推荐算法、数据跨境以及模型供应商使用情况，会在正式上线前纳入合规清单，并在法务与运营核验后再进入生产发布。未完成必要审校或备案的能力，不视为正式合规上线能力。"
+        }
+      }
+    }
+  },
+  "profile": {
+    "form": {
+      "save": "保存资料",
+      "saving": "正在保存…",
+      "saved": "个人资料已保存。",
+      "failed": "暂时无法保存个人资料。",
+      "firstSetup": "先创建公开的开发者资料，让你能出现在讨论、项目和协作入口中。",
+      "slug": "地址标识",
+      "collaboration": "协作偏好",
+      "open": "公开开放",
+      "invite_only": "仅限邀请",
+      "closed": "暂不开放",
+      "headline": "一句话介绍",
+      "bio": "个人简介",
+      "skills": "技能标签",
+      "skillsPlaceholder": "Next.js, Prisma, Product",
+      "avatarUrl": "头像地址",
+      "website": "个人网站",
+      "github": "GitHub",
+      "twitter": "X / Twitter",
+      "linkedin": "LinkedIn"
+    }
+  },
+  "apiKeys": {
+    "authRequiredTitle": "需要登录",
+    "authRequiredDesc": "登录后才能管理脚本、集成和 Agent 使用的 API Key。",
+    "demoLogin": "演示登录",
+    "signIn": "登录",
+    "pageTitle": "API Key",
+    "pageDescription": "为 MCP、OpenAPI 和 Agent 集成创建带 scope 的密钥，并查看每个密钥的使用情况。",
+    "createTitle": "创建新密钥",
+    "createDescription": "为密钥命名、选择权限范围，并可选绑定一个具名 Agent 以保留审计归属。",
+    "label": "密钥名称",
+    "labelPlaceholder": "例如：Production Agent、CI Pipeline",
+    "linkedAgent": "关联 Agent",
+    "linkedAgentHintPrefix": "将密钥关联到具名 Agent，便于在 MCP 和 API 审计中追踪来源。可在",
+    "linkedAgentHintLink": "设置",
+    "linkedAgentHintSuffix": "中管理 Agent。",
+    "noLinkedAgent": "不关联 Agent",
+    "paused": "已暂停",
+    "scopes": "权限范围",
+    "requiredBaseScope": "必需基础 scope",
+    "generate": "生成密钥",
+    "saveNow": "请立即保存这个密钥",
+    "secretShownOnce": "出于安全原因，这个密钥只会展示一次。离开当前页面后，你将无法再次查看它。",
+    "loadFailed": "暂时无法加载 API Key。",
+    "loadUsageFailed": "暂时无法加载 API Key 用量。",
+    "loadAgentsFailed": "暂时无法加载关联 Agent。",
+    "createFailed": "暂时无法创建 API Key。",
+    "revokeFailed": "暂时无法撤销 API Key。",
+    "activeTitle": "已创建的密钥",
+    "activeDescription": "查看当前账号签发的所有密钥。展开后可查看最近 7 天用量和最近的 MCP 调用。",
+    "emptyTitle": "还没有 API Key",
+    "emptyDescription": "先创建一个 API Key，再通过 MCP 或 OpenAPI 调用 VibeHub。",
+    "active": "生效中",
+    "revoked": "已撤销",
+    "agentLinked": "已关联 Agent",
+    "created": "创建时间",
+    "lastUsed": "最近使用",
+    "metric7d": "近 7 天调用",
+    "metric24h": "近 24 小时调用",
+    "metricErrors": "错误数",
+    "metricTools": "工具数",
+    "last7d": "最近 7 天",
+    "loading": "加载中…",
+    "viewUsage": "查看用量",
+    "hideUsage": "收起用量",
+    "revoke": "撤销",
+    "recentInvocationsTitle": "最近 MCP 调用",
+    "recentInvocationsDescription": "展示最近 100 次调用，并支持按工具和结果筛选。",
+    "filterTool": "按工具筛选",
+    "allStatuses": "全部状态",
+    "successOnly": "仅成功",
+    "errorsOnly": "仅错误",
+    "noMatchingInvocations": "没有匹配的调用记录",
+    "noMatchingInvocationsDesc": "当前筛选条件下，这个密钥还没有对应的 MCP 调用。",
+    "duration": "耗时",
+    "status": "状态",
+    "agentLinkedShort": "已关联 Agent",
+    "na": "无",
+    "success": "成功",
+    "error": "错误",
+    "revokeTitle": "确认撤销 API Key？",
+    "revokeDescription": "这会立即使“{label}”失效。所有依赖它的集成都将停止工作，且无法恢复。",
+    "revokeConfirm": "确认撤销",
+    "revokeCancel": "取消"
+  },
+  "automations": {
+    "newTitle": "创建自动化",
+    "namePlaceholder": "自动化名称",
+    "descriptionPlaceholder": "可选说明",
+    "triggerEvent": "触发事件",
+    "agentBinding": "关联 Agent",
+    "none": "无",
+    "action": "动作",
+    "payloadFilter": "Payload 过滤 JSON",
+    "stepConfig": "步骤配置 JSON",
+    "invalidJson": "过滤条件或配置 JSON 无效。",
+    "create": "创建自动化",
+    "createFailed": "暂时无法创建自动化。",
+    "created": "自动化已创建",
+    "activeTitle": "已启用的自动化",
+    "loading": "加载中…",
+    "empty": "还没有自动化。",
+    "enable": "启用",
+    "disable": "停用",
+    "delete": "删除",
+    "deleteFailed": "暂时无法删除自动化。",
+    "deleted": "自动化已删除",
+    "updateFailed": "暂时无法更新自动化。",
+    "agentLabel": "关联 Agent",
+    "recentRuns": "最近运行记录",
+    "recentRunsEmpty": "还没有自动化运行记录。"
+  },
+  "webhooks": {
+    "newTitle": "新建回调端点",
+    "httpsUrl": "HTTPS 地址",
+    "events": "订阅事件（留空表示全部事件）",
+    "create": "创建端点",
+    "createFailed": "暂时无法创建回调端点。",
+    "created": "回调端点已创建",
+    "endpoints": "回调端点",
+    "loading": "加载中…",
+    "empty": "还没有配置回调端点。",
+    "allEvents": "全部事件",
+    "active": "启用中",
+    "inactive": "已停用",
+    "sendTest": "发送测试请求",
+    "testFailed": "测试投递失败。",
+    "testSucceeded": "测试投递成功",
+    "recentDeliveries": "最近投递记录",
+    "recentDeliveriesEmpty": "还没有投递记录。"
   }
 }

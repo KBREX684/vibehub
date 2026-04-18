@@ -5,25 +5,26 @@ import { useState, useTransition } from "react";
 import { ArrowRight, Check, CheckCheck } from "lucide-react";
 import type { InAppNotification } from "@/lib/types";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { formatLocalizedDateTime } from "@/lib/formatting";
 import { groupNotificationsForDisplay } from "./notification-grouping";
 import { apiFetch } from "@/lib/api-fetch";
 
 const KIND_ICONS: Record<string, string> = {
-  team_join_request:       "👥",
-  team_join_approved:      "✅",
-  team_join_rejected:      "❌",
-  team_task_assigned:      "📋",
-  team_task_ready_for_review: "🕵️",
-  team_task_reviewed: "✅",
-  agent_confirmation_required: "⚠️",
-  post_commented:          "💬",
-  comment_replied:         "↩️",
-  post_liked:              "❤️",
-  project_bookmarked:      "🔖",
-  user_followed:           "👤",
-  project_intent_received: "🤝",
-  post_featured:           "⭐",
-  collaboration_intent_status_update: "🤝",
+  team_join_request: "users",
+  team_join_approved: "check",
+  team_join_rejected: "close",
+  team_task_assigned: "task",
+  team_task_ready_for_review: "review",
+  team_task_reviewed: "check",
+  agent_confirmation_required: "warning",
+  post_commented: "comment",
+  comment_replied: "reply",
+  post_liked: "heart",
+  project_bookmarked: "bookmark",
+  user_followed: "profile",
+  project_intent_received: "collab",
+  post_featured: "star",
+  collaboration_intent_status_update: "collab",
 };
 
 async function patchNotifications(ids?: string[], markAll?: boolean) {
@@ -44,7 +45,7 @@ export function NotificationsClient({
 }: {
   initialItems: InAppNotification[];
 }) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [items, setItems] = useState(initialItems);
   const [isPending, startTransition] = useTransition();
 
@@ -106,8 +107,8 @@ export function NotificationsClient({
         {displayRows.map((row) => {
           const primaryId = row.ids[0];
           const isUnread = !row.readAt;
-          const icon = KIND_ICONS[row.kind] ?? "🔔";
-          const date = new Date(row.createdAt).toLocaleDateString("en-US", {
+          const icon = KIND_ICONS[row.kind] ?? "notification";
+          const date = formatLocalizedDateTime(row.createdAt, language, {
             month: "short",
             day: "numeric",
             hour: "2-digit",
@@ -124,10 +125,10 @@ export function NotificationsClient({
               className={`card p-4 flex items-start gap-3 transition-all ${
                 isUnread
                   ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]"
-                  : "opacity-70"
+                  : "border-[var(--color-border)] bg-[var(--color-bg-surface)]"
               }`}
             >
-              <span className="text-lg shrink-0 w-8 h-8 flex items-center justify-center">
+              <span className="shrink-0 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[11px] font-mono uppercase text-[var(--color-text-secondary)]">
                 {icon}
               </span>
 
@@ -182,7 +183,7 @@ export function NotificationsClient({
                     className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1 mt-1"
                     onClick={() => isUnread && markOne(row.ids)}
                   >
-                    Open confirmation queue
+                    {t("notifications.open_confirmation_queue", "Open confirmation queue")}
                     <ArrowRight className="w-3 h-3" />
                   </Link>
                 )}

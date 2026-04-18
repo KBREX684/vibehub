@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { apiFetch } from "@/lib/api-fetch";
 import { WEBHOOK_EVENT_NAMES } from "@/lib/webhook-events";
 
@@ -24,6 +25,7 @@ type DeliveryRow = {
 };
 
 export function WebhooksClient() {
+  const { t } = useLanguage();
   const [items, setItems] = useState<WebhookRow[]>([]);
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,10 +62,10 @@ export function WebhooksClient() {
     });
     const json = await res.json();
     if (!res.ok) {
-      toast.error(json?.error?.message ?? "Failed to create");
+      toast.error(json?.error?.message ?? t("webhooks.createFailed"));
       return;
     }
-    toast.success("Webhook endpoint created");
+    toast.success(t("webhooks.created"));
     setUrl("");
     setEvents([]);
     void refresh();
@@ -76,10 +78,10 @@ export function WebhooksClient() {
     });
     const json = await res.json();
     if (!res.ok) {
-      toast.error(json?.error?.message ?? "Test failed");
+      toast.error(json?.error?.message ?? t("webhooks.testFailed"));
       return;
     }
-    toast.success(json?.data?.ok ? "Delivery succeeded" : `Failed: ${json?.data?.error ?? ""}`);
+    toast.success(json?.data?.ok ? t("webhooks.testSucceeded") : `${t("webhooks.testFailed")} ${json?.data?.error ?? ""}`.trim());
     void refresh();
   }
 
@@ -90,9 +92,9 @@ export function WebhooksClient() {
   return (
     <div className="space-y-8">
       <form onSubmit={createEndpoint} className="card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">New endpoint</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("webhooks.newTitle")}</h2>
         <div className="space-y-1.5">
-          <label className="text-xs text-[var(--color-text-secondary)]">HTTPS URL</label>
+          <label className="text-xs text-[var(--color-text-secondary)]">{t("webhooks.httpsUrl")}</label>
           <input
             className="input-base"
             type="url"
@@ -103,7 +105,7 @@ export function WebhooksClient() {
           />
         </div>
         <div className="space-y-2">
-          <p className="text-xs text-[var(--color-text-muted)] m-0">Events (empty = all)</p>
+          <p className="text-xs text-[var(--color-text-muted)] m-0">{t("webhooks.events")}</p>
           <div className="flex flex-wrap gap-2">
             {WEBHOOK_EVENT_NAMES.map((ev) => (
               <label key={ev} className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
@@ -118,26 +120,26 @@ export function WebhooksClient() {
           </div>
         </div>
         <button type="submit" className="btn btn-primary text-sm">
-          Create
+          {t("webhooks.create")}
         </button>
       </form>
 
       <section className="card p-6 space-y-3">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Endpoints</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("webhooks.endpoints")}</h2>
         {loading ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">Loading…</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("webhooks.loading")}</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">No webhooks yet.</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("webhooks.empty")}</p>
         ) : (
           <ul className="space-y-3 m-0 p-0 list-none">
             {items.map((w) => (
               <li key={w.id} className="border border-[var(--color-border)] rounded-[var(--radius-md)] p-3">
                 <p className="text-xs font-mono text-[var(--color-text-secondary)] break-all m-0">{w.url}</p>
                 <p className="text-[10px] text-[var(--color-text-muted)] mt-1 m-0">
-                  {w.events.length ? w.events.join(", ") : "all events"} · {w.active ? "active" : "inactive"}
+                  {w.events.length ? w.events.join(", ") : t("webhooks.allEvents")} · {w.active ? t("webhooks.active") : t("webhooks.inactive")}
                 </p>
                 <button type="button" className="btn btn-secondary text-xs mt-2" onClick={() => testWebhook(w.id)}>
-                  Send test
+                  {t("webhooks.sendTest")}
                 </button>
               </li>
             ))}
@@ -146,9 +148,9 @@ export function WebhooksClient() {
       </section>
 
       <section className="card p-6 space-y-3">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Recent deliveries</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("webhooks.recentDeliveries")}</h2>
         {deliveries.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">No delivery log yet.</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("webhooks.recentDeliveriesEmpty")}</p>
         ) : (
           <ul className="space-y-2 m-0 p-0 list-none text-xs">
             {deliveries.map((d) => (

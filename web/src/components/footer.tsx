@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Zap, Globe, Link2 } from "lucide-react";
+import { Zap, BookOpen, GitBranch, Mail } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { Float } from "@/components/ui";
 
 type FooterLink =
   | { kind: "link"; href: string; labelKey: string }
-  | { kind: "mailto"; href: string; labelKey: string }
-  | { kind: "soon"; labelKey: string };
+  | { kind: "mailto"; href: string; labelKey: string };
 
 type FooterColumn = {
   titleKey: string;
@@ -21,26 +20,27 @@ export function Footer() {
     {
       titleKey: "footer.platform",
       links: [
-        { kind: "link", href: "/discover", labelKey: "nav.discover" },
+        { kind: "link", href: "/discover", labelKey: "nav.projects" },
         { kind: "link", href: "/discussions", labelKey: "nav.discussions" },
         { kind: "link", href: "/teams", labelKey: "nav.teams" },
-        { kind: "link", href: "/leaderboards", labelKey: "nav.leaderboards" },
+        { kind: "link", href: "/pricing", labelKey: "nav.pricing" },
       ],
     },
     {
       titleKey: "footer.developers",
       links: [
+        { kind: "link", href: "/developers", labelKey: "nav.developers" },
         { kind: "link", href: "/settings/api-keys", labelKey: "footer.apiKeys" },
         { kind: "link", href: "/api/v1/openapi.json", labelKey: "footer.openapi" },
-        { kind: "link", href: "/pricing", labelKey: "footer.pricing" },
+        { kind: "link", href: "/developers/api-docs", labelKey: "footer.docs" },
       ],
     },
     {
       titleKey: "footer.company",
       links: [
         { kind: "link", href: "/#about", labelKey: "footer.about" },
-        { kind: "soon", labelKey: "footer.blog" },
-        { kind: "soon", labelKey: "footer.careers" },
+        { kind: "link", href: "/rules", labelKey: "footer.rules" },
+        { kind: "link", href: "/aigc", labelKey: "footer.aigc" },
         { kind: "mailto", href: "mailto:support@vibehub.dev", labelKey: "footer.contact" },
       ],
     },
@@ -54,8 +54,8 @@ export function Footer() {
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2 font-bold text-base text-[var(--color-text-primary)] mb-3">
               <Float distance={4} speed={4}>
-                <span className="w-6 h-6 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent-cyan)] flex items-center justify-center">
-                  <Zap className="w-3.5 h-3.5 text-[var(--color-text-inverse)]" />
+                <span className="w-6 h-6 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] flex items-center justify-center shadow-[inset_0_1px_0_var(--color-featured-highlight)]">
+                  <Zap className="w-3.5 h-3.5 text-[var(--color-text-primary)]" />
                 </span>
               </Float>
               VibeHub
@@ -65,9 +65,9 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3 mt-4">
               {[
-                { icon: Link2, href: "https://github.com", labelKey: "footer.github" },
-                { icon: Link2, href: "https://twitter.com", labelKey: "footer.twitter" },
-                { icon: Globe, href: "/", labelKey: "footer.website" },
+                { icon: GitBranch, href: "https://github.com/KBREX684/vibehub", labelKey: "footer.github" },
+                { icon: BookOpen, href: "/developers", labelKey: "footer.docs" },
+                { icon: Mail, href: "mailto:support@vibehub.dev", labelKey: "footer.contact" },
               ].map(({ icon: Icon, href, labelKey }) => (
                 <a
                   key={labelKey}
@@ -91,14 +91,6 @@ export function Footer() {
               </h4>
               <ul className="flex flex-col gap-2">
                 {col.links.map((link) => {
-                  if (link.kind === "soon") {
-                    const label = `${t(link.labelKey)} (${t("common.comingSoon")})`;
-                    return (
-                      <li key={link.labelKey}>
-                        <span className="text-sm text-[var(--color-text-muted)] cursor-default">{label}</span>
-                      </li>
-                    );
-                  }
                   if (link.kind === "mailto") {
                     return (
                       <li key={link.labelKey}>

@@ -149,9 +149,9 @@ export default async function SettingsIndexPage() {
           <Settings2 className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">{t("settings.title", "Settings")}</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">{t("settings.title")}</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 m-0">
-            {t("settings.subtitle", "Manage your account, workspace, and developer integrations.")}
+            {t("settings.subtitle")}
           </p>
         </div>
       </div>
@@ -159,10 +159,10 @@ export default async function SettingsIndexPage() {
       {!session && (
         <div className="card p-6 text-center space-y-3">
           <p className="text-sm text-[var(--color-text-secondary)] m-0">
-            {t("settings.sign_in_hint", "Sign in to manage your account settings and developer integrations.")}
+            {t("settings.sign_in_hint")}
           </p>
           <Link href="/login?redirect=/settings" className="btn btn-primary text-sm px-6 py-2.5 inline-flex">
-            Sign in
+            {t("settings.sign_in")}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

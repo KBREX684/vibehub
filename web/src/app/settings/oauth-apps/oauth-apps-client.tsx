@@ -5,10 +5,13 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
 import { DEFAULT_API_KEY_SCOPES } from "@/lib/api-key-scopes";
 import type { OAuthAppSummary } from "@/lib/types";
+import { useLanguage } from "@/app/context/LanguageContext";
+import { Badge } from "@/components/ui";
 
 type OAuthAppCreated = OAuthAppSummary & { clientSecret: string };
 
 export function OAuthAppsClient() {
+  const { t } = useLanguage();
   const [apps, setApps] = useState<OAuthAppSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -51,14 +54,14 @@ export function OAuthAppsClient() {
     });
     const json = (await res.json()) as { data?: { app?: OAuthAppCreated }; error?: { message?: string } };
     if (!res.ok || !json.data?.app) {
-      toast.error(json.error?.message ?? "Failed to create OAuth app");
+      toast.error(json.error?.message ?? t("settings.oauth.create_failed"));
       return;
     }
     setLatestSecret(json.data.app.clientSecret);
     setName("");
     setDescription("");
     setRedirectUris("http://localhost:3001/callback");
-    toast.success("OAuth app created");
+    toast.success(t("settings.oauth.created"));
     void refresh();
   }
 
@@ -71,7 +74,7 @@ export function OAuthAppsClient() {
     });
     const json = (await res.json()) as { error?: { message?: string } };
     if (!res.ok) {
-      toast.error(json.error?.message ?? "Failed to update OAuth app");
+      toast.error(json.error?.message ?? t("settings.oauth.update_failed"));
       return;
     }
     void refresh();
@@ -84,10 +87,10 @@ export function OAuthAppsClient() {
     });
     const json = (await res.json()) as { error?: { message?: string } };
     if (!res.ok) {
-      toast.error(json.error?.message ?? "Failed to delete OAuth app");
+      toast.error(json.error?.message ?? t("settings.oauth.delete_failed"));
       return;
     }
-    toast.success("OAuth app deleted");
+    toast.success(t("settings.oauth.deleted"));
     void refresh();
   }
 
@@ -98,23 +101,23 @@ export function OAuthAppsClient() {
   return (
     <div className="space-y-8">
       <form onSubmit={createApp} className="card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">New OAuth app</h2>
-        <input className="input-base" value={name} onChange={(e) => setName(e.target.value)} placeholder="App name" required />
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("settings.oauth.new_app")}</h2>
+        <input className="input-base" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("settings.oauth.app_name")} required />
         <textarea
           className="input-base min-h-24"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="What this integration is for"
+          placeholder={t("settings.oauth.description")}
         />
         <textarea
           className="input-base min-h-24 font-mono text-xs"
           value={redirectUris}
           onChange={(e) => setRedirectUris(e.target.value)}
-          placeholder="One redirect URI per line"
+          placeholder={t("settings.oauth.redirect_placeholder")}
           required
         />
         <div className="space-y-2">
-          <p className="text-xs text-[var(--color-text-muted)] m-0">Scopes</p>
+          <p className="text-xs text-[var(--color-text-muted)] m-0">{t("settings.oauth.scopes")}</p>
           <div className="flex flex-wrap gap-2">
             {DEFAULT_API_KEY_SCOPES.map((scope) => (
               <label key={scope} className="text-xs flex items-center gap-1.5 text-[var(--color-text-secondary)]">
@@ -124,22 +127,22 @@ export function OAuthAppsClient() {
             ))}
           </div>
         </div>
-        <button type="submit" className="btn btn-primary w-fit">Create OAuth app</button>
+        <button type="submit" className="btn btn-primary w-fit">{t("settings.oauth.create")}</button>
         {latestSecret && (
           <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3 space-y-2">
-            <p className="text-xs font-semibold text-[var(--color-text-primary)] m-0">Client secret</p>
-            <p className="text-xs text-[var(--color-text-secondary)] m-0">Shown once. Store it now.</p>
+            <p className="text-xs font-semibold text-[var(--color-text-primary)] m-0">{t("settings.oauth.client_secret")}</p>
+            <p className="text-xs text-[var(--color-text-secondary)] m-0">{t("settings.oauth.client_secret_once")}</p>
             <code className="block break-all text-xs">{latestSecret}</code>
           </div>
         )}
       </form>
 
       <section className="card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">Registered apps</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("settings.oauth.registered_apps")}</h2>
         {loading ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">Loading…</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("common.loading")}</p>
         ) : apps.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)] m-0">No OAuth apps yet.</p>
+          <p className="text-sm text-[var(--color-text-muted)] m-0">{t("settings.oauth.empty")}</p>
         ) : (
           <ul className="space-y-4 list-none m-0 p-0">
             {apps.map((app) => (
@@ -151,16 +154,16 @@ export function OAuthAppsClient() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button type="button" className="btn btn-secondary text-xs" onClick={() => toggleActive(app)}>
-                      {app.active ? "Disable" : "Enable"}
+                      {app.active ? t("common.disable") : t("common.enable")}
                     </button>
                     <button type="button" className="btn btn-ghost text-xs text-[var(--color-error)]" onClick={() => removeApp(app)}>
-                      Delete
+                      {t("common.delete")}
                     </button>
                   </div>
                 </div>
                 {app.description && <p className="text-sm text-[var(--color-text-secondary)] m-0">{app.description}</p>}
                 <div className="space-y-1">
-                  <p className="text-xs text-[var(--color-text-muted)] m-0">Redirect URIs</p>
+                  <p className="text-xs text-[var(--color-text-muted)] m-0">{t("settings.oauth.redirect_uris")}</p>
                   <ul className="list-none m-0 p-0 space-y-1 text-xs font-mono text-[var(--color-text-secondary)]">
                     {app.redirectUris.map((uri) => (
                       <li key={uri} className="break-all">{uri}</li>
@@ -169,7 +172,7 @@ export function OAuthAppsClient() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {app.scopes.map((scope) => (
-                    <span key={scope} className="tag">{scope}</span>
+                    <Badge key={scope} variant="default" pill mono size="sm">{scope}</Badge>
                   ))}
                 </div>
               </li>

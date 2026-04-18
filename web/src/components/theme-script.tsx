@@ -5,20 +5,13 @@ export function ThemeScript() {
   const code = `
 (function(){
   try {
-    var k='vibehub-theme';
-    var v=localStorage.getItem(k);
-    if(!v){
-      try{
-        var m=document.cookie.match(/(?:^|;\\s*)vibehub_theme=([^;]+)/);
-        if(m) v=decodeURIComponent(m[1]);
-      }catch(e){}
-    }
-    if(!v) v='dark';
     var d=document.documentElement;
-    function setDark(on){ d.classList.toggle('dark',on); d.classList.toggle('light',!on); }
-    if(v==='dark') setDark(true);
-    else if(v==='light') setDark(false);
-    else setDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    d.classList.add('dark');
+    d.classList.remove('light');
+    try {
+      localStorage.setItem('vibehub-theme','dark');
+      document.cookie='vibehub_theme=dark;path=/;max-age=31536000;SameSite=Lax';
+    } catch(e) {}
   } catch(e) {}
 })();`;
   return <script dangerouslySetInnerHTML={{ __html: code }} />;

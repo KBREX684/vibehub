@@ -20,10 +20,10 @@ export default async function NotificationSettingsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">
-            {t("settings.notifications_title", "Notifications")}
+            {t("settings.notifications_title")}
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1 m-0">
-            {t("settings.notifications_desc", "Choose which in-app notification categories you receive.")}
+            {t("settings.notifications_desc")}
           </p>
         </div>
       </div>

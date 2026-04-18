@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check, Copy } from "lucide-react";
+import { useLanguage } from "@/app/context/LanguageContext";
 
 export interface CopyButtonProps {
   value: string;
@@ -28,12 +29,13 @@ const sizeClass: Record<NonNullable<CopyButtonProps["size"]>, string> = {
  */
 export function CopyButton({
   value,
-  label = "复制",
-  copiedLabel = "已复制",
+  label,
+  copiedLabel,
   size = "md",
   className = "",
   onCopied,
 }: CopyButtonProps) {
+  const { t } = useLanguage();
   const [copied, setCopied] = React.useState(false);
   const timeoutRef = React.useRef<number | null>(null);
 
@@ -79,14 +81,20 @@ export function CopyButton({
         "bg-transparent text-[var(--color-text-secondary)] border-[var(--color-border)]",
         "hover:bg-[var(--color-bg-surface-hover)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]",
         "transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-apple)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]",
         sizeClass[size],
         copied ? "text-[var(--color-success)] border-[var(--color-success-border)]" : "",
         className,
       ].join(" ")}
     >
       <Icon className={size === "sm" ? "w-3 h-3" : "w-3.5 h-3.5"} aria-hidden="true" />
-      {label !== null ? <span>{copied ? copiedLabel : label}</span> : null}
+      {label !== null ? (
+        <span>
+          {copied
+            ? copiedLabel ?? t("common.copied", "Copied")
+            : label ?? t("common.copy", "Copy")}
+        </span>
+      ) : null}
     </button>
   );
 }

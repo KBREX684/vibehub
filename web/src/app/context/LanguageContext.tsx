@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   LANGUAGE_COOKIE_KEY,
   getClientTranslator,
@@ -40,11 +41,18 @@ export function LanguageProvider({
   children: React.ReactNode;
   initialLanguage?: Lang;
 }) {
+  const router = useRouter();
   const [language, setLanguageState] = useState<Lang>(initialLanguage);
 
   useEffect(() => {
-    setLanguageState(browserPreferredLanguage(initialLanguage));
-  }, [initialLanguage]);
+    const preferred = browserPreferredLanguage(initialLanguage);
+    setLanguageState(preferred);
+    if (preferred !== initialLanguage) {
+      document.documentElement.lang = preferred;
+      document.cookie = `${LANGUAGE_COOKIE_KEY}=${preferred}; path=/; max-age=31536000; samesite=lax`;
+      router.refresh();
+    }
+  }, [initialLanguage, router]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -58,10 +66,19 @@ export function LanguageProvider({
     const translate = getClientTranslator(language);
     return {
       language,
-      setLanguage: setLanguageState,
+      setLanguage: (nextLanguage) => {
+        if (nextLanguage === language) return;
+        setLanguageState(nextLanguage);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(STORAGE_KEY, nextLanguage);
+          document.documentElement.lang = nextLanguage;
+          document.cookie = `${LANGUAGE_COOKIE_KEY}=${nextLanguage}; path=/; max-age=31536000; samesite=lax`;
+        }
+        router.refresh();
+      },
       t: translate,
     };
-  }, [language]);
+  }, [language, router]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

@@ -7,44 +7,26 @@ export type ThemeChoice = "light" | "dark" | "system";
 
 const STORAGE_KEY = "vibehub-theme";
 
-function readStoredTheme(): ThemeChoice | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw === "light" || raw === "dark" || raw === "system") return raw;
-  } catch {
-    /* ignore */
-  }
-  return null;
+function resolveEffectiveDark(): boolean {
+  return true;
 }
 
-function browserPreferredTheme(fallback: ThemeChoice): ThemeChoice {
-  return readStoredTheme() ?? fallback;
-}
-
-function resolveEffectiveDark(choice: ThemeChoice): boolean {
-  if (choice === "dark") return true;
-  if (choice === "light") return false;
-  if (typeof window === "undefined") return true;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-function applyDomTheme(choice: ThemeChoice): void {
+function applyDomTheme(): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  const dark = resolveEffectiveDark(choice);
+  const dark = resolveEffectiveDark();
   root.classList.toggle("dark", dark);
   root.classList.toggle("light", !dark);
 }
 
-function persistTheme(choice: ThemeChoice): void {
+function persistTheme(): void {
   try {
-    window.localStorage.setItem(STORAGE_KEY, choice);
+    window.localStorage.setItem(STORAGE_KEY, "dark");
   } catch {
     /* ignore */
   }
   const maxAge = 60 * 60 * 24 * 365;
-  document.cookie = `${THEME_COOKIE_KEY}=${choice};path=/;max-age=${maxAge};SameSite=Lax`;
+  document.cookie = `${THEME_COOKIE_KEY}=dark;path=/;max-age=${maxAge};SameSite=Lax`;
 }
 
 const ThemeContext = createContext<{
@@ -65,30 +47,22 @@ export function ThemeProvider({
 
   useEffect(() => {
     setMounted(true);
-    setThemeState(browserPreferredTheme(initialTheme));
+    setThemeState("dark");
   }, [initialTheme]);
 
   useEffect(() => {
     if (!mounted) return;
-    applyDomTheme(theme);
-    persistTheme(theme);
+    applyDomTheme();
+    persistTheme();
   }, [theme, mounted]);
 
-  useEffect(() => {
-    if (!mounted || theme !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyDomTheme("system");
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, [theme, mounted]);
-
-  const setTheme = useCallback((t: ThemeChoice) => {
-    setThemeState(t);
-    applyDomTheme(t);
-    persistTheme(t);
+  const setTheme = useCallback(() => {
+    setThemeState("dark");
+    applyDomTheme();
+    persistTheme();
   }, []);
 
-  const effectiveDark = mounted ? resolveEffectiveDark(theme) : resolveEffectiveDark(initialTheme);
+  const effectiveDark = true;
 
   const value = useMemo(
     () => ({ theme, setTheme, effectiveDark }),

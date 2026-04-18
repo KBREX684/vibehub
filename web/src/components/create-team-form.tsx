@@ -3,11 +3,13 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UpgradeReason } from "@/lib/subscription";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { UpgradePlanCallout } from "@/components/upgrade-plan-callout";
 import { apiFetch } from "@/lib/api-fetch";
 
 export function CreateTeamForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [mission, setMission] = useState("");
@@ -42,7 +44,7 @@ export function CreateTeamForm() {
       };
       if (!res.ok || !json.data?.slug) {
         setStatus("error");
-        setMessage(json.error?.message ?? "Create failed");
+        setMessage(json.error?.message ?? t("team.form.createFailed"));
         setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
@@ -56,31 +58,36 @@ export function CreateTeamForm() {
 
   return (
     <form className="card discover-filters" onSubmit={onSubmit}>
-      <h2>创建团队（P3-1）</h2>
-      <p className="muted small">需先 Demo 登录；URL 标识 slug 可选（小写字母、数字与连字符）。</p>
+      <h2>{t("team.form.title")}</h2>
+      <p className="muted small">{t("team.form.subtitle")}</p>
       <div className="discover-filter-grid" style={{ marginTop: "0.75rem" }}>
         <label className="discover-field">
-          <span>名称</span>
+          <span>{t("team.form.name")}</span>
           <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={80} />
         </label>
         <label className="discover-field">
-          <span>Slug（可选）</span>
+          <span>{t("team.form.slug")}</span>
           <input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="my-squad"
+            placeholder={t("team.form.slugPlaceholder")}
             pattern="[a-z0-9]+(-[a-z0-9]+)*"
-            title="小写、数字、连字符"
+            title={t("team.form.slugHint")}
           />
         </label>
         <label className="discover-field" style={{ gridColumn: "1 / -1" }}>
-          <span>使命（可选）</span>
-          <input value={mission} onChange={(e) => setMission(e.target.value)} maxLength={500} />
+          <span>{t("team.form.mission")}</span>
+          <input
+            value={mission}
+            onChange={(e) => setMission(e.target.value)}
+            maxLength={500}
+            placeholder={t("team.form.missionPlaceholder")}
+          />
         </label>
       </div>
       <div className="discover-actions">
         <button type="submit" className="button" disabled={status === "loading"}>
-          {status === "loading" ? "创建中…" : "创建"}
+          {status === "loading" ? t("team.form.submitting") : t("team.form.submit")}
         </button>
       </div>
       {message ? <p className="error-text">{message}</p> : null}

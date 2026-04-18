@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/app/context/LanguageContext";
 import type { CreatorProfile } from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
 
@@ -11,6 +12,7 @@ interface Props {
 
 export function ProfileForm({ initialProfile }: Props) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [slug, setSlug] = useState(initialProfile?.slug ?? "");
   const [headline, setHeadline] = useState(initialProfile?.headline ?? "");
   const [bio, setBio] = useState(initialProfile?.bio ?? "");
@@ -63,11 +65,11 @@ export function ProfileForm({ initialProfile }: Props) {
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
         setStatus("error");
-        setMessage(json.error?.message ?? "Failed to save profile");
+        setMessage(json.error?.message ?? t("profile.form.failed"));
         return;
       }
       setStatus("success");
-      setMessage("Profile saved.");
+      setMessage(t("profile.form.saved"));
       router.refresh();
     } catch (err) {
       setStatus("error");
@@ -79,13 +81,13 @@ export function ProfileForm({ initialProfile }: Props) {
     <form onSubmit={onSubmit} className="card p-6 space-y-5">
       {!initialProfile && (
         <p className="text-xs text-[var(--color-text-muted)] m-0">
-          First time setup: create your creator profile.
+          {t("profile.form.firstSetup")}
         </p>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Slug</span>
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.slug")}</span>
           <input
             className="input-base"
             value={slug}
@@ -98,7 +100,7 @@ export function ProfileForm({ initialProfile }: Props) {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Collaboration</span>
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.collaboration")}</span>
           <select
             className="input-base"
             value={collaborationPreference}
@@ -106,15 +108,15 @@ export function ProfileForm({ initialProfile }: Props) {
               setCollaborationPreference(e.target.value as "open" | "invite_only" | "closed")
             }
           >
-            <option value="open">Open</option>
-            <option value="invite_only">Invite only</option>
-            <option value="closed">Closed</option>
+            <option value="open">{t("profile.form.open")}</option>
+            <option value="invite_only">{t("profile.form.invite_only")}</option>
+            <option value="closed">{t("profile.form.closed")}</option>
           </select>
         </label>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="profile-headline" className="text-xs font-semibold text-[var(--color-text-secondary)]">Headline</label>
+        <label htmlFor="profile-headline" className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.headline")}</label>
         <input
           id="profile-headline"
           className="input-base"
@@ -126,7 +128,7 @@ export function ProfileForm({ initialProfile }: Props) {
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Bio</span>
+        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.bio")}</span>
         <textarea
           className="input-base min-h-[140px]"
           value={bio}
@@ -137,36 +139,36 @@ export function ProfileForm({ initialProfile }: Props) {
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Skills (comma-separated)</span>
+        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.skills")}</span>
         <input
           className="input-base"
           value={skillsInput}
           onChange={(e) => setSkillsInput(e.target.value)}
-          placeholder="Next.js, Prisma, Product"
+          placeholder={t("profile.form.skillsPlaceholder")}
         />
       </label>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Avatar URL</span>
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.avatarUrl")}</span>
           <input className="input-base" type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} />
         </label>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="profile-website" className="text-xs font-semibold text-[var(--color-text-secondary)]">Website</label>
+          <label htmlFor="profile-website" className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.website")}</label>
           <input id="profile-website" className="input-base" type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />
         </div>
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">GitHub</span>
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.github")}</span>
           <input className="input-base" type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">X / Twitter</span>
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.twitter")}</span>
           <input className="input-base" type="url" value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} />
         </label>
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">LinkedIn</span>
+        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t("profile.form.linkedin")}</span>
         <input className="input-base" type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} />
       </label>
 
@@ -182,7 +184,7 @@ export function ProfileForm({ initialProfile }: Props) {
 
       <div className="flex items-center gap-3">
         <button className="btn btn-primary" type="submit" disabled={status === "saving"}>
-          {status === "saving" ? "Saving..." : "Save profile"}
+          {status === "saving" ? t("profile.form.saving") : t("profile.form.save")}
         </button>
       </div>
     </form>

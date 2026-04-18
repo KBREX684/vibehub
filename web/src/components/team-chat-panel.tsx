@@ -17,7 +17,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Send, Wifi, WifiOff, Users, MessageSquare, Lock } from "lucide-react";
+import { useLanguage } from "@/app/context/LanguageContext";
 import { apiFetch } from "@/lib/api-fetch";
+import { formatLocalizedTime } from "@/lib/formatting";
+import { Badge, Button } from "@/components/ui";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,14 +61,6 @@ function getTeamChatWsUrl(): string {
   return `${wsProto}//${hostname}:3001/ws`;
 }
 
-function formatTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "";
-  }
-}
-
 function nanoid() {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -73,6 +68,7 @@ function nanoid() {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
+  const { language, t } = useLanguage();
   const [messages, setMessages]       = useState<ChatMsg[]>([]);
   const [input, setInput]             = useState("");
   const [connState, setConnState]     = useState<ConnState>("disconnected");
@@ -334,8 +330,8 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     return (
       <div className="card p-8 text-center">
         <Lock className="w-8 h-8 text-[var(--color-text-muted)] mx-auto mb-3 opacity-60" />
-        <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">Team Chat</p>
-        <p className="text-xs text-[var(--color-text-secondary)]">Sign in to access the team chat.</p>
+        <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">{t("team.chat.title", "Team chat")}</p>
+        <p className="text-xs text-[var(--color-text-secondary)]">{t("team.chat.sign_in_required", "Sign in to access the team chat.")}</p>
       </div>
     );
   }
@@ -344,8 +340,8 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     return (
       <div className="card p-8 text-center">
         <Lock className="w-8 h-8 text-[var(--color-text-muted)] mx-auto mb-3 opacity-60" />
-        <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">Team Chat</p>
-        <p className="text-xs text-[var(--color-text-secondary)]">Join this team to participate in the chat.</p>
+        <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">{t("team.chat.title", "Team chat")}</p>
+        <p className="text-xs text-[var(--color-text-secondary)]">{t("team.chat.join_required", "Join this team to participate in the chat.")}</p>
       </div>
     );
   }
@@ -354,9 +350,9 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
     return (
       <div className="card p-8 text-center">
         <Users className="w-8 h-8 text-[var(--color-warning)] mx-auto mb-3" />
-        <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">Chat at capacity</p>
+        <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">{t("team.chat.capacity_title", "Chat at capacity")}</p>
         <p className="text-xs text-[var(--color-text-secondary)]">
-          The chat room is full. Please try again later.
+          {t("team.chat.capacity_desc", "The chat room is full. Please try again later.")}
         </p>
       </div>
     );
@@ -365,39 +361,39 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
   // ── Main render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="card flex flex-col overflow-hidden" style={{ minHeight: 400, maxHeight: 560 }}>
+    <div className="card flex min-h-[24rem] max-h-[min(70vh,36rem)] flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-[var(--color-accent-cyan)]" />
-          <span className="text-sm font-semibold text-[var(--color-text-primary)]">Team Chat</span>
+          <MessageSquare className="w-4 h-4 text-[var(--color-text-secondary)]" />
+          <span className="text-sm font-semibold text-[var(--color-text-primary)]">{t("team.chat.title", "Team chat")}</span>
           {onlineCount !== null && (
-            <span className="tag tag-green text-xs">{onlineCount} online</span>
+            <Badge variant="success" pill mono size="sm">{t("team.chat.online_count", "{count} online").replace("{count}", String(onlineCount))}</Badge>
           )}
         </div>
         <div className="flex items-center gap-1.5">
           {connState === "connected" ? (
             <span className="flex items-center gap-1 text-xs text-[var(--color-success)]">
               <Wifi className="w-3.5 h-3.5" />
-              Live
+              {t("team.chat.live", "Live")}
             </span>
           ) : connState === "connecting" ? (
             <span className="flex items-center gap-1 text-xs text-[var(--color-warning)]">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-warning)] animate-pulse" />
-              Connecting…
+              {t("team.chat.connecting", "Connecting…")}
             </span>
           ) : (
             <span className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
               <WifiOff className="w-3.5 h-3.5" />
-              Offline
+              {t("team.chat.offline", "Offline")}
             </span>
           )}
         </div>
       </div>
 
       {usingRestFallback && (
-        <div className="mx-4 mt-2 px-3 py-1.5 bg-[var(--color-warning-subtle)] border border-[rgba(251,191,36,0.25)] rounded-[var(--radius-md)] text-xs text-[var(--color-warning)]">
-          Realtime chat unavailable. Sending via REST fallback.
+        <div className="mx-4 mt-2 px-3 py-1.5 bg-[var(--color-warning-subtle)] border border-[var(--color-warning-border)] rounded-[var(--radius-md)] text-xs text-[var(--color-warning)]">
+          {t("team.chat.rest_fallback", "Realtime chat is unavailable. Messages will be sent through the fallback channel.")}
         </div>
       )}
 
@@ -408,16 +404,16 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
       >
         {historyState === "loading" ? (
           <div className="text-center py-8">
-            <p className="text-xs text-[var(--color-text-muted)]">Loading recent messages…</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("team.chat.loading", "Loading recent messages…")}</p>
           </div>
         ) : historyState === "error" ? (
           <div className="text-center py-8">
-            <p className="text-xs text-[var(--color-error)]">Failed to load chat history.</p>
+            <p className="text-xs text-[var(--color-error)]">{t("team.chat.history_error", "Failed to load chat history.")}</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-xs text-[var(--color-text-muted)]">
-              No messages yet. Say hello!
+              {t("team.chat.empty", "No messages yet. Start the conversation.")}
             </p>
           </div>
         ) : (
@@ -439,15 +435,15 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
                   <div
                     className={`px-3 py-2 rounded-[var(--radius-lg)] text-sm leading-relaxed max-w-full break-words ${
                       isSelf
-                        ? "bg-[var(--color-primary)] text-[var(--color-text-inverse)]"
+                        ? "bg-[var(--color-chat-self-subtle)] text-[var(--color-text-primary)] border border-[var(--color-border-subtle)]"
                         : "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
                     } ${msg.pending ? "opacity-60" : ""}`}
                   >
                     {msg.body}
                   </div>
                   <span className="text-[10px] text-[var(--color-text-muted)] px-1">
-                    {formatTime(msg.createdAt)}
-                    {msg.pending && " · sending…"}
+                    {formatLocalizedTime(msg.createdAt, language)}
+                    {msg.pending ? ` · ${t("team.chat.sending", "sending…")}` : ""}
                   </span>
                 </div>
               </div>
@@ -459,7 +455,7 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
 
       {/* Error bar */}
       {error && (
-        <div className="mx-4 mb-1 px-3 py-1.5 bg-[var(--color-error-subtle)] border border-[rgba(239,68,68,0.2)] rounded-[var(--radius-md)] text-xs text-[var(--color-error)]">
+        <div className="mx-4 mb-1 px-3 py-1.5 bg-[var(--color-error-subtle)] border border-[var(--color-error-border)] rounded-[var(--radius-md)] text-xs text-[var(--color-error)]">
           {error}
         </div>
       )}
@@ -474,20 +470,23 @@ export function TeamChatPanel({ teamSlug, currentUser, isMember }: Props) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message…"
+            placeholder={t("team.chat.placeholder", "Write a message")}
             maxLength={2000}
             className="input-base flex-1 text-sm py-2"
           />
-          <button
+          <Button
             type="submit"
             disabled={!input.trim()}
-            className="btn btn-primary px-3 py-2 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            variant="primary"
+            size="md"
+            className="shrink-0 px-3"
+            aria-label={t("team.chat.send", "Send message")}
           >
             <Send className="w-4 h-4" />
-          </button>
+          </Button>
         </form>
         <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
-          Messages are retained for 30 days.
+          {t("team.chat.retention", "Messages are retained for 30 days.")}
         </p>
       </div>
     </div>

@@ -302,23 +302,23 @@ export default async function DevelopersPage() {
 
           <section className="card p-5 space-y-3">
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-              Protocol status
+              {t("developers.v8.sidebar.protocol_status")}
             </h3>
             <div className="space-y-2 text-xs text-[var(--color-text-secondary)]">
               <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
-                <span>OpenAPI version</span>
+                <span>{t("developers.v8.sidebar.openapi_version")}</span>
                 <code className="font-mono text-[var(--color-text-primary)]">{openApi.info?.version ?? "1.0.0"}</code>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
-                <span>Manifest version</span>
+                <span>{t("developers.v8.sidebar.manifest_version")}</span>
                 <code className="font-mono text-[var(--color-text-primary)]">{manifest.manifestVersion}</code>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
-                <span>Protocol version</span>
+                <span>{t("developers.v8.sidebar.protocol_version")}</span>
                 <code className="font-mono text-[var(--color-text-primary)]">{manifest.protocolVersion}</code>
               </div>
               <div className="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] px-3 py-2">
-                <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-tertiary)] mb-1">Generated</div>
+                <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-tertiary)] mb-1">{t("developers.v8.sidebar.generated")}</div>
                 <div className="font-mono text-[var(--color-text-primary)]">{new Date(manifest.generatedAt).toISOString()}</div>
               </div>
             </div>
