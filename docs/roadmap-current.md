@@ -4,7 +4,8 @@
 
 ## 当前主线
 
-VibeHub 当前正式主线已切换到 **V9.0 Team Workspace 协作中枢**。
+VibeHub 当前正式主线已切换到 **V10.0 单主线协作产品**（上层 IA 收口于 `docs/ia-v10-refactor-plan.md`），
+其数据层与治理能力沿用 V9.0 `Team Workspace 协作中枢` 的 P0/P1/P2 规划。
 
 核心定义：
 
@@ -90,6 +91,7 @@ V9.0 执行期间，以下方向默认冻结，仅允许修复缺陷与保持兼
 ## 配套文档
 
 - 当前主线索引：`docs/roadmap-current.md`
+- **V10.0 内容理念与页面地图重构方案（IA 事实来源）：`docs/ia-v10-refactor-plan.md`**
 - **V9.0 总路线图：`docs/ecosystem-roadmap-v9.0.md`**
 - **V9.0 实施计划书：`docs/ecosystem-implementation-plan-v9.0.md`**
 - v8 战略底本：`docs/product-strategy-v8.md`
