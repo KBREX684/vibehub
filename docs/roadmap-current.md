@@ -6,7 +6,8 @@
 
 VibeHub 正式主线已收口到 **V11.0 最终章 — AI 工作留痕本（Operation Ledger）**。
 唯一事实来源：**`docs/v11.0-final-chapter-rfc.md`**
-工程并行计划：**`docs/v11.0-engineering-plan.md`**
+后端任务计划书（GPT 执行）：**`docs/v11.0-backend-tasks.md`**
+前端任务计划书（GLM 执行）：**`docs/v11.0-frontend-tasks.md`**
 
 V11.0 一句话定位（已冻结，6 个月内不改）：
 > "VibeHub — 你和 AI 一起做的工作，有据可查。"
