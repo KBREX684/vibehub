@@ -1,11 +1,23 @@
 # VibeHub Roadmap (Current)
 
-更新日期：2026-04-18
+更新日期：2026-04-19
 
 ## 当前主线
 
-VibeHub 当前正式主线已切换到 **V10.0 单主线协作产品**（上层 IA 收口于 `docs/ia-v10-refactor-plan.md`），
-其数据层与治理能力沿用 V9.0 `Team Workspace 协作中枢` 的 P0/P1/P2 规划。
+VibeHub 正式主线已收口到 **V11.0 最终章 — AI 工作留痕本（Operation Ledger）**。
+唯一事实来源：**`docs/v11.0-final-chapter-rfc.md`**
+工程并行计划：**`docs/v11.0-engineering-plan.md`**
+
+V11.0 一句话定位（已冻结，6 个月内不改）：
+> "VibeHub — 你和 AI 一起做的工作，有据可查。"
+
+V11.0 砍掉的（v10 → v11）：Team Workspace（降级为只读归档）/ Discover 项目发现 /
+Collaboration Intent / Project Library（重命名为个人作品集）/ Agent Task Center
+（折叠进 Studio）/ Notifications 多分类（降级为单列表）/ Pricing 三档（降为 Free + Pro）。
+
+V11.0 留下的：`/studio` · `/ledger` · `/u/[slug]` 三件事 + Settings + Pricing + Home。
+
+历史路线（v8 / v9 / v10 / v10 IA 重构 / v10 UI 提示词）已全部归档，仅作历史档案。
 
 核心定义：
 

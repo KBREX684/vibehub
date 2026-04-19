@@ -1,9 +1,16 @@
+> ⛔ **已归档（2026-04-19）**：本文件原是 v10.0 IA 的配套 UI 提示词集，现 v10 已被
+> **`docs/v11.0-final-chapter-rfc.md`** 取代。
+> v11.0 砍掉了 Team Workspace / Discover / Intents / Project Library / Agent Task Center 等大半页面。
+> 现役 UI 提示词请见 **`docs/v11.0-figma-prompts.md`**（待出，结构沿用本文件 §0/§1/§2，
+> 但 §5 页面级提示词只保留 Home / Studio / Ledger / Card / Pricing / Settings 六页）。
+> 风格 DNA（Monochrome Geek + Geist Mono + Apple Blue 单主色）100% 沿用，无需重做 token。
+
 # VibeHub v10.0 Figma / AI UI 生成提示词集
 
-> 用途：把以下分段提示词喂给 Figma（Figma Make / Figma AI）、v0、Galileo、UIzard、Locofy 等 AI UI 生成工具。
-> 每一段提示词独立自洽（可以单独复制），整体按"设计基因 → Token → 组件库 → 页面"自上而下组织。
+> 版本：v10.0（**已归档**）
+> 用途：曾用于喂给 Figma Make / v0 / Galileo / UIzard 生成 v10 UI。
 > 风格 DNA 来源：仓库 `DESIGN.md` + `web/src/app/globals.css`。参照公司：Linear / Vercel / Raycast / Supabase Studio / GitHub Primer。
-> 配合 IA：`docs/ia-v10-refactor-plan.md`。
+> 配合 IA：`docs/ia-v10-refactor-plan.md`（同样已归档）。
 
 ---
 

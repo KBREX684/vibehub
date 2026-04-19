@@ -1,12 +1,17 @@
+> ⛔ **已归档（2026-04-19）**：本文件已被 **`docs/v11.0-final-chapter-rfc.md`** 取代。
+> v11.0 在 v10 之上做了大幅减法（砍掉 Team Workspace / Discover / Collaboration Intent 等），
+> 收敛到「**Studio · Ledger · Card** 三件事 + 操作公证账本主轴」。
+> 本文件保留作为 v10 IA 的历史档案，新工作请直接参考 v11 RFC 与
+> `docs/v11.0-engineering-plan.md`。
+
 # VibeHub v10.0 内容理念与页面地图重构方案
 
-> 版本：v10.0（规划）
+> 版本：v10.0（**已归档**）
 > 更新日期：2026-04-18
 > 定位：把 VibeHub 从"社区 / 项目 / 团队 / 开发者 / 定价"并列模块结构，重构为围绕
 > **项目发现 → 协作意向 → Workspace 协作 → Agent 执行 → 快照与交付**
 > 运行的单主线产品。
-> 本文件是 IA/页面/数据的唯一事实来源；与 `docs/roadmap-current.md`、`docs/ecosystem-roadmap-v9.0.md` 配合使用。
-> 与 `docs/product-strategy-v8.md` 的冻结项（Agent 合法参与人类团队 / 不做代码托管 / 不做 IDE）完全兼容。
+> 本文件曾是 IA/页面/数据的唯一事实来源；现已被 v11.0 RFC 取代。
 
 ---
 
