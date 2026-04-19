@@ -12,6 +12,11 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { isRepositoryError } from "@/lib/repository-errors";
 import type { CollaborationIntentStatus } from "@/lib/types";
+import {
+  deprecatedResponse,
+  isV11BackendLockdownEnabled,
+  withDeprecatedHeaders,
+} from "@/lib/v11-deprecation";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -53,7 +58,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   const result = await listProjectCollaborationIntents({ projectId: project.id, status, page, limit });
-  return apiSuccess(result);
+  return withDeprecatedHeaders(apiSuccess(result));
 }
 
 const submitSchema = z.object({
@@ -64,6 +69,9 @@ const submitSchema = z.object({
 });
 
 export async function POST(request: NextRequest, { params }: Props) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("INTENTS_DEPRECATED");
+  }
   const auth = await authenticateRequest(request);
   if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

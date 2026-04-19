@@ -6,6 +6,11 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
+import {
+  deprecatedResponse,
+  isV11BackendLockdownEnabled,
+  withDeprecatedHeaders,
+} from "@/lib/v11-deprecation";
 
 const bodySchema = z.object({
   title: z.string().min(1).max(120),
@@ -34,7 +39,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       page,
       limit,
     });
-    return apiSuccess(result);
+    return withDeprecatedHeaders(apiSuccess(result));
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
@@ -50,6 +55,9 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const auth = await authenticateRequest(request);
   if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

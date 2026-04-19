@@ -39,6 +39,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -161,6 +186,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -475,6 +525,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -525,6 +600,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -583,6 +683,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -637,6 +762,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -686,6 +836,175 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/u/{slug}/trust-card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the public Trust Card for a creator */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/u/{slug}/trust-card.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export the public Trust Card for a creator as PDF */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description PDF file */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -747,6 +1066,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -799,6 +1143,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -855,6 +1224,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -907,6 +1301,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -963,6 +1382,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1010,6 +1454,705 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/workspaces/personal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get personal workspace overview and Studio metrics */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/compliance-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get personal AIGC compliance settings */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update personal AIGC compliance settings */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/me/aigc-compliance/audit-trail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List or export AIGC compliance audit trail entries visible to the current user */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List ledger entries visible to the current user */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/opc-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get OPC profile and trust metrics for the current user */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update OPC profile fields for the current user */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/internal/pmf/event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record an internal v11 PMF event */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/v11-pmf-dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get v11 PMF dashboard metrics */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1071,6 +2214,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1123,6 +2291,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1179,6 +2372,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1231,6 +2449,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1287,6 +2530,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1325,6 +2593,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1367,6 +2660,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1415,6 +2733,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1484,6 +2827,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1523,6 +2891,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1578,6 +2971,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1627,6 +3045,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1694,6 +3137,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1733,6 +3201,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1799,6 +3292,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1838,6 +3356,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1893,6 +3436,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -1905,7 +3473,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Submit collaboration intent */
+        /**
+         * [deprecated] Submit collaboration intent
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1942,6 +3514,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -1970,7 +3567,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Project owner reviews collaboration intent */
+        /**
+         * [deprecated] Project owner reviews collaboration intent
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2008,6 +3609,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -2036,7 +3662,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Project owner ignores collaboration intent */
+        /**
+         * [deprecated] Project owner ignores collaboration intent
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2074,6 +3704,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -2102,7 +3757,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Project owner blocks and reports collaboration intent */
+        /**
+         * [deprecated] Project owner blocks and reports collaboration intent
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2140,6 +3799,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -2196,6 +3880,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -2250,6 +3959,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -2362,6 +4096,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/artifacts/{artifactId}/aigc-stamp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply or refresh an AIGC stamp for a workspace artifact */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    artifactId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams/{slug}/join": {
         parameters: {
             query?: never;
@@ -2371,7 +4195,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Request to join team */
+        /**
+         * [deprecated] Request to join team
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2410,6 +4238,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -2436,7 +4289,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Owner approves or rejects join request */
+        /**
+         * [deprecated] Owner approves or rejects join request
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2476,6 +4333,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -2506,7 +4388,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update team external links (owner/admin; session cookie) */
+        /**
+         * [deprecated] Update team external links (owner/admin; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -2629,6 +4515,31 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -2663,7 +4574,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add an existing user to the team by email with role member|reviewer|admin (owner/admin only; session cookie) */
+        /**
+         * [deprecated] Add an existing user to the team by email with role member|reviewer|admin (owner/admin only; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2806,6 +4721,31 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -2845,7 +4785,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a team member or leave the team (owner/admin or self; session cookie) */
+        /**
+         * [deprecated] Remove a team member or leave the team (owner/admin or self; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -2938,6 +4882,31 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -2963,7 +4932,11 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Update team member role to member|reviewer|admin (owner/admin only; session cookie) */
+        /**
+         * [deprecated] Update team member role to member|reviewer|admin (owner/admin only; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -3084,6 +5057,31 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -3119,7 +5117,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete milestone (owner) */
+        /**
+         * [deprecated] Delete milestone (owner)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -3150,6 +5152,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -3163,7 +5190,11 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Update milestone */
+        /**
+         * [deprecated] Update milestone
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -3203,6 +5234,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -3226,7 +5282,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete task (creator/admin/owner; agent-bound keys receive confirmation_required instead of direct deletion) */
+        /**
+         * [deprecated] Delete task (creator/admin/owner; agent-bound keys receive confirmation_required instead of direct deletion)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -3301,6 +5361,31 @@ export interface paths {
                 /** @description Not found */
                 404: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -3367,7 +5452,11 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Update task fields (creator/assignee/reviewer/admin/owner; agent-bound keys route task completion into review flow) */
+        /**
+         * [deprecated] Update task fields (creator/assignee/reviewer/admin/owner; agent-bound keys route task completion into review flow)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -3463,6 +5552,31 @@ export interface paths {
                 /** @description Not found */
                 404: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -3538,7 +5652,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reorder task within column */
+        /**
+         * [deprecated] Reorder task within column
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -3576,6 +5694,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -3643,6 +5786,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -3682,6 +5850,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -3737,6 +5930,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -3786,6 +6004,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -3855,6 +6098,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -3920,6 +6188,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -3973,6 +6266,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -4031,6 +6349,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -4080,6 +6423,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -4135,6 +6503,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -4205,6 +6598,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -4259,6 +6677,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -4308,6 +6751,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
                     };
                 };
                 /** @description Server error */
@@ -4376,6 +6844,31 @@ export interface paths {
                         "application/json": components["schemas"]["ApiErrorEnvelope"];
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -4435,6 +6928,413 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List ledger entries for a workspace */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/ledger/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export workspace ledger bundle as json, txt, or pdf */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/ledger/anchor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Anchor a workspace ledger bundle with a third-party attestation provider */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Pro required */
+                402: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Provider not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/{ledgerEntryId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify one ledger entry against the hash chain */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ledgerEntryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Rate limited */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/verify-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify an exported ledger bundle */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiSuccessEnvelope"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiErrorEnvelope"];
+                    };
+                };
+                /** @description Rate limited */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -10028,7 +12928,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create team (session cookie) */
+        /**
+         * [deprecated] Create team (session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -10087,6 +12991,31 @@ export interface paths {
                 /** @description Unauthorized */
                 401: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -10263,7 +13192,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update team overview settings (owner/admin; session cookie) */
+        /**
+         * [deprecated] Update team overview settings (owner/admin; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -10383,6 +13316,31 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -10417,7 +13375,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Issue short-lived WS chat token (team member only; session cookie) */
+        /**
+         * [deprecated] Issue short-lived WS chat token (team member only; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -10491,6 +13453,31 @@ export interface paths {
                 /** @description Not found */
                 404: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -10686,7 +13673,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create team chat message (team member only; session cookie) */
+        /**
+         * [deprecated] Create team chat message (team member only; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -10787,6 +13778,31 @@ export interface paths {
                 /** @description Not found */
                 404: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -11055,7 +14071,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create a structured team discussion (session cookie) */
+        /**
+         * [deprecated] Create a structured team discussion (session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -11136,6 +14156,31 @@ export interface paths {
                 /** @description Forbidden */
                 403: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -11306,7 +14351,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Add an agent binding to the team with a role card (owner/admin only; session cookie) */
+        /**
+         * [deprecated] Add an agent binding to the team with a role card (owner/admin only; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -11448,6 +14497,31 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -11487,7 +14561,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a team agent membership (owner/admin only; session cookie) */
+        /**
+         * [deprecated] Remove a team agent membership (owner/admin only; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -11580,6 +14658,31 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
                 /** @description Server error */
                 500: {
                     headers: {
@@ -11605,7 +14708,11 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Update a team agent's role card or active flag (owner/admin only; session cookie) */
+        /**
+         * [deprecated] Update a team agent's role card or active flag (owner/admin only; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -11709,6 +14816,31 @@ export interface paths {
                 /** @description Not found */
                 404: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -12011,7 +15143,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create team task (session or Bearer write:team:tasks) */
+        /**
+         * [deprecated] Create team task (session or Bearer write:team:tasks)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -12064,6 +15200,31 @@ export interface paths {
                 /** @description Forbidden */
                 403: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -12147,7 +15308,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Batch update task status (owner/admin/reviewer; session or Bearer write:team:tasks; agent-bound keys blocked) */
+        /**
+         * [deprecated] Batch update task status (owner/admin/reviewer; session or Bearer write:team:tasks; agent-bound keys blocked)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -12250,6 +15415,31 @@ export interface paths {
                 /** @description Not found */
                 404: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -12442,7 +15632,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create task comment (team member; session cookie) */
+        /**
+         * [deprecated] Create task comment (team member; session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -12523,6 +15717,31 @@ export interface paths {
                 /** @description Forbidden */
                 403: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -12828,7 +16047,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create milestone (session cookie) */
+        /**
+         * [deprecated] Create milestone (session cookie)
+         * @deprecated
+         * @description This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -12860,6 +16083,31 @@ export interface paths {
                 /** @description Unauthorized */
                 401: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            meta: {
+                                /** Format: uuid */
+                                requestId: string;
+                                /** Format: date-time */
+                                timestamp: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Gone (v11 archived write endpoint) */
+                410: {
+                    headers: {
+                        /** @description Always true for archived endpoints */
+                        "X-Deprecated"?: string;
+                        /** @description Deprecation date */
+                        "X-Deprecated-Since"?: string;
                         [name: string]: unknown;
                     };
                     content: {

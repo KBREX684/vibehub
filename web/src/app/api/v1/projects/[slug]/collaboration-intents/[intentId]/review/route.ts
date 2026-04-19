@@ -4,6 +4,7 @@ import { authenticateRequest, rateLimitedResponse } from "@/lib/auth";
 import { reviewCollaborationIntentByOwner } from "@/lib/repository";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
+import { deprecatedResponse, isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 
 interface Props { params: Promise<{ slug: string; intentId: string }> }
 
@@ -15,6 +16,9 @@ const reviewSchema = z.object({
 });
 
 export async function POST(request: NextRequest, { params }: Props) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("INTENTS_DEPRECATED");
+  }
   const auth = await authenticateRequest(request);
   if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

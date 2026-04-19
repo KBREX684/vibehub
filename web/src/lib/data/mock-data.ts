@@ -1,5 +1,7 @@
 import type {
   AdminAiSuggestionRecord,
+  AigcStamp,
+  AigcProviderApi,
   AgentActionAuditRow,
   AgentConfirmationRequest,
   AuditLog,
@@ -9,9 +11,13 @@ import type {
   CollaborationIntent,
   ContributionCreditProfile,
   CreatorProfile,
+  LedgerEntry,
   InAppNotificationKind,
   McpInvokeAuditRow,
   ModerationCase,
+  OpcProfile,
+  OpcTrustMetric,
+  PmfEvent,
   Post,
   Project,
   ReportTicket,
@@ -72,6 +78,13 @@ export interface MockEnterpriseVerificationApplication {
   reviewedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MockWorkspacePreference {
+  workspaceId: string;
+  aigcAutoStamp?: boolean;
+  aigcProvider?: AigcProviderApi;
+  ledgerEnabled?: boolean;
 }
 
 export interface MockTeam {
@@ -222,9 +235,36 @@ export const mockTeamTaskComments: MockTeamTaskComment[] = [
 ];
 
 export const mockUsers: User[] = [
-  { id: "u1", email: "alice@vibehub.dev", name: "Alice", role: "admin", githubId: 1001, githubUsername: "alice-ai", avatarUrl: "https://avatars.githubusercontent.com/u/1001" },
-  { id: "u2", email: "bob@vibehub.dev", name: "Bob", role: "user", githubId: 1002, githubUsername: "bob-solo", avatarUrl: "https://avatars.githubusercontent.com/u/1002" },
-  { id: "u3", email: "chen@vibehub.dev", name: "Chen", role: "user", githubId: 1003, githubUsername: "chen-dev", avatarUrl: "https://avatars.githubusercontent.com/u/1003" },
+  {
+    id: "u1",
+    email: "alice@vibehub.dev",
+    name: "Alice",
+    role: "admin",
+    createdAt: "2025-10-01T00:00:00.000Z",
+    githubId: 1001,
+    githubUsername: "alice-ai",
+    avatarUrl: "https://avatars.githubusercontent.com/u/1001",
+  },
+  {
+    id: "u2",
+    email: "bob@vibehub.dev",
+    name: "Bob",
+    role: "user",
+    createdAt: "2025-12-15T00:00:00.000Z",
+    githubId: 1002,
+    githubUsername: "bob-solo",
+    avatarUrl: "https://avatars.githubusercontent.com/u/1002",
+  },
+  {
+    id: "u3",
+    email: "chen@vibehub.dev",
+    name: "Chen",
+    role: "user",
+    createdAt: "2026-01-20T00:00:00.000Z",
+    githubId: 1003,
+    githubUsername: "chen-dev",
+    avatarUrl: "https://avatars.githubusercontent.com/u/1003",
+  },
 ];
 
 export const mockCreators: CreatorProfile[] = [
@@ -343,8 +383,35 @@ export const mockWorkspaceSnapshots: WorkspaceSnapshot[] =
 export const mockWorkspaceArtifacts: WorkspaceArtifact[] =
   createPersistedArray<WorkspaceArtifact>("workspaceArtifacts");
 
+export const mockAigcStamps: AigcStamp[] =
+  createPersistedArray<AigcStamp>("aigcStamps");
+
+export const mockWorkspacePreferences: MockWorkspacePreference[] =
+  createPersistedArray<MockWorkspacePreference>("workspacePreferences");
+
+export const mockOpcProfiles: OpcProfile[] =
+  createPersistedArray<OpcProfile>("opcProfiles");
+
+export const mockOpcTrustMetrics: OpcTrustMetric[] =
+  createPersistedArray<OpcTrustMetric>("opcTrustMetrics");
+
+export const mockLegalAttestationLinks: Array<{
+  id: string;
+  creatorProfileId: string;
+  label: string;
+  href: string;
+  createdAt: string;
+  updatedAt: string;
+}> = createPersistedArray("legalAttestationLinks");
+
 export const mockWorkspaceDeliverables: WorkspaceDeliverable[] =
   createPersistedArray<WorkspaceDeliverable>("workspaceDeliverables");
+
+export const mockLedgerEntries: LedgerEntry[] =
+  createPersistedArray<LedgerEntry>("ledgerEntries");
+
+export const mockPmfEvents: PmfEvent[] =
+  createPersistedArray<PmfEvent>("pmfEvents");
 
 export const mockAgentTasks: MockAgentTaskRecord[] =
   createPersistedArray<MockAgentTaskRecord>("agentTasks");

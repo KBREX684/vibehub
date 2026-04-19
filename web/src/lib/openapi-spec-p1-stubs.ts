@@ -52,6 +52,27 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
       responses: ok,
     },
   },
+  "/api/v1/u/{slug}/trust-card": {
+    get: {
+      tags: ["trust"],
+      summary: "Get the public Trust Card for a creator",
+      parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+      responses: ok,
+    },
+  },
+  "/api/v1/u/{slug}/trust-card.pdf": {
+    get: {
+      tags: ["trust"],
+      summary: "Export the public Trust Card for a creator as PDF",
+      parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+      responses: {
+        "200": { description: "PDF file" },
+        "401": { description: "Unauthorized", content: { "application/json": { schema: errRef } } },
+        "404": { description: "Not found", content: { "application/json": { schema: errRef } } },
+        "500": { description: "Server error", content: { "application/json": { schema: errRef } } },
+      },
+    },
+  },
   "/api/v1/leaderboards/discussions": {
     get: { tags: ["meta"], summary: "All-time discussion leaderboard", responses: ok },
   },
@@ -69,6 +90,38 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
   },
   "/api/v1/me/workspaces": {
     get: { tags: ["me"], summary: "List workspace console entries and badges", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/workspaces/personal": {
+    get: { tags: ["me"], summary: "Get personal workspace overview and Studio metrics", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/compliance-settings": {
+    get: { tags: ["compliance"], summary: "Get personal AIGC compliance settings", security: [{ SessionCookie: [] }], responses: ok },
+    patch: { tags: ["compliance"], summary: "Update personal AIGC compliance settings", security: [{ SessionCookie: [] }], responses: okWrite },
+  },
+  "/api/v1/me/aigc-compliance/audit-trail": {
+    get: { tags: ["compliance"], summary: "List or export AIGC compliance audit trail entries visible to the current user", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/ledger": {
+    get: { tags: ["ledger"], summary: "List ledger entries visible to the current user", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/opc-profile": {
+    get: { tags: ["trust"], summary: "Get OPC profile and trust metrics for the current user", security: [{ SessionCookie: [] }], responses: ok },
+    patch: { tags: ["trust"], summary: "Update OPC profile fields for the current user", security: [{ SessionCookie: [] }], responses: okWrite },
+  },
+  "/api/v1/internal/pmf/event": {
+    post: {
+      tags: ["internal"],
+      summary: "Record an internal v11 PMF event",
+      responses: { ...okWrite, "403": { description: "Forbidden", content: { "application/json": { schema: errRef } } } },
+    },
+  },
+  "/api/v1/admin/v11-pmf-dashboard": {
+    get: {
+      tags: ["admin"],
+      summary: "Get v11 PMF dashboard metrics",
+      security: [{ SessionCookie: [] }],
+      responses: { ...ok, "403": { description: "Forbidden", content: { "application/json": { schema: errRef } } } },
+    },
   },
   "/api/v1/me/library": {
     get: { tags: ["me"], summary: "List work-library projects for the current user", security: [{ SessionCookie: [] }], responses: ok },
@@ -211,6 +264,15 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
   },
   "/api/v1/search": {
     get: { tags: ["meta"], summary: "Unified search", responses: ok },
+  },
+  "/api/v1/artifacts/{artifactId}/aigc-stamp": {
+    post: {
+      tags: ["compliance"],
+      summary: "Apply or refresh an AIGC stamp for a workspace artifact",
+      parameters: [{ name: "artifactId", in: "path", required: true, schema: { type: "string" } }],
+      security: [{ SessionCookie: [] }],
+      responses: okWrite,
+    },
   },
   "/api/v1/teams/{slug}/join": {
     post: {
@@ -459,6 +521,52 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
         { name: "deliverableId", in: "path", required: true, schema: { type: "string" } },
       ],
       responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/ledger": {
+    get: {
+      tags: ["ledger"],
+      summary: "List ledger entries for a workspace",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: ok,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/ledger/export": {
+    get: {
+      tags: ["ledger"],
+      summary: "Export workspace ledger bundle as json, txt, or pdf",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: ok,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/ledger/anchor": {
+    post: {
+      tags: ["ledger"],
+      summary: "Anchor a workspace ledger bundle with a third-party attestation provider",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: {
+        ...okWrite,
+        "402": { description: "Pro required", content: { "application/json": { schema: errRef } } },
+        "503": { description: "Provider not configured", content: { "application/json": { schema: errRef } } },
+      },
+    },
+  },
+  "/api/v1/ledger/{ledgerEntryId}/verify": {
+    get: {
+      tags: ["ledger"],
+      summary: "Verify one ledger entry against the hash chain",
+      parameters: [{ name: "ledgerEntryId", in: "path", required: true, schema: { type: "string" } }],
+      responses: { ...ok, "429": { description: "Rate limited", content: { "application/json": { schema: errRef } } } },
+    },
+  },
+  "/api/v1/ledger/verify-bundle": {
+    post: {
+      tags: ["ledger"],
+      summary: "Verify an exported ledger bundle",
+      responses: { ...okWrite, "429": { description: "Rate limited", content: { "application/json": { schema: errRef } } } },
     },
   },
 };

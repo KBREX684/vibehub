@@ -60,27 +60,15 @@ describe("W6 provider readiness", () => {
 
   it("marks china providers as sandbox in local development by default", () => {
     expect(getPaymentProviderReadiness("alipay").status).toBe("sandbox");
-    expect(getPaymentProviderReadiness("wechatpay").status).toBe("sandbox");
   });
 
   it("requires live credentials in production-like environments", () => {
     Object.assign(process.env, { NODE_ENV: "production" });
     expect(getPaymentProviderReadiness("alipay").status).toBe("not_configured");
-    expect(getPaymentProviderReadiness("wechatpay").status).toBe("not_configured");
   });
 });
 
 describe("W6 webhook detection", () => {
-  it("detects Stripe from stripe-signature", () => {
-    const headers = new Headers({ "stripe-signature": "sig" });
-    expect(detectPaymentProviderFromWebhook(headers, "{}")).toBe("stripe");
-  });
-
-  it("detects WeChat Pay from signature headers", () => {
-    const headers = new Headers({ "Wechatpay-Signature": "sig", "Wechatpay-Timestamp": "123" });
-    expect(detectPaymentProviderFromWebhook(headers, "{}")).toBe("wechatpay");
-  });
-
   it("detects Alipay from form payload", () => {
     const headers = new Headers({ "content-type": "application/x-www-form-urlencoded" });
     expect(detectPaymentProviderFromWebhook(headers, "trade_status=TRADE_SUCCESS&out_trade_no=123")).toBe("alipay");

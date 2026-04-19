@@ -65,6 +65,36 @@ type OpenApiOperation = {
   [key: string]: unknown;
 };
 
+const V11_DEPRECATED_OPERATIONS = new Set([
+  "POST /api/v1/teams",
+  "PATCH /api/v1/teams/{slug}",
+  "PATCH /api/v1/teams/{slug}/links",
+  "POST /api/v1/teams/{slug}/chat/token",
+  "POST /api/v1/teams/{slug}/chat/messages",
+  "POST /api/v1/teams/{slug}/discussions",
+  "POST /api/v1/teams/{slug}/members",
+  "PATCH /api/v1/teams/{slug}/members/{userId}",
+  "DELETE /api/v1/teams/{slug}/members/{userId}",
+  "POST /api/v1/teams/{slug}/agents",
+  "PATCH /api/v1/teams/{slug}/agents/{membershipId}",
+  "DELETE /api/v1/teams/{slug}/agents/{membershipId}",
+  "POST /api/v1/teams/{slug}/tasks",
+  "PATCH /api/v1/teams/{slug}/tasks/batch",
+  "PATCH /api/v1/teams/{slug}/tasks/{taskId}",
+  "DELETE /api/v1/teams/{slug}/tasks/{taskId}",
+  "POST /api/v1/teams/{slug}/tasks/{taskId}/comments",
+  "POST /api/v1/teams/{slug}/tasks/{taskId}/reorder",
+  "POST /api/v1/teams/{slug}/milestones",
+  "PATCH /api/v1/teams/{slug}/milestones/{milestoneId}",
+  "DELETE /api/v1/teams/{slug}/milestones/{milestoneId}",
+  "POST /api/v1/teams/{slug}/join",
+  "POST /api/v1/teams/{slug}/join-requests/{requestId}/review",
+  "POST /api/v1/projects/{slug}/collaboration-intents",
+  "POST /api/v1/projects/{slug}/collaboration-intents/{intentId}/review",
+  "POST /api/v1/projects/{slug}/collaboration-intents/{intentId}/ignore",
+  "POST /api/v1/projects/{slug}/collaboration-intents/{intentId}/block-and-report",
+]);
+
 const OPERATION_SCOPE_HINTS: Record<string, string> = {
   "GET /api/v1/projects": "read:projects:list",
   "POST /api/v1/projects": "write:projects",
@@ -161,9 +191,38 @@ function decorateOpenApiDocument(doc: Record<string, unknown>) {
     for (const method of OPERATION_METHODS) {
       const operation = pathItem?.[method];
       if (!operation) continue;
+      const operationKey = `${method.toUpperCase()} ${path}`;
       operation["x-required-scope"] = inferRequiredScope(path, method, operation);
       operation["x-auth-modes"] = inferAuthModes(path, method, operation);
       operation["x-rate-limit-tier"] = inferRateLimitTier(path, method, operation);
+      if (V11_DEPRECATED_OPERATIONS.has(operationKey)) {
+        operation.deprecated = true;
+        operation["x-deprecated-since"] = "2026-04-19";
+        operation["x-learn-more"] = "/v11";
+        const note = "This legacy write endpoint is archived in v11 and returns HTTP 410 when backend lockdown is enabled.";
+        if (typeof operation.summary === "string" && !operation.summary.includes("[deprecated]")) {
+          operation.summary = `[deprecated] ${operation.summary}`;
+        }
+        if (typeof operation.description === "string") {
+          if (!operation.description.includes(note)) {
+            operation.description = `${operation.description}\n\n${note}`;
+          }
+        } else {
+          operation.description = note;
+        }
+        const currentResponses = (operation.responses ?? {}) as Record<string, unknown>;
+        if (!currentResponses["410"]) {
+          currentResponses["410"] = {
+            description: "Gone (v11 archived write endpoint)",
+            headers: {
+              "X-Deprecated": { schema: { type: "string" }, description: "Always true for archived endpoints" },
+              "X-Deprecated-Since": { schema: { type: "string" }, description: "Deprecation date" },
+            },
+            content: { "application/json": { schema: errorEnvelope } },
+          };
+          operation.responses = currentResponses;
+        }
+      }
     }
   }
   return doc;
@@ -178,7 +237,12 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       title: "VibeHub API",
       version: "1.0.0",
       description: [
-        "VibeHub HTTP API under `/api/v1`.",
+        "VibeHub v11 HTTP API under `/api/v1`.",
+        "",
+        "**Primary product surfaces**",
+        "- **Studio**: the authenticated workspace where users and agents produce work records.",
+        "- **Ledger**: signed, append-only work evidence for artifacts, snapshots, deliverables, agent actions, and compliance events.",
+        "- **Trust Card**: the public-facing profile and export surface built from verified work history.",
         "",
         "**Responses**: Successful JSON uses `{ data, meta }`. Errors use `{ error: { code, message, details? }, meta }`.",
         "",
@@ -192,33 +256,41 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         "",
         "**Machine-readable spec**: `GET /api/v1/openapi.json` returns this document as JSON.",
         "",
+        "**Legacy compatibility**",
+        "- Archived team/community endpoints remain documented while the v11 backend lockdown is optional.",
+        "- When `V11_BACKEND_LOCKDOWN=true`, archived write endpoints return **410 Gone** and should be treated as read-only compatibility surfaces.",
+        "",
         `**API key scopes** (subset): \`${scopeList}\``,
       ].join("\n"),
     },
     servers: [{ url: "/", description: "Same origin as the Next.js app" }],
     tags: [
-      { name: "meta", description: "Discovery and specification" },
-      { name: "public", description: "Unauthenticated read mirrors" },
-      { name: "projects", description: "Project gallery" },
-      { name: "teams", description: "Teams and membership" },
-      { name: "me", description: "Current user" },
+      { name: "meta", description: "Specification, search, and discovery metadata" },
+      { name: "public", description: "Unauthenticated public read surfaces for work pages and profiles" },
+      { name: "projects", description: "Public work pages and archived project-era compatibility endpoints" },
+      { name: "teams", description: "Archived collaboration endpoints retained for v10/v11 compatibility" },
+      { name: "me", description: "Current user APIs, including Studio entrypoints and personal control surfaces" },
+      { name: "ledger", description: "Signed work ledger APIs for listing, verifying, exporting, and anchoring evidence" },
+      { name: "trust", description: "OPC profile and Trust Card APIs derived from verified work history" },
+      { name: "compliance", description: "AIGC stamp settings, audit trails, and artifact compliance actions" },
+      { name: "internal", description: "Internal-only v11 PMF and backend instrumentation endpoints" },
       { name: "mcp", description: "MCP-style read tools (v1 GET)" },
       { name: "mcp-v2", description: "MCP v2 HTTP: manifest + scoped POST invoke" },
-      { name: "auth", description: "Demo session" },
-      { name: "health", description: "Liveness" },
-      { name: "posts", description: "Discussion posts" },
-      { name: "comments", description: "Post comments and replies" },
-      { name: "challenges", description: "Challenges and campaigns" },
-      { name: "creators", description: "Creator profiles and growth" },
-      { name: "embed", description: "Embeddable cards and oEmbed" },
-      { name: "enterprise", description: "Enterprise workspace and intelligence APIs" },
-      { name: "reports", description: "Ecosystem reports" },
-      { name: "subscription", description: "Subscription plans and billing-adjacent endpoints" },
-      { name: "reputation", description: "Contribution credit and leaderboards" },
-      { name: "oauth", description: "OAuth application registration and authorization code flow" },
-      { name: "automation", description: "Event-driven workflow automation and external integrations" },
-      { name: "admin", description: "Admin-only endpoints" },
-      { name: "uploads", description: "Presigned object storage uploads" },
+      { name: "auth", description: "Session and authentication bootstrap endpoints" },
+      { name: "health", description: "Liveness and environment health" },
+      { name: "posts", description: "Archived community post endpoints kept for compatibility" },
+      { name: "comments", description: "Archived community comment endpoints kept for compatibility" },
+      { name: "challenges", description: "Archived campaign endpoints kept for compatibility" },
+      { name: "creators", description: "Legacy creator profile surfaces and public profile compatibility endpoints" },
+      { name: "embed", description: "Embeddable cards, oEmbed, and public presentation helpers" },
+      { name: "enterprise", description: "Archived enterprise/intelligence compatibility endpoints" },
+      { name: "reports", description: "Reporting and export-adjacent endpoints" },
+      { name: "subscription", description: "China-only subscription and Alipay billing endpoints" },
+      { name: "reputation", description: "Archived reputation and leaderboard compatibility endpoints" },
+      { name: "oauth", description: "Developer registration and OAuth compatibility endpoints" },
+      { name: "automation", description: "Archived automation and integration compatibility endpoints" },
+      { name: "admin", description: "Admin-only moderation, audit, governance, and v11 PMF endpoints" },
+      { name: "uploads", description: "Presigned upload and object storage intake endpoints" },
     ],
     components: {
       securitySchemes: {

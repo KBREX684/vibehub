@@ -55,11 +55,35 @@ enum WorkspaceArtifactValidationState {
   rejected
 }
 
+enum AigcStampMode {
+  text
+  image
+  audio
+  video
+}
+
+enum AigcProviderApi {
+  local
+  tencent
+  aliyun
+}
+
 enum DeliverableStatus {
   draft
   submitted
   approved
   rejected
+}
+
+enum LedgerActorType {
+  user
+  agent
+}
+
+enum LedgerAnchorChain {
+  vibehub
+  zhixin
+  baoquan
 }
 
 enum WeeklyLeaderboardKind {
@@ -256,6 +280,9 @@ model User {
   automationWorkflows        AutomationWorkflow[]
   automationWorkflowRuns     AutomationWorkflowRun[]
   personalWorkspace          Workspace?                 @relation("UserWorkspace")
+  opcProfile                 OpcProfile?
+  opcTrustMetric             OpcTrustMetric?
+  pmfEvents                  PmfEvent[]
   workspaceSnapshotsCreated  SnapshotCapsule[]          @relation("WorkspaceSnapshotCreator")
   workspaceArtifactsUploaded WorkspaceArtifact[]
   workspaceDeliverablesCreated WorkspaceDeliverable[]   @relation("WorkspaceDeliverableCreator")
@@ -627,6 +654,7 @@ model AgentActionAudit {
   apiKeyId       String?
   teamId         String?
   taskId         String?
+  ledgerEntryId  String?           @unique
   action         String
   outcome        AgentActionStatus
   metadata       Json?
@@ -635,6 +663,7 @@ model AgentActionAudit {
   agentBinding   AgentBinding      @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
   team           Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
   task           TeamTask?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  ledgerEntry    LedgerEntry?      @relation("LedgerEntryAgentActionAudit", fields: [ledgerEntryId], references: [id], onDelete: SetNull)
 
   @@index([actorUserId, createdAt])
   @@index([agentBindingId, createdAt])
@@ -649,6 +678,7 @@ model AgentConfirmationRequest {
   apiKeyId        String?
   teamId          String?
   taskId          String?
+  ledgerEntryId   String?                 @unique
   targetType      String
   targetId        String
   action          String
@@ -665,6 +695,7 @@ model AgentConfirmationRequest {
   team            Team?                   @relation(fields: [teamId], references: [id], onDelete: SetNull)
   task            TeamTask?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
   agentTask       AgentTask?
+  ledgerEntry     LedgerEntry?            @relation("LedgerEntryAgentConfirmationRequest", fields: [ledgerEntryId], references: [id], onDelete: SetNull)
 
   @@index([requesterUserId, status, createdAt])
   @@index([agentBindingId, status, createdAt])
@@ -692,26 +723,86 @@ model CreatorProfile {
   updatedAt               DateTime                 @updatedAt
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects                Project[]
+  trustCardLinks          LegalAttestationLink[]
 
   @@index([searchVector], type: Gin)
 }
 
+model OpcProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  headline     String?
+  summary      String?
+  serviceScope String?
+  city         String?
+  websiteUrl   String?
+  proofUrl     String?
+  publicCard   Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([publicCard, updatedAt])
+}
+
+model OpcTrustMetric {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  ledgerEntryCount   Int      @default(0)
+  snapshotCount      Int      @default(0)
+  stampedArtifactCount Int    @default(0)
+  publicWorkCount    Int      @default(0)
+  avgResponseHours   Float    @default(0)
+  registrationDays   Int      @default(0)
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LegalAttestationLink {
+  id               String          @id @default(cuid())
+  creatorProfileId String
+  label            String
+  href             String
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  creatorProfile   CreatorProfile  @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  @@index([creatorProfileId, createdAt])
+}
+
+model PmfEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([event, createdAt])
+  @@index([userId, createdAt])
+}
+
 model Workspace {
-  id        String        @id @default(cuid())
-  kind      WorkspaceKind
-  slug      String        @unique
-  title     String
-  userId    String?       @unique
-  teamId    String?       @unique
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  user      User?         @relation("UserWorkspace", fields: [userId], references: [id], onDelete: Cascade)
-  team      Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  projects  Project[]
-  artifacts WorkspaceArtifact[]
-  snapshots SnapshotCapsule[]
-  deliverables WorkspaceDeliverable[]
-  agentTasks AgentTask[]
+  id             String                 @id @default(cuid())
+  kind           WorkspaceKind
+  slug           String                 @unique
+  title          String
+  userId         String?                @unique
+  teamId         String?                @unique
+  ledgerEnabled  Boolean                @default(true)
+  aigcAutoStamp  Boolean                @default(true)
+  aigcProvider   AigcProviderApi        @default(local)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  user           User?                  @relation("UserWorkspace", fields: [userId], references: [id], onDelete: Cascade)
+  team           Team?                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  projects       Project[]
+  artifacts      WorkspaceArtifact[]
+  aigcStamps     AigcStamp[]
+  snapshots      SnapshotCapsule[]
+  deliverables   WorkspaceDeliverable[]
+  agentTasks     AgentTask[]
+  ledgerEntries  LedgerEntry[]
 
   @@index([kind])
 }
@@ -720,6 +811,7 @@ model SnapshotCapsule {
   id                 String            @id @default(cuid())
   workspaceId        String
   createdByUserId    String
+  ledgerEntryId      String?           @unique
   title              String
   summary            String
   goal               String?
@@ -730,6 +822,7 @@ model SnapshotCapsule {
   updatedAt          DateTime          @updatedAt
   workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy          User              @relation("WorkspaceSnapshotCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  ledgerEntry        LedgerEntry?      @relation("LedgerEntrySnapshotCapsule", fields: [ledgerEntryId], references: [id], onDelete: SetNull)
   previousSnapshot   SnapshotCapsule?  @relation("WorkspaceSnapshotChain", fields: [previousSnapshotId], references: [id], onDelete: SetNull)
   nextSnapshots      SnapshotCapsule[] @relation("WorkspaceSnapshotChain")
   deliverables       WorkspaceDeliverable[]
@@ -740,24 +833,46 @@ model SnapshotCapsule {
 }
 
 model WorkspaceArtifact {
-  id              String                           @id @default(cuid())
-  workspaceId     String
-  uploaderUserId  String
-  filename        String
-  contentType     String
-  sizeBytes       Int
-  storageKey      String                           @unique
-  visibility      WorkspaceArtifactVisibility      @default(workspace)
-  validationState WorkspaceArtifactValidationState @default(pending)
-  publicUrl       String?
-  createdAt       DateTime                         @default(now())
-  updatedAt       DateTime                         @updatedAt
-  workspace       Workspace                        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  uploader        User                             @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
+  id               String                           @id @default(cuid())
+  workspaceId      String
+  uploaderUserId   String
+  aigcStampId      String?                          @unique
+  requireAigcStamp Boolean                          @default(true)
+  filename         String
+  contentType      String
+  sizeBytes        Int
+  storageKey       String                           @unique
+  visibility       WorkspaceArtifactVisibility      @default(workspace)
+  validationState  WorkspaceArtifactValidationState @default(pending)
+  publicUrl        String?
+  createdAt        DateTime                         @default(now())
+  updatedAt        DateTime                         @updatedAt
+  workspace        Workspace                        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploader         User                             @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
+  aigcStamp        AigcStamp?                       @relation("ArtifactCurrentStamp")
 
   @@index([workspaceId, createdAt])
   @@index([uploaderUserId, createdAt])
   @@index([workspaceId, validationState])
+}
+
+model AigcStamp {
+  id                String          @id @default(cuid())
+  artifactId        String          @unique
+  workspaceId       String
+  provider          AigcProviderApi
+  mode              AigcStampMode
+  visibleLabel      String
+  hiddenWatermarkId String?
+  rawResponse       Json?
+  stampedAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  artifact          WorkspaceArtifact @relation("ArtifactCurrentStamp", fields: [artifactId], references: [id], onDelete: Cascade)
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, stampedAt])
+  @@index([provider, stampedAt])
+  @@index([mode, stampedAt])
 }
 
 model WorkspaceDeliverable {
@@ -766,6 +881,7 @@ model WorkspaceDeliverable {
   snapshotId       String
   createdByUserId  String
   reviewedByUserId String?
+  ledgerEntryId    String?           @unique
   title            String
   description      String?
   status           DeliverableStatus @default(draft)
@@ -777,11 +893,39 @@ model WorkspaceDeliverable {
   snapshot         SnapshotCapsule   @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
   createdBy        User              @relation("WorkspaceDeliverableCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
   reviewedBy       User?             @relation("WorkspaceDeliverableReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  ledgerEntry      LedgerEntry?      @relation("LedgerEntryWorkspaceDeliverable", fields: [ledgerEntryId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])
   @@index([snapshotId, createdAt])
   @@index([createdByUserId, createdAt])
   @@index([status, createdAt])
+}
+
+model LedgerEntry {
+  id                       String                     @id @default(cuid())
+  workspaceId              String
+  actorType                LedgerActorType
+  actorId                  String
+  actionKind               String
+  targetType               String?
+  targetId                 String?
+  payload                  Json
+  payloadHash              String
+  prevHash                 String?
+  signature                String                     @unique
+  signedAt                 DateTime                   @default(now())
+  anchorChain              LedgerAnchorChain          @default(vibehub)
+  anchorTxId               String?
+  anchorVerifiedAt         DateTime?
+  workspace                Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agentActionAudit         AgentActionAudit?          @relation("LedgerEntryAgentActionAudit")
+  agentConfirmationRequest AgentConfirmationRequest?  @relation("LedgerEntryAgentConfirmationRequest")
+  snapshotCapsule          SnapshotCapsule?           @relation("LedgerEntrySnapshotCapsule")
+  deliverable              WorkspaceDeliverable?      @relation("LedgerEntryWorkspaceDeliverable")
+
+  @@index([workspaceId, signedAt])
+  @@index([actorType, actorId, signedAt])
+  @@index([targetType, targetId, signedAt])
 }
 
 model AgentTask {

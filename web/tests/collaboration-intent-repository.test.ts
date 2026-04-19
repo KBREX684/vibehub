@@ -12,8 +12,9 @@ describe("collaboration intent flow", () => {
       projectId: "p1",
       applicantId: "u2",
       intentType: "join",
-      message: "I can contribute to backend API design and E2E reliability.",
-      contact: "bob@vibehub.dev",
+      pitch: "我可以补上后端 API 设计和 E2E 稳定性。",
+      whyYou: "我长期负责接口治理、类型约束和 CI 质量。",
+      howCollab: "先从本周的 API 收口和回归测试开始接手。",
     });
 
     expect(created.status).toBe("pending");
@@ -35,7 +36,9 @@ describe("collaboration intent flow", () => {
       projectId: "p1",
       applicantId: "u3",
       intentType: "recruit",
-      message: "Recruiting frontend collaborator for interactive gallery iteration.",
+      pitch: "我们正在寻找前端协作者共同迭代交互展示。",
+      whyYou: "你有可见的界面打磨经验，适合这一轮交付。",
+      howCollab: "先接交互原型和页面联调，按快照节奏推进。",
     });
 
     const reviewed = await reviewCollaborationIntent({
@@ -63,7 +66,9 @@ describe("collaboration intent flow", () => {
         projectId: "missing-project",
         applicantId: "u2",
         intentType: "join",
-        message: "I am ready to collaborate.",
+        pitch: "我已经准备好参与协作。",
+        whyYou: "我能补足当前缺失的实现与联调。",
+        howCollab: "先从当前待办和文档整理开始。",
       })
     ).rejects.toThrow("PROJECT_NOT_FOUND");
   });
@@ -73,7 +78,9 @@ describe("collaboration intent flow", () => {
       projectId: "p1",
       applicantId: "u3",
       intentType: "join",
-      message: "Owner-queue review test.",
+      pitch: "这里是所有者审核队列测试。",
+      whyYou: "我能配合验证结构化协作流程。",
+      howCollab: "通过审批后先从当前交付链开始协作。",
     });
 
     const reviewed = await reviewCollaborationIntent({
@@ -92,7 +99,9 @@ describe("collaboration intent flow", () => {
       projectId: "p2",
       applicantId: "u1",
       intentType: "join",
-      message: "Wrong owner test.",
+      pitch: "这里是错误 owner 测试。",
+      whyYou: "用于验证 owner 匹配约束。",
+      howCollab: "不发生真实协作，只验证流程。",
     });
 
     await expect(

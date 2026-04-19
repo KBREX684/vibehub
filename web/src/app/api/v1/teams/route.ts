@@ -12,6 +12,11 @@ import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createTeam, listTeams, getUserTier, countUserTeams } from "@/lib/repository";
 import { checkQuota } from "@/lib/quota";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
+import {
+  deprecatedResponse,
+  isV11BackendLockdownEnabled,
+  withDeprecatedHeaders,
+} from "@/lib/v11-deprecation";
 
 const createTeamSchema = z.object({
   name: z.string().min(2).max(80),
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const { page, limit } = parsePagination(url.searchParams);
     const result = await listTeams({ page, limit });
-    return apiSuccess(result);
+    return withDeprecatedHeaders(apiSuccess(result));
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
@@ -49,6 +54,9 @@ return apiError(
 }
 
 export async function POST(request: Request) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

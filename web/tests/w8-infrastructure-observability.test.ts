@@ -21,7 +21,7 @@ beforeEach(() => {
   delete process.env.ADMIN_AI_PROVIDER_API_KEY;
   delete process.env.ADMIN_AI_MODEL;
   delete process.env.ADMIN_AI_PROVIDER_NAME;
-  process.env.NODE_ENV = "development";
+  Object.assign(process.env, { NODE_ENV: "development" });
 });
 
 afterEach(() => {

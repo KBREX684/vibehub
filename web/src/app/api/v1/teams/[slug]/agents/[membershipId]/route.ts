@@ -7,6 +7,7 @@ import {
   updateTeamAgentMembership,
 } from "@/lib/repository";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
+import { deprecatedResponse, isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 
 const patchSchema = z.object({
   role: z
@@ -61,6 +62,9 @@ function mapManageError(message: string) {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
@@ -105,6 +109,9 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

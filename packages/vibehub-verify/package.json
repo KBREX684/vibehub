@@ -1,0 +1,9 @@
+{
+  "name": "vibehub-verify",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "vibehub-verify": "./bin/vibehub-verify.js"
+  },
+  "type": "commonjs"
+}

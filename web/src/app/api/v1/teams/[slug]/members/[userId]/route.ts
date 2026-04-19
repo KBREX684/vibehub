@@ -5,6 +5,7 @@ import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { removeTeamMember, updateTeamMemberRole } from "@/lib/repository";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import { deprecatedResponse, isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 
 interface Params {
   params: Promise<{ slug: string; userId: string }>;
@@ -15,6 +16,9 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: Request, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);
@@ -56,6 +60,9 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

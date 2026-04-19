@@ -12,6 +12,10 @@ export async function register() {
     await startWebhookWorkers();
     const { startCreditWorkers } = await import("@/lib/queue/credit-queue");
     await startCreditWorkers();
+    const { startAigcStampWorkers } = await import("@/lib/queue/aigc-stamp-queue");
+    await startAigcStampWorkers();
+    const { startTrustMetricWorkers } = await import("@/lib/queue/recompute-trust-metric-queue");
+    await startTrustMetricWorkers();
   } catch (e) {
     const { logger, serializeError } = await import("@/lib/logger");
     logger.error({ err: serializeError(e) }, "[instrumentation] bootstrap failed");

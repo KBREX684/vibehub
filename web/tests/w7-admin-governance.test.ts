@@ -179,7 +179,7 @@ describe("W7 dashboard and API contract", () => {
       id: "task_w7",
       teamId: "team1",
       title: "Prepare release notes",
-      status: "in_progress",
+      status: "doing",
       sortOrder: 1,
       createdByUserId: "u1",
       createdAt: "2026-04-17T09:00:00.000Z",
@@ -191,7 +191,7 @@ describe("W7 dashboard and API contract", () => {
       agentBindingId: "binding_1",
       teamId: "team1",
       action: "agent_complete_team_task",
-      outcome: "success",
+      outcome: "succeeded",
       createdAt: "2026-04-17T10:00:00.000Z",
     });
     mockAgentConfirmationRequests.unshift({
