@@ -46,6 +46,7 @@ export default async function AdminLayout({
     { href: "/admin/ai-suggestions", label: t("admin.layout.ai_suggestions", "AI suggestions"), icon: Cpu },
     { href: "/admin/audit-logs", label: t("admin.layout.audit_logs", "Audit logs"), icon: Settings },
     { href: "/admin/mcp-audits", label: t("admin.layout.mcp_audits", "MCP audits"), icon: BarChart2 },
+    { href: "/admin/v11-pmf-dashboard", label: "V11 PMF", icon: BarChart2 },
   ];
 
   return (

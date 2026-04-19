@@ -1,144 +1,87 @@
 "use client";
 
 import Link from "next/link";
-import { Zap, BookOpen, GitBranch, Mail } from "lucide-react";
+import { Zap } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
-import { Float } from "@/components/ui";
 
-type FooterLink =
-  | { kind: "link"; href: string; labelKey: string }
-  | { kind: "mailto"; href: string; labelKey: string };
-
-type FooterColumn = {
-  titleKey: string;
-  links: FooterLink[];
-};
+const FOOTER_COLUMNS = [
+  {
+    title: "产品",
+    links: [
+      { href: "/", label: "Home" },
+      { href: "/studio", label: "Studio" },
+      { href: "/ledger", label: "Ledger" },
+      { href: "/u/dev-alice", label: "Card" },
+      { href: "/pricing", label: "Pricing" },
+    ],
+  },
+  {
+    title: "开发者",
+    links: [
+      { href: "/aigc", label: "API 文档" },
+      { href: "/aigc", label: "vibehub-verify CLI" },
+      { href: "/aigc", label: "MCP server" },
+    ],
+  },
+  {
+    title: "合规",
+    links: [
+      { href: "/aigc", label: "AIGC 公示" },
+      { href: "/privacy", label: "隐私" },
+      { href: "/terms", label: "条款" },
+      { href: "/rules", label: "平台规则" },
+    ],
+  },
+  {
+    title: "关于",
+    links: [
+      { href: "/", label: "博客" },
+      { href: "/", label: "联系" },
+    ],
+  },
+];
 
 export function Footer() {
   const { t } = useLanguage();
-  const columns: FooterColumn[] = [
-    {
-      titleKey: "footer.platform",
-      links: [
-        { kind: "link", href: "/discover", labelKey: "nav.projects" },
-        { kind: "link", href: "/discussions", labelKey: "nav.discussions" },
-        { kind: "link", href: "/teams", labelKey: "nav.teams" },
-        { kind: "link", href: "/pricing", labelKey: "nav.pricing" },
-      ],
-    },
-    {
-      titleKey: "footer.developers",
-      links: [
-        { kind: "link", href: "/developers", labelKey: "nav.developers" },
-        { kind: "link", href: "/settings/api-keys", labelKey: "footer.apiKeys" },
-        { kind: "link", href: "/api/v1/openapi.json", labelKey: "footer.openapi" },
-        { kind: "link", href: "/developers/api-docs", labelKey: "footer.docs" },
-      ],
-    },
-    {
-      titleKey: "footer.company",
-      links: [
-        { kind: "link", href: "/#about", labelKey: "footer.about" },
-        { kind: "link", href: "/rules", labelKey: "footer.rules" },
-        { kind: "link", href: "/aigc", labelKey: "footer.aigc" },
-        { kind: "mailto", href: "mailto:support@vibehub.dev", labelKey: "footer.contact" },
-      ],
-    },
-  ];
 
   return (
-    <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)] mt-20">
+    <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)]">
       <div className="container py-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
-          {/* Brand col */}
-          <div className="col-span-2">
-            <Link href="/" className="flex items-center gap-2 font-bold text-base text-[var(--color-text-primary)] mb-3">
-              <Float distance={4} speed={4}>
-                <span className="w-6 h-6 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] flex items-center justify-center shadow-[inset_0_1px_0_var(--color-featured-highlight)]">
-                  <Zap className="w-3.5 h-3.5 text-[var(--color-text-primary)]" />
-                </span>
-              </Float>
-              VibeHub
-            </Link>
-            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-xs">
-              {t("footer.tagline")}
-            </p>
-            <div className="flex items-center gap-3 mt-4">
-              {[
-                { icon: GitBranch, href: "https://github.com/KBREX684/vibehub", labelKey: "footer.github" },
-                { icon: BookOpen, href: "/developers", labelKey: "footer.docs" },
-                { icon: Mail, href: "mailto:support@vibehub.dev", labelKey: "footer.contact" },
-              ].map(({ icon: Icon, href, labelKey }) => (
-                <a
-                  key={labelKey}
-                  href={href}
-                  className="p-2 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all"
-                  aria-label={t(labelKey)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Icon className="w-4 h-4" />
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Link columns */}
-          {columns.map((col) => (
-            <div key={col.titleKey}>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
-                {t(col.titleKey)}
+        {/* Top: 4 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+          {FOOTER_COLUMNS.map((col) => (
+            <div key={col.title}>
+              <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-4">
+                {col.title}
               </h4>
-              <ul className="flex flex-col gap-2">
-                {col.links.map((link) => {
-                  if (link.kind === "mailto") {
-                    return (
-                      <li key={link.labelKey}>
-                        <a
-                          href={link.href}
-                          className="footer-link text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                        >
-                          {t(link.labelKey)}
-                        </a>
-                      </li>
-                    );
-                  }
-                  return (
-                    <li key={link.href}>
-                      <Link
-                        href={link.href}
-                        className="footer-link text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        {t(link.labelKey)}
-                      </Link>
-                    </li>
-                  );
-                })}
+              <ul className="space-y-2">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
           ))}
         </div>
 
-        <div className="border-t border-[var(--color-border)] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-[var(--color-text-muted)]">
-            © {new Date().getFullYear()} VibeHub. {t("footer.rights")}
-          </p>
-          <div className="flex items-center gap-4">
-            {[
-              { href: "/privacy", key: "footer.privacy" },
-              { href: "/terms", key: "footer.terms" },
-              { href: "/rules", key: "footer.rules" },
-              { href: "/aigc", key: "footer.aigc" },
-            ].map((item) => (
-              <Link
-                key={item.key}
-                href={item.href}
-                className="footer-link text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
-              >
-                {t(item.key)}
-              </Link>
-            ))}
+        {/* Bottom: brand + legal */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-6 border-t border-[var(--color-border)]">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
+              <Zap className="w-3 h-3 text-[var(--color-text-primary)]" />
+            </span>
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">VibeHub</span>
+            <span className="text-[10px] font-mono text-[var(--color-text-muted)]">AI 留痕本</span>
           </div>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            © {new Date().getFullYear()} VibeHub · 备案号占位
+          </p>
         </div>
       </div>
     </footer>

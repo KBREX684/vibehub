@@ -99,12 +99,12 @@ export default async function SubscriptionPage({ searchParams }: Props) {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
-            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxTeams === Infinity ? "∞" : limits.maxTeams}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_teams", "Teams")}</p>
+            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxStorageGb === Infinity ? "∞" : `${limits.maxStorageGb} GB`}</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_storage", "存储")}</p>
           </div>
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
-            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxProjects === Infinity ? "∞" : limits.maxProjects}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_projects", "Projects")}</p>
+            <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxLedgerPerMonth === Infinity ? "∞" : limits.maxLedgerPerMonth}</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("subscription.limit_ledger", "Ledger/月")}</p>
           </div>
           <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
             <p className="text-xl font-bold text-[var(--color-text-primary)]">{limits.maxApiKeys === Infinity ? "∞" : limits.maxApiKeys}</p>

@@ -1,384 +1,248 @@
-/**
- * v8 home — first paint must say one thing clearly:
- *   VibeHub = 中国中文开发者的 AI+Human 协作网络
- *
- * Structure (top → bottom):
- *   1. Hero: positioning + dual CTA ("展示我的作品" / "让 Agent 进团队")
- *   2. Four-pillar strip: 广场 / 项目 / 团队 / Agent 总线
- *   3. Live feed + featured projects (real data via HomeFeedSection)
- *   4. Agent-as-teammate section: role cards + how it actually works
- *   5. Differentiation table: why not PH / GitHub / 飞书 / 掘金
- *   6. Pricing / CTA footer
- *
- * No text is hard-coded: every copy string routes through i18n with a
- * Chinese-first fallback (the fallback is used if the key is missing in
- * `zh.json` / `en.json`, which keeps us honest during partial translation).
- */
-import Link from "next/link";
-import { listProjectFeed, listTeams } from "@/lib/repository";
-import { HomeFeedSection } from "@/components/home-feed-section";
-import { HomeHeroClient } from "@/components/home-hero-client";
-import { HomePillarsClient, type PillarItem } from "@/components/home-pillars-client";
-import { HomeCtaFooterClient } from "@/components/home-cta-footer-client";
-import { HeroThreadsBackdrop } from "@/components/visual/hero-threads-backdrop";
-import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
+import Link from "next/link";
 import {
-  ArrowRight,
-  Rocket,
-  ShieldCheck,
-  Eye,
-  Bot,
-  CheckCircle2,
-  XCircle,
+  Compass,
+  Receipt,
+  User,
+  Shield,
+  Stamp,
+  FileCheck,
+  BarChart2,
 } from "lucide-react";
-import { AnimatedSection, Badge } from "@/components/ui";
 
 export default async function HomePage() {
-  const session = await getSessionUserFromCookie();
   const { t } = await getServerTranslator();
-  const [{ items: projects }, { items: teams }] = await Promise.all([
-    listProjectFeed({ page: 1, limit: 6, sort: "hot", viewerUserId: session?.userId }),
-    listTeams({ page: 1, limit: 3 }),
-  ]);
-
-  const primaryCTA = session ? "/projects/new" : "/signup";
-  const secondaryCTA = session ? "/settings/agents" : "/developers";
-
-  const pillars: PillarItem[] = [
-    {
-      icon: "MessagesSquare",
-      href: "/discussions",
-      title: t("home.v8.pillars.square.title", "广场讨论"),
-      desc: t("home.v8.pillars.square.desc", "在这里产生灵感、发经验、找同行。"),
-      accent: "cyan",
-    },
-    {
-      icon: "FolderGit2",
-      href: "/discover",
-      title: t("home.v8.pillars.gallery.title", "项目画廊"),
-      desc: t("home.v8.pillars.gallery.desc", "让作品被发现、被收藏、被协作。"),
-      accent: "apple",
-    },
-    {
-      icon: "Users",
-      href: "/teams",
-      title: t("home.v8.pillars.teams.title", "团队协作"),
-      desc: t("home.v8.pillars.teams.desc", "陌生开发者也能低摩擦组队共创。"),
-      accent: "violet",
-    },
-    {
-      icon: "Bot",
-      href: "/settings/agents",
-      title: t("home.v8.pillars.agents.title", "Agent 总线"),
-      desc: t("home.v8.pillars.agents.desc", "Cursor、Claude、自建 Agent 都能作为队员参与。"),
-      accent: "success",
-    },
-  ];
 
   return (
-    <main className="container pb-24 space-y-20">
-      {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <section
-        id="about"
-        className="relative overflow-hidden pt-14 pb-4 text-center scroll-mt-24 rounded-[var(--radius-3xl)] isolate"
-      >
-        <HeroThreadsBackdrop />
-        <HomeHeroClient
-          primaryCTA={primaryCTA}
-          secondaryCTA={secondaryCTA}
-          eyebrowText={t("home.v8.eyebrow", "中国中文开发者 · AI+Human 协作网络")}
-          heroLine1={t("home.v8.hero_line1", "让你的作品被看见，")}
-          heroLine2={t("home.v8.hero_line2", "让你的 Agent 合法进入团队。")}
-          heroDescription={t(
-            "home.v8.hero_description",
-            "VibeHub 是面向中国中文开发者的协作网络：广场讨论、项目画廊、小团队组队，再加上让 Cursor、Claude、自建 Agent 作为可审计队员参与协作的 Agent 总线。"
-          )}
-          primaryLabel={
-            session
-              ? t("home.v8.cta_primary_authed", "展示我的作品")
-              : t("home.v8.cta_primary_guest", "免费注册，展示作品")
-          }
-          secondaryLabel={
-            session
-              ? t("home.v8.cta_secondary_authed", "让我的 Agent 进团队")
-              : t("home.v8.cta_secondary_guest", "给开发者看 Agent 接入")
-          }
-        />
+    <main>
+      {/* ── A. Hero ─────────────────────────────────────────────────── */}
+      <section className="container py-20 md:py-28">
+        <div className="grid md:grid-cols-[3fr_2fr] gap-12 items-center">
+          {/* Left */}
+          <div className="space-y-6">
+            <p className="text-[11px] font-mono uppercase tracking-widest text-[var(--color-text-muted)]">
+              中国 OPC · AI 留痕本
+            </p>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-[var(--color-text-primary)] leading-tight">
+              你和 AI 一起做的工作，
+              <br />
+              有据可查。
+            </h1>
+            <p className="text-base md:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-xl">
+              VibeHub 自动记录你和 Agent 的每一次写入，加合规标识、留可校验账本、沉淀为可外发的信用名片。给客户、给监管、给自己一份证据。
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/signup"
+                className="inline-flex items-center px-6 py-3 text-sm font-semibold bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] rounded-[var(--radius-md)] hover:opacity-90 transition-opacity"
+              >
+                开始留痕
+              </Link>
+              <Link
+                href="/u/dev-alice"
+                className="inline-flex items-center px-6 py-3 text-sm font-semibold border border-[var(--color-border-strong)] text-[var(--color-text-primary)] rounded-[var(--radius-md)] hover:bg-[var(--color-bg-surface)] transition-colors"
+              >
+                查看示例 Card
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: static workflow */}
+          <div className="hidden md:flex items-center justify-center">
+            <div className="w-full max-w-sm p-8 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+              <div className="space-y-6">
+                {/* Step 1: Studio */}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-apple-subtle)] border border-[var(--color-accent-apple-border)] flex items-center justify-center">
+                    <Compass className="w-5 h-5 text-[var(--color-accent-apple)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">Studio（做）</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">任务 + Agent 执行</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="w-px h-6 border-l border-dashed border-[var(--color-border-strong)]" />
+                </div>
+
+                {/* Step 2: Ledger */}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-violet-subtle)] border border-[var(--color-accent-violet-border)] flex items-center justify-center">
+                    <Receipt className="w-5 h-5 text-[var(--color-accent-violet)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">Ledger（签）</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">操作公证账本</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="w-px h-6 border-l border-dashed border-[var(--color-border-strong)]" />
+                </div>
+
+                {/* Step 3: Card */}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-cyan-subtle)] border border-[var(--color-accent-cyan-border)] flex items-center justify-center">
+                    <User className="w-5 h-5 text-[var(--color-accent-cyan)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">Card（晒）</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">公开信用名片</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* ── Four pillars ────────────────────────────────────────────────────── */}
-      <HomePillarsClient pillars={pillars} />
-
-      {/* ── Live feed + featured projects ───────────────────────────────────── */}
-      <HomeFeedSection session={session} projects={projects} teams={teams} />
-
-      {/* ── Agent-as-teammate ───────────────────────────────────────────────── */}
-      <AnimatedSection className="space-y-6" delayMs={120}>
-        <div className="flex items-start sm:items-center justify-between gap-4 flex-col sm:flex-row">
-          <div>
-            <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-accent-violet)] mb-2">
-              {t("home.v8.agent_section.eyebrow", "差异化 · 仅 VibeHub")}
-            </div>
-            <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
-              {t("home.v8.agent_section.title", "Agent 是团队里的正式队员")}
-            </h2>
-            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed max-w-2xl m-0 mt-2">
-              {t(
-                "home.v8.agent_section.subtitle",
-                "在 VibeHub，你的 Cursor、Claude、自建 Agent 可以作为"
-              )}
-              <span className="text-[var(--color-text-primary)] font-medium">
-                {t("home.v8.agent_section.subtitle_highlight", "可审计 · 可撤回 · 有角色牌")}
-              </span>
-              {t(
-                "home.v8.agent_section.subtitle_tail",
-                "的队员参与任务，每一次高风险写入都必须经人工确认。绝不自治。"
-              )}
-            </p>
-          </div>
-          <Link
-            href="/developers"
-            className="btn btn-secondary text-sm px-4 py-2"
-          >
-            {t("home.v8.agent_section.learn_more", "查看协议接入")}
-            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-          </Link>
+      {/* ── B. 三件事 ─────────────────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">三件事</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">做 → 签 → 晒。一个完整闭环。</p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {[
             {
-              icon: Eye,
-              title: t("home.v8.agent_roles.reader.title", "Reader"),
-              desc: t(
-                "home.v8.agent_roles.reader.desc",
-                "读取任务、讨论、聊天。默认角色，无写入权限。"
-              ),
-              tone: "info" as const,
+              icon: Compass,
+              color: "var(--color-accent-apple)",
+              bgColor: "var(--color-accent-apple-subtle)",
+              borderColor: "var(--color-accent-apple-border)",
+              title: "Studio（做）",
+              desc: "在个人工作站里和 Agent 一起干活。每次操作自动写入 Ledger，每个产出物自动加 AIGC 标识。",
+              link: "/studio",
+              linkText: "进入 Studio →",
             },
             {
-              icon: Bot,
-              title: t("home.v8.agent_roles.executor.title", "Executor"),
-              desc: t(
-                "home.v8.agent_roles.executor.desc",
-                "可领取任务并标记完成，写入需要人工 Confirmation。"
-              ),
-              tone: "violet" as const,
+              icon: Receipt,
+              color: "var(--color-accent-violet)",
+              bgColor: "var(--color-accent-violet-subtle)",
+              borderColor: "var(--color-accent-violet-border)",
+              title: "Ledger（签）",
+              desc: "全部 Agent 写入 + 人工确认 + 快照创建 + 交付通过事件的不可篡改时间线。支持一键导出。",
+              link: "/ledger",
+              linkText: "查看示例 Ledger →",
             },
             {
-              icon: ShieldCheck,
-              title: t("home.v8.agent_roles.reviewer.title", "Reviewer"),
-              desc: t(
-                "home.v8.agent_roles.reviewer.desc",
-                "提交审查意见，明确标注 AI 建议，不做最终裁决。"
-              ),
-              tone: "apple" as const,
+              icon: User,
+              color: "var(--color-accent-cyan)",
+              bgColor: "var(--color-accent-cyan-subtle)",
+              borderColor: "var(--color-accent-cyan-border)",
+              title: "Card（晒）",
+              desc: "来自 Ledger 的 6 个真实指标，自动生成公开信用名片。给客户、给投资人、给监管。",
+              link: "/u/dev-alice",
+              linkText: "查看示例 Card →",
             },
-          ].map(({ icon: Icon, title, desc, tone }) => (
-            <div key={title} className="card p-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] flex items-center justify-center">
-                  <Icon className="w-4 h-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
-                </div>
-                <Badge variant={tone} pill>
-                  {t("home.v8.agent_roles.role_card", "角色牌")}
-                </Badge>
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="p-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)]"
+            >
+              <div
+                className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center mb-4"
+                style={{ backgroundColor: item.bgColor, border: `1px solid ${item.borderColor}` }}
+              >
+                <item.icon className="w-5 h-5" style={{ color: item.color }} />
               </div>
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-                {title}
-              </h3>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed m-0">
-                {desc}
-              </p>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">{item.title}</h3>
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-4">{item.desc}</p>
+              <Link href={item.link} className="text-sm font-medium hover:underline" style={{ color: item.color }}>
+                {item.linkText}
+              </Link>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* How it actually works — 4 steps */}
-        <div className="card p-6 md:p-8 space-y-5 border-t-2 border-t-[var(--color-accent-violet)]">
-          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]">
-            <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
-            {t("home.v8.how.eyebrow", "4 步跑通人机协作")}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[
-              {
-                step: "01",
-                title: t("home.v8.how.s1.title", "绑定 Agent"),
-                desc: t(
-                  "home.v8.how.s1.desc",
-                  "在「我的 Agent」里为 Cursor / Claude / 自建 agent 发放独立 API Key。"
-                ),
-              },
-              {
-                step: "02",
-                title: t("home.v8.how.s2.title", "加入团队"),
-                desc: t(
-                  "home.v8.how.s2.desc",
-                  "团队 owner 给 Agent 发「角色牌」：Reader / Executor / Reviewer / Coordinator。"
-                ),
-              },
-              {
-                step: "03",
-                title: t("home.v8.how.s3.title", "参与任务"),
-                desc: t(
-                  "home.v8.how.s3.desc",
-                  "Agent 读取任务、领取任务、提交审查，所有写入进入确认队列。"
-                ),
-              },
-              {
-                step: "04",
-                title: t("home.v8.how.s4.title", "人工兜底"),
-                desc: t(
-                  "home.v8.how.s4.desc",
-                  "高风险动作由你本人批准，全链路留有审计日志，随时可撤回。"
-                ),
-              },
-            ].map(({ step, title, desc }) => (
-              <div key={step} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-semibold text-[var(--color-text-primary)]">
-                    {step}
-                  </span>
-                  <span className="flex-1 h-px bg-[var(--color-border)]" />
-                </div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-                  {title}
-                </h3>
-                <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed m-0">
-                  {desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </AnimatedSection>
-
-      {/* ── Differentiation ─────────────────────────────────────────────────── */}
-      <AnimatedSection className="space-y-5" delayMs={180}>
-        <div>
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-text-tertiary)] mb-2">
-            {t("home.v8.diff.eyebrow", "定位对比")}
-          </div>
-          <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight m-0">
-            {t("home.v8.diff.title", "VibeHub 不是社区、不是看板、不是代码仓库")}
+      {/* ── C. 合规恐惧 ────────────────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="max-w-3xl mx-auto text-center mb-10">
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+            自 2025-09-01 起，所有 AI 内容必须加合规标识
           </h2>
-          <p className="text-sm text-[var(--color-text-secondary)] max-w-2xl m-0 mt-2 leading-relaxed">
-            {t(
-              "home.v8.diff.subtitle",
-              "我们只解决一件别人没解决的事：让 AI Agent 在人类团队里成为可信的一等公民。"
-            )}
+          <p className="text-sm text-[var(--color-text-secondary)] mt-3">
+            GB 45438-2025 罚款上限 1000 万元。不加标 = 赌命。
           </p>
         </div>
+        <div className="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          {[
+            { icon: Stamp, title: "自动加标", desc: "上传即加 AIGC 标识" },
+            { icon: Receipt, title: "留痕账本", desc: "每一步都不可篡改" },
+            { icon: FileCheck, title: "月度报告", desc: "合规报告一键导出" },
+            { icon: BarChart2, title: "可向监管出示", desc: "有据可查、可校验" },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="p-5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] text-center"
+            >
+              <item.icon className="w-6 h-6 mx-auto text-[var(--color-text-secondary)] mb-3" />
+              <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">{item.title}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <div className="card p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-[var(--color-bg-subtle)] border-b border-[var(--color-border)]">
-                  {[
-                    t("home.v8.diff.col.dimension", "维度"),
-                    t("home.v8.diff.col.vibehub", "VibeHub"),
-                    t("home.v8.diff.col.other_community", "社区 / 掘金"),
-                    t("home.v8.diff.col.github", "GitHub"),
-                    t("home.v8.diff.col.feishu", "飞书 / 钉钉"),
-                  ].map((label, i) => (
-                    <th
-                      key={i}
-                      scope="col"
-                      className="px-4 py-3 text-left text-xs font-mono font-medium uppercase tracking-wider text-[var(--color-text-tertiary)]"
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  {
-                    dim: t("home.v8.diff.row.agent.dim", "Agent 作为队员"),
-                    vibehub: true,
-                    other: false,
-                    github: false,
-                    feishu: false,
-                  },
-                  {
-                    dim: t("home.v8.diff.row.teaming.dim", "面向陌生开发者的组队"),
-                    vibehub: true,
-                    other: false,
-                    github: false,
-                    feishu: false,
-                  },
-                  {
-                    dim: t("home.v8.diff.row.mcp.dim", "内容对 AI 可读 (MCP)"),
-                    vibehub: true,
-                    other: false,
-                    github: false,
-                    feishu: false,
-                  },
-                  {
-                    dim: t("home.v8.diff.row.china.dim", "中国大陆落地 + 支付"),
-                    vibehub: true,
-                    other: true,
-                    github: false,
-                    feishu: true,
-                  },
-                  {
-                    dim: t("home.v8.diff.row.projects.dim", "项目展示与协作意向"),
-                    vibehub: true,
-                    other: false,
-                    github: true,
-                    feishu: false,
-                  },
-                ].map((row, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-[var(--color-border-subtle)] last:border-b-0"
-                  >
-                    <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] font-medium">
-                      {row.dim}
-                    </td>
-                    {[row.vibehub, row.other, row.github, row.feishu].map((v, j) => (
-                      <td key={j} className="px-4 py-3">
-                        {v ? (
-                          <CheckCircle2
-                            className={
-                              j === 0
-                                ? "w-4 h-4 text-[var(--color-success)]"
-                                : "w-4 h-4 text-[var(--color-text-secondary)]"
-                            }
-                            aria-label="支持"
-                          />
-                        ) : (
-                          <XCircle
-                            className="w-4 h-4 text-[var(--color-text-muted)]"
-                            aria-label="不支持"
-                          />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* ── D. Pricing 简表 ─────────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">简单两档</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)]">
+              <h3 className="text-lg font-semibold mb-2">Free</h3>
+              <p className="text-3xl font-mono font-bold mb-4">¥0</p>
+              <ul className="space-y-1.5 text-sm text-[var(--color-text-secondary)]">
+                <li>1 GB Workspace</li>
+                <li>100 Ledger / 月</li>
+                <li>基础 AIGC 标识</li>
+                <li>公开 Trust Card</li>
+              </ul>
+            </div>
+            <div
+              className="p-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]"
+              style={{ boxShadow: "inset 0 0 0 1px var(--color-featured-highlight)" }}
+            >
+              <h3 className="text-lg font-semibold mb-2">Pro</h3>
+              <p className="text-3xl font-mono font-bold mb-1">
+                ¥29<span className="text-sm font-normal opacity-70">/月</span>
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] mb-4">¥288/年</p>
+              <ul className="space-y-1.5 text-sm text-[var(--color-text-secondary)]">
+                <li>10 GB Workspace</li>
+                <li>无限 Ledger</li>
+                <li>完整 AIGC 标识（腾讯/阿里 API）</li>
+                <li>至信链锚定</li>
+                <li>月度合规报告</li>
+              </ul>
+            </div>
+          </div>
+          <div className="text-center mt-6">
+            <Link href="/pricing" className="text-sm text-[var(--color-accent-apple)] hover:underline">
+              查看完整定价 →
+            </Link>
           </div>
         </div>
-      </AnimatedSection>
+      </section>
 
-      {/* ── CTA footer ─────────────────────────────────────────────────────── */}
-      <HomeCtaFooterClient
-        eyebrowText={t("home.v8.cta_footer.eyebrow", "中国大陆优先 · 中文优先")}
-        title={t("home.v8.cta_footer.title", "从今天开始，把你的 Agent 带进团队")}
-        description={t("home.v8.cta_footer.desc", "免费注册，Pro 月付 ¥29。不烧钱买增长，不替你付 LLM token。")}
-        primaryLabel={
-          session
-            ? t("home.v8.cta_footer.primary_authed", "开始发布作品")
-            : t("home.v8.cta_footer.primary_guest", "免费注册")
-        }
-        secondaryLabel={t("home.v8.cta_footer.secondary", "给开发者看 Agent 接入")}
-        primaryHref={session ? "/projects/new" : "/signup"}
-      />
+      {/* ── E. Trust Card 示例 ───────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">真实信用名片</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-8">
+            每个 VibeHub 用户都有这样一张可校验的信用名片。6 个指标全部来自 Ledger，禁止手填。
+          </p>
+          <Link
+            href="/u/dev-alice"
+            className="inline-flex items-center px-6 py-3 text-sm font-semibold bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] rounded-[var(--radius-md)] hover:opacity-90 transition-opacity"
+          >
+            查看示例 Trust Card
+          </Link>
+        </div>
+      </section>
     </main>
   );
 }

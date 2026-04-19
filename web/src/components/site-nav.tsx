@@ -1,17 +1,11 @@
 "use client";
 
 /**
- * v8 SiteNav — replaces the earlier TopNav layout for the new five-pillar
- * information architecture: 广场 · 项目 · 团队 · 开发者 · 定价.
+ * v11 SiteNav — collapsed from v8's five-pillar to 3 entries:
+ * Home / Studio / Pricing.
  *
- * Differences vs the legacy TopNav:
- *   - Five primary nav slots (no more 7+ pill), aligned with v8 strategy.
- *   - Logged-in users get "发讨论 / 建项目 / 我的 Agent" quick actions, which
- *     are the three main creation surfaces in the AI+Human collaboration loop.
- *   - The account dropdown surfaces "我的 Agent" and "我的团队" as first-class
- *     entries — agents are treated as teammates, not buried under settings.
- *   - Theme switcher is kept behind the existing ThemeContext without adding
- *     new light-mode assets; v8 does not ship a light-mode refresh.
+ * Logged-in users get a single "新建工作记录" quick action linking to /studio.
+ * The account dropdown surfaces Studio-related entries only.
  */
 
 import Link from "next/link";
@@ -30,10 +24,8 @@ import {
   Shield,
   Key,
   User,
-  Bot,
-  Users,
-  MessageSquarePlus,
-  FolderPlus,
+  Settings,
+  Compass,
 } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
@@ -42,21 +34,18 @@ import { Avatar } from "@/components/ui";
 
 type NavLink = {
   href: string;
-  /** i18n key (defaults resolve to Chinese label in v8 locales). */
+  /** i18n key */
   key: string;
   /** When true, link is considered active only on exact path match. */
   exact?: boolean;
 };
 
 /**
- * Primary information architecture for v8. Keep this list in sync with
- * `docs/product-strategy-v8.md` §1.1 (four-pillar definition) + pricing.
+ * v11 primary navigation — 3 entries only.
  */
 const NAV_LINKS: NavLink[] = [
-  { href: "/discussions", key: "nav.discussions" },
-  { href: "/discover", key: "nav.projects" },
-  { href: "/teams", key: "nav.teams" },
-  { href: "/developers", key: "nav.developers" },
+  { href: "/", key: "nav.home", exact: true },
+  { href: "/studio", key: "nav.studio" },
   { href: "/pricing", key: "nav.pricing" },
 ];
 
@@ -66,23 +55,18 @@ export function SiteNav() {
   const { user, loading, logout, unreadCount } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [createMenuOpen, setCreateMenuOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const userMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const createMenuRef = useRef<HTMLDivElement>(null);
-  const createMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuId = useId();
   const userMenuId = useId();
-  const createMenuId = useId();
 
   useEffect(() => {
     function onWindowKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setUserMenuOpen(false);
         setMobileOpen(false);
-        setCreateMenuOpen(false);
       }
     }
 
@@ -90,9 +74,6 @@ export function SiteNav() {
       const target = event.target as Node;
       if (userMenuOpen && !userMenuRef.current?.contains(target) && !userMenuButtonRef.current?.contains(target)) {
         setUserMenuOpen(false);
-      }
-      if (createMenuOpen && !createMenuRef.current?.contains(target) && !createMenuButtonRef.current?.contains(target)) {
-        setCreateMenuOpen(false);
       }
     }
 
@@ -102,34 +83,13 @@ export function SiteNav() {
       window.removeEventListener("keydown", onWindowKeyDown);
       window.removeEventListener("mousedown", onPointerDown);
     };
-  }, [userMenuOpen, createMenuOpen]);
+  }, [userMenuOpen]);
 
   function isActive(link: NavLink) {
-    if (link.exact) return pathname === link.href;
+    if (link.exact) return pathname === "/";
     if (link.href === "/") return pathname === "/";
     return pathname === link.href || pathname.startsWith(`${link.href}/`);
   }
-
-  const createItems: Array<{ href: string; icon: typeof Bot; label: string; desc: string }> = [
-    {
-      href: "/discussions/new",
-      icon: MessageSquarePlus,
-      label: t("nav.quick.new_post", "发一条讨论"),
-      desc: t("nav.quick.new_post_desc", "在广场发帖，让同行看到你的想法"),
-    },
-    {
-      href: "/projects/new",
-      icon: FolderPlus,
-      label: t("nav.quick.new_project", "建一个项目"),
-      desc: t("nav.quick.new_project_desc", "发布作品，获得协作者"),
-    },
-    {
-      href: "/settings/agents",
-      icon: Bot,
-      label: t("nav.quick.agents", "我的 Agent"),
-      desc: t("nav.quick.agents_desc", "绑定与管理你的协作 Agent"),
-    },
-  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--color-border)] bg-[var(--color-bg-canvas)]/90 backdrop-blur-md">
@@ -144,6 +104,9 @@ export function SiteNav() {
             <Zap className="w-4 h-4 text-[var(--color-text-primary)]" aria-hidden="true" />
           </span>
           <span>VibeHub</span>
+          <span className="hidden sm:inline text-[10px] font-mono text-[var(--color-text-muted)] tracking-wider uppercase ml-0.5">
+            AI 留痕本
+          </span>
         </Link>
 
         {/* Desktop nav */}
@@ -199,58 +162,15 @@ export function SiteNav() {
             <span>{language === "en" ? "EN" : "中"}</span>
           </button>
 
-          {/* Quick-create menu (logged-in only) */}
+          {/* Quick-create (logged-in only) — single action */}
           {!loading && user ? (
-            <div className="relative hidden md:block">
-              <button
-                ref={createMenuButtonRef}
-                type="button"
-                onClick={() => setCreateMenuOpen((v) => !v)}
-                aria-haspopup="menu"
-                aria-expanded={createMenuOpen}
-                aria-controls={createMenuId}
-                className="inline-flex w-[7.75rem] items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] text-xs font-semibold border border-[var(--color-text-primary)] hover:opacity-90 transition-opacity"
-              >
-                <FolderPlus className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>{t("nav.quick.create", "创建")}</span>
-                <ChevronDown className="w-3 h-3" aria-hidden="true" />
-              </button>
-              <AnimatePresence>
-                {createMenuOpen ? (
-                  <motion.div
-                    ref={createMenuRef}
-                    id={createMenuId}
-                    role="menu"
-                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 6, scale: 0.97 }}
-                    transition={{ duration: 0.14 }}
-                    className="absolute right-0 top-full mt-2 w-64 bg-[var(--color-bg-elevated)] border border-[var(--color-border-strong)] rounded-[var(--radius-lg)] shadow-[var(--shadow-modal)] overflow-hidden"
-                  >
-                    {createItems.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          role="menuitem"
-                          onClick={() => setCreateMenuOpen(false)}
-                          className="flex items-start gap-3 px-3 py-2.5 hover:bg-[var(--color-bg-surface)] transition-colors border-b border-[var(--color-border-subtle)] last:border-b-0"
-                        >
-                          <span className="shrink-0 w-7 h-7 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-secondary)]">
-                            <Icon className="w-3.5 h-3.5" aria-hidden="true" />
-                          </span>
-                          <span className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium text-[var(--color-text-primary)]">{item.label}</span>
-                            <span className="text-xs text-[var(--color-text-tertiary)] leading-relaxed">{item.desc}</span>
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </div>
+            <Link
+              href="/studio"
+              className="hidden md:inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] text-xs font-semibold border border-[var(--color-text-primary)] hover:opacity-90 transition-opacity"
+            >
+              <Compass className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{t("nav.quick.new_work", "新建工作记录")}</span>
+            </Link>
           ) : null}
 
           {/* Notifications */}
@@ -307,12 +227,10 @@ export function SiteNav() {
                       </div>
                       <div className="py-1">
                         {[
+                          { href: "/studio", icon: Compass, key: "nav.studio", label: "Studio" },
                           { href: "/settings/profile", icon: User, key: "nav.profile", label: "个人主页" },
-                          { href: "/settings/agents", icon: Bot, key: "nav.my_agents", label: "我的 Agent" },
-                          { href: "/teams", icon: Users, key: "nav.my_teams", label: "我的团队" },
                           { href: "/settings/api-keys", icon: Key, key: "nav.api_keys", label: "API 密钥" },
-                          { href: "/notifications", icon: Bell, key: "nav.notifications", label: "通知" },
-                          { href: "/settings/account", icon: User, key: "nav.account", label: "账号设置" },
+                          { href: "/settings/account", icon: Settings, key: "nav.account", label: "账号设置" },
                           { href: "/admin", icon: Shield, key: "nav.admin", label: "管理后台", adminOnly: true },
                         ]
                           .filter((item) => !item.adminOnly || user.role === "admin")
@@ -404,22 +322,13 @@ export function SiteNav() {
                 {user ? (
                   <>
                     <div className="border-t border-[var(--color-border)] mt-2 pt-2" />
-                    <div className="grid grid-cols-3 gap-2 px-1">
-                      {createItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setMobileOpen(false)}
-                            className="flex flex-col items-center justify-center gap-1 px-2 py-3 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-                          >
-                            <Icon className="w-4 h-4" aria-hidden="true" />
-                            <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
+                    <Link
+                      href="/studio"
+                      onClick={() => setMobileOpen(false)}
+                      className="btn btn-primary w-full text-center"
+                    >
+                      {t("nav.quick.new_work", "新建工作记录")}
+                    </Link>
                   </>
                 ) : null}
                 {!loading && !user ? (
