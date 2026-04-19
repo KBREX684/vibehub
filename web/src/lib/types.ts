@@ -20,6 +20,8 @@ export type SubscriptionTier = "free" | "pro";
 export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
 export type OAuthAppTokenScope = string;
 export type WorkspaceKind = "personal" | "team";
+export type AigcStampMode = "text" | "image" | "audio" | "video";
+export type AigcProviderApi = "local" | "tencent" | "aliyun";
 export type AutomationWorkflowRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped";
 export type AutomationWorkflowActionType =
   | "create_team_task"
@@ -40,6 +42,7 @@ export interface User {
   email: string;
   name: string;
   role: Role;
+  createdAt?: string;
   /** P0: bump to revoke existing browser sessions */
   sessionVersion?: number;
   /** P0-1: email auth (optional; mock store uses ISO strings for dates) */
@@ -218,6 +221,9 @@ export interface WorkspaceSummary {
   subtitle?: string;
   teamSlug?: string;
   memberCount?: number;
+  ledgerEnabled?: boolean;
+  aigcAutoStamp?: boolean;
+  aigcProvider?: AigcProviderApi;
 }
 
 export interface WorkLibraryItem extends Project {
@@ -245,16 +251,123 @@ export interface WorkspaceArtifact {
   storageKey: string;
   uploaderUserId: string;
   uploaderName?: string;
+  aigcStampId?: string;
+  requireAigcStamp?: boolean;
   visibility: "workspace";
   validationState: WorkspaceArtifactValidationState;
   publicUrl?: string;
+  aigcStampedAt?: string;
+  aigcProvider?: AigcProviderApi;
+  aigcMode?: AigcStampMode;
+  aigcVisibleLabel?: string;
+  aigcHiddenWatermarkId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AigcStamp {
+  id: string;
+  artifactId: string;
+  workspaceId: string;
+  provider: AigcProviderApi;
+  mode: AigcStampMode;
+  visibleLabel: string;
+  hiddenWatermarkId?: string;
+  stampedAt: string;
+  updatedAt: string;
+}
+
+export interface AigcComplianceSettings {
+  workspaceId: string;
+  aigcAutoStamp: boolean;
+  aigcProvider: AigcProviderApi;
+  ledgerEnabled: boolean;
+}
+
+export interface AigcComplianceAuditTrailItem {
+  stampId: string;
+  artifactId: string;
+  workspaceId: string;
+  workspaceTitle: string;
+  workspaceKind: WorkspaceKind;
+  filename: string;
+  provider: AigcProviderApi;
+  mode: AigcStampMode;
+  visibleLabel: string;
+  hiddenWatermarkId?: string;
+  stampedAt: string;
+}
+
+export interface PersonalWorkspaceMetrics {
+  monthlyLedgerCount: number;
+  aigcStampCoveragePct: number;
+}
+
+export interface OpcProfile {
+  id: string;
+  userId: string;
+  headline?: string;
+  summary?: string;
+  serviceScope?: string;
+  city?: string;
+  websiteUrl?: string;
+  proofUrl?: string;
+  publicCard: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OpcTrustMetric {
+  id: string;
+  userId: string;
+  ledgerEntryCount: number;
+  snapshotCount: number;
+  stampedArtifactCount: number;
+  publicWorkCount: number;
+  avgResponseHours: number;
+  registrationDays: number;
+  updatedAt: string;
+}
+
+export interface PmfEvent {
+  id: string;
+  userId: string;
+  event: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface TrustCard {
+  slug: string;
+  creatorName: string;
+  avatarUrl?: string;
+  headline?: string;
+  summary?: string;
+  serviceScope?: string;
+  city?: string;
+  websiteUrl?: string;
+  proofUrl?: string;
+  publicCard: boolean;
+  metrics: OpcTrustMetric;
+  legalAttestations: Array<{
+    id: string;
+    label: string;
+    href: string;
+  }>;
+  publicProjects: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    oneLiner: string;
+    openSource: boolean;
+    updatedAt: string;
+  }>;
 }
 
 export interface WorkspaceSnapshot {
   id: string;
   workspaceId: string;
+  ledgerEntryId?: string;
   title: string;
   summary: string;
   goal?: string;
@@ -275,6 +388,7 @@ export interface WorkspaceDeliverable {
   id: string;
   workspaceId: string;
   snapshotId: string;
+  ledgerEntryId?: string;
   snapshotTitle?: string;
   title: string;
   description?: string;
@@ -290,6 +404,27 @@ export interface WorkspaceDeliverable {
 }
 
 export type WorkIntentTab = "received" | "sent" | "accepted" | "declined" | "expired";
+
+export type LedgerActorType = "user" | "agent";
+export type LedgerAnchorChain = "vibehub" | "zhixin" | "baoquan";
+
+export interface LedgerEntry {
+  id: string;
+  workspaceId: string;
+  actorType: LedgerActorType;
+  actorId: string;
+  actionKind: string;
+  targetType?: string;
+  targetId?: string;
+  payload: Record<string, unknown>;
+  payloadHash: string;
+  prevHash?: string;
+  signature: string;
+  signedAt: string;
+  anchorChain: LedgerAnchorChain;
+  anchorTxId?: string;
+  anchorVerifiedAt?: string;
+}
 
 export interface WorkIntentInboxItem extends CollaborationIntent {
   projectSlug: string;
@@ -556,6 +691,7 @@ export interface AgentActionAuditRow {
   apiKeyId?: string;
   teamId?: string;
   taskId?: string;
+  ledgerEntryId?: string;
   action: string;
   outcome: AgentActionStatus;
   metadata?: Record<string, unknown>;
@@ -573,6 +709,7 @@ export interface AgentConfirmationRequest {
   teamSlug?: string;
   taskId?: string;
   taskTitle?: string;
+  ledgerEntryId?: string;
   targetType: string;
   targetId: string;
   action: string;

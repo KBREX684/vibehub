@@ -3,6 +3,7 @@ import type { Prisma, WorkspaceKind as PrismaWorkspaceKind } from "@prisma/clien
 import {
   mockAuditLogs,
   mockWorkspaceArtifacts,
+  mockWorkspacePreferences,
   mockWorkspaceDeliverables,
   mockCreators,
   mockProjects,
@@ -12,6 +13,7 @@ import {
   mockWorkspaceSnapshots,
 } from "@/lib/data/mock-data";
 import type {
+  AigcProviderApi,
   TeamRole,
   WorkspaceArtifact,
   WorkspaceDeliverable,
@@ -19,8 +21,11 @@ import type {
   WorkspaceSnapshot,
   WorkspaceSummary,
 } from "@/lib/types";
+import { logger, serializeError } from "@/lib/logger";
 import { RepositoryError } from "@/lib/repository-errors";
+import { assertV11LegacyWriteAllowed } from "@/lib/repository-errors";
 import { getPrisma, useMockData } from "@/lib/repositories/repository-shared";
+import { appendEntry, isLedgerWriteThroughEnabled } from "@/lib/repositories/ledger.repository";
 import { getUserTier } from "@/lib/repositories/billing.repository";
 import { getLimits } from "@/lib/subscription";
 import {
@@ -28,6 +33,7 @@ import {
   createWorkspacePresignedPutUrl,
   isObjectStorageConfigured,
 } from "@/lib/uploads-presign";
+import { isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 
 type DbClient = Prisma.TransactionClient | Awaited<ReturnType<typeof getPrisma>>;
 
@@ -36,6 +42,9 @@ export interface WorkspaceAccessRecord extends WorkspaceSummary {
   teamId?: string;
   ownerUserId?: string;
   viewerRole?: TeamRole;
+  ledgerEnabled?: boolean;
+  aigcAutoStamp?: boolean;
+  aigcProvider?: AigcProviderApi;
 }
 
 export interface WorkspaceArtifactUploadRequest {
@@ -80,6 +89,9 @@ function toWorkspaceSummary(row: {
   title: string;
   userId: string | null;
   teamId: string | null;
+  ledgerEnabled?: boolean;
+  aigcAutoStamp?: boolean;
+  aigcProvider?: AigcProviderApi;
   user?: { name: string } | null;
   team?: { slug: string; name: string; mission: string | null; ownerUserId?: string; _count?: { memberships: number } } | null;
 }): WorkspaceAccessRecord {
@@ -94,6 +106,9 @@ function toWorkspaceSummary(row: {
       memberCount: row.team._count?.memberships,
       ownerUserId: row.team.ownerUserId,
       teamId: row.teamId ?? undefined,
+      ledgerEnabled: row.ledgerEnabled ?? true,
+      aigcAutoStamp: row.aigcAutoStamp ?? true,
+      aigcProvider: row.aigcProvider ?? "local",
     };
   }
   return {
@@ -104,6 +119,19 @@ function toWorkspaceSummary(row: {
     subtitle: row.user?.name,
     ownerUserId: row.userId ?? undefined,
     userId: row.userId ?? undefined,
+    ledgerEnabled: row.ledgerEnabled ?? true,
+    aigcAutoStamp: row.aigcAutoStamp ?? true,
+    aigcProvider: row.aigcProvider ?? "local",
+  };
+}
+
+function applyMockWorkspacePreferences(summary: WorkspaceAccessRecord): WorkspaceAccessRecord {
+  const override = mockWorkspacePreferences.find((item) => item.workspaceId === summary.id);
+  return {
+    ...summary,
+    ledgerEnabled: override?.ledgerEnabled ?? summary.ledgerEnabled ?? true,
+    aigcAutoStamp: override?.aigcAutoStamp ?? summary.aigcAutoStamp ?? true,
+    aigcProvider: override?.aigcProvider ?? summary.aigcProvider ?? "local",
   };
 }
 
@@ -140,6 +168,8 @@ function toWorkspaceProjectReference(project: {
 function toWorkspaceArtifactDto(row: {
   id: string;
   workspaceId: string;
+  aigcStampId?: string | null;
+  requireAigcStamp?: boolean;
   filename: string;
   contentType: string;
   sizeBytes: number;
@@ -149,12 +179,21 @@ function toWorkspaceArtifactDto(row: {
   visibility: "workspace";
   validationState: "pending" | "ready" | "rejected";
   publicUrl?: string | null;
+  aigcStamp?: {
+    provider: AigcProviderApi;
+    mode: "text" | "image" | "audio" | "video";
+    visibleLabel: string;
+    hiddenWatermarkId?: string | null;
+    stampedAt: Date | string;
+  } | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }): WorkspaceArtifact {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
+    aigcStampId: row.aigcStampId ?? undefined,
+    requireAigcStamp: row.requireAigcStamp ?? true,
     filename: row.filename,
     contentType: row.contentType,
     sizeBytes: row.sizeBytes,
@@ -164,6 +203,15 @@ function toWorkspaceArtifactDto(row: {
     visibility: row.visibility,
     validationState: row.validationState,
     publicUrl: row.publicUrl ?? undefined,
+    aigcStampedAt: row.aigcStamp
+      ? typeof row.aigcStamp.stampedAt === "string"
+        ? row.aigcStamp.stampedAt
+        : row.aigcStamp.stampedAt.toISOString()
+      : undefined,
+    aigcProvider: row.aigcStamp?.provider,
+    aigcMode: row.aigcStamp?.mode,
+    aigcVisibleLabel: row.aigcStamp?.visibleLabel,
+    aigcHiddenWatermarkId: row.aigcStamp?.hiddenWatermarkId ?? undefined,
     createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
     updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : row.updatedAt.toISOString(),
   };
@@ -172,6 +220,7 @@ function toWorkspaceArtifactDto(row: {
 function toWorkspaceSnapshotDto(row: {
   id: string;
   workspaceId: string;
+  ledgerEntryId?: string | null;
   title: string;
   summary: string;
   goal?: string | null;
@@ -187,6 +236,7 @@ function toWorkspaceSnapshotDto(row: {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
+    ledgerEntryId: row.ledgerEntryId ?? undefined,
     title: row.title,
     summary: row.summary,
     goal: row.goal ?? undefined,
@@ -206,6 +256,7 @@ function toWorkspaceDeliverableDto(row: {
   id: string;
   workspaceId: string;
   snapshotId: string;
+  ledgerEntryId?: string | null;
   snapshotTitle?: string | null;
   title: string;
   description?: string | null;
@@ -226,6 +277,7 @@ function toWorkspaceDeliverableDto(row: {
     id: row.id,
     workspaceId: row.workspaceId,
     snapshotId: row.snapshotId,
+    ledgerEntryId: row.ledgerEntryId ?? undefined,
     snapshotTitle: row.snapshotTitle ?? undefined,
     title: row.title,
     description: row.description ?? undefined,
@@ -266,11 +318,11 @@ async function getAccessibleWorkspace(userId: string, workspaceId: string, clien
         (item) => item.teamId === workspace.teamId && item.userId === userId
       );
       return {
-        ...workspace,
+        ...applyMockWorkspacePreferences(workspace),
         viewerRole: membership?.role,
       };
     }
-    return workspace;
+    return applyMockWorkspacePreferences(workspace);
   }
 
   const db = client ?? (await getPrisma());
@@ -307,6 +359,9 @@ async function getAccessibleWorkspace(userId: string, workspaceId: string, clien
     title: workspace.title,
     userId: workspace.userId,
     teamId: workspace.teamId,
+    ledgerEnabled: (workspace as { ledgerEnabled?: boolean }).ledgerEnabled,
+    aigcAutoStamp: (workspace as { aigcAutoStamp?: boolean }).aigcAutoStamp,
+    aigcProvider: (workspace as { aigcProvider?: AigcProviderApi }).aigcProvider,
     user: workspace.user ? { name: workspace.user.name } : null,
     team: workspace.team
       ? {
@@ -470,12 +525,17 @@ export async function ensurePersonalWorkspace(userId: string, client?: DbClient)
     const user = mockUsers.find((item) => item.id === userId);
     if (!user) throw new Error("USER_NOT_FOUND");
     return {
+      ...applyMockWorkspacePreferences({
       id: `personal:${userId}`,
       kind: "personal",
       slug: "personal",
       title: "个人工作区",
       subtitle: user.name,
       userId,
+      ledgerEnabled: true,
+      aigcAutoStamp: true,
+      aigcProvider: "local",
+      }),
     };
   }
 
@@ -517,6 +577,7 @@ export async function ensureTeamWorkspace(
     const team = mockTeams.find((item) => item.id === teamId);
     if (!team) throw new Error("TEAM_NOT_FOUND");
     return {
+      ...applyMockWorkspacePreferences({
       id: `team:${team.id}`,
       kind: "team",
       slug: team.slug,
@@ -526,10 +587,28 @@ export async function ensureTeamWorkspace(
       teamId: team.id,
       ownerUserId: team.ownerUserId,
       memberCount: mockTeamMemberships.filter((membership) => membership.teamId === team.id).length,
+      ledgerEnabled: true,
+      aigcAutoStamp: true,
+      aigcProvider: "local",
+      }),
     };
   }
 
   const db = client ?? (await getPrisma());
+  const existing = await db.workspace.findUnique({
+    where: { teamId },
+    include: {
+      user: { select: { name: true } },
+      team: { select: { slug: true, name: true, mission: true, ownerUserId: true, _count: { select: { memberships: true } } } },
+    },
+  });
+  if (existing) {
+    return toWorkspaceSummary(existing);
+  }
+  if (isV11BackendLockdownEnabled()) {
+    assertV11LegacyWriteAllowed("TEAM_WORKSPACE_DEPRECATED");
+  }
+
   const team =
     teamSeed ??
     (await db.team.findUnique({
@@ -580,15 +659,20 @@ export async function listAccessibleWorkspacesForUser(userId: string): Promise<W
     return [
       personal,
       ...teams.map((team) => ({
-        id: `team:${team.id}`,
-        kind: "team" as const,
-        slug: team.slug,
-        title: team.name,
-        subtitle: team.mission,
-        teamSlug: team.slug,
-        teamId: team.id,
-        ownerUserId: team.ownerUserId,
-        memberCount: mockTeamMemberships.filter((membership) => membership.teamId === team.id).length,
+        ...applyMockWorkspacePreferences({
+          id: `team:${team.id}`,
+          kind: "team" as const,
+          slug: team.slug,
+          title: team.name,
+          subtitle: team.mission,
+          teamSlug: team.slug,
+          teamId: team.id,
+          ownerUserId: team.ownerUserId,
+          memberCount: mockTeamMemberships.filter((membership) => membership.teamId === team.id).length,
+          ledgerEnabled: true,
+          aigcAutoStamp: true,
+          aigcProvider: "local",
+        }),
       })),
     ];
   }
@@ -680,6 +764,42 @@ function getWorkspaceStorageMode() {
   return isObjectStorageConfigured() ? ("object_storage" as const) : ("unconfigured" as const);
 }
 
+async function appendWorkspaceLedgerEntry(params: {
+  workspace: WorkspaceAccessRecord;
+  actorType: "user" | "agent";
+  actorId: string;
+  actionKind: string;
+  targetType?: string;
+  targetId?: string;
+  payload: Record<string, unknown>;
+  signedAt?: Date;
+  client?: DbClient;
+}) {
+  if (params.workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+    return null;
+  }
+  return appendEntry({
+    workspaceId: params.workspace.id,
+    actorType: params.actorType,
+    actorId: params.actorId,
+    actionKind: params.actionKind,
+    targetType: params.targetType,
+    targetId: params.targetId,
+    payload: params.payload,
+    signedAt: params.signedAt,
+    client: params.client,
+  });
+}
+
+async function enqueueWorkspaceTrustMetricRecompute(userId: string, reason: string) {
+  try {
+    const { enqueueTrustMetricRecompute } = await import("@/lib/queue/recompute-trust-metric-queue");
+    await enqueueTrustMetricRecompute({ userId, reason });
+  } catch {
+    // Ignore trust metric refresh failures on workspace write paths.
+  }
+}
+
 export async function listWorkspaceArtifacts(params: {
   userId: string;
   workspaceId: string;
@@ -706,7 +826,18 @@ export async function listWorkspaceArtifacts(params: {
   const db = await getPrisma();
   const rows = await db.workspaceArtifact.findMany({
     where: { workspaceId: workspace.id },
-    include: { uploader: { select: { id: true, name: true } } },
+    include: {
+      uploader: { select: { id: true, name: true } },
+      aigcStamp: {
+        select: {
+          provider: true,
+          mode: true,
+          visibleLabel: true,
+          hiddenWatermarkId: true,
+          stampedAt: true,
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -715,6 +846,8 @@ export async function listWorkspaceArtifacts(params: {
       toWorkspaceArtifactDto({
         id: row.id,
         workspaceId: row.workspaceId,
+        aigcStampId: (row as { aigcStampId?: string | null }).aigcStampId,
+        requireAigcStamp: (row as { requireAigcStamp?: boolean }).requireAigcStamp,
         filename: row.filename,
         contentType: row.contentType,
         sizeBytes: row.sizeBytes,
@@ -724,6 +857,7 @@ export async function listWorkspaceArtifacts(params: {
         visibility: row.visibility,
         validationState: row.validationState,
         publicUrl: row.publicUrl,
+        aigcStamp: row.aigcStamp,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       })
@@ -788,6 +922,7 @@ export async function requestWorkspaceArtifactUpload(params: {
       storageKey: `mock://workspace/${workspace.id}/${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]+/g, "_")}`,
       uploaderUserId: params.userId,
       uploaderName: uploader?.name,
+      requireAigcStamp: workspace.aigcAutoStamp !== false,
       visibility: "workspace",
       validationState: "ready",
       createdAt: now,
@@ -807,6 +942,19 @@ export async function requestWorkspaceArtifactUpload(params: {
       sizeBytes,
       mode: "mock",
     });
+    if (artifact.requireAigcStamp !== false && workspace.aigcAutoStamp !== false) {
+      try {
+        const { enqueueAigcStamp } = await import("@/lib/queue/aigc-stamp-queue");
+        await enqueueAigcStamp({
+          artifactId: artifact.id,
+          workspaceId: workspace.id,
+          actorUserId: params.userId,
+          trigger: "auto",
+        });
+      } catch (error) {
+        logger.error({ err: serializeError(error), artifactId: artifact.id }, "Failed to enqueue mock AIGC stamp job");
+      }
+    }
     return {
       artifact,
       storage: {
@@ -836,6 +984,7 @@ export async function requestWorkspaceArtifactUpload(params: {
     data: {
       workspaceId: workspace.id,
       uploaderUserId: params.userId,
+      requireAigcStamp: workspace.aigcAutoStamp !== false,
       filename,
       contentType,
       sizeBytes,
@@ -866,6 +1015,8 @@ export async function requestWorkspaceArtifactUpload(params: {
     artifact: toWorkspaceArtifactDto({
       id: created.id,
       workspaceId: created.workspaceId,
+      aigcStampId: (created as { aigcStampId?: string | null }).aigcStampId,
+      requireAigcStamp: (created as { requireAigcStamp?: boolean }).requireAigcStamp,
       filename: created.filename,
       contentType: created.contentType,
       sizeBytes: created.sizeBytes,
@@ -918,6 +1069,36 @@ export async function completeWorkspaceArtifactUpload(params: {
       sizeBytes: artifact.sizeBytes,
       mode: "mock",
     });
+    await appendWorkspaceLedgerEntry({
+      workspace,
+      actorType: "user",
+      actorId: params.userId,
+      actionKind: "workspace.artifact.ready",
+      targetType: "workspace_artifact",
+      targetId: artifact.id,
+      payload: {
+        workspaceId: workspace.id,
+        artifactId: artifact.id,
+        filename: artifact.filename,
+        contentType: artifact.contentType,
+        sizeBytes: artifact.sizeBytes,
+        validationState: artifact.validationState,
+        mode: "mock",
+      },
+    });
+    if (artifact.requireAigcStamp !== false && workspace.aigcAutoStamp !== false) {
+      try {
+        const { enqueueAigcStamp } = await import("@/lib/queue/aigc-stamp-queue");
+        await enqueueAigcStamp({
+          artifactId: artifact.id,
+          workspaceId: workspace.id,
+          actorUserId: params.userId,
+          trigger: "auto",
+        });
+      } catch (error) {
+        logger.error({ err: serializeError(error), artifactId: artifact.id }, "Failed to enqueue mock AIGC stamp job");
+      }
+    }
     return artifact;
   }
 
@@ -942,7 +1123,18 @@ export async function completeWorkspaceArtifactUpload(params: {
   const updated = await db.workspaceArtifact.update({
     where: { id: existing.id },
     data: { validationState: "ready" },
-    include: { uploader: { select: { id: true, name: true } } },
+    include: {
+      uploader: { select: { id: true, name: true } },
+      aigcStamp: {
+        select: {
+          provider: true,
+          mode: true,
+          visibleLabel: true,
+          hiddenWatermarkId: true,
+          stampedAt: true,
+        },
+      },
+    },
   });
 
   await appendArtifactAuditLog(
@@ -957,10 +1149,43 @@ export async function completeWorkspaceArtifactUpload(params: {
     },
     db
   );
+  await appendWorkspaceLedgerEntry({
+    workspace,
+    actorType: "user",
+    actorId: params.userId,
+    actionKind: "workspace.artifact.ready",
+    targetType: "workspace_artifact",
+    targetId: updated.id,
+    payload: {
+      workspaceId: workspace.id,
+      artifactId: updated.id,
+      filename: updated.filename,
+      contentType: updated.contentType,
+      sizeBytes: updated.sizeBytes,
+      validationState: updated.validationState,
+      mode: getWorkspaceStorageMode(),
+    },
+    client: db,
+  });
+  if (updated.requireAigcStamp !== false && workspace.aigcAutoStamp !== false) {
+    try {
+      const { enqueueAigcStamp } = await import("@/lib/queue/aigc-stamp-queue");
+      await enqueueAigcStamp({
+        artifactId: updated.id,
+        workspaceId: workspace.id,
+        actorUserId: params.userId,
+        trigger: "auto",
+      });
+    } catch (error) {
+      logger.error({ err: serializeError(error), artifactId: updated.id }, "Failed to enqueue AIGC stamp job");
+    }
+  }
 
   return toWorkspaceArtifactDto({
     id: updated.id,
     workspaceId: updated.workspaceId,
+    aigcStampId: (updated as { aigcStampId?: string | null }).aigcStampId,
+    requireAigcStamp: (updated as { requireAigcStamp?: boolean }).requireAigcStamp,
     filename: updated.filename,
     contentType: updated.contentType,
     sizeBytes: updated.sizeBytes,
@@ -970,6 +1195,7 @@ export async function completeWorkspaceArtifactUpload(params: {
     visibility: updated.visibility,
     validationState: updated.validationState,
     publicUrl: updated.publicUrl,
+    aigcStamp: updated.aigcStamp,
     createdAt: updated.createdAt,
     updatedAt: updated.updatedAt,
   });
@@ -1063,7 +1289,18 @@ export async function getWorkspaceArtifactDownloadUrl(params: {
   const db = await getPrisma();
   const artifact = await db.workspaceArtifact.findUnique({
     where: { id: params.artifactId },
-    include: { uploader: { select: { id: true, name: true } } },
+    include: {
+      uploader: { select: { id: true, name: true } },
+      aigcStamp: {
+        select: {
+          provider: true,
+          mode: true,
+          visibleLabel: true,
+          hiddenWatermarkId: true,
+          stampedAt: true,
+        },
+      },
+    },
   });
   if (!artifact || artifact.workspaceId !== workspace.id) {
     throw new RepositoryError("NOT_FOUND", "Workspace artifact not found", 404);
@@ -1088,6 +1325,8 @@ export async function getWorkspaceArtifactDownloadUrl(params: {
     artifact: toWorkspaceArtifactDto({
       id: artifact.id,
       workspaceId: artifact.workspaceId,
+      aigcStampId: (artifact as { aigcStampId?: string | null }).aigcStampId,
+      requireAigcStamp: (artifact as { requireAigcStamp?: boolean }).requireAigcStamp,
       filename: artifact.filename,
       contentType: artifact.contentType,
       sizeBytes: artifact.sizeBytes,
@@ -1097,6 +1336,7 @@ export async function getWorkspaceArtifactDownloadUrl(params: {
       visibility: artifact.visibility,
       validationState: artifact.validationState,
       publicUrl: artifact.publicUrl,
+      aigcStamp: artifact.aigcStamp,
       createdAt: artifact.createdAt,
       updatedAt: artifact.updatedAt,
     }),
@@ -1120,6 +1360,7 @@ export async function listWorkspaceSnapshots(params: {
         toWorkspaceSnapshotDto(
           {
             ...snapshot,
+            ledgerEntryId: snapshot.ledgerEntryId,
             previousSnapshotTitle:
               snapshot.previousSnapshotId
                 ? mockWorkspaceSnapshots.find((item) => item.id === snapshot.previousSnapshotId)?.title
@@ -1145,6 +1386,7 @@ export async function listWorkspaceSnapshots(params: {
       {
         id: row.id,
         workspaceId: row.workspaceId,
+        ledgerEntryId: (row as { ledgerEntryId?: string | null }).ledgerEntryId,
         title: row.title,
         summary: row.summary,
         goal: row.goal,
@@ -1181,6 +1423,7 @@ export async function createWorkspaceSnapshot(params: {
   roleNotes?: string;
   projectIds?: string[];
   previousSnapshotId?: string;
+  ledgerActionKind?: "workspace.snapshot.created" | "workspace.snapshot.rolled_back";
 }): Promise<WorkspaceSnapshot> {
   const workspace = await getAccessibleWorkspace(params.userId, params.workspaceId);
   const title = normalizeSnapshotTitle(params.title);
@@ -1219,6 +1462,7 @@ export async function createWorkspaceSnapshot(params: {
     const snapshot: WorkspaceSnapshot = {
       id: randomUUID(),
       workspaceId: workspace.id,
+      ledgerEntryId: undefined,
       title,
       summary,
       goal: params.goal?.trim() || undefined,
@@ -1242,6 +1486,29 @@ export async function createWorkspaceSnapshot(params: {
       projectIds: selectedProjectIds,
       teamId: workspace.teamId ?? null,
     });
+    const ledgerEntry = await appendWorkspaceLedgerEntry({
+      workspace,
+      actorType: "user",
+      actorId: params.userId,
+      actionKind: params.ledgerActionKind ?? "workspace.snapshot.created",
+      targetType: "workspace_snapshot",
+      targetId: snapshot.id,
+      payload: {
+        workspaceId: workspace.id,
+        snapshotId: snapshot.id,
+        title: snapshot.title,
+        summary: snapshot.summary,
+        projectIds: selectedProjectIds,
+        previousSnapshotId: params.previousSnapshotId ?? null,
+      },
+      signedAt: new Date(now),
+    });
+    if (ledgerEntry) {
+      snapshot.ledgerEntryId = ledgerEntry.id;
+    }
+    if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+      await enqueueWorkspaceTrustMetricRecompute(params.userId, params.ledgerActionKind ?? "workspace.snapshot.created");
+    }
     return snapshot;
   }
 
@@ -1270,11 +1537,39 @@ export async function createWorkspaceSnapshot(params: {
     projectIds: selectedProjectIds,
     teamId: workspace.teamId ?? null,
   }, db);
+  const ledgerEntry = await appendWorkspaceLedgerEntry({
+    workspace,
+    actorType: "user",
+    actorId: params.userId,
+    actionKind: params.ledgerActionKind ?? "workspace.snapshot.created",
+    targetType: "workspace_snapshot",
+    targetId: created.id,
+    payload: {
+      workspaceId: workspace.id,
+      snapshotId: created.id,
+      title: created.title,
+      summary: created.summary,
+      projectIds: selectedProjectIds,
+      previousSnapshotId: created.previousSnapshotId,
+    },
+    signedAt: created.createdAt,
+    client: db,
+  });
+  if (ledgerEntry) {
+    await db.snapshotCapsule.update({
+      where: { id: created.id },
+      data: { ledgerEntry: { connect: { id: ledgerEntry.id } } },
+    });
+  }
+  if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+    await enqueueWorkspaceTrustMetricRecompute(params.userId, params.ledgerActionKind ?? "workspace.snapshot.created");
+  }
 
   return toWorkspaceSnapshotDto(
     {
       id: created.id,
       workspaceId: created.workspaceId,
+      ledgerEntryId: ledgerEntry?.id,
       title: created.title,
       summary: created.summary,
       goal: created.goal,
@@ -1324,6 +1619,7 @@ export async function rollbackWorkspaceSnapshot(params: {
     roleNotes: params.roleNotes?.trim() || source.roleNotes,
     projectIds: source.projectIds,
     previousSnapshotId: source.id,
+    ledgerActionKind: "workspace.snapshot.rolled_back",
   }).then(async (snapshot) => {
     await appendSnapshotAuditLog(params.userId, "workspace.snapshot.rolled_back", snapshot.id, {
       workspaceId: workspace.id,
@@ -1367,6 +1663,7 @@ export async function listWorkspaceDeliverables(params: {
         id: row.id,
         workspaceId: row.workspaceId,
         snapshotId: row.snapshotId,
+        ledgerEntryId: (row as { ledgerEntryId?: string | null }).ledgerEntryId,
         snapshotTitle: row.snapshot.title,
         title: row.title,
         description: row.description,
@@ -1414,6 +1711,7 @@ export async function createWorkspaceDeliverable(params: {
       id: randomUUID(),
       workspaceId: workspace.id,
       snapshotId: snapshot.id,
+      ledgerEntryId: undefined,
       snapshotTitle: snapshot.title,
       title,
       description,
@@ -1430,6 +1728,28 @@ export async function createWorkspaceDeliverable(params: {
       title: deliverable.title,
       teamId: workspace.teamId ?? null,
     });
+    const ledgerEntry = await appendWorkspaceLedgerEntry({
+      workspace,
+      actorType: "user",
+      actorId: params.userId,
+      actionKind: "workspace.deliverable.created",
+      targetType: "workspace_deliverable",
+      targetId: deliverable.id,
+      payload: {
+        workspaceId: workspace.id,
+        deliverableId: deliverable.id,
+        snapshotId: snapshot.id,
+        title: deliverable.title,
+        status: deliverable.status,
+      },
+      signedAt: new Date(now),
+    });
+    if (ledgerEntry) {
+      deliverable.ledgerEntryId = ledgerEntry.id;
+    }
+    if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+      await enqueueWorkspaceTrustMetricRecompute(params.userId, "workspace.deliverable.created");
+    }
     return deliverable;
   }
 
@@ -1455,11 +1775,38 @@ export async function createWorkspaceDeliverable(params: {
     title: created.title,
     teamId: workspace.teamId ?? null,
   }, db);
+  const ledgerEntry = await appendWorkspaceLedgerEntry({
+    workspace,
+    actorType: "user",
+    actorId: params.userId,
+    actionKind: "workspace.deliverable.created",
+    targetType: "workspace_deliverable",
+    targetId: created.id,
+    payload: {
+      workspaceId: workspace.id,
+      deliverableId: created.id,
+      snapshotId: snapshot.id,
+      title: created.title,
+      status: created.status,
+    },
+    signedAt: created.createdAt,
+    client: db,
+  });
+  if (ledgerEntry) {
+    await db.workspaceDeliverable.update({
+      where: { id: created.id },
+      data: { ledgerEntry: { connect: { id: ledgerEntry.id } } },
+    });
+  }
+  if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+    await enqueueWorkspaceTrustMetricRecompute(params.userId, "workspace.deliverable.created");
+  }
 
   return toWorkspaceDeliverableDto({
     id: created.id,
     workspaceId: created.workspaceId,
     snapshotId: created.snapshotId,
+    ledgerEntryId: ledgerEntry?.id ?? (created as { ledgerEntryId?: string | null }).ledgerEntryId,
     snapshotTitle: created.snapshot.title,
     title: created.title,
     description: created.description,
@@ -1505,6 +1852,24 @@ export async function submitWorkspaceDeliverable(params: {
       title: item.title,
       teamId: workspace.teamId ?? null,
     });
+    await appendWorkspaceLedgerEntry({
+      workspace,
+      actorType: "user",
+      actorId: params.userId,
+      actionKind: "workspace.deliverable.submitted",
+      targetType: "workspace_deliverable",
+      targetId: item.id,
+      payload: {
+        workspaceId: workspace.id,
+        deliverableId: item.id,
+        snapshotId: item.snapshotId,
+        status: item.status,
+      },
+      signedAt: new Date(now),
+    });
+    if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+      await enqueueWorkspaceTrustMetricRecompute(params.userId, "workspace.deliverable.submitted");
+    }
     return item;
   }
 
@@ -1548,11 +1913,31 @@ export async function submitWorkspaceDeliverable(params: {
     title: updated.title,
     teamId: workspace.teamId ?? null,
   }, db);
+  await appendWorkspaceLedgerEntry({
+    workspace,
+    actorType: "user",
+    actorId: params.userId,
+    actionKind: "workspace.deliverable.submitted",
+    targetType: "workspace_deliverable",
+    targetId: updated.id,
+    payload: {
+      workspaceId: workspace.id,
+      deliverableId: updated.id,
+      snapshotId: updated.snapshotId,
+      status: updated.status,
+    },
+    signedAt: updated.updatedAt,
+    client: db,
+  });
+  if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+    await enqueueWorkspaceTrustMetricRecompute(params.userId, "workspace.deliverable.submitted");
+  }
 
   return toWorkspaceDeliverableDto({
     id: updated.id,
     workspaceId: updated.workspaceId,
     snapshotId: updated.snapshotId,
+    ledgerEntryId: (updated as { ledgerEntryId?: string | null }).ledgerEntryId,
     snapshotTitle: updated.snapshot.title,
     title: updated.title,
     description: updated.description,
@@ -1603,6 +1988,25 @@ export async function reviewWorkspaceDeliverable(params: {
       teamId: workspace.teamId ?? null,
       decision: params.decision,
     });
+    await appendWorkspaceLedgerEntry({
+      workspace,
+      actorType: "user",
+      actorId: params.userId,
+      actionKind: "workspace.deliverable.reviewed",
+      targetType: "workspace_deliverable",
+      targetId: item.id,
+      payload: {
+        workspaceId: workspace.id,
+        deliverableId: item.id,
+        snapshotId: item.snapshotId,
+        status: item.status,
+        decision: params.decision,
+      },
+      signedAt: new Date(now),
+    });
+    if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+      await enqueueWorkspaceTrustMetricRecompute(params.userId, "workspace.deliverable.reviewed");
+    }
     return item;
   }
 
@@ -1643,11 +2047,32 @@ export async function reviewWorkspaceDeliverable(params: {
     teamId: workspace.teamId ?? null,
     decision: params.decision,
   }, db);
+  await appendWorkspaceLedgerEntry({
+    workspace,
+    actorType: "user",
+    actorId: params.userId,
+    actionKind: "workspace.deliverable.reviewed",
+    targetType: "workspace_deliverable",
+    targetId: updated.id,
+    payload: {
+      workspaceId: workspace.id,
+      deliverableId: updated.id,
+      snapshotId: updated.snapshotId,
+      status: updated.status,
+      decision: params.decision,
+    },
+    signedAt: updated.updatedAt,
+    client: db,
+  });
+  if (workspace.ledgerEnabled === false || !isLedgerWriteThroughEnabled()) {
+    await enqueueWorkspaceTrustMetricRecompute(params.userId, "workspace.deliverable.reviewed");
+  }
 
   return toWorkspaceDeliverableDto({
     id: updated.id,
     workspaceId: updated.workspaceId,
     snapshotId: updated.snapshotId,
+    ledgerEntryId: (updated as { ledgerEntryId?: string | null }).ledgerEntryId,
     snapshotTitle: updated.snapshot.title,
     title: updated.title,
     description: updated.description,
@@ -1696,6 +2121,7 @@ export async function listPublicSnapshotsForProject(projectSlug: string): Promis
       {
         id: row.id,
         workspaceId: row.workspaceId,
+        ledgerEntryId: (row as { ledgerEntryId?: string | null }).ledgerEntryId,
         title: row.title,
         summary: row.summary,
         goal: row.goal,
@@ -1760,6 +2186,7 @@ export async function getPublicSnapshotForProject(params: {
       {
         id: snapshot.id,
         workspaceId: snapshot.workspaceId,
+        ledgerEntryId: (snapshot as { ledgerEntryId?: string | null }).ledgerEntryId,
         title: snapshot.title,
         summary: snapshot.summary,
         goal: snapshot.goal,

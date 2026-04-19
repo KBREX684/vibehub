@@ -4,6 +4,11 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { addTeamAgentMembership, listTeamAgentMemberships } from "@/lib/repository";
 import { safeServerErrorDetails } from "@/lib/safe-error-details";
+import {
+  deprecatedResponse,
+  isV11BackendLockdownEnabled,
+  withDeprecatedHeaders,
+} from "@/lib/v11-deprecation";
 
 /**
  * v8 W3 — Team Agent Bus
@@ -36,7 +41,7 @@ export async function GET(_request: Request, { params }: Params) {
       teamSlug: slug,
       viewerUserId: session.userId,
     });
-    return apiSuccess({ memberships });
+    return withDeprecatedHeaders(apiSuccess({ memberships }));
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
@@ -62,6 +67,9 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function POST(request: Request, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

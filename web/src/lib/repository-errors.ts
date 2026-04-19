@@ -1,5 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { apiError } from "@/lib/response";
+import {
+  buildDeprecatedErrorPayload,
+  deprecatedHeaders,
+  getDeprecatedApiMessage,
+  isDeprecatedApiCode,
+  type DeprecatedApiCode,
+  V11_DEPRECATED_SINCE,
+  V11_LEARN_MORE_URL,
+} from "@/lib/v11-deprecation";
 
 export type RepositoryErrorCode =
   | "NOT_FOUND"
@@ -8,6 +17,9 @@ export type RepositoryErrorCode =
   | "FORBIDDEN"
   | "CREATOR_PROFILE_REQUIRED"
   | "INVALID_INPUT"
+  | "TEAMS_DEPRECATED"
+  | "INTENTS_DEPRECATED"
+  | "TEAM_WORKSPACE_DEPRECATED"
   | "INTERNAL";
 
 export class RepositoryError extends Error {
@@ -50,6 +62,13 @@ export function isRepositoryError(e: unknown): e is RepositoryError {
   return e instanceof RepositoryError;
 }
 
+export function assertV11LegacyWriteAllowed(code: DeprecatedApiCode, message?: string) {
+  throw new RepositoryError(code, message ?? getDeprecatedApiMessage(code), 410, {
+    deprecatedSince: V11_DEPRECATED_SINCE,
+    learnMoreUrl: V11_LEARN_MORE_URL,
+  });
+}
+
 /** For route catch blocks: map `RepositoryError` to JSON response, else return null. */
 export function apiErrorFromRepositoryCatch(e: unknown) {
   const prismaMapped = mapPrismaToRepositoryError(e);
@@ -64,6 +83,12 @@ export function apiErrorFromRepositoryCatch(e: unknown) {
     );
   }
   if (isRepositoryError(e)) {
+    if (isDeprecatedApiCode(e.code)) {
+      return Response.json(buildDeprecatedErrorPayload(e.code, e.message), {
+        status: e.httpStatus,
+        headers: deprecatedHeaders(),
+      });
+    }
     return apiError(
       {
         code: e.code,

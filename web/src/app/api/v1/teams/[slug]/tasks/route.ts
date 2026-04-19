@@ -5,6 +5,11 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createTeamTask, listTeamTasks } from "@/lib/repository";
 import type { TeamTaskStatus } from "@/lib/types";
+import {
+  deprecatedResponse,
+  isV11BackendLockdownEnabled,
+  withDeprecatedHeaders,
+} from "@/lib/v11-deprecation";
 
 const createSchema = z.object({
   title: z.string().min(1).max(200),
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { slug } = await params;
     const tasks = await listTeamTasks({ teamSlug: slug, viewerUserId: session.userId });
-    return apiSuccess({ tasks });
+    return withDeprecatedHeaders(apiSuccess({ tasks }));
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
@@ -56,6 +61,9 @@ const msg = error instanceof Error ? error.message : String(error);
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const auth = await authenticateRequest(request, "write:team:tasks");
   const gate = resolveReadAuth(auth, false);
   if (!gate.ok) {

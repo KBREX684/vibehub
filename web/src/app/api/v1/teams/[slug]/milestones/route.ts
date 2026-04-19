@@ -4,6 +4,11 @@ import { authenticateRequest, getSessionUserFromCookie, rateLimitedResponse, res
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { createTeamMilestone, listTeamMilestones } from "@/lib/repository";
+import {
+  deprecatedResponse,
+  isV11BackendLockdownEnabled,
+  withDeprecatedHeaders,
+} from "@/lib/v11-deprecation";
 
 const createSchema = z.object({
   title: z.string().min(1).max(200),
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { slug } = await params;
     const milestones = await listTeamMilestones({ teamSlug: slug, viewerUserId: session.userId });
-    return apiSuccess({ milestones });
+    return withDeprecatedHeaders(apiSuccess({ milestones }));
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
@@ -53,6 +58,9 @@ const msg = error instanceof Error ? error.message : String(error);
 }
 
 export async function POST(request: Request, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

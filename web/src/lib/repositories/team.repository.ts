@@ -10,6 +10,8 @@ import {
   mockUsers,
 } from "@/lib/data/mock-data";
 import { ensureTeamWorkspace } from "@/lib/repositories/workspace.repository";
+import { assertV11LegacyWriteAllowed } from "@/lib/repository-errors";
+import { isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 import type {
   TeamDetail,
   TeamJoinRequestRow,
@@ -373,6 +375,9 @@ export async function createTeam(input: {
   slug?: string;
   mission?: string;
 }): Promise<TeamDetail> {
+  if (isV11BackendLockdownEnabled()) {
+    assertV11LegacyWriteAllowed("TEAMS_DEPRECATED");
+  }
   const name = input.name.trim();
   if (!name) throw new Error("INVALID_TEAM_NAME");
   const baseSlug = slugifyTeamSlug(input.slug?.trim() || name);

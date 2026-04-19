@@ -5,6 +5,7 @@ import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { agentCompleteTeamTask, deleteTeamTask, requestAgentTaskDelete, updateTeamTask } from "@/lib/repository";
 import type { TeamTaskStatus } from "@/lib/types";
+import { deprecatedResponse, isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 
 const patchSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -20,6 +21,9 @@ interface Params {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const auth = await authenticateRequest(request, "write:team:tasks");
   const gate = resolveReadAuth(auth, false);
   if (!gate.ok) {
@@ -111,6 +115,9 @@ if (error instanceof z.ZodError) {
 }
 
 export async function DELETE(request: NextRequest, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const auth = await authenticateRequest(request, "write:team:tasks");
   const gate = resolveReadAuth(auth, false);
   if (!gate.ok) {

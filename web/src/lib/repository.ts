@@ -9,7 +9,11 @@ import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
 import { randomBytes, randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
-import { mapPrismaToRepositoryError, RepositoryError } from "@/lib/repository-errors";
+import {
+  assertV11LegacyWriteAllowed,
+  mapPrismaToRepositoryError,
+  RepositoryError,
+} from "@/lib/repository-errors";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
 import { generateSecureToken, hashPassword, verifyPassword } from "@/lib/auth-password";
 import { DEFAULT_API_KEY_SCOPES, normalizeApiKeyScopes } from "@/lib/api-key-scopes";
@@ -20,6 +24,7 @@ import {
 } from "@/lib/enterprise-profile-db";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { creatorFtsWhereClause, postFtsWhereClause, projectFtsWhereClause } from "@/lib/fts-sql";
+import { appendEntry, isLedgerWriteThroughEnabled } from "@/lib/repositories/ledger.repository";
 import {
   mockApiKeys,
 } from "@/lib/data/mock-api-keys";
@@ -180,11 +185,24 @@ import {
   listTeamsForUser as listTeamsForUserFromShared,
   listPendingJoinRequestsForOwner as listPendingJoinRequestsForOwnerFromShared,
 } from "@/lib/repositories/repository-shared";
+import { isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 
 const useMockData = isMockDataEnabled();
 type DemoRole = Extract<Role, "admin" | "user">;
 
 const mockWeeklySnapshots = new Map<string, WeeklyLeaderboardMaterializedSnapshot>();
+
+function assertLegacyTeamWriteAllowed() {
+  if (isV11BackendLockdownEnabled()) {
+    assertV11LegacyWriteAllowed("TEAMS_DEPRECATED");
+  }
+}
+
+function assertLegacyIntentWriteAllowed() {
+  if (isV11BackendLockdownEnabled()) {
+    assertV11LegacyWriteAllowed("INTENTS_DEPRECATED");
+  }
+}
 
 /** Monday 00:00:00.000 UTC for the ISO week containing `date`. */
 export function startOfUtcWeekContaining(date: Date): Date {
@@ -1245,6 +1263,7 @@ function toAgentActionAuditDto(row: {
   apiKeyId?: string | null;
   teamId?: string | null;
   taskId?: string | null;
+  ledgerEntryId?: string | null;
   action: string;
   outcome: AgentActionStatus;
   metadata?: unknown;
@@ -1257,6 +1276,7 @@ function toAgentActionAuditDto(row: {
     apiKeyId: row.apiKeyId ?? undefined,
     teamId: row.teamId ?? undefined,
     taskId: row.taskId ?? undefined,
+    ledgerEntryId: row.ledgerEntryId ?? undefined,
     action: row.action,
     outcome: row.outcome,
     metadata:
@@ -1274,6 +1294,7 @@ function toAgentConfirmationDto(row: {
   apiKeyId?: string | null;
   teamId?: string | null;
   taskId?: string | null;
+  ledgerEntryId?: string | null;
   targetType: string;
   targetId: string;
   action: string;
@@ -1297,6 +1318,7 @@ function toAgentConfirmationDto(row: {
     teamSlug: row.teamSlug ?? undefined,
     taskId: row.taskId ?? undefined,
     taskTitle: row.taskTitle ?? undefined,
+    ledgerEntryId: row.ledgerEntryId ?? undefined,
     targetType: row.targetType,
     targetId: row.targetId,
     action: row.action,
@@ -1367,6 +1389,62 @@ function buildAgentTaskSubtitle(params: {
     return `「${actionLabel}」已完成${scope}`;
   }
   return `「${actionLabel}」执行中${scope}`;
+}
+
+function readWorkspaceIdFromLedgerMetadata(metadata?: Record<string, unknown>) {
+  const workspaceId = metadata?.workspaceId;
+  return typeof workspaceId === "string" && workspaceId.trim() ? workspaceId.trim() : undefined;
+}
+
+async function resolveWorkspaceIdForLedgerWrite(params: {
+  userId: string;
+  teamId?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  const explicitWorkspaceId = readWorkspaceIdFromLedgerMetadata(params.metadata);
+  if (explicitWorkspaceId) {
+    return explicitWorkspaceId;
+  }
+  if (params.teamId) {
+    if (useMockData) {
+      return `team:${params.teamId}`;
+    }
+    const prisma = await getPrisma();
+    const workspace = await prisma.workspace.findFirst({
+      where: { teamId: params.teamId },
+      select: { id: true },
+    });
+    return workspace?.id;
+  }
+  return undefined;
+}
+
+async function appendAgentLedgerEntry(params: {
+  workspaceId?: string;
+  actorUserId: string;
+  actorType: "user" | "agent";
+  actorId: string;
+  actionKind: string;
+  targetType?: string;
+  targetId?: string;
+  payload: Record<string, unknown>;
+}) {
+  if (!params.workspaceId || !isLedgerWriteThroughEnabled()) {
+    return null;
+  }
+  return appendEntry({
+    workspaceId: params.workspaceId,
+    actorType: params.actorType,
+    actorId: params.actorId,
+    actionKind: params.actionKind,
+    targetType: params.targetType,
+    targetId: params.targetId,
+    payload: {
+      ...params.payload,
+      workspaceId: params.workspaceId,
+      actorUserId: params.actorUserId,
+    },
+  });
 }
 
 function toWorkAgentTaskDto(row: {
@@ -1447,23 +1525,49 @@ async function recordAgentActionAudit(params: {
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   const now = new Date().toISOString();
+  const workspaceId = await resolveWorkspaceIdForLedgerWrite({
+    userId: params.actorUserId,
+    teamId: params.teamId,
+    metadata: params.metadata,
+  });
   if (useMockData) {
-    mockAgentActionAudits.unshift({
+    const row: AgentActionAuditRow = {
       id: `agent_audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       actorUserId: params.actorUserId,
       agentBindingId: params.agentBindingId,
       apiKeyId: params.apiKeyId,
       teamId: params.teamId ?? undefined,
       taskId: params.taskId ?? undefined,
+      ledgerEntryId: undefined,
       action: params.action,
       outcome: params.outcome,
       metadata: params.metadata,
       createdAt: now,
+    };
+    mockAgentActionAudits.unshift(row);
+    const ledgerEntry = await appendAgentLedgerEntry({
+      workspaceId,
+      actorUserId: params.actorUserId,
+      actorType: "agent",
+      actorId: params.agentBindingId,
+      actionKind: `agent.action.${params.action}`,
+      targetType: params.taskId ? "team_task" : params.teamId ? "team" : undefined,
+      targetId: params.taskId ?? params.teamId ?? undefined,
+      payload: {
+        apiKeyId: params.apiKeyId ?? null,
+        teamId: params.teamId ?? null,
+        taskId: params.taskId ?? null,
+        outcome: params.outcome,
+        metadata: params.metadata ?? {},
+      },
     });
+    if (ledgerEntry) {
+      row.ledgerEntryId = ledgerEntry.id;
+    }
     return;
   }
   const prisma = await getPrisma();
-  await prisma.agentActionAudit.create({
+  const created = await prisma.agentActionAudit.create({
     data: {
       actorUserId: params.actorUserId,
       agentBindingId: params.agentBindingId,
@@ -1475,6 +1579,28 @@ async function recordAgentActionAudit(params: {
       metadata: (params.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
     },
   });
+  const ledgerEntry = await appendAgentLedgerEntry({
+    workspaceId,
+    actorUserId: params.actorUserId,
+    actorType: "agent",
+    actorId: params.agentBindingId,
+    actionKind: `agent.action.${params.action}`,
+    targetType: params.taskId ? "team_task" : params.teamId ? "team" : undefined,
+    targetId: params.taskId ?? params.teamId ?? undefined,
+    payload: {
+      apiKeyId: params.apiKeyId ?? null,
+      teamId: params.teamId ?? null,
+      taskId: params.taskId ?? null,
+      outcome: params.outcome,
+      metadata: params.metadata ?? {},
+    },
+  });
+  if (ledgerEntry) {
+    await prisma.agentActionAudit.update({
+      where: { id: created.id },
+      data: { ledgerEntry: { connect: { id: ledgerEntry.id } } },
+    });
+  }
 }
 
 async function createAgentConfirmationRequest(params: {
@@ -1494,14 +1620,20 @@ async function createAgentConfirmationRequest(params: {
 }): Promise<AgentConfirmationRequest> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 3);
+  const workspaceId = await resolveWorkspaceIdForLedgerWrite({
+    userId: params.requesterUserId,
+    teamId: params.teamId,
+    metadata: params.payload,
+  });
   if (useMockData) {
-    const row = toAgentConfirmationDto({
+    const row: AgentConfirmationRequest = toAgentConfirmationDto({
       id: `agent_confirm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       requesterUserId: params.requesterUserId,
       agentBindingId: params.agentBindingId,
       apiKeyId: params.apiKeyId,
       teamId: params.teamId ?? undefined,
       taskId: params.taskId ?? undefined,
+      ledgerEntryId: undefined,
       targetType: params.targetType,
       targetId: params.targetId,
       action: params.action,
@@ -1514,6 +1646,27 @@ async function createAgentConfirmationRequest(params: {
       taskTitle: params.taskTitle,
     });
     mockAgentConfirmationRequests.unshift(row);
+    const ledgerEntry = await appendAgentLedgerEntry({
+      workspaceId,
+      actorUserId: params.requesterUserId,
+      actorType: "agent",
+      actorId: params.agentBindingId,
+      actionKind: "agent.confirmation.requested",
+      targetType: params.targetType,
+      targetId: params.targetId,
+      payload: {
+        apiKeyId: params.apiKeyId ?? null,
+        teamId: params.teamId ?? null,
+        taskId: params.taskId ?? null,
+        action: params.action,
+        reason: params.reason ?? null,
+        payload: params.payload,
+        expiresAt: expiresAt.toISOString(),
+      },
+    });
+    if (ledgerEntry) {
+      row.ledgerEntryId = ledgerEntry.id;
+    }
     for (const userId of [...new Set(params.notifyUserIds ?? [])]) {
       if (!userId) continue;
       void notifyUser({
@@ -1553,6 +1706,30 @@ async function createAgentConfirmationRequest(params: {
       task: { select: { title: true } },
     },
   });
+  const ledgerEntry = await appendAgentLedgerEntry({
+    workspaceId,
+    actorUserId: params.requesterUserId,
+    actorType: "agent",
+    actorId: params.agentBindingId,
+    actionKind: "agent.confirmation.requested",
+    targetType: params.targetType,
+    targetId: params.targetId,
+    payload: {
+      apiKeyId: params.apiKeyId ?? null,
+      teamId: params.teamId ?? null,
+      taskId: params.taskId ?? null,
+      action: params.action,
+      reason: params.reason ?? null,
+      payload: params.payload,
+        expiresAt: (created.expiresAt ?? expiresAt).toISOString(),
+      },
+    });
+  if (ledgerEntry) {
+    await prisma.agentConfirmationRequest.update({
+      where: { id: created.id },
+      data: { ledgerEntry: { connect: { id: ledgerEntry.id } } },
+    });
+  }
   for (const userId of [...new Set(params.notifyUserIds ?? [])]) {
     if (!userId) continue;
     void notifyUser({
@@ -1571,6 +1748,7 @@ async function createAgentConfirmationRequest(params: {
   }
   return toAgentConfirmationDto({
     ...created,
+    ledgerEntryId: ledgerEntry?.id,
     decidedByName: created.decider?.name,
     teamSlug: created.team?.slug,
     taskTitle: created.task?.title,
@@ -2599,6 +2777,7 @@ export async function createTeamDiscussion(params: {
   title: string;
   body: string;
 }): Promise<TeamDiscussion> {
+  assertLegacyTeamWriteAllowed();
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
   const title = params.title.trim().slice(0, 120);
   const body = params.body.trim().slice(0, 4000);
@@ -2700,6 +2879,7 @@ export async function createTeamTaskComment(params: {
   actorUserId: string;
   body: string;
 }): Promise<TeamTaskComment> {
+  assertLegacyTeamWriteAllowed();
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
   const body = params.body.trim().slice(0, 2000);
   if (!body) throw new Error("INVALID_TEAM_TASK_COMMENT_BODY");
@@ -3008,6 +3188,7 @@ export async function agentCompleteTeamTask(params: {
   agentBindingId: string;
   apiKeyId?: string;
 }): Promise<TeamTask> {
+  assertLegacyTeamWriteAllowed();
   await assertActiveAgentBindingForUser({ userId: params.actorUserId, agentBindingId: params.agentBindingId });
   const { teamId } = await assertTeamTaskMutateAllowed({
     teamSlug: params.teamSlug,
@@ -3190,6 +3371,7 @@ export async function requestAgentTaskReview(params: {
   approved: boolean;
   reviewNote?: string;
 }): Promise<AgentConfirmationRequest> {
+  assertLegacyTeamWriteAllowed();
   await assertActiveAgentBindingForUser({ userId: params.actorUserId, agentBindingId: params.agentBindingId });
   const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
   if (!canReviewTasks(role)) {
@@ -3304,6 +3486,7 @@ export async function requestAgentTaskDelete(params: {
   apiKeyId?: string;
   reason?: string;
 }): Promise<AgentConfirmationRequest> {
+  assertLegacyTeamWriteAllowed();
   await assertActiveAgentBindingForUser({ userId: params.actorUserId, agentBindingId: params.agentBindingId });
   const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
   if (!(role === "owner" || role === "admin")) {
@@ -4101,6 +4284,7 @@ export async function createTeamTask(params: {
   sortOrder?: number;
   milestoneId?: string | null;
 }): Promise<TeamTask> {
+  assertLegacyTeamWriteAllowed();
   const { teamId } = await assertTeamMemberBySlug(params.teamSlug, params.actorUserId);
   const teamSlug = params.teamSlug;
   const title = params.title.trim();
@@ -4274,6 +4458,7 @@ export async function reorderTeamTask(params: {
   actorUserId: string;
   direction: "up" | "down";
 }): Promise<TeamTask[]> {
+  assertLegacyTeamWriteAllowed();
   const { teamId } = await assertTeamTaskMutateAllowed({
     teamSlug: params.teamSlug,
     actorUserId: params.actorUserId,
@@ -4375,6 +4560,7 @@ export async function updateTeamTask(params: {
   sortOrder?: number;
   milestoneId?: string | null;
 }): Promise<TeamTask> {
+  assertLegacyTeamWriteAllowed();
   const { teamId } = await assertTeamTaskMutateAllowed({
     teamSlug: params.teamSlug,
     actorUserId: params.actorUserId,
@@ -4621,6 +4807,7 @@ export async function batchUpdateTeamTasks(params: {
   taskIds: string[];
   status: TeamTaskStatus;
 }): Promise<TeamTask[]> {
+  assertLegacyTeamWriteAllowed();
   const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
   if (!canReviewTasks(role)) {
     throw new Error("FORBIDDEN_BATCH_TASK_UPDATE");
@@ -4708,6 +4895,7 @@ export async function deleteTeamTask(params: {
   taskId: string;
   actorUserId: string;
 }): Promise<void> {
+  assertLegacyTeamWriteAllowed();
   const { teamId } = await assertTeamTaskMutateAllowed({
     teamSlug: params.teamSlug,
     actorUserId: params.actorUserId,
@@ -4871,6 +5059,7 @@ export async function createTeamMilestone(params: {
   targetDate: string;
   sortOrder?: number;
 }): Promise<TeamMilestone> {
+  assertLegacyTeamWriteAllowed();
   const { teamId } = await assertTeamOwnerBySlug(params.teamSlug, params.actorUserId);
   const title = params.title.trim();
   if (!title) {
@@ -4981,6 +5170,7 @@ export async function updateTeamMilestone(params: {
   visibility?: "team_only" | "public";
   progress?: number;
 }): Promise<TeamMilestone> {
+  assertLegacyTeamWriteAllowed();
   const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
   // Owners/admins can edit all fields; members/reviewers can only update progress.
   const wantsStructural =
@@ -5136,6 +5326,7 @@ export async function deleteTeamMilestone(params: {
   milestoneId: string;
   actorUserId: string;
 }): Promise<void> {
+  assertLegacyTeamWriteAllowed();
   const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
   if (!canManageTeamMembership(role)) {
     throw new Error("FORBIDDEN_NOT_OWNER");
@@ -6755,6 +6946,7 @@ export async function submitCollaborationIntent(input: {
   whyYou: string;
   howCollab: string;
 }): Promise<CollaborationIntent> {
+  assertLegacyIntentWriteAllowed();
   const pitch = input.pitch.trim();
   const whyYou = input.whyYou.trim();
   const howCollab = input.howCollab.trim();
@@ -6822,6 +7014,7 @@ export async function createCollaborationIntent(input: {
   whyYou: string;
   howCollab: string;
 }): Promise<CollaborationIntent> {
+  assertLegacyIntentWriteAllowed();
   const pitch = input.pitch.trim();
   const whyYou = input.whyYou.trim();
   const howCollab = input.howCollab.trim();
@@ -8243,6 +8436,7 @@ export async function updateTeamProfile(params: {
   name?: string;
   mission?: string | null;
 }): Promise<TeamDetail> {
+  assertLegacyTeamWriteAllowed();
   return updateTeamProfileFromDomain(params);
 }
 
@@ -8252,6 +8446,7 @@ export async function createTeam(input: {
   slug?: string;
   mission?: string;
 }): Promise<TeamDetail> {
+  assertLegacyTeamWriteAllowed();
   return createTeamFromDomain(input);
 }
 
@@ -8266,6 +8461,7 @@ export async function updateTeamLinks(params: {
   githubOrgUrl?: string | null;
   githubRepoUrl?: string | null;
 }): Promise<TeamDetail> {
+  assertLegacyTeamWriteAllowed();
   if (useMockData) {
     const team = mockTeams.find((t) => t.slug === params.teamSlug);
     if (!team) throw new Error("TEAM_NOT_FOUND");
@@ -8321,6 +8517,7 @@ export async function createTeamChatMessage(input: {
   authorId: string;
   body: string;
 }): Promise<TeamChatMessage> {
+  assertLegacyTeamWriteAllowed();
   const raw = input.body.trim();
   if (!raw || Buffer.byteLength(raw, "utf8") > 2000) throw new Error("INVALID_BODY");
   assertUrlCountAtMost(raw, 3, "chat");
@@ -8482,6 +8679,7 @@ async function transitionCollaborationIntentByOwner(params: {
   /** If approve + teamSlug provided, auto-invite applicant to this team */
   inviteToTeamSlug?: string;
 }): Promise<CollaborationIntent> {
+  assertLegacyIntentWriteAllowed();
   const nextStatus = mapCollaborationIntentActionToStatus(params.action);
   const note = normalizeModerationNote(params.note);
   const reportReason = note ?? "Blocked by project owner from the collaboration inbox.";
@@ -8726,6 +8924,7 @@ export async function requestTeamJoin(params: {
   userId: string;
   message?: string;
 }): Promise<TeamJoinRequestRow> {
+  assertLegacyTeamWriteAllowed();
   const message = params.message?.trim().slice(0, 500) ?? "";
 
   if (useMockData) {
@@ -8948,6 +9147,7 @@ export async function reviewTeamJoinRequest(params: {
   ownerUserId?: string;
   action: "approve" | "reject";
 }): Promise<TeamJoinRequestRow> {
+  assertLegacyTeamWriteAllowed();
   const reviewerUserId = params.reviewerUserId ?? params.ownerUserId;
   if (!reviewerUserId) {
     throw new Error("FORBIDDEN_NOT_OWNER");
@@ -9137,6 +9337,7 @@ export async function addTeamMemberByEmail(params: {
   email: string;
   role?: TeamRole;
 }): Promise<TeamMember> {
+  assertLegacyTeamWriteAllowed();
   const email = params.email.trim().toLowerCase();
   if (!email) {
     throw new Error("INVALID_EMAIL");
@@ -9242,6 +9443,7 @@ export async function removeTeamMember(params: {
   actorUserId: string;
   memberUserId: string;
 }): Promise<void> {
+  assertLegacyTeamWriteAllowed();
   if (useMockData) {
     const team = mockTeams.find((t) => t.slug === params.teamSlug);
     if (!team) {
@@ -9312,6 +9514,7 @@ export async function updateTeamMemberRole(params: {
   memberUserId: string;
   role: TeamRole;
 }): Promise<TeamMember> {
+  assertLegacyTeamWriteAllowed();
   if (params.role === "owner") {
     throw new Error("INVALID_TEAM_ROLE");
   }
@@ -9783,6 +9986,7 @@ export async function addTeamAgentMembership(params: {
   agentBindingId: string;
   role?: TeamAgentRole;
 }): Promise<TeamAgentMembershipSummary> {
+  assertLegacyTeamWriteAllowed();
   const role: TeamAgentRole = params.role ?? "reader";
   if (!isTeamAgentRole(role)) throw new Error("INVALID_TEAM_AGENT_ROLE");
 
@@ -9930,6 +10134,7 @@ export async function updateTeamAgentMembership(params: {
   role?: TeamAgentRole;
   active?: boolean;
 }): Promise<TeamAgentMembershipSummary> {
+  assertLegacyTeamWriteAllowed();
   if (params.role !== undefined && !isTeamAgentRole(params.role)) {
     throw new Error("INVALID_TEAM_AGENT_ROLE");
   }
@@ -10050,6 +10255,7 @@ export async function removeTeamAgentMembership(params: {
   actorUserId: string;
   membershipId: string;
 }): Promise<void> {
+  assertLegacyTeamWriteAllowed();
   const { teamId, role: actorRole } = await assertTeamMemberRoleBySlug(
     params.teamSlug,
     params.actorUserId

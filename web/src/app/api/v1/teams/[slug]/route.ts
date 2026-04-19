@@ -9,6 +9,11 @@ import { readJsonObjectBody } from "@/lib/api-json-body";
 import { apiErrorFromZod } from "@/lib/zod-api-error";
 import { apiErrorFromRepositoryMessage } from "@/lib/route-repository-message";
 import { getRequestLogger, serializeError } from "@/lib/logger";
+import {
+  deprecatedResponse,
+  isV11BackendLockdownEnabled,
+  withDeprecatedHeaders,
+} from "@/lib/v11-deprecation";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (!team) {
       return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
     }
-    return apiSuccess(team);
+    return withDeprecatedHeaders(apiSuccess(team));
   } catch (error) {
     const repositoryErrorResponse = apiErrorFromRepositoryCatch(error);
     if (repositoryErrorResponse) return repositoryErrorResponse;
@@ -54,6 +59,9 @@ const patchTeamSchema = z
   .refine((o) => Object.keys(o).length > 0, { message: "Provide at least one field to update" });
 
 export async function PATCH(request: NextRequest, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const auth = await authenticateRequest(request);
   if (auth.kind === "rate_limited") return rateLimitedResponse(auth.retryAfterSeconds);
   if (auth.kind !== "ok") return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

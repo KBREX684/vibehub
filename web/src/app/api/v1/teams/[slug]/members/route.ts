@@ -3,6 +3,7 @@ import { getSessionUserFromCookie } from "@/lib/auth";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { addTeamMemberByEmail } from "@/lib/repository";
+import { deprecatedResponse, isV11BackendLockdownEnabled } from "@/lib/v11-deprecation";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -14,6 +15,9 @@ interface Params {
 }
 
 export async function POST(request: Request, { params }: Params) {
+  if (isV11BackendLockdownEnabled()) {
+    return deprecatedResponse("TEAMS_DEPRECATED");
+  }
   const session = await getSessionUserFromCookie();
   if (!session) {
     return apiError({ code: "UNAUTHORIZED", message: "Login required" }, 401);

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { apiError } from "@/lib/response";
 
 vi.mock("@/lib/admin-auth", () => ({
   requireAdminSession: vi.fn(),
@@ -21,12 +22,7 @@ describe("admin collaboration review route", () => {
   it("rejects non-admin sessions before touching the repository", async () => {
     vi.mocked(requireAdminSession).mockResolvedValue({
       ok: false,
-      response: new Response(
-        JSON.stringify({
-          error: { code: "FORBIDDEN", message: "Admin role required" },
-        }),
-        { status: 403, headers: { "content-type": "application/json" } }
-      ),
+      response: apiError({ code: "FORBIDDEN", message: "Admin role required" }, 403),
     });
 
     const response = await reviewAsAdmin(
