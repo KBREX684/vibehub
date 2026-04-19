@@ -14,7 +14,8 @@ interface Props {
 
 export function WorkViewTabs({ basePath, current, tabs, paramName = "view" }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="overflow-x-auto border-b border-[var(--color-border)] hide-scrollbar">
+      <div className="flex min-w-max items-center gap-5">
       {tabs.map((tab) => {
         const href = tab.value === "default" ? basePath : `${basePath}?${paramName}=${encodeURIComponent(tab.value)}`;
         const active = current === tab.value || (current === "" && tab.value === "default");
@@ -24,16 +25,17 @@ export function WorkViewTabs({ basePath, current, tabs, paramName = "view" }: Pr
             href={href}
             scroll={false}
             className={[
-              "inline-flex min-w-[7rem] items-center justify-center rounded-[var(--radius-pill)] border px-3.5 py-2 text-xs transition-colors",
+              "relative inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent py-3 text-sm transition-colors",
               active
-                ? "border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]"
-                : "border-[var(--color-border)] bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]",
+                ? "border-[var(--color-primary)] text-[var(--color-text-primary)]"
+                : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]",
             ].join(" ")}
           >
             {tab.label}
           </Link>
         );
       })}
+      </div>
     </div>
   );
 }

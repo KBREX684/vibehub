@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Bot, FolderKanban, Settings2, Users } from "lucide-react";
+import { Bot, Camera, Settings2, Upload, UserPlus, Users } from "lucide-react";
 import { getSessionUserFromCookie } from "@/lib/auth";
 import { getTeamBySlug, listTeamMilestones } from "@/lib/repository";
 import {
@@ -10,14 +10,16 @@ import {
   listWorkspaceProjects,
   listWorkspaceSnapshots,
 } from "@/lib/repositories/workspace.repository";
+import { ComplianceStrip } from "@/components/compliance-strip";
 import { TeamActivityTimeline } from "@/components/team-activity-timeline";
 import { TeamDiscussionsPanel } from "@/components/team-discussions-panel";
 import { TeamMilestonesPanel } from "@/components/team-milestones-panel";
 import { TeamTasksPanel } from "@/components/team-tasks-panel";
+import { WorkspaceTopBar } from "@/components/workspace-top-bar";
 import { WorkspaceArtifactsPanel } from "@/components/workspace-artifacts-panel";
 import { WorkspaceDeliverablesPanel } from "@/components/workspace-deliverables-panel";
 import { WorkspaceSnapshotsPanel } from "@/components/workspace-snapshots-panel";
-import { Avatar, PageHeader, SectionCard, TagPill } from "@/components/ui";
+import { Avatar, SectionCard, TagPill } from "@/components/ui";
 import { WorkViewTabs } from "@/components/work-view-tabs";
 
 interface Props {
@@ -52,48 +54,43 @@ export default async function WorkTeamPage({ params, searchParams }: Props) {
   if (!team) notFound();
 
   const workspace = await ensureTeamWorkspace(team.id);
-  const [milestones, fileState, snapshotProjects, snapshots, deliverables] = await Promise.all([
+  const [milestones, fileState, workspaceProjects, snapshots, deliverables] = await Promise.all([
     listTeamMilestones({ teamSlug: slug, viewerUserId: session.userId }),
     view === "files" ? listWorkspaceArtifacts({ userId: session.userId, workspaceId: workspace.id }) : Promise.resolve(null),
-    view === "snapshots" || view === "deliverables"
-      ? listWorkspaceProjects({ userId: session.userId, workspaceId: workspace.id })
-      : Promise.resolve([]),
-    view === "snapshots" || view === "deliverables"
-      ? listWorkspaceSnapshots({ userId: session.userId, workspaceId: workspace.id })
-      : Promise.resolve([]),
-    view === "deliverables"
-      ? listWorkspaceDeliverables({ userId: session.userId, workspaceId: workspace.id })
-      : Promise.resolve({ items: [] }),
+    listWorkspaceProjects({ userId: session.userId, workspaceId: workspace.id }),
+    listWorkspaceSnapshots({ userId: session.userId, workspaceId: workspace.id }),
+    listWorkspaceDeliverables({ userId: session.userId, workspaceId: workspace.id }),
   ]);
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon={FolderKanban}
-        eyebrow="团队工作区"
+      <WorkspaceTopBar
+        iconLetter={team.name.charAt(0)}
         title={team.name}
         subtitle={team.mission ?? "面向结构化协作、Agent 受控执行与交付闭环的团队共享工作区。"}
-        actions={
-          <>
-            <Link href={`/work/team/${encodeURIComponent(team.slug)}?view=agent`} className="btn btn-secondary text-sm px-4 py-2 inline-flex items-center gap-1.5">
-              <Bot className="w-4 h-4" />
-              智能代理面板
-            </Link>
-            <Link href={`/work/team/${encodeURIComponent(team.slug)}?view=settings`} className="btn btn-ghost text-sm px-4 py-2 inline-flex items-center gap-1.5">
-              <Settings2 className="w-4 h-4" />
-              团队设置
-            </Link>
-          </>
-        }
+        projectLabel={workspaceProjects[0]?.title}
+        stats={[
+          { label: "成员", value: String(team.memberCount) },
+          { label: "项目", value: String(team.projectCount) },
+          { label: "快照", value: String(snapshots.length) },
+          { label: "交付", value: String(deliverables.items.length) },
+        ]}
+        actions={[
+          { id: "invite", label: "邀请成员", icon: UserPlus, variant: "secondary" },
+          { id: "upload", label: "上传文件", icon: Upload, variant: "secondary" },
+          { id: "snapshot", label: "创建快照", icon: Camera, href: `/work/team/${encodeURIComponent(team.slug)}?view=snapshots`, variant: "secondary" },
+          { id: "agent", label: "Agent 面板", icon: Bot, href: `/work/team/${encodeURIComponent(team.slug)}?view=agent`, variant: "primary" },
+        ]}
       />
 
-      <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-          <TagPill mono size="sm" accent="default">团队工作区</TagPill>
-          <TagPill mono size="sm" accent="default">{team.memberCount} 名成员</TagPill>
-          <TagPill mono size="sm" accent="default">{team.projectCount} 个项目</TagPill>
-        </div>
-      </div>
+      <ComplianceStrip
+        items={[
+          { label: "数据区域", value: "中国大陆" },
+          { label: "跨境", value: "关闭" },
+          { label: "模型备案", value: "已登记" },
+          { label: "审计留存", value: "12 个月" },
+        ]}
+      />
 
       <WorkViewTabs basePath={`/work/team/${encodeURIComponent(team.slug)}`} current={view} tabs={TABS} />
 
@@ -114,7 +111,7 @@ export default async function WorkTeamPage({ params, searchParams }: Props) {
         <WorkspaceSnapshotsPanel
           workspaceId={workspace.id}
           workspaceLabel={team.name}
-          projects={snapshotProjects}
+          projects={workspaceProjects}
           snapshots={snapshots}
           canRollback={team.viewerRole === "owner" || team.viewerRole === "admin"}
           emptyTitle="团队还没有快照"

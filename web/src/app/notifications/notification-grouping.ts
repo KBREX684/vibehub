@@ -54,8 +54,8 @@ export function groupNotificationsForDisplay(items: InAppNotification[]): Notifi
       metadata: latest.metadata,
       createdAt: latest.createdAt,
       readAt,
-      title: count > 1 ? `${count} people liked your post` : latest.title,
-      body: count > 1 ? `Your post received ${count} new likes.` : latest.body,
+      title: count > 1 ? `${count} 人为你的帖子点了赞` : latest.title,
+      body: count > 1 ? `你的帖子新增了 ${count} 个点赞。` : latest.body,
     });
   }
 
