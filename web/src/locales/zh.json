@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "VibeHub",
-    "description": "面向开发者的项目、团队与 API 原生协作社区。"
+    "description": "AI 留痕本 — 你和 AI 一起做的工作，有据可查。"
   },
   "search": {
     "placeholder": "搜索项目、讨论、创作者...",
@@ -1619,5 +1619,58 @@
   "admin.daily_featured.pick": "选中",
   "admin.daily_featured.queue": "队列",
   "admin.daily_featured.priority": "优先级",
-  "admin.daily_featured.risk": "风险"
+  "admin.daily_featured.risk": "风险",
+
+  "nav.home": "首页",
+  "nav.studio": "Studio",
+  "nav.ledger": "Ledger",
+  "nav.card": "Card",
+  "nav.quick.new_work": "新建工作记录",
+
+  "studio.coming_soon_title": "Studio 即将上线",
+  "studio.coming_soon_desc": "P3 完成后启用。你的 AI 工作站，自动留痕、可校验、有据可查。",
+
+  "pricing.header.title": "定价",
+  "pricing.header.description": "简单两档。从免费开始，按需升级 Pro。",
+  "pricing.pro_description_v11": "无限 Ledger · 完整 AIGC 标识 · 至信链锚定 · 月度合规报告 · Trust Card 高级版",
+  "pricing.free_description_v11": "1 GB Workspace · 100 ledger/月 · 基础 AIGC 标识 · 公开 Trust Card · vibehub-verify CLI",
+  "pricing.yearly_price": "¥{price}/年",
+  "pricing.compare.workspace_storage": "Workspace 存储",
+  "pricing.compare.ledger_monthly": "Ledger 条数/月",
+  "pricing.compare.aigc_stamp": "AIGC 合规标识",
+  "pricing.compare.trust_card": "Trust Card",
+  "pricing.compare.ledger_anchor": "司法链锚定（至信链/保全网）",
+  "pricing.compare.compliance_report": "月度合规报告（GB 45438-2025）",
+  "pricing.compare.verify_cli": "vibehub-verify CLI 校验",
+  "pricing.compare.api_keys": "API 密钥",
+
+  "pricing.faq.no_team_q": "为什么没有团队套餐？",
+  "pricing.faq.no_team_a": "v11.0 专注独立开发者（OPC）。团队功能未来可能作为 v12 单线扩展，但不会偏离 Ledger 主线。",
+  "pricing.faq.verify_cli_q": "vibehub-verify 是什么？",
+  "pricing.faq.verify_cli_a": "一个独立 npm 包，可在本地命令行校验你的 Ledger 是否被篡改。不依赖 VibeHub 服务器。",
+  "pricing.faq.data_ownership_q": "我的数据所有权？",
+  "pricing.faq.data_ownership_a": "你的所有 Ledger / Artifact / Snapshot 都可一键导出。数据永远属于你。",
+  "pricing.faq.aigc_required_q": "为什么需要 AIGC 标识？",
+  "pricing.faq.aigc_required_a": "根据 GB 45438-2025，自 2025-09-01 起所有 AI 生成内容必须加合规标识，违规罚款上限 1000 万元。",
+
+  "studio.view.tasks": "任务",
+  "studio.view.activity": "活动",
+  "studio.view.files": "文件",
+  "studio.view.snapshots": "快照",
+  "studio.view.agents": "Agent",
+  "studio.view.works": "作品",
+  "studio.workspace_name": "我的工作站",
+  "studio.new": "新建",
+
+  "ledger.page_title": "Ledger",
+  "ledger.page_subtitle": "AI 操作公证账本",
+  "ledger.export_button": "导出",
+  "ledger.export_title": "导出 Ledger",
+  "ledger.export_mock_msg": "Mock 模式下不下载文件。导出参数已记录。",
+  "ledger.kind.workspace.artifact.upload": "上传文件",
+  "ledger.kind.snapshot.create": "创建快照",
+  "ledger.kind.deliverable.approve": "确认交付",
+  "ledger.kind.agent.task.complete": "Agent 完成任务",
+  "ledger.kind.aigc.stamp.apply": "添加 AIGC 标识",
+  "ledger.kind.ledger.anchor.apply": "锚定到司法链"
 }

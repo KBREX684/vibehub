@@ -33,6 +33,7 @@ describe("groupNotificationsForDisplay", () => {
     const rows = groupNotificationsForDisplay(items);
     const likeRow = rows.find((r) => r.kind === "post_liked");
     expect(likeRow?.ids).toEqual(["n2", "n1"]);
-    expect(likeRow?.title).toContain("2 people");
+    // v11 是 China-only zh locale，分组标题为中文
+    expect(likeRow?.title).toContain("2 人");
   });
 });

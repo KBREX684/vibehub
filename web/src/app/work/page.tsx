@@ -1,5 +1,5 @@
-import { WorkRootRedirect } from "@/components/work-root-redirect";
+import { redirect } from "next/navigation";
 
-export default function WorkRootPage() {
-  return <WorkRootRedirect />;
+export default function WorkPage() {
+  redirect("/studio");
 }

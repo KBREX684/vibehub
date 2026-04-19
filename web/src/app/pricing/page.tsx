@@ -6,11 +6,10 @@ import { getServerTranslator } from "@/lib/i18n";
 export default async function PricingPage() {
   const { t } = await getServerTranslator();
   const faqs = [
-    "alipay",
-    "plans",
-    "renewal",
-    "mcp",
-    "enterprise",
+    "no_team",
+    "verify_cli",
+    "data_ownership",
+    "aigc_required",
   ] as const;
 
   return (

@@ -1,11 +1,12 @@
 /**
  * Subscription tier definitions, limits, and gate helpers.
  *
- * v8.0 strategy: only Free + Pro (¥29/month) for the current GA path.
+ * v11.0 strategy: Free + Pro (¥29/month or ¥288/year).
+ * Focus: AI 操作公证账本 (Ledger). No team/enterprise tiers.
  *
- * Core principle: Free users fully experience the community (browse, post,
- * comment, like, join teams). Pro unlocks "more space", "more exposure",
- * and "developer tooling" — it never locks basic social features.
+ * Free users get 1 Personal Workspace, basic AIGC stamping, and a public Trust Card.
+ * Pro unlocks unlimited Ledger, full AIGC stamping (Tencent/Aliyun), legal chain anchoring,
+ * monthly compliance reports, and advanced Trust Card.
  */
 
 export type SubscriptionTier = "free" | "pro";
@@ -19,69 +20,48 @@ export interface SubscriptionEntitlementLike {
 // ─── Tier limits ─────────────────────────────────────────────────────────────
 
 export interface TierLimits {
-  maxTeams: number;
-  maxTeamMembers: number;
-  maxProjects: number;
-  maxScreenshots: number;
-  workspaceStorageMb: number;
-  maxWorkspaceFileBytes: number;
-  maxSnapshots: number;
-  maxAgentsPerTeam: number;
-  apiRatePerMinute: number;
+  maxStorageGb: number;
+  maxLedgerPerMonth: number;
   maxApiKeys: number;
-  canFeatureProject: boolean;
-  canPublishMilestone: boolean;
-  mcpToolsUnlocked: boolean;
-  proBadge: boolean;
-  priorityCollabMatch: boolean;
-  activityLogExport: boolean;
+  apiRatePerMinute: number;
+  aigcStampProvider: "local" | "full";
+  ledgerAnchorChain: false | ("zhixin" | "baoquan")[];
+  complianceReportExport: boolean;
+  trustCardAdvanced: boolean;
+  vibehubVerifyCli: boolean;
 }
 
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   free: {
-    maxTeams: 1,
-    maxTeamMembers: 5,
-    maxProjects: 5,
-    maxScreenshots: 3,
-    workspaceStorageMb: 256,
-    maxWorkspaceFileBytes: 25 * 1024 * 1024,
-    maxSnapshots: 20,
-    maxAgentsPerTeam: 3,
-    apiRatePerMinute: 60,
+    maxStorageGb: 1,
+    maxLedgerPerMonth: 100,
     maxApiKeys: 2,
-    canFeatureProject: false,
-    canPublishMilestone: false,
-    mcpToolsUnlocked: false,
-    proBadge: false,
-    priorityCollabMatch: false,
-    activityLogExport: false,
+    apiRatePerMinute: 60,
+    aigcStampProvider: "local",
+    ledgerAnchorChain: false,
+    complianceReportExport: false,
+    trustCardAdvanced: false,
+    vibehubVerifyCli: true,
   },
   pro: {
-    maxTeams: 5,
-    maxTeamMembers: 20,
-    maxProjects: Infinity,
-    maxScreenshots: 10,
-    workspaceStorageMb: 5 * 1024,
-    maxWorkspaceFileBytes: 250 * 1024 * 1024,
-    maxSnapshots: 200,
-    maxAgentsPerTeam: 20,
-    apiRatePerMinute: 600,
+    maxStorageGb: 10,
+    maxLedgerPerMonth: Infinity,
     maxApiKeys: 10,
-    canFeatureProject: true,
-    canPublishMilestone: true,
-    mcpToolsUnlocked: true,
-    proBadge: true,
-    priorityCollabMatch: true,
-    activityLogExport: true,
+    apiRatePerMinute: 600,
+    aigcStampProvider: "full",
+    ledgerAnchorChain: ["zhixin", "baoquan"],
+    complianceReportExport: true,
+    trustCardAdvanced: true,
+    vibehubVerifyCli: true,
   },
 };
 
 // ─── Pricing (display only) ───────────────────────────────────────────────────
 
 export const TIER_PRICING = {
-  free: { label: "免费版", priceMonthly: 0, currency: "CNY" },
-  pro: { label: "专业版", priceMonthly: 29, currency: "CNY" },
-} satisfies Record<SubscriptionTier, { label: string; priceMonthly: number; currency: string }>;
+  free: { label: "Free", priceMonthly: 0, priceYearly: 0, currency: "CNY" },
+  pro: { label: "Pro", priceMonthly: 29, priceYearly: 288, currency: "CNY" },
+} satisfies Record<SubscriptionTier, { label: string; priceMonthly: number; priceYearly: number; currency: string }>;
 
 export function resolveEntitledTier(subscription: SubscriptionEntitlementLike): SubscriptionTier {
   if (subscription.tier === "free") return "free";
@@ -111,37 +91,24 @@ export interface GateResult {
 }
 
 export type UpgradeReason =
-  | "team_limit"
-  | "team_member_limit"
-  | "project_limit"
-  | "screenshot_limit"
-  | "feature_project"
-  | "publish_milestone"
-  | "mcp_tools"
-  | "api_key_limit";
+  | "ledger_anchor"
+  | "aigc_stamp_full"
+  | "trust_card_advanced"
+  | "compliance_report"
+  | "storage_limit"
+  | "api_key_limit"
+  | "ledger_monthly_limit";
 
-export function checkTeamLimit(tier: SubscriptionTier, currentTeamCount: number): GateResult {
-  const limit = TIER_LIMITS[tier].maxTeams;
-  if (currentTeamCount < limit) return { allowed: true };
-  return { allowed: false, upgradeReason: "team_limit" };
+export function checkStorageLimit(tier: SubscriptionTier, usedGb: number): GateResult {
+  const limit = TIER_LIMITS[tier].maxStorageGb;
+  if (usedGb < limit) return { allowed: true };
+  return { allowed: false, upgradeReason: "storage_limit" };
 }
 
-export function checkProjectLimit(tier: SubscriptionTier, currentProjectCount: number): GateResult {
-  const limit = TIER_LIMITS[tier].maxProjects;
-  if (currentProjectCount < limit) return { allowed: true };
-  return { allowed: false, upgradeReason: "project_limit" };
-}
-
-export function checkScreenshotLimit(tier: SubscriptionTier, screenshotCount: number): GateResult {
-  const limit = TIER_LIMITS[tier].maxScreenshots;
-  if (screenshotCount <= limit) return { allowed: true };
-  return { allowed: false, upgradeReason: "screenshot_limit" };
-}
-
-export function checkTeamMemberLimit(tier: SubscriptionTier, currentMemberCount: number): GateResult {
-  const limit = TIER_LIMITS[tier].maxTeamMembers;
-  if (currentMemberCount < limit) return { allowed: true };
-  return { allowed: false, upgradeReason: "team_member_limit" };
+export function checkLedgerMonthlyLimit(tier: SubscriptionTier, currentCount: number): GateResult {
+  const limit = TIER_LIMITS[tier].maxLedgerPerMonth;
+  if (currentCount < limit) return { allowed: true };
+  return { allowed: false, upgradeReason: "ledger_monthly_limit" };
 }
 
 export function checkApiKeyLimit(tier: SubscriptionTier, currentKeyCount: number): GateResult {
@@ -156,39 +123,57 @@ export function getApiRateUsagePercent(tier: SubscriptionTier, usedThisMinute: n
   return Math.min(100, Math.round((usedThisMinute / max) * 100));
 }
 
+// ─── Deprecated gate helpers (kept for backend compat; always allowed in v11) ──
+
+/** @deprecated v11 removes teams. Always returns allowed. */
+export function checkTeamLimit(_tier: SubscriptionTier, _currentTeamCount: number): GateResult {
+  return { allowed: true };
+}
+
+/** @deprecated v11 removes team members. Always returns allowed. */
+export function checkTeamMemberLimit(_tier: SubscriptionTier, _currentMemberCount: number): GateResult {
+  return { allowed: true };
+}
+
+/** @deprecated v11 removes project limits. Always returns allowed. */
+export function checkProjectLimit(_tier: SubscriptionTier, _currentProjectCount: number): GateResult {
+  return { allowed: true };
+}
+
+/** @deprecated v11 removes screenshot limits. Always returns allowed. */
+export function checkScreenshotLimit(_tier: SubscriptionTier, _screenshotCount: number): GateResult {
+  return { allowed: true };
+}
+
 // ─── Upgrade prompt messages ──────────────────────────────────────────────────
 
 export const UPGRADE_MESSAGES: Record<UpgradeReason, { title: string; body: string }> = {
-  team_limit: {
-    title: "升级后可创建更多团队",
-    body: "免费版最多创建 1 个团队。升级到专业版后最多可创建 5 个团队。",
+  ledger_anchor: {
+    title: "锚定到司法链是 Pro 功能",
+    body: "升级 Pro 后，每月可锚定无限条 Ledger 到至信链/保全网，为你的 AI 工作背书。",
   },
-  team_member_limit: {
-    title: "团队成员数量已达上限",
-    body: "免费版每个团队最多支持 5 名成员。升级到专业版后最多支持 20 名成员。",
+  aigc_stamp_full: {
+    title: "完整 AIGC 标识需要 Pro",
+    body: "Free 用户使用本地模式标识。升级 Pro 解锁腾讯云/阿里云 AIGC 标识 API。",
   },
-  project_limit: {
-    title: "升级后可创建无限项目",
-    body: "免费版最多支持 5 个项目。升级到专业版后可使用无限项目。",
+  trust_card_advanced: {
+    title: "高级 Trust Card 需要 Pro",
+    body: "升级 Pro 解锁自定义域名、历史合作脱敏展示等高级 Trust Card 功能。",
   },
-  screenshot_limit: {
-    title: "升级后可上传更多截图",
-    body: "免费版每个项目最多上传 3 张截图。升级到专业版后最多可上传 10 张。",
+  compliance_report: {
+    title: "月度合规报告需要 Pro",
+    body: "升级 Pro 后可导出 GB 45438-2025 格式月度合规报告 PDF。",
   },
-  feature_project: {
-    title: "升级后可申请今日精选",
-    body: "专业版用户可以申请今日精选项目位，获得更高曝光。",
-  },
-  publish_milestone: {
-    title: "升级后可公开里程碑",
-    body: "专业版用户可以在项目页公开里程碑，吸引协作者加入。",
-  },
-  mcp_tools: {
-    title: "升级后可解锁全部 MCP 工具",
-    body: "免费版包含 5 个基础 MCP 工具。升级到专业版后可使用全部 9 个工具。",
+  storage_limit: {
+    title: "存储空间不足",
+    body: "Free 用户 1 GB 存储。升级 Pro 获得 10 GB。",
   },
   api_key_limit: {
-    title: "升级后可创建更多 API 密钥",
-    body: "免费版最多支持 2 个 API 密钥。升级到专业版后最多可创建 10 个。",
+    title: "API 密钥数量已达上限",
+    body: "Free 用户 2 个 API 密钥。升级 Pro 获得最多 10 个。",
+  },
+  ledger_monthly_limit: {
+    title: "本月 Ledger 条数已达上限",
+    body: "Free 用户每月 100 条 Ledger。升级 Pro 获得无限 Ledger。",
   },
 };

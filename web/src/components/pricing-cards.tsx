@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { TIER_LIMITS, TIER_PRICING } from "@/lib/subscription";
+import { TIER_PRICING } from "@/lib/subscription";
 import type { SubscriptionTier } from "@/lib/subscription";
 import type { PaymentProviderKind } from "@/lib/types";
 import { toast } from "sonner";
@@ -28,9 +28,6 @@ const ALT_BTN_CLASS =
 const RECOMMENDED_TAG_CLASS =
   "inline-flex items-center px-2 py-1 border border-[var(--color-border-strong)] bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] text-[10px] font-mono font-bold uppercase tracking-wider";
 
-const COMPARE_HEADER_CLASS =
-  "hidden md:grid grid-cols-[1fr_120px_120px] px-6 py-3 border-b border-[var(--color-border)] text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-surface)]";
-
 interface FeatureRow {
   labelKey: string;
   free: string | boolean;
@@ -38,26 +35,24 @@ interface FeatureRow {
 }
 
 const FEATURE_ROWS: FeatureRow[] = [
-  { labelKey: "pricing.compare.community", free: true, pro: true },
-  { labelKey: "pricing.compare.projects", free: `${TIER_LIMITS.free.maxProjects}`, pro: "∞" },
-  { labelKey: "pricing.compare.teams", free: `${TIER_LIMITS.free.maxTeams}`, pro: `${TIER_LIMITS.pro.maxTeams}` },
-  { labelKey: "pricing.compare.team_members", free: `${TIER_LIMITS.free.maxTeamMembers}`, pro: `${TIER_LIMITS.pro.maxTeamMembers}` },
-  { labelKey: "pricing.compare.api_rate", free: `${TIER_LIMITS.free.apiRatePerMinute}`, pro: `${TIER_LIMITS.pro.apiRatePerMinute}` },
-  { labelKey: "pricing.compare.api_keys", free: `${TIER_LIMITS.free.maxApiKeys}`, pro: `${TIER_LIMITS.pro.maxApiKeys}` },
-  { labelKey: "pricing.compare.mcp_tools", free: "basic", pro: "all" },
-  { labelKey: "pricing.compare.feature_project", free: false, pro: true },
-  { labelKey: "pricing.compare.publish_milestones", free: false, pro: true },
-  { labelKey: "pricing.compare.priority_match", free: false, pro: true },
-  { labelKey: "pricing.compare.export_logs", free: false, pro: true },
+  { labelKey: "pricing.compare.workspace_storage", free: "1 GB", pro: "10 GB" },
+  { labelKey: "pricing.compare.ledger_monthly", free: "100/月", pro: "∞" },
+  { labelKey: "pricing.compare.aigc_stamp", free: "基础（本地）", pro: "完整（腾讯/阿里 API）" },
+  { labelKey: "pricing.compare.trust_card", free: "基础版", pro: "高级版" },
+  { labelKey: "pricing.compare.ledger_anchor", free: false, pro: true },
+  { labelKey: "pricing.compare.compliance_report", free: false, pro: true },
+  { labelKey: "pricing.compare.verify_cli", free: true, pro: true },
+  { labelKey: "pricing.compare.api_keys", free: "2", pro: "10" },
 ];
 
 export function PricingCards() {
   const { t } = useLanguage();
-  const providerLabel = () => t("pricing.provider_alipay", "支付宝");
+  const providerLabel = (_provider: PaymentProviderKind) =>
+    t("pricing.provider_alipay", "Alipay");
 
   async function startCheckout(tier: SubscriptionTier, paymentProvider: PaymentProviderKind) {
     const toastId = toast.loading(
-      t("pricing.checkout_preparing", "正在准备 {provider} 支付...").replace("{provider}", providerLabel())
+      t("pricing.checkout_preparing", "Preparing {provider} checkout...").replace("{provider}", providerLabel(paymentProvider))
     );
     try {
       const res = await apiFetch("/api/v1/billing/checkout", {
@@ -70,10 +65,10 @@ export function PricingCards() {
         toast.dismiss(toastId);
         window.location.href = json.data.url;
       } else {
-        toast.error(json.error?.message ?? t("pricing.checkout_failed", "暂时无法发起支付，请稍后重试。"), { id: toastId });
+        toast.error(json.error?.message ?? t("pricing.checkout_failed", "Unable to start checkout right now. Please try again shortly."), { id: toastId });
       }
     } catch {
-      toast.error(t("pricing.network_error", "网络异常，请稍后重试。"), { id: toastId });
+      toast.error(t("pricing.network_error", "Network error. Please try again."), { id: toastId });
     }
   }
 
@@ -92,41 +87,46 @@ export function PricingCards() {
               <div className="flex-grow flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-semibold tracking-tight m-0">{tierLabel}</h2>
-                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>{t("pricing.recommended", "推荐")}</span>}
+                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>{t("pricing.recommended", "Recommended")}</span>}
                 </div>
 
                 <div className="mb-6">
                   {pricing.priceMonthly === 0 ? (
-                    <div className="text-5xl font-mono font-bold tracking-tight">{t("pricing.free_price", "免费")}</div>
+                    <div className="text-5xl font-mono font-bold tracking-tight">{t("pricing.free_price", "Free")}</div>
                   ) : (
-                    <div className="flex items-baseline">
-                      <span className="text-2xl font-mono font-medium mr-1">¥</span>
-                      <CountUp
-                        end={pricing.priceMonthly}
-                        duration={1100}
-                        className="text-5xl font-mono font-bold tracking-tight"
-                      />
-                      <span className="text-sm font-mono ml-2 opacity-70">{t("pricing.per_month", "/ 月")}</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-baseline">
+                        <span className="text-2xl font-mono font-medium mr-1">¥</span>
+                        <CountUp
+                          end={pricing.priceMonthly}
+                          duration={1100}
+                          className="text-5xl font-mono font-bold tracking-tight"
+                        />
+                        <span className="text-sm font-mono ml-2 opacity-70">{t("pricing.per_month", "/ month")}</span>
+                      </div>
+                      <div className="text-sm font-mono text-[var(--color-text-tertiary)]">
+                        {t("pricing.yearly_price", "¥{price}/year").replace("{price}", String(pricing.priceYearly))}
+                      </div>
                     </div>
                   )}
                 </div>
 
                 <p className={`text-sm mb-8 ${isPro ? "opacity-80" : "text-[var(--color-text-secondary)]"}`}>
                   {isPro
-                    ? t("pricing.pro_description", "获得更多项目容量、更强协作配额、更高 API 与 MCP 限额，以及更强的发现曝光。")
-                    : t("pricing.free_description", "先体验项目发布、协作申请与核心工作台闭环，再决定是否升级。")}
+                    ? t("pricing.pro_description_v11", "无限 Ledger · 完整 AIGC 标识 · 至信链锚定 · 月度合规报告 · Trust Card 高级版")
+                    : t("pricing.free_description_v11", "1 GB Workspace · 100 ledger/月 · 基础 AIGC 标识 · 公开 Trust Card · vibehub-verify CLI")}
                 </p>
 
                 {tier === "free" ? (
                   <Link href="/signup" className={FREE_CTA_CLASS}>
-                    {t("pricing.free_cta", "免费开始使用")}
+                    {t("pricing.free_cta", "Get started free")}
                   </Link>
                 ) : (
                   <div className="mt-auto space-y-3">
+                    {/* v10 收口为 China-only Alipay；v11 RFC §0.1 沿用此约束 */}
                     <button className={PRIMARY_CTA_CLASS} onClick={() => void startCheckout(tier, "alipay")}>
-                      {t("pricing.upgrade_alipay", "使用支付宝升级")}
+                      {t("pricing.upgrade_alipay", "Upgrade with Alipay")}
                     </button>
-                    <div className={ALT_BTN_CLASS}>{t("pricing.alipay_only_hint", "当前仅支持支付宝结算")}</div>
                   </div>
                 )}
               </div>
@@ -137,13 +137,13 @@ export function PricingCards() {
 
       <div className="border border-[var(--color-border)] bg-[var(--color-bg-canvas)] overflow-hidden animate-fade-in-up delay-100">
         <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">{t("pricing.compare_title", "套餐对比")}</h3>
+          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">{t("pricing.compare_title", "Plan comparison")}</h3>
         </div>
 
-        <div className={COMPARE_HEADER_CLASS}>
-          <span>{t("pricing.compare.feature", "能力项")}</span>
-          <span className="text-center">{t("pricing.compare.free", "免费版")}</span>
-          <span className="text-center">{t("pricing.compare.pro", "专业版")}</span>
+        <div className="hidden md:grid grid-cols-[1fr_120px_120px] px-6 py-3 border-b border-[var(--color-border)] text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-surface)]">
+          <span>{t("pricing.compare.feature", "Feature")}</span>
+          <span className="text-center">{t("pricing.compare.free", "Free")}</span>
+          <span className="text-center">{t("pricing.compare.pro", "Pro")}</span>
         </div>
 
         <div className="divide-y divide-[var(--color-border)]">
@@ -154,19 +154,19 @@ export function PricingCards() {
               </span>
 
               <div className="flex md:hidden justify-between text-xs font-mono mb-1">
-                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.free", "免费版")}</span>
-                <span className="text-[var(--color-text-primary)]">{row.free === true ? "✓" : row.free === false ? "—" : row.free === "basic" ? t("pricing.compare.basic_tools", "基础工具") : row.free}</span>
+                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.free", "Free")}</span>
+                <span className="text-[var(--color-text-primary)]">{row.free === true ? "✓" : row.free === false ? "—" : row.free}</span>
               </div>
               <div className="flex md:hidden justify-between text-xs font-mono">
-                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.pro", "专业版")}</span>
-                <span className="text-[var(--color-text-primary)] font-bold">{row.pro === true ? "✓" : row.pro === false ? "—" : row.pro === "all" ? t("pricing.compare.all_tools", "全部已解锁工具") : row.pro}</span>
+                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.pro", "Pro")}</span>
+                <span className="text-[var(--color-text-primary)] font-bold">{row.pro === true ? "✓" : row.pro === false ? "—" : row.pro}</span>
               </div>
 
               <span className="hidden md:block text-center font-mono text-[var(--color-text-secondary)]">
-                {row.free === true ? "✓" : row.free === false ? "—" : row.free === "basic" ? t("pricing.compare.basic_tools", "基础工具") : row.free}
+                {row.free === true ? "✓" : row.free === false ? "—" : row.free}
               </span>
               <span className="hidden md:block text-center font-mono text-[var(--color-text-primary)] font-bold">
-                {row.pro === true ? "✓" : row.pro === false ? "—" : row.pro === "all" ? t("pricing.compare.all_tools", "全部已解锁工具") : row.pro}
+                {row.pro === true ? "✓" : row.pro === false ? "—" : row.pro}
               </span>
             </div>
           ))}

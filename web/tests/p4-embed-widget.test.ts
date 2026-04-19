@@ -7,7 +7,7 @@ describe("getEmbedProjectCard", () => {
     expect(card).not.toBeNull();
     expect(card!.slug).toBe("vibehub");
     expect(card!.title).toBeDefined();
-    expect(card!.vibehubUrl).toBe("/projects/vibehub");
+    expect(card!.vibehubUrl).toBe("/p/vibehub"); // v10/v11 移到 /p/[slug]
   });
 
   it("returns null for non-existent project", async () => {
@@ -23,7 +23,7 @@ describe("getEmbedTeamCard", () => {
     expect(card!.slug).toBe("vibehub-core");
     expect(card!.name).toBeDefined();
     expect(card!.memberCount).toBeGreaterThan(0);
-    expect(card!.vibehubUrl).toBe("/teams/vibehub-core");
+    expect(card!.vibehubUrl).toBe("/work/team/vibehub-core"); // v10/v11 团队空间 URL
   });
 
   it("returns null for non-existent team", async () => {

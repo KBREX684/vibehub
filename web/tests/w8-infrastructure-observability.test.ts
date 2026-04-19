@@ -76,6 +76,8 @@ describe("W8 system alerts", () => {
     const snapshot = await getSystemHealthSnapshot({ includeRecentAlerts: true });
     expect(snapshot.checks.ai).toBe("fallback");
     expect(snapshot.recentAlerts?.[0]?.kind).toBe("billing.webhook_failed");
-    expect(snapshot.paymentProviders).toHaveLength(3);
+    // v10 已收口为 China-only Alipay；v11 RFC §0.1 沿用此约束
+    expect(snapshot.paymentProviders).toHaveLength(1);
+    expect(snapshot.paymentProviders[0].id).toBe("alipay");
   });
 });

@@ -500,7 +500,21 @@ async function getWorkspaceTierLimits(access: WorkspaceAccessRecord) {
     throw new RepositoryError("INTERNAL", "Workspace owner could not be determined", 500);
   }
   const tier = await getUserTier(ownerUserId);
-  return getLimits(tier);
+  const limits = getLimits(tier);
+  // v11 TierLimits surface (`maxStorageGb`) replaces v10 `workspaceStorageMb`.
+  // Workspace storage paths still want a per-file ceiling, so derive a sane
+  // default of 25 % of the per-workspace quota until v12 introduces a
+  // dedicated knob.
+  const workspaceStorageMb = limits.maxStorageGb * 1024;
+  const maxWorkspaceFileBytes = Math.max(
+    25 * 1024 * 1024,
+    Math.floor((workspaceStorageMb * 1024 * 1024) / 4)
+  );
+  return {
+    ...limits,
+    workspaceStorageMb,
+    maxWorkspaceFileBytes,
+  };
 }
 
 async function getWorkspaceArtifactUsageBytes(workspaceId: string): Promise<number> {

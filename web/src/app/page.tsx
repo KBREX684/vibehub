@@ -1,198 +1,248 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import {
-  ArrowRight,
-  Bot,
-  CheckCircle2,
-  Eye,
-  FolderKanban,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
-import { getSessionUserFromCookie } from "@/lib/auth";
 import { getServerTranslator } from "@/lib/i18n";
-import { HomeCtaFooterClient } from "@/components/home-cta-footer-client";
-import { HomeHeroClient } from "@/components/home-hero-client";
-import { HomePillarsClient, type PillarItem } from "@/components/home-pillars-client";
-import { HeroThreadsBackdrop } from "@/components/visual/hero-threads-backdrop";
-import { AnimatedSection, Badge } from "@/components/ui";
+import Link from "next/link";
+import {
+  Compass,
+  Receipt,
+  User,
+  Shield,
+  Stamp,
+  FileCheck,
+  BarChart2,
+} from "lucide-react";
 
 export default async function HomePage() {
-  const session = await getSessionUserFromCookie();
-  if (session) {
-    redirect("/work");
-  }
-
   const { t } = await getServerTranslator();
 
-  const pillars: PillarItem[] = [
-    {
-      icon: "FolderGit2",
-      href: "/discover",
-      title: t("home.v10.pillars.discover.title", "发现项目"),
-      desc: t("home.v10.pillars.discover.desc", "浏览项目、理解团队背景，再决定在哪里发起协作。"),
-      accent: "cyan",
-    },
-    {
-      icon: "Users",
-      href: "/p/vibehub#project-collaboration-intent",
-      title: t("home.v10.pillars.intent.title", "合作申请"),
-      desc: t("home.v10.pillars.intent.desc", "用三段式结构化申请替代嘈杂私聊，让协作意图可审核、可追踪。"),
-      accent: "apple",
-    },
-    {
-      icon: "Bot",
-      href: "/settings/developers",
-      title: t("home.v10.pillars.agent.title", "智能代理治理"),
-      desc: t("home.v10.pillars.agent.desc", "智能代理以受约束的正式队员身份参与协作，而不是自治操作者。"),
-      accent: "violet",
-    },
-    {
-      icon: "FolderGit2",
-      href: "/pricing",
-      title: t("home.v10.pillars.workspace.title", "团队工作区"),
-      desc: t("home.v10.pillars.workspace.desc", "共享上下文、交付状态和受控执行都沉淀在工作区中。"),
-      accent: "success",
-    },
-  ];
-
   return (
-    <main className="container space-y-16 pb-24">
-      <section className="relative isolate overflow-hidden rounded-[var(--radius-3xl)] pt-14 text-center">
-        <HeroThreadsBackdrop />
-        <HomeHeroClient
-          primaryCTA="/signup"
-          secondaryCTA="/pricing"
-          eyebrowText={t("home.v10.eyebrow", "本地开发不变 · 云端协作升级")}
-          heroLine1={t("home.v10.hero_line1", "继续在本地开发，")}
-          heroLine2={t("home.v10.hero_line2", "把协作统一收进工作区。")}
-          heroDescription={t(
-            "home.v10.hero_description",
-            "VibeHub 不是 IDE，也不是代码托管平台。它是承载项目、合作申请、团队工作区和智能代理受控执行的协作状态层。"
-          )}
-          primaryLabel={t("home.v10.cta_primary", "进入我的工作台")}
-          secondaryLabel={t("home.v10.cta_secondary", "查看团队工作区方案")}
-        />
+    <main>
+      {/* ── A. Hero ─────────────────────────────────────────────────── */}
+      <section className="container py-20 md:py-28">
+        <div className="grid md:grid-cols-[3fr_2fr] gap-12 items-center">
+          {/* Left */}
+          <div className="space-y-6">
+            <p className="text-[11px] font-mono uppercase tracking-widest text-[var(--color-text-muted)]">
+              中国 OPC · AI 留痕本
+            </p>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-[var(--color-text-primary)] leading-tight">
+              你和 AI 一起做的工作，
+              <br />
+              有据可查。
+            </h1>
+            <p className="text-base md:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-xl">
+              VibeHub 自动记录你和 Agent 的每一次写入，加合规标识、留可校验账本、沉淀为可外发的信用名片。给客户、给监管、给自己一份证据。
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/signup"
+                className="inline-flex items-center px-6 py-3 text-sm font-semibold bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] rounded-[var(--radius-md)] hover:opacity-90 transition-opacity"
+              >
+                开始留痕
+              </Link>
+              <Link
+                href="/u/dev-alice"
+                className="inline-flex items-center px-6 py-3 text-sm font-semibold border border-[var(--color-border-strong)] text-[var(--color-text-primary)] rounded-[var(--radius-md)] hover:bg-[var(--color-bg-surface)] transition-colors"
+              >
+                查看示例 Card
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: static workflow */}
+          <div className="hidden md:flex items-center justify-center">
+            <div className="w-full max-w-sm p-8 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+              <div className="space-y-6">
+                {/* Step 1: Studio */}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-apple-subtle)] border border-[var(--color-accent-apple-border)] flex items-center justify-center">
+                    <Compass className="w-5 h-5 text-[var(--color-accent-apple)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">Studio（做）</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">任务 + Agent 执行</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="w-px h-6 border-l border-dashed border-[var(--color-border-strong)]" />
+                </div>
+
+                {/* Step 2: Ledger */}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-violet-subtle)] border border-[var(--color-accent-violet-border)] flex items-center justify-center">
+                    <Receipt className="w-5 h-5 text-[var(--color-accent-violet)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">Ledger（签）</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">操作公证账本</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="w-px h-6 border-l border-dashed border-[var(--color-border-strong)]" />
+                </div>
+
+                {/* Step 3: Card */}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-cyan-subtle)] border border-[var(--color-accent-cyan-border)] flex items-center justify-center">
+                    <User className="w-5 h-5 text-[var(--color-accent-cyan)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">Card（晒）</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">公开信用名片</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <HomePillarsClient pillars={pillars} />
-
-      <AnimatedSection className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]" delayMs={80}>
-        <section className="card space-y-4 p-6">
-          <div className="flex items-center gap-2">
-              <Badge variant="cyan" pill mono size="sm">
-              {t("home.v10.section.flow.badge", "主路径")}
-            </Badge>
-          </div>
-          <h2 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
-            {t("home.v10.section.flow.title", "v10 的产品主线现在是一条连续路径，而不是五块割裂能力。")}
-          </h2>
-          <p className="m-0 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-            {t(
-              "home.v10.section.flow.desc",
-              "用户先发现项目，再提交结构化合作申请，进入工作区后与智能代理在确认规则下协同推进交付。"
-            )}
-          </p>
-          <div className="grid gap-3 md:grid-cols-2">
-            {[
-              {
-                icon: Eye,
-                title: t("home.v10.flow.discover.title", "发现"),
-                desc: t("home.v10.flow.discover.desc", "项目页是公开发现和判断方向的入口。"),
-              },
-              {
-                icon: Users,
-                title: t("home.v10.flow.intent.title", "申请"),
-                desc: t("home.v10.flow.intent.desc", "三段式合作申请让协作意图保持清晰、可审核。"),
-              },
-              {
-                icon: FolderKanban,
-                title: t("home.v10.flow.workspace.title", "工作区"),
-                desc: t("home.v10.flow.workspace.desc", "个人与团队工作区统一组织交付状态、文件与归属关系。"),
-              },
-              {
-                icon: Bot,
-                title: t("home.v10.flow.agent.title", "智能代理任务"),
-                desc: t("home.v10.flow.agent.desc", "智能代理动作始终可见、可审计、可确认。"),
-              },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)]">
-                  <Icon className="h-4 w-4 text-[var(--color-text-secondary)]" />
-                </div>
-                <h3 className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">{title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-secondary)]">{desc}</p>
+      {/* ── B. 三件事 ─────────────────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">三件事</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2">做 → 签 → 晒。一个完整闭环。</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          {[
+            {
+              icon: Compass,
+              color: "var(--color-accent-apple)",
+              bgColor: "var(--color-accent-apple-subtle)",
+              borderColor: "var(--color-accent-apple-border)",
+              title: "Studio（做）",
+              desc: "在个人工作站里和 Agent 一起干活。每次操作自动写入 Ledger，每个产出物自动加 AIGC 标识。",
+              link: "/studio",
+              linkText: "进入 Studio →",
+            },
+            {
+              icon: Receipt,
+              color: "var(--color-accent-violet)",
+              bgColor: "var(--color-accent-violet-subtle)",
+              borderColor: "var(--color-accent-violet-border)",
+              title: "Ledger（签）",
+              desc: "全部 Agent 写入 + 人工确认 + 快照创建 + 交付通过事件的不可篡改时间线。支持一键导出。",
+              link: "/ledger",
+              linkText: "查看示例 Ledger →",
+            },
+            {
+              icon: User,
+              color: "var(--color-accent-cyan)",
+              bgColor: "var(--color-accent-cyan-subtle)",
+              borderColor: "var(--color-accent-cyan-border)",
+              title: "Card（晒）",
+              desc: "来自 Ledger 的 6 个真实指标，自动生成公开信用名片。给客户、给投资人、给监管。",
+              link: "/u/dev-alice",
+              linkText: "查看示例 Card →",
+            },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="p-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)]"
+            >
+              <div
+                className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center mb-4"
+                style={{ backgroundColor: item.bgColor, border: `1px solid ${item.borderColor}` }}
+              >
+                <item.icon className="w-5 h-5" style={{ color: item.color }} />
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="card space-y-4 p-6">
-          <Badge variant="success" pill mono size="sm">
-            {t("home.v10.section.boundaries.badge", "产品边界")}
-          </Badge>
-          <h2 className="m-0 text-xl font-semibold tracking-tight text-[var(--color-text-primary)]">
-            {t("home.v10.section.boundaries.title", "VibeHub 明确不去做的事情")}
-          </h2>
-          <div className="space-y-3">
-            {[
-              t("home.v10.boundaries.ide", "不是 AI IDE。编辑与执行仍然留在本地。"),
-              t("home.v10.boundaries.repo", "不是 repo-first 平台。工作区是位于代码托管之上的协作协调层。"),
-              t("home.v10.boundaries.chat", "不是开放式聊天产品。合作申请保持结构化。"),
-              t("home.v10.boundaries.agent", "不是自治代理模式。高风险动作仍然需要人工确认。"),
-            ].map((line) => (
-              <div key={line} className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" />
-                <p className="m-0 text-sm leading-relaxed text-[var(--color-text-secondary)]">{line}</p>
-              </div>
-            ))}
-          </div>
-          <Link href="/pricing" className="btn btn-secondary inline-flex px-4 py-2 text-sm">
-            {t("home.v10.section.boundaries.cta", "查看团队工作区定价")}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </section>
-      </AnimatedSection>
-
-      <AnimatedSection className="grid gap-4 lg:grid-cols-3" delayMs={140}>
-        {[
-          {
-            icon: ShieldCheck,
-            title: t("home.v10.cards.compliance.title", "默认可见的合规边界"),
-            desc: t("home.v10.cards.compliance.desc", "团队工作区应该把数据地域、AI 边界和高风险确认清晰展示出来，而不是藏在说明里。"),
-          },
-          {
-            icon: Bot,
-            title: t("home.v10.cards.governance.title", "智能代理是带护栏的正式队员"),
-            desc: t("home.v10.cards.governance.desc", "绑定、成员关系、任务和确认流是不同概念，产品现在会把它们分开呈现。"),
-          },
-          {
-            icon: Users,
-            title: t("home.v10.cards.workspace.title", "工作区成为产品中心"),
-            desc: t("home.v10.cards.workspace.desc", "路线图现在优先建设工作台主流程，而不是继续扩散公开页面。"),
-          },
-        ].map(({ icon: Icon, title, desc }) => (
-          <section key={title} className="card p-6">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)]">
-              <Icon className="h-4 w-4 text-[var(--color-text-secondary)]" />
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">{item.title}</h3>
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-4">{item.desc}</p>
+              <Link href={item.link} className="text-sm font-medium hover:underline" style={{ color: item.color }}>
+                {item.linkText}
+              </Link>
             </div>
-            <h3 className="m-0 text-base font-semibold text-[var(--color-text-primary)]">{title}</h3>
-            <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">{desc}</p>
-          </section>
-        ))}
-      </AnimatedSection>
+          ))}
+        </div>
+      </section>
 
-      <HomeCtaFooterClient
-        eyebrowText={t("home.v10.footer.eyebrow", "v10 重构进行中")}
-        title={t("home.v10.footer.title", "把项目带进以工作区为中心的协作流程")}
-        description={t(
-          "home.v10.footer.desc",
-          "当前工程重点是先把工作台路由、结构化协作和智能代理安全执行链路做稳，再进行视觉打磨。"
-        )}
-        primaryLabel={t("home.v10.footer.primary", "创建账号")}
-        secondaryLabel={t("home.v10.footer.secondary", "查看开发者接入")}
-        primaryHref="/signup"
-      />
+      {/* ── C. 合规恐惧 ────────────────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="max-w-3xl mx-auto text-center mb-10">
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+            自 2025-09-01 起，所有 AI 内容必须加合规标识
+          </h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-3">
+            GB 45438-2025 罚款上限 1000 万元。不加标 = 赌命。
+          </p>
+        </div>
+        <div className="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          {[
+            { icon: Stamp, title: "自动加标", desc: "上传即加 AIGC 标识" },
+            { icon: Receipt, title: "留痕账本", desc: "每一步都不可篡改" },
+            { icon: FileCheck, title: "月度报告", desc: "合规报告一键导出" },
+            { icon: BarChart2, title: "可向监管出示", desc: "有据可查、可校验" },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="p-5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] text-center"
+            >
+              <item.icon className="w-6 h-6 mx-auto text-[var(--color-text-secondary)] mb-3" />
+              <p className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">{item.title}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── D. Pricing 简表 ─────────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">简单两档</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)]">
+              <h3 className="text-lg font-semibold mb-2">Free</h3>
+              <p className="text-3xl font-mono font-bold mb-4">¥0</p>
+              <ul className="space-y-1.5 text-sm text-[var(--color-text-secondary)]">
+                <li>1 GB Workspace</li>
+                <li>100 Ledger / 月</li>
+                <li>基础 AIGC 标识</li>
+                <li>公开 Trust Card</li>
+              </ul>
+            </div>
+            <div
+              className="p-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]"
+              style={{ boxShadow: "inset 0 0 0 1px var(--color-featured-highlight)" }}
+            >
+              <h3 className="text-lg font-semibold mb-2">Pro</h3>
+              <p className="text-3xl font-mono font-bold mb-1">
+                ¥29<span className="text-sm font-normal opacity-70">/月</span>
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] mb-4">¥288/年</p>
+              <ul className="space-y-1.5 text-sm text-[var(--color-text-secondary)]">
+                <li>10 GB Workspace</li>
+                <li>无限 Ledger</li>
+                <li>完整 AIGC 标识（腾讯/阿里 API）</li>
+                <li>至信链锚定</li>
+                <li>月度合规报告</li>
+              </ul>
+            </div>
+          </div>
+          <div className="text-center mt-6">
+            <Link href="/pricing" className="text-sm text-[var(--color-accent-apple)] hover:underline">
+              查看完整定价 →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── E. Trust Card 示例 ───────────────────────────────────── */}
+      <section className="container py-16 border-t border-[var(--color-border)]">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">真实信用名片</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-8">
+            每个 VibeHub 用户都有这样一张可校验的信用名片。6 个指标全部来自 Ledger，禁止手填。
+          </p>
+          <Link
+            href="/u/dev-alice"
+            className="inline-flex items-center px-6 py-3 text-sm font-semibold bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] rounded-[var(--radius-md)] hover:opacity-90 transition-opacity"
+          >
+            查看示例 Trust Card
+          </Link>
+        </div>
+      </section>
     </main>
   );
 }
