@@ -1,8 +1,77 @@
 # VibeHub release notes
 
-Updated: 2026-04-18
+Updated: 2026-04-19
 
-## 2026-04-18 — v9.0 ecosystem upgrade line published
+## 2026-04-19 — v11.1 warm-light UI redesign prompts published
+
+Adds [`docs/v11.1-warm-ui-prompts.md`](./v11.1-warm-ui-prompts.md): a Claude
+Code–inspired warm-light (eye-friendly) redesign brief for the v11 main
+surface (6 pages + 11 components), with a dual-theme co-existence pattern
+so legacy `/admin/**` and `/work/**` routes keep the dark Monochrome Geek
+look. Implementation begins after PM signs off on the warm DNA color
+(`#C45A2F` Anthropic Sienna) and the v11.1 scope.
+
+No code change in this entry — planning only.
+
+## 2026-04-19 — v11.0 final-chapter merged to main
+
+V11.0 is the final-chapter convergence: VibeHub收口为 **"AI 工作留痕本
+（Operation Ledger）"**, removing all parallel narratives.
+
+- One-line position (frozen for 12 months):
+  > "VibeHub — 你和 AI 一起做的工作，有据可查。"
+- Three pillars: **Studio (do) → Ledger (sign) → Card (show)**
+- Five new schemas: `LedgerEntry` (hash chain + ed25519 signature) /
+  `AigcStamp` (GB 45438-2025 compliance) / `OpcProfile` / `OpcTrustMetric` /
+  `LegalAttestationLink` (zhixin / baoquan judicial anchoring)
+- Pricing collapsed to two tiers (Free + Pro ¥29/mo, Alipay China-only)
+- 14 legacy v10 endpoints (teams / collaboration intents / team workspace
+  creation) returns `410 Gone` with explicit deprecation codes
+- New independent npm package: `packages/vibehub-verify` for offline
+  ledger verification
+- 90-day PMF gates (RFC §11): compliance-enabled rate ≥70%, monthly
+  ledger export rate ≥30%, Pro conversion rate ≥5%
+- 12-month freeze list (RFC §10): no team revival, no matching, no IM,
+  no content feed, no agent marketplace, no IDE/repo/CI
+
+Source of truth and execution plans:
+
+- **`docs/v11.0-final-chapter-rfc.md`** — product RFC
+- **`docs/v11.0-backend-tasks.md`** — backend role brief (GPT)
+- **`docs/v11.0-frontend-tasks.md`** — frontend role brief (GLM)
+
+Verification on the merged branch:
+- `npm install` 752 packages OK
+- `npx tsc --noEmit` 0 errors
+- `npm run lint` 0 errors (warnings only)
+- `npm run validate:openapi` 158 paths, 93.7% coverage
+- `USE_MOCK_DATA=true npx vitest run` 81 files / 323 tests all pass
+- `npm run build` OK (all routes compile)
+
+PRs merged: #79 (docs) · #80 (BE) · #81 (FE).
+
+## 2026-04-18 — v10.0 workspace-first surface (now historical)
+
+V10.0 reshaped the product around a single thread (Discover → Intent →
+Workspace → Agent Task → Snapshot/Deliverable), introduced
+`/work/**` console, and shipped the personal/team Workspace + Snapshot
++ Deliverable + AgentTask schemas.
+
+This line **is fully superseded by v11.0**. Workspace/Snapshot/
+Deliverable/AgentTask data objects are retained and reused; team-side
+write paths are now locked behind `TEAMS_DEPRECATED` / `INTENTS_DEPRECATED`
+guards.
+
+Historical reference (archived):
+- `docs/ia-v10-refactor-plan.md`
+- `docs/ui-v10-figma-prompts.md`
+
+## 2026-04-18 — v9.0 ecosystem upgrade line published (now historical)
+
+> ⚠️ V9.0 has been superseded by v11.0 final-chapter on 2026-04-19.
+> Team Workspace is no longer a paid anchor — its team-side write paths
+> are locked behind `TEAMS_DEPRECATED`. Snapshot Capsule, Agent governance,
+> and compliance visibility were absorbed into the v11 Ledger main thread.
 
 V9.0 formally shifts the product center from "community + team + agent surfaces" to **Team Workspace as the collaboration hub**.
 
@@ -28,7 +97,13 @@ The execution plan is no longer framed by broad version slogans alone. It is spl
 
 Each subphase is expected to land end-to-end: schema, migration, API, OpenAPI, permissions, audit, UI, admin traceability, and checks.
 
-## 2026-04-17 — v8.0 re-positioning: China-first AI+Human collaboration network
+## 2026-04-17 — v8.0 re-positioning: China-first AI+Human collaboration network (now historical)
+
+> ⚠️ V8.0 has been superseded twice — first by v9.0 (Team Workspace), then
+> by v11.0 (Operation Ledger). The v8 community / project gallery / team
+> collaboration narratives are no longer active product directions.
+> Underlying data tables (Post / Comment / Project / Team / etc.) are
+> retained for data integrity but their write paths are locked.
 
 v8.0 is not "one more feature cycle". It is a full re-framing of VibeHub:
 

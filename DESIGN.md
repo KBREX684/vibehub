@@ -1,6 +1,12 @@
 # VibeHub Design System — Monochrome Geek (v2)
 
-> **Authority**: This document is the single source of truth for the VibeHub design system.
+> **v11.0 现行实现**：本文件描述的暗色 Monochrome Geek 系统是当前 main 上**所有页面的实际样式**。
+>
+> **v11.1 规划**：暖色护眼版（Claude Code 风）将通过 `data-theme` 双主题与本系统**共存**。
+> 暖色版 token 与设计原则见 [`docs/v11.1-warm-ui-prompts.md`](./docs/v11.1-warm-ui-prompts.md)。
+> v11.1 落地后，本文件描述的 dark 系统仍保留给 `/admin/**` 与 `/work/**` 老路由，等 v11.2 再统一。
+
+> **Authority**: This document is the single source of truth for the VibeHub design system (dark theme).
 > `globals.css` must match the token table below. No component may introduce a colour
 > literal that is not defined here.
 >
