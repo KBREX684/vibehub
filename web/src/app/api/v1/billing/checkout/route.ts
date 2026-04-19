@@ -13,7 +13,7 @@ import { withRequestLogging } from "@/lib/request-logging";
 
 const checkoutBodySchema = z.object({
   tier: z.literal("pro"),
-  paymentProvider: z.enum(["stripe", "alipay", "wechatpay"]).optional(),
+  paymentProvider: z.literal("alipay").optional(),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
 });
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       if (!parsed.ok) return parsed.response;
       const zod = checkoutBodySchema.safeParse(parsed.body);
       if (!zod.success) return apiErrorFromZod(zod.error);
-      const { tier, paymentProvider = "stripe", successUrl: bodySuccess, cancelUrl: bodyCancel } = zod.data;
+      const { tier, paymentProvider = "alipay", successUrl: bodySuccess, cancelUrl: bodyCancel } = zod.data;
 
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
       const successUrl = bodySuccess ?? `${baseUrl}/settings/subscription?success=1`;
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
           return apiError(
             {
               code: "PAYMENT_PROVIDER_NOT_CONFIGURED",
-              message: readiness.notes[0] ?? `${paymentProvider} is not configured`,
+              message: readiness.notes[0] ?? "支付宝支付当前未配置",
             },
             503
           );
@@ -67,11 +67,9 @@ export async function POST(request: NextRequest) {
         if (repositoryErrorResponse) return repositoryErrorResponse;
         const msg = err instanceof Error ? err.message : String(err);
         if (
-          msg === "STRIPE_NOT_CONFIGURED" ||
-          msg === "ALIPAY_NOT_CONFIGURED" ||
-          msg === "WECHATPAY_NOT_CONFIGURED"
+          msg === "ALIPAY_NOT_CONFIGURED"
         ) {
-          return apiError({ code: "PAYMENT_PROVIDER_NOT_CONFIGURED", message: "Payment provider is not configured" }, 503);
+          return apiError({ code: "PAYMENT_PROVIDER_NOT_CONFIGURED", message: "支付宝支付当前未配置" }, 503);
         }
         const mapped = apiErrorFromRepositoryMessage(msg);
         if (mapped) return mapped;

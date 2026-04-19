@@ -17,6 +17,13 @@ import { Badge } from "@/components/ui";
 const TEAM_MEMBERSHIP_CHIP_CLASS =
   "inline-flex items-center gap-1 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] rounded-[var(--radius-pill)] px-2 py-0.5 border border-[var(--color-border-subtle)]";
 
+function confirmationGroupLabel(targetType: string) {
+  if (targetType.startsWith("workspace_")) return "工作区";
+  if (targetType === "team_task") return "团队任务";
+  if (targetType === "team_member") return "团队成员";
+  return "其他";
+}
+
 interface ApiResponse {
   data?: {
     bindings?: AgentBindingSummary[];
@@ -41,6 +48,11 @@ export function AgentsClient() {
   const [label, setLabel] = useState("");
   const [agentType, setAgentType] = useState("openai");
   const [description, setDescription] = useState("");
+  const groupedConfirmations = confirmations.reduce<Record<string, AgentConfirmationRequest[]>>((acc, item) => {
+    const key = confirmationGroupLabel(item.targetType);
+    (acc[key] ??= []).push(item);
+    return acc;
+  }, {});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,40 +69,51 @@ export function AgentsClient() {
       if (!response.ok) {
         setMessage(json.error?.message ?? t("settings.agents.load_failed"));
         setBindings([]);
+        setTeamsByBinding({});
+        setConfirmations((confirmationsJson.data?.items as AgentConfirmationRequest[] | undefined) ?? []);
+        setAudits((auditsJson.data?.items as AgentActionAuditRow[] | undefined) ?? []);
         return;
       }
       const loadedBindings = json.data?.bindings ?? [];
       setBindings(loadedBindings);
       setConfirmations((confirmationsJson.data?.items as AgentConfirmationRequest[] | undefined) ?? []);
       setAudits((auditsJson.data?.items as AgentActionAuditRow[] | undefined) ?? []);
+      setTeamsByBinding({});
+      setLoading(false);
 
-      // Fetch team memberships per binding (fire-and-forget per row).
-      const teamsMap: Record<string, TeamAgentMembershipSummary[]> = {};
-      await Promise.all(
-        loadedBindings.map(async (binding) => {
-          try {
-            const r = await apiFetch(
-              `/api/v1/me/agent-bindings/${encodeURIComponent(binding.id)}/teams`,
-              { credentials: "include" }
-            );
-            if (!r.ok) {
+      // Team membership enrichment is secondary metadata. Load it after the
+      // main bindings / confirmations / audits payload so the page does not
+      // block rendering the confirmation queue on slow multi-binding accounts.
+      void (async () => {
+        const teamsMap: Record<string, TeamAgentMembershipSummary[]> = {};
+        await Promise.all(
+          loadedBindings.map(async (binding) => {
+            try {
+              const r = await apiFetch(
+                `/api/v1/me/agent-bindings/${encodeURIComponent(binding.id)}/teams`,
+                { credentials: "include" }
+              );
+              if (!r.ok) {
+                teamsMap[binding.id] = [];
+                return;
+              }
+              const j = (await r.json()) as ApiResponse;
+              teamsMap[binding.id] = j.data?.memberships ?? [];
+            } catch {
               teamsMap[binding.id] = [];
-              return;
             }
-            const j = (await r.json()) as ApiResponse;
-            teamsMap[binding.id] = j.data?.memberships ?? [];
-          } catch {
-            teamsMap[binding.id] = [];
-          }
-        })
-      );
-      setTeamsByBinding(teamsMap);
+          })
+        );
+        setTeamsByBinding(teamsMap);
+      })();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t("settings.agents.load_failed"));
       setBindings([]);
-    } finally {
-      setLoading(false);
+      setTeamsByBinding({});
+      setConfirmations([]);
+      setAudits([]);
     }
+    setLoading(false);
   }, [t]);
 
   useEffect(() => {
@@ -297,7 +320,7 @@ export function AgentsClient() {
                       {teamMemberships.map((m) => (
                         <Link
                           key={m.id}
-                          href={m.teamSlug ? `/teams/${m.teamSlug}/agents` : "#"}
+                          href={m.teamSlug ? `/work/team/${m.teamSlug}?view=agent` : "#"}
                           className={TEAM_MEMBERSHIP_CHIP_CLASS}
                         >
                           <span className="font-medium">{m.teamName ?? m.teamSlug ?? m.teamId}</span>
@@ -328,36 +351,51 @@ export function AgentsClient() {
             {t("settings.agents.pending_empty")}
           </div>
         ) : (
-          <div className="space-y-3">
-            {confirmations.map((item) => (
-              <article key={item.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.action}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)] m-0">
-                      {item.teamSlug ? `/${item.teamSlug}` : t("settings.agents.no_team")}{item.taskTitle ? ` · ${item.taskTitle}` : ""}
+          <div className="space-y-4">
+            {Object.entries(groupedConfirmations).map(([group, items]) => (
+              <div key={group} className="space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">
+                  {group}
+                </div>
+                {items.map((item) => (
+                  <article key={item.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{item.action}</p>
+                        <p className="text-xs text-[var(--color-text-secondary)] m-0">
+                          {item.teamSlug ? `/${item.teamSlug}` : t("settings.agents.no_team")}
+                          {item.taskTitle ? ` · ${item.taskTitle}` : ""}
+                          {item.targetType.startsWith("workspace_") ? ` · ${item.targetType.replace("workspace_", "").replaceAll("_", " ")}` : ""}
+                        </p>
+                      </div>
+                      <span className="badge badge-yellow inline-flex items-center gap-1">
+                        <Clock3 className="w-3 h-3" />
+                        {item.status}
+                      </span>
+                    </div>
+                    {item.reason ? <p className="text-sm text-[var(--color-text-secondary)] m-0">{item.reason}</p> : null}
+                    <p className="text-xs text-[var(--color-text-muted)] m-0">
+                      {t("settings.agents.requested")} {formatLocalizedDateTime(item.createdAt, language)}
                     </p>
-                  </div>
-                  <span className="badge badge-yellow inline-flex items-center gap-1">
-                    <Clock3 className="w-3 h-3" />
-                    {item.status}
-                  </span>
-                </div>
-                {item.reason ? <p className="text-sm text-[var(--color-text-secondary)] m-0">{item.reason}</p> : null}
-                <p className="text-xs text-[var(--color-text-muted)] m-0">
-                  {t("settings.agents.requested")} {formatLocalizedDateTime(item.createdAt, language)}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => void decideConfirmation(item.id, "approved")} className="btn btn-primary text-xs px-3 py-1.5 inline-flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
-                    {t("common.approve")}
-                  </button>
-                  <button type="button" onClick={() => void decideConfirmation(item.id, "rejected")} className="btn btn-ghost text-xs px-3 py-1.5 inline-flex items-center gap-1.5 text-[var(--color-danger)]">
-                    <X className="w-3.5 h-3.5" />
-                    {t("common.reject")}
-                  </button>
-                </div>
-              </article>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button type="button" onClick={() => void decideConfirmation(item.id, "approved")} className="btn btn-primary text-xs px-3 py-1.5 inline-flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5" />
+                        {t("common.approve")}
+                      </button>
+                      <button type="button" onClick={() => void decideConfirmation(item.id, "rejected")} className="btn btn-ghost text-xs px-3 py-1.5 inline-flex items-center gap-1.5 text-[var(--color-danger)]">
+                        <X className="w-3.5 h-3.5" />
+                        {t("common.reject")}
+                      </button>
+                      <Link
+                        href={`/work/agent-tasks?confirmation=${encodeURIComponent(item.id)}`}
+                        className="btn btn-ghost text-xs px-3 py-1.5"
+                      >
+                        Open in task center
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
             ))}
           </div>
         )}

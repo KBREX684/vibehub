@@ -15,6 +15,52 @@ function isLoginProtectedPage(pathname: string): boolean {
   return pathname === "/notifications" || pathname.startsWith("/notifications/");
 }
 
+function isWorkRootPath(pathname: string): boolean {
+  return pathname === "/work";
+}
+
+function isDeveloperLegacyPage(pathname: string): boolean {
+  return pathname === "/developers" || pathname === "/developers/api-docs";
+}
+
+function getLegacyProjectRedirect(pathname: string): string | null {
+  if (pathname === "/projects") return "/discover";
+  if (pathname === "/projects/new") return "/p/new";
+  const editMatch = pathname.match(/^\/projects\/([^/]+)\/edit$/);
+  if (editMatch) return `/p/${editMatch[1]}/edit`;
+  const detailMatch = pathname.match(/^\/projects\/([^/]+)$/);
+  return detailMatch ? `/p/${detailMatch[1]}` : null;
+}
+
+function getLegacyCreatorRedirect(pathname: string): string | null {
+  const detailMatch = pathname.match(/^\/creators\/([^/]+)$/);
+  return detailMatch ? `/u/${detailMatch[1]}` : null;
+}
+
+function getLegacyTeamRedirect(pathname: string): string | null {
+  if (pathname === "/teams") return "/discover";
+  if (pathname === "/teams/new") return "/work/create-team";
+  const taskMatch = pathname.match(/^\/teams\/([^/]+)\/tasks\/([^/]+)$/);
+  if (taskMatch) return `/work/team/${taskMatch[1]}?view=tasks&taskId=${taskMatch[2]}`;
+  const agentsMatch = pathname.match(/^\/teams\/([^/]+)\/agents$/);
+  if (agentsMatch) return `/work/team/${agentsMatch[1]}?view=agent`;
+  const settingsMatch = pathname.match(/^\/teams\/([^/]+)\/settings$/);
+  if (settingsMatch) return `/work/team/${settingsMatch[1]}?view=settings`;
+  const detailMatch = pathname.match(/^\/teams\/([^/]+)$/);
+  return detailMatch ? `/work/team/${detailMatch[1]}` : null;
+}
+
+function isRetiredDiscoveryPage(pathname: string): boolean {
+  return (
+    pathname === "/leaderboards" ||
+    pathname.startsWith("/leaderboards/") ||
+    pathname === "/collections" ||
+    pathname.startsWith("/collections/") ||
+    pathname === "/discussions" ||
+    pathname.startsWith("/discussions/")
+  );
+}
+
 // ─── CSRF protection ─────────────────────────────────────────────────────────
 // Routes exempt from CSRF checks: the CSRF token endpoint itself, auth
 // callbacks (server-to-server redirects), Stripe webhook (verified by
@@ -147,6 +193,8 @@ export async function middleware(request: NextRequest) {
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-request-id", requestId);
+  const rawSession = request.cookies.get("vibehub_session")?.value;
+  const session = rawSession ? await decodeSessionEdge(rawSession) : null;
 
   function withRequestId(response: NextResponse) {
     response.headers.set("x-request-id", requestId);
@@ -155,8 +203,6 @@ export async function middleware(request: NextRequest) {
 
   // Admin page protection — valid session + admin role required
   if (isAdminPath(nextUrl.pathname)) {
-    const raw = request.cookies.get("vibehub_session")?.value;
-    const session = raw ? await decodeSessionEdge(raw) : null;
     if (!session) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("required", "admin");
@@ -168,14 +214,49 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (isWorkRootPath(nextUrl.pathname) && session) {
+    const lastTeamSlug = request.cookies.get("vibehub_last_team_workspace")?.value?.trim();
+    const target = lastTeamSlug ? `/work/team/${encodeURIComponent(lastTeamSlug)}` : "/work/personal";
+    return withRequestId(NextResponse.redirect(new URL(target, request.url)));
+  }
+
+  const legacyProjectRedirect = getLegacyProjectRedirect(nextUrl.pathname);
+  if (legacyProjectRedirect) {
+    return withRequestId(NextResponse.redirect(new URL(legacyProjectRedirect, request.url)));
+  }
+
+  const legacyCreatorRedirect = getLegacyCreatorRedirect(nextUrl.pathname);
+  if (legacyCreatorRedirect) {
+    return withRequestId(NextResponse.redirect(new URL(legacyCreatorRedirect, request.url)));
+  }
+
+  const legacyTeamRedirect = getLegacyTeamRedirect(nextUrl.pathname);
+  if (legacyTeamRedirect) {
+    return withRequestId(NextResponse.redirect(new URL(legacyTeamRedirect, request.url)));
+  }
+
   if (isLoginProtectedPage(nextUrl.pathname)) {
+    if (!session) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", "/work/notifications");
+      return withRequestId(NextResponse.redirect(loginUrl));
+    }
+    return withRequestId(NextResponse.redirect(new URL("/work/notifications", request.url)));
+  }
+
+  if (isDeveloperLegacyPage(nextUrl.pathname)) {
     const raw = request.cookies.get("vibehub_session")?.value;
     const session = raw ? await decodeSessionEdge(raw) : null;
     if (!session) {
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", nextUrl.pathname);
+      loginUrl.searchParams.set("redirect", "/settings/developers");
       return withRequestId(NextResponse.redirect(loginUrl));
     }
+    return withRequestId(NextResponse.redirect(new URL("/settings/developers", request.url)));
+  }
+
+  if (isRetiredDiscoveryPage(nextUrl.pathname)) {
+    return withRequestId(NextResponse.redirect(new URL("/discover", request.url)));
   }
 
   if (nextUrl.pathname.startsWith("/api/v1/internal/rate-limit")) {
@@ -244,7 +325,6 @@ export async function middleware(request: NextRequest) {
     // ── CSRF double-submit check ──────────────────────────────────────────
     // Only applies when the request is authenticated via session cookie.
     // Bearer API-key requests are exempt (they don't use cookies at all).
-    const rawSession = request.cookies.get("vibehub_session")?.value;
     if (rawSession && !isCsrfExempt(nextUrl.pathname)) {
       const submittedToken = request.headers.get("x-csrf-token");
       const secret = resolveSessionSigningSecret() ?? "dev-session-secret-change-me";
@@ -298,5 +378,25 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/admin/:path*", "/admin", "/notifications", "/notifications/:path*"],
+  matcher: [
+    "/api/:path*",
+    "/admin/:path*",
+    "/admin",
+    "/work",
+    "/notifications",
+    "/notifications/:path*",
+    "/projects",
+    "/projects/:path*",
+    "/creators/:path*",
+    "/teams",
+    "/teams/:path*",
+    "/developers",
+    "/developers/api-docs",
+    "/leaderboards",
+    "/leaderboards/:path*",
+    "/collections",
+    "/collections/:path*",
+    "/discussions",
+    "/discussions/:path*",
+  ],
 };

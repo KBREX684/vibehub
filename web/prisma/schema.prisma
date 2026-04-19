@@ -31,6 +31,37 @@ enum CollaborationIntentType {
   recruit
 }
 
+enum CollaborationIntentStatus {
+  pending
+  approved
+  rejected
+  ignored
+  blocked
+  expired
+}
+
+enum WorkspaceKind {
+  personal
+  team
+}
+
+enum WorkspaceArtifactVisibility {
+  workspace
+}
+
+enum WorkspaceArtifactValidationState {
+  pending
+  ready
+  rejected
+}
+
+enum DeliverableStatus {
+  draft
+  submitted
+  approved
+  rejected
+}
+
 enum WeeklyLeaderboardKind {
   discussions_by_weekly_comment_count
   projects_by_weekly_collaboration_intent_count
@@ -99,9 +130,7 @@ enum SubscriptionStatus {
 
 /// v7 P0-9: which payment backend backs this subscription row
 enum PaymentProvider {
-  stripe
   alipay
-  wechatpay
 }
 
 enum BillingRecordStatus {
@@ -123,6 +152,13 @@ enum AgentConfirmationStatus {
   approved
   rejected
   canceled
+}
+
+enum AgentTaskStatus {
+  running
+  pending_confirm
+  done
+  failed
 }
 
 enum AutomationWorkflowRunStatus {
@@ -165,8 +201,6 @@ model User {
   githubId                   Int?                       @unique
   githubUsername             String?                    @unique
   avatarUrl                  String?
-  /// M-2: Stripe customer
-  stripeCustomerId           String?                    @unique
   createdAt                  DateTime                   @default(now())
   updatedAt                  DateTime                   @updatedAt
   creatorProfile             CreatorProfile?
@@ -221,6 +255,12 @@ model User {
   oauthAccessTokens          OAuthAccessToken[]
   automationWorkflows        AutomationWorkflow[]
   automationWorkflowRuns     AutomationWorkflowRun[]
+  personalWorkspace          Workspace?                 @relation("UserWorkspace")
+  workspaceSnapshotsCreated  SnapshotCapsule[]          @relation("WorkspaceSnapshotCreator")
+  workspaceArtifactsUploaded WorkspaceArtifact[]
+  workspaceDeliverablesCreated WorkspaceDeliverable[]   @relation("WorkspaceDeliverableCreator")
+  workspaceDeliverablesReviewed WorkspaceDeliverable[]  @relation("WorkspaceDeliverableReviewer")
+  agentTasksRequested        AgentTask[]                @relation("AgentTaskRequester")
 }
 
 enum EnterpriseVerificationStatus {
@@ -511,6 +551,7 @@ model ApiKey {
   createdAt      DateTime      @default(now())
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   agentBinding   AgentBinding? @relation(fields: [agentBindingId], references: [id], onDelete: SetNull)
+  agentTasks     AgentTask[]
 
   @@index([userId])
   @@index([agentBindingId])
@@ -531,6 +572,7 @@ model AgentBinding {
   mcpInvokes           McpInvokeAudit[]
   actionAudits         AgentActionAudit[]
   confirmationRequests AgentConfirmationRequest[]
+  agentTasks           AgentTask[]
   automationWorkflows  AutomationWorkflow[]
   teamMemberships      TeamAgentMembership[]
 
@@ -622,6 +664,7 @@ model AgentConfirmationRequest {
   agentBinding    AgentBinding            @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
   team            Team?                   @relation(fields: [teamId], references: [id], onDelete: SetNull)
   task            TeamTask?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  agentTask       AgentTask?
 
   @@index([requesterUserId, status, createdAt])
   @@index([agentBindingId, status, createdAt])
@@ -653,11 +696,135 @@ model CreatorProfile {
   @@index([searchVector], type: Gin)
 }
 
+model Workspace {
+  id        String        @id @default(cuid())
+  kind      WorkspaceKind
+  slug      String        @unique
+  title     String
+  userId    String?       @unique
+  teamId    String?       @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User?         @relation("UserWorkspace", fields: [userId], references: [id], onDelete: Cascade)
+  team      Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  projects  Project[]
+  artifacts WorkspaceArtifact[]
+  snapshots SnapshotCapsule[]
+  deliverables WorkspaceDeliverable[]
+  agentTasks AgentTask[]
+
+  @@index([kind])
+}
+
+model SnapshotCapsule {
+  id                 String            @id @default(cuid())
+  workspaceId        String
+  createdByUserId    String
+  title              String
+  summary            String
+  goal               String?
+  roleNotes          String?
+  projectIds         String[]
+  previousSnapshotId String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy          User              @relation("WorkspaceSnapshotCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  previousSnapshot   SnapshotCapsule?  @relation("WorkspaceSnapshotChain", fields: [previousSnapshotId], references: [id], onDelete: SetNull)
+  nextSnapshots      SnapshotCapsule[] @relation("WorkspaceSnapshotChain")
+  deliverables       WorkspaceDeliverable[]
+
+  @@index([workspaceId, createdAt])
+  @@index([createdByUserId, createdAt])
+  @@index([previousSnapshotId])
+}
+
+model WorkspaceArtifact {
+  id              String                           @id @default(cuid())
+  workspaceId     String
+  uploaderUserId  String
+  filename        String
+  contentType     String
+  sizeBytes       Int
+  storageKey      String                           @unique
+  visibility      WorkspaceArtifactVisibility      @default(workspace)
+  validationState WorkspaceArtifactValidationState @default(pending)
+  publicUrl       String?
+  createdAt       DateTime                         @default(now())
+  updatedAt       DateTime                         @updatedAt
+  workspace       Workspace                        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploader        User                             @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([uploaderUserId, createdAt])
+  @@index([workspaceId, validationState])
+}
+
+model WorkspaceDeliverable {
+  id               String            @id @default(cuid())
+  workspaceId      String
+  snapshotId       String
+  createdByUserId  String
+  reviewedByUserId String?
+  title            String
+  description      String?
+  status           DeliverableStatus @default(draft)
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  snapshot         SnapshotCapsule   @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation("WorkspaceDeliverableCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  reviewedBy       User?             @relation("WorkspaceDeliverableReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([snapshotId, createdAt])
+  @@index([createdByUserId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AgentTask {
+  id                    String              @id @default(cuid())
+  requesterUserId       String
+  agentBindingId        String
+  apiKeyId              String?
+  workspaceId           String?
+  teamId                String?
+  confirmationRequestId String?             @unique
+  taskId                String?
+  title                 String
+  subtitle              String
+  action                String
+  targetType            String
+  targetId              String
+  status                AgentTaskStatus
+  metadata              Json?
+  completedAt           DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  requester             User                @relation("AgentTaskRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  agentBinding          AgentBinding        @relation(fields: [agentBindingId], references: [id], onDelete: Cascade)
+  apiKey                ApiKey?             @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  workspace             Workspace?          @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  team                  Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  teamTask              TeamTask?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  confirmationRequest   AgentConfirmationRequest? @relation(fields: [confirmationRequestId], references: [id], onDelete: SetNull)
+
+  @@index([requesterUserId, createdAt])
+  @@index([agentBindingId, createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([status, createdAt])
+}
+
 model Project {
   id                   String                   @id @default(cuid())
   slug                 String                   @unique
   creatorId            String
   teamId               String?
+  workspaceId          String?
   title                String
   oneLiner             String
   description          String
@@ -683,12 +850,14 @@ model Project {
   updatedAt            DateTime                 @updatedAt
   creator              CreatorProfile           @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   team                 Team?                    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  workspace            Workspace?               @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   collaborationIntents CollaborationIntent[]
   bookmarks            ProjectBookmark[]
 
   @@index([searchVector], type: Gin)
   @@index([creatorId])
   @@index([teamId])
+  @@index([workspaceId])
   @@index([featuredRank])
 }
 
@@ -884,10 +1053,14 @@ model CollaborationIntent {
   intentType                CollaborationIntentType
   message                   String
   contact                   String?
-  status                    ReviewStatus            @default(pending)
+  pitch                     String?
+  whyYou                    String?
+  howCollab                 String?
+  status                    CollaborationIntentStatus @default(pending)
   reviewNote                String?
   reviewedAt                DateTime?
   reviewedBy                String?
+  expiresAt                 DateTime?
   /// T-4: tracks conversion to team membership
   convertedToTeamMembership Boolean                 @default(false)
   createdAt                 DateTime                @default(now())
@@ -945,6 +1118,7 @@ model Team {
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
   owner                     User                       @relation("TeamOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace                 Workspace?
   memberships               TeamMembership[]
   joinRequests              TeamJoinRequest[]
   projects                  Project[]
@@ -955,6 +1129,7 @@ model Team {
   taskComments              TeamTaskComment[]
   agentActionAudits         AgentActionAudit[]
   agentConfirmationRequests AgentConfirmationRequest[]
+  agentTasks                AgentTask[]
   agentMemberships          TeamAgentMembership[]
 
   @@index([ownerUserId])
@@ -1015,6 +1190,7 @@ model TeamTask {
   comments                  TeamTaskComment[]
   agentActionAudits         AgentActionAudit[]
   agentConfirmationRequests AgentConfirmationRequest[]
+  agentTasks                AgentTask[]
 
   @@index([teamId])
   @@index([teamId, status])
@@ -1126,25 +1302,19 @@ model ContributionCredit {
 
 // ─── M-1/M-2: 商业化订阅 (Subscription) ──────────────────────────────────────
 
-/// M-1: per-user subscription (Stripe-backed)
+/// M-1: per-user subscription (Alipay-backed)
 model UserSubscription {
   id                   String             @id @default(cuid())
   userId               String             @unique
   tier                 SubscriptionTier   @default(free)
   status               SubscriptionStatus @default(active)
-  paymentProvider      PaymentProvider    @default(stripe)
-  /// M-2: Stripe subscription ID
-  stripeSubscriptionId String?            @unique
-  /// M-2: Stripe price ID
-  stripePriceId        String?
+  paymentProvider      PaymentProvider    @default(alipay)
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   billingRecords       BillingRecord[]
-
-  @@index([stripeSubscriptionId])
 }
 
 model BillingRecord {
@@ -1155,7 +1325,7 @@ model BillingRecord {
   tier              SubscriptionTier
   status            BillingRecordStatus @default(pending)
   amountCents       Int
-  currency          String              @default("USD")
+  currency          String              @default("CNY")
   externalSessionId String?
   externalPaymentId String?
   description       String?

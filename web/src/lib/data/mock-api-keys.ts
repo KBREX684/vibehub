@@ -1,3 +1,5 @@
+import { createPersistedArray } from "@/lib/data/mock-persist";
+
 export interface MockApiKey {
   id: string;
   userId: string;
@@ -12,4 +14,4 @@ export interface MockApiKey {
   createdAt: string;
 }
 
-export const mockApiKeys: MockApiKey[] = [];
+export const mockApiKeys: MockApiKey[] = createPersistedArray<MockApiKey>("apiKeys");

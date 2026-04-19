@@ -35,7 +35,7 @@ export function ProjectCard({
       )}
 
       <Link
-        href={`/projects/${project.slug}`}
+        href={`/p/${project.slug}`}
         className="absolute inset-0 z-10"
         aria-label={`View ${project.title}`}
       />

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Briefcase, MessageSquare, User, CornerDownLeft } from "lucide-react";
+import { Search, Briefcase, User, CornerDownLeft } from "lucide-react";
 import { SearchHighlight } from "@/components/search-highlight";
 import type { SearchResult } from "@/lib/types";
 import { useLanguage } from "@/app/context/LanguageContext";
@@ -18,7 +18,6 @@ type SearchSection = {
 
 const SECTIONS: SearchSection[] = [
   { key: "project", labelKey: "search.section_projects", icon: Briefcase },
-  { key: "post", labelKey: "search.section_discussions", icon: MessageSquare },
   { key: "creator", labelKey: "search.section_creators", icon: User },
 ];
 
@@ -29,9 +28,8 @@ export function openCommandPalette() {
 }
 
 function hrefForResult(result: SearchResult) {
-  if (result.type === "post") return `/discussions/${result.slug}`;
-  if (result.type === "creator") return `/creators/${result.slug}`;
-  return `/projects/${result.slug}`;
+  if (result.type === "creator") return `/u/${result.slug}`;
+  return `/p/${result.slug}`;
 }
 
 export function CommandPalette() {
@@ -111,7 +109,7 @@ export function CommandPalette() {
         if (!response.ok) {
           throw new Error(json.error?.message ?? "");
         }
-        setResults(json.data?.results ?? []);
+        setResults((json.data?.results ?? []).filter((item) => item.type !== "post"));
         setSelectedIndex(0);
       })
       .catch((err) => {

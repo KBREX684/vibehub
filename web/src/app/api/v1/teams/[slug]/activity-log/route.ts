@@ -24,7 +24,11 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { page, limit } = parsePagination(url.searchParams);
     const typeRaw = url.searchParams.get("type");
     const type =
-      typeRaw === "task" || typeRaw === "discussion" || typeRaw === "agent"
+      typeRaw === "task" ||
+      typeRaw === "discussion" ||
+      typeRaw === "workspace" ||
+      typeRaw === "confirmation" ||
+      typeRaw === "agent"
         ? typeRaw
         : "all";
     const result = await listTeamActivityLog({ teamSlug: slug, page, limit, type });

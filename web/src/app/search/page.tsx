@@ -1,6 +1,6 @@
 import { unifiedSearch } from "@/lib/repository";
 import Link from "next/link";
-import { Search, Hash, Box, User, Briefcase, MessageSquare } from "lucide-react";
+import { Search, Hash, Box, User, Briefcase } from "lucide-react";
 import { SearchHighlight } from "@/components/search-highlight";
 import { Button, EmptyState, PageHeader, Badge } from "@/components/ui";
 import { getServerTranslator } from "@/lib/i18n";
@@ -13,7 +13,6 @@ interface Props {
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
-  post: <MessageSquare className="w-4 h-4" aria-hidden="true" />,
   project: <Briefcase className="w-4 h-4" aria-hidden="true" />,
   creator: <User className="w-4 h-4" aria-hidden="true" />,
 };
@@ -21,14 +20,13 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 export default async function SearchPage({ searchParams }: Props) {
   const { t } = await getServerTranslator();
   const { q = "", type } = await searchParams;
-  const validTypes = ["post", "project", "creator"] as const;
+  const validTypes = ["project", "creator"] as const;
   type SearchType = (typeof validTypes)[number];
   const resolvedType = validTypes.includes(type as SearchType) ? (type as SearchType) : undefined;
 
   const qTrim = q.trim();
-  const results = qTrim.length >= 2 ? await unifiedSearch(qTrim, resolvedType) : [];
+  const results = qTrim.length >= 2 ? (await unifiedSearch(qTrim, resolvedType)).filter((item) => item.type !== "post") : [];
   const typeLabels: Record<SearchType, string> = {
-    post: t("search.type_post", "Discussion"),
     project: t("search.type_project", "Project"),
     creator: t("search.type_creator", "Creator"),
   };
@@ -39,7 +37,7 @@ export default async function SearchPage({ searchParams }: Props) {
           .replace("{query}", qTrim)
       : qTrim.length > 0
         ? t("search.min_query_page", "Type at least 2 characters to search. Matches are highlighted in results.")
-        : t("search.page_hint", "Use the global search to find projects, discussions, and creators across VibeHub.");
+        : t("search.page_hint", "使用全局搜索快速找到项目与创作者。");
 
   return (
     <main className="container pb-24 pt-8 space-y-6">
@@ -84,20 +82,13 @@ export default async function SearchPage({ searchParams }: Props) {
         <EmptyState
           icon={Search}
           title={t("search.empty_title", "Search the platform")}
-          description={t("search.empty_description", "Use the global search to find projects, discussions, and creators, or jump into browse pages from the navigation.")}
+          description={t("search.empty_description", "使用全局搜索快速找到项目与创作者，或直接进入发现页开始浏览。")}
           action={
-            <div className="flex gap-2 justify-center">
-              <Link href="/discover">
-                <Button variant="primary" size="sm">
-                  {t("search.empty_cta_projects", "Discover projects")}
-                </Button>
-              </Link>
-              <Link href="/discussions">
-                <Button variant="secondary" size="sm">
-                  {t("search.empty_cta_discussions", "Browse discussions")}
-                </Button>
-              </Link>
-            </div>
+            <Link href="/discover">
+              <Button variant="primary" size="sm">
+                {t("search.empty_cta_projects", "发现项目")}
+              </Button>
+            </Link>
           }
           block
         />
@@ -131,7 +122,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   {TYPE_ICONS[item.type]} {typeLabels[item.type as SearchType]}
                 </Badge>
                 <Link
-                  href={`/${item.type === "post" ? "discussions" : item.type === "creator" ? "creators" : "projects"}/${item.slug}`}
+                  href={item.type === "creator" ? `/u/${item.slug}` : `/p/${item.slug}`}
                   className={RESULT_TITLE_LINK_CLASS}
                 >
                   <SearchHighlight text={item.title} query={qTrim} />

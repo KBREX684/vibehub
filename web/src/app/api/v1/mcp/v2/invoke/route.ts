@@ -41,6 +41,9 @@ import {
   requestAgentTaskDelete,
   requestAgentTaskReview,
   requestAgentTeamMemberRoleChange,
+  requestAgentWorkspaceArtifactUpload,
+  requestAgentWorkspaceSnapshotCreate,
+  requestAgentWorkspaceSnapshotRollback,
   requestTeamJoin,
   resolveTeamAgentRole,
   submitCollaborationIntent,
@@ -48,6 +51,10 @@ import {
   teamAgentCanWriteTasks,
   tryRegisterMcpInvokeIdempotency,
 } from "@/lib/repository";
+import {
+  ensureTeamWorkspace,
+  listWorkspaceArtifacts,
+} from "@/lib/repositories/workspace.repository";
 import type {
   CollaborationIntentType,
   ProjectStatus,
@@ -465,14 +472,22 @@ if (isRepositoryError(e) && e.code === "CREATOR_PROFILE_REQUIRED") {
       case "submit_collaboration_intent": {
         const projectSlug = str(input.projectSlug) ?? "";
         const intentType = str(input.intentType) as CollaborationIntentType | undefined;
-        const message = str(input.message) ?? "";
-        const contact = str(input.contact);
-        if (!projectSlug || !message || (intentType !== "join" && intentType !== "recruit")) {
+        const pitch = str(input.pitch) ?? "";
+        const whyYou = str(input.whyYou) ?? "";
+        const howCollab = str(input.howCollab) ?? "";
+        if (!projectSlug || !pitch || !whyYou || !howCollab || (intentType !== "join" && intentType !== "recruit")) {
           await log(400, "INVALID_INPUT");
-          return apiError({ code: "INVALID_INPUT", message: "projectSlug, intentType (join|recruit), message required" }, 400);
+          return apiError(
+            {
+              code: "INVALID_INPUT",
+              message: "projectSlug, intentType (join|recruit), pitch, whyYou, and howCollab are required",
+            },
+            400
+          );
         }
-        assertContentSafeText(message, "message");
-        if (contact) assertContentSafeText(contact, "contact");
+        assertContentSafeText(pitch, "pitch");
+        assertContentSafeText(whyYou, "whyYou");
+        assertContentSafeText(howCollab, "howCollab");
         const proj = await getProjectBySlug(projectSlug);
         if (!proj) {
           await log(404, "PROJECT_NOT_FOUND");
@@ -483,8 +498,9 @@ if (isRepositoryError(e) && e.code === "CREATOR_PROFILE_REQUIRED") {
             projectId: proj.id,
             applicantId: session.userId,
             intentType,
-            message,
-            contact,
+            pitch,
+            whyYou,
+            howCollab,
           });
           await log(200);
           return apiSuccess({ tool, input, output: intent });
@@ -610,6 +626,25 @@ const msg = e instanceof Error ? e.message : String(e);
         return apiSuccess({ tool, input, output: { milestones } });
       }
 
+      case "workspace_list_artifacts": {
+        const teamSlug = str(input.teamSlug) ?? "";
+        if (!teamSlug) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug required" }, 400);
+        }
+        const roleGate = await enforceTeamAgentRole(teamSlug, () => true, "comment");
+        if (roleGate) return roleGate;
+        const team = await getTeamBySlug(teamSlug, session.userId);
+        if (!team) {
+          await log(404, "TEAM_NOT_FOUND");
+          return apiError({ code: "TEAM_NOT_FOUND", message: "Team not found" }, 404);
+        }
+        const workspace = await ensureTeamWorkspace(team.id);
+        const artifacts = await listWorkspaceArtifacts({ userId: session.userId, workspaceId: workspace.id });
+        await log(200);
+        return apiSuccess({ tool, input, output: artifacts });
+      }
+
       case "agent_complete_team_task": {
         if (!agentBindingId) {
           await log(403, "AGENT_BINDING_REQUIRED");
@@ -733,6 +768,104 @@ const msg = e instanceof Error ? e.message : String(e);
         return apiSuccess({ tool, input, output: { confirmationRequired: true, request: requestItem } }, 202);
       }
 
+      case "workspace_request_upload": {
+        if (!agentBindingId) {
+          await log(403, "AGENT_BINDING_REQUIRED");
+          return apiError({ code: "AGENT_BINDING_REQUIRED", message: "This tool requires an API key linked to an active agent binding." }, 403);
+        }
+        const teamSlug = str(input.teamSlug) ?? "";
+        const filename = str(input.filename) ?? "";
+        const contentType = str(input.contentType) ?? "";
+        const sizeBytes = num(input.sizeBytes, 0);
+        if (!teamSlug || !filename || !contentType || sizeBytes <= 0) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug, filename, contentType, sizeBytes required" }, 400);
+        }
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          (role) => role === "executor" || role === "coordinator",
+          "write"
+        );
+        if (roleGate) return roleGate;
+        const requestItem = await requestAgentWorkspaceArtifactUpload({
+          teamSlug,
+          filename,
+          contentType,
+          sizeBytes,
+          actorUserId: session.userId,
+          agentBindingId,
+          apiKeyId,
+        });
+        await log(202);
+        return apiSuccess({ tool, input, output: { confirmationRequired: true, request: requestItem } }, 202);
+      }
+
+      case "snapshot_create": {
+        if (!agentBindingId) {
+          await log(403, "AGENT_BINDING_REQUIRED");
+          return apiError({ code: "AGENT_BINDING_REQUIRED", message: "This tool requires an API key linked to an active agent binding." }, 403);
+        }
+        const teamSlug = str(input.teamSlug) ?? "";
+        const title = str(input.title) ?? "";
+        const summary = str(input.summary) ?? "";
+        const goal = str(input.goal);
+        const roleNotes = str(input.roleNotes);
+        const projectIds = Array.isArray(input.projectIds)
+          ? input.projectIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+          : [];
+        if (!teamSlug || !title || !summary || projectIds.length === 0) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug, title, summary, projectIds required" }, 400);
+        }
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          (role) => role === "executor" || role === "coordinator",
+          "write"
+        );
+        if (roleGate) return roleGate;
+        const requestItem = await requestAgentWorkspaceSnapshotCreate({
+          teamSlug,
+          title,
+          summary,
+          goal,
+          roleNotes,
+          projectIds,
+          actorUserId: session.userId,
+          agentBindingId,
+          apiKeyId,
+        });
+        await log(202);
+        return apiSuccess({ tool, input, output: { confirmationRequired: true, request: requestItem } }, 202);
+      }
+
+      case "snapshot_rollback": {
+        if (!agentBindingId) {
+          await log(403, "AGENT_BINDING_REQUIRED");
+          return apiError({ code: "AGENT_BINDING_REQUIRED", message: "This tool requires an API key linked to an active agent binding." }, 403);
+        }
+        const teamSlug = str(input.teamSlug) ?? "";
+        const snapshotId = str(input.snapshotId) ?? "";
+        if (!teamSlug || !snapshotId) {
+          await log(400, "INVALID_INPUT");
+          return apiError({ code: "INVALID_INPUT", message: "teamSlug and snapshotId required" }, 400);
+        }
+        const roleGate = await enforceTeamAgentRole(
+          teamSlug,
+          teamAgentCanCoordinate,
+          "coordinate"
+        );
+        if (roleGate) return roleGate;
+        const requestItem = await requestAgentWorkspaceSnapshotRollback({
+          teamSlug,
+          snapshotId,
+          actorUserId: session.userId,
+          agentBindingId,
+          apiKeyId,
+        });
+        await log(202);
+        return apiSuccess({ tool, input, output: { confirmationRequired: true, request: requestItem } }, 202);
+      }
+
       default: {
         await log(400, "UNKNOWN_TOOL");
         return assertNeverTool(tool);
@@ -751,6 +884,7 @@ const msg = e instanceof Error ? e.message : String(e);
       msg === "FORBIDDEN_TASK_REVIEW" ||
       msg === "FORBIDDEN_TASK_DELETE" ||
       msg === "FORBIDDEN_NOT_OWNER" ||
+      msg === "FORBIDDEN_WORKSPACE_SNAPSHOT_ROLLBACK" ||
       msg === "FORBIDDEN_AGENT_CONFIRMATION" ||
       msg === "FORBIDDEN_NOT_TEAM_MEMBER" ||
       msg === "TEAM_AGENT_NOT_MEMBER" ||
@@ -758,6 +892,13 @@ const msg = e instanceof Error ? e.message : String(e);
     ) {
       await log(403, msg);
       return apiError({ code: "FORBIDDEN", message: msg }, 403);
+    }
+    if (
+      msg === "INVALID_WORKSPACE_ARTIFACT_REQUEST" ||
+      msg === "INVALID_WORKSPACE_SNAPSHOT_REQUEST"
+    ) {
+      await log(400, msg);
+      return apiError({ code: msg, message: msg }, 400);
     }
     if (msg === "TEAM_TASK_NOT_IN_REVIEW" || msg === "AGENT_CONFIRMATION_NOT_PENDING") {
       await log(409, msg);

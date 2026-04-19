@@ -172,18 +172,18 @@ export function NotificationsClient({
 
                 {postSlug && row.kind === "post_liked" && (
                   <Link
-                    href={`/discussions/${encodeURIComponent(postSlug)}`}
+                    href="/discover"
                     className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1"
                     onClick={() => isUnread && markOne(row.ids)}
                   >
-                    {t("notifications.open_post")}
+                    打开发现页
                     <ArrowRight className="w-3 h-3" />
                   </Link>
                 )}
 
                 {teamSlug && (
                   <Link
-                    href={`/teams/${encodeURIComponent(teamSlug)}`}
+                    href={`/work/team/${encodeURIComponent(teamSlug)}`}
                     className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1"
                     onClick={() => isUnread && markOne(row.ids)}
                   >
@@ -194,7 +194,7 @@ export function NotificationsClient({
 
                 {confirmationRequestId && (
                   <Link
-                    href={`/settings/agents?confirmation=${encodeURIComponent(confirmationRequestId)}`}
+                    href={`/work/agent-tasks?confirmation=${encodeURIComponent(confirmationRequestId)}`}
                     className="text-xs text-[var(--color-primary-hover)] hover:underline flex items-center gap-1 mt-1"
                     onClick={() => isUnread && markOne(row.ids)}
                   >

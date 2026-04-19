@@ -7,7 +7,7 @@ import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { WEBHOOK_EVENT_NAMES, isWebhookEventName } from "@/lib/webhook-events";
 import { paginateArray } from "@/lib/pagination";
 import { COLLECTION_TOPICS } from "@/lib/topics-config";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { mapPrismaToRepositoryError, RepositoryError } from "@/lib/repository-errors";
 import { hashApiKeyToken, generateApiKeyPlaintext, isApiKeyTokenFormat } from "@/lib/api-key-crypto";
@@ -29,6 +29,7 @@ import {
   mockAuditLogs,
   mockAgentActionAudits,
   mockAgentConfirmationRequests,
+  mockAgentTasks,
   mockComments,
   mockCollaborationIntents,
   mockCreators,
@@ -57,6 +58,8 @@ import {
   mockTeamTaskComments,
   mockTeamChatMessages,
   mockWebhookEndpoints,
+  mockWorkspaceArtifacts,
+  mockWorkspaceSnapshots,
 } from "@/lib/data/mock-data";
 import type {
   ApiKeyCreated,
@@ -70,6 +73,7 @@ import type {
   AuditLog,
   CollaborationIntent,
   CollaborationIntentConversionMetrics,
+  CollaborationIntentStatus,
   CollaborationIntentType,
   CollectionTopic,
   Comment,
@@ -118,6 +122,7 @@ import type {
   TalentRadarEntry,
   TeamActivityLogEntry,
   TeamDiscussion,
+  WorkAgentTaskItem,
   WeeklyLeaderboardKind,
   WeeklyLeaderboardMaterializedRow,
   WeeklyLeaderboardMaterializedSnapshot,
@@ -129,6 +134,13 @@ import type {
   EnterpriseVerificationStatus,
   ProjectSortOrder,
 } from "@/lib/types";
+import {
+  composeStructuredIntentMessage,
+  deriveIntentExpiresAt,
+  findIntentContactViolation,
+  normalizeCollaborationIntentStatus,
+  normalizeStructuredIntentFields,
+} from "@/lib/collaboration-intents";
 import { checkTeamMemberLimit } from "@/lib/subscription";
 import {
   getEnterpriseProfileByUserId as getEnterpriseProfileByUserIdFromDomain,
@@ -161,6 +173,9 @@ import {
   getPostBySlug as getPostBySlugFromDomain,
   listPosts as listPostsFromDomain,
 } from "@/lib/repositories/community.repository";
+import {
+  ensureTeamWorkspace,
+} from "@/lib/repositories/workspace.repository";
 import {
   listTeamsForUser as listTeamsForUserFromShared,
   listPendingJoinRequestsForOwner as listPendingJoinRequestsForOwnerFromShared,
@@ -241,6 +256,8 @@ interface ReviewCollaborationIntentInput {
   inviteApplicantToTeamOnApprove?: boolean;
 }
 
+type OwnerCollaborationIntentAction = "approve" | "reject" | "ignore" | "block";
+
 export async function getPrisma() {
   const db = await import("@/lib/db");
   return db.prisma;
@@ -249,6 +266,32 @@ export async function getPrisma() {
 function normalizeModerationNote(note?: string): string | undefined {
   const value = note?.trim();
   return value ? value.slice(0, 500) : undefined;
+}
+
+function getStructuredIntentFields(input: {
+  pitch?: string | null;
+  whyYou?: string | null;
+  howCollab?: string | null;
+  message?: string | null;
+}) {
+  return normalizeStructuredIntentFields(input);
+}
+
+function mapCollaborationIntentActionToStatus(
+  action: ReviewCollaborationIntentInput["action"] | OwnerCollaborationIntentAction
+): CollaborationIntentStatus {
+  switch (action) {
+    case "approve":
+      return "approved";
+    case "reject":
+      return "rejected";
+    case "ignore":
+      return "ignored";
+    case "block":
+      return "blocked";
+    default:
+      return "pending";
+  }
 }
 
 function toProjectDto(project: {
@@ -435,27 +478,37 @@ function toCollaborationIntentDto(item: {
   applicantId: string;
   intentType: string;
   message: string;
+  pitch?: string | null;
+  whyYou?: string | null;
+  howCollab?: string | null;
   contact: string | null;
-  status: ReviewStatus;
+  status: string;
   reviewNote: string | null;
   reviewedAt: Date | null;
   reviewedBy: string | null;
+  expiresAt?: Date | null;
   convertedToTeamMembership?: boolean;
   createdAt: Date;
 }): CollaborationIntent {
   const intentType: CollaborationIntentType = item.intentType === "recruit" ? "recruit" : "join";
+  const expiresAt = item.expiresAt?.toISOString() ?? deriveIntentExpiresAt(item.createdAt);
+  const fields = getStructuredIntentFields(item);
 
   return {
     id: item.id,
     projectId: item.projectId,
     applicantId: item.applicantId,
     intentType,
+    pitch: fields.pitch || undefined,
+    whyYou: fields.whyYou || undefined,
+    howCollab: fields.howCollab || undefined,
     message: item.message,
     contact: item.contact ?? undefined,
-    status: item.status,
+    status: normalizeCollaborationIntentStatus(item.status, expiresAt),
     reviewNote: item.reviewNote ?? undefined,
     reviewedAt: item.reviewedAt?.toISOString(),
     reviewedBy: item.reviewedBy ?? undefined,
+    expiresAt,
     convertedToTeamMembership: item.convertedToTeamMembership ?? false,
     createdAt: item.createdAt.toISOString(),
   };
@@ -498,7 +551,7 @@ function toReportTicketDto(item: {
 }): ReportTicket {
   return {
     id: item.id,
-    targetType: "post",
+    targetType: item.targetType === "collaboration_intent" ? "collaboration_intent" : "post",
     targetId: item.targetId,
     reporterId: item.reporterId,
     reason: item.reason,
@@ -874,6 +927,7 @@ export async function getProjectEngagementSnapshot(params: {
     applicantId: string;
     applicantName: string;
     intentType: CollaborationIntent["intentType"];
+    pitch?: string;
     message: string;
     status: CollaborationIntent["status"];
     createdAt: string;
@@ -900,7 +954,8 @@ export async function getProjectEngagementSnapshot(params: {
         applicantId: item.applicantId,
         applicantName: mockUsers.find((user) => user.id === item.applicantId)?.name ?? item.applicantId,
         intentType: item.intentType,
-        message: item.message,
+        pitch: item.pitch ?? undefined,
+        message: item.message ?? "",
         status: item.status,
         createdAt: item.createdAt,
       }));
@@ -948,7 +1003,8 @@ export async function getProjectEngagementSnapshot(params: {
       applicantId: item.applicant.id,
       applicantName: item.applicant.name,
       intentType: item.intentType,
-      message: item.message,
+      pitch: item.pitch ?? undefined,
+      message: item.message ?? "",
       status: item.status,
       createdAt: item.createdAt.toISOString(),
     })),
@@ -1266,6 +1322,120 @@ function toAgentConfirmationDto(row: {
   };
 }
 
+function describeAgentTaskAction(action: string, taskTitle?: string | null) {
+  const readable = (() => {
+    switch (action) {
+      case "team_task_complete":
+        return "完成团队任务";
+      case "team_task_review_approve":
+        return "批准任务复核";
+      case "team_task_review_reject":
+        return "驳回任务复核";
+      case "team_task_delete":
+        return "删除团队任务";
+      case "team_member_role_update":
+        return "更新成员角色";
+      case "workspace_artifact_upload":
+        return "上传工作区文件";
+      case "workspace_snapshot_create":
+        return "创建工作区快照";
+      case "workspace_snapshot_rollback":
+        return "回滚工作区快照";
+      default:
+        return action.replaceAll("_", " ");
+    }
+  })();
+  return taskTitle ? `${readable} · ${taskTitle}` : readable;
+}
+
+function buildAgentTaskSubtitle(params: {
+  action: string;
+  status: WorkAgentTaskItem["status"];
+  teamName?: string | null;
+  requesterName?: string | null;
+}) {
+  const actor = params.requesterName ?? "工作区成员";
+  const actionLabel = describeAgentTaskAction(params.action);
+  const scope = params.teamName ? `（${params.teamName}）` : "";
+  if (params.status === "pending_confirm") {
+    return `${actor}发起了「${actionLabel}」确认请求${scope}`;
+  }
+  if (params.status === "failed") {
+    return `「${actionLabel}」已被驳回${scope}`;
+  }
+  if (params.status === "done") {
+    return `「${actionLabel}」已完成${scope}`;
+  }
+  return `「${actionLabel}」执行中${scope}`;
+}
+
+function toWorkAgentTaskDto(row: {
+  id: string;
+  requesterUserId: string;
+  requesterName?: string | null;
+  agentBindingId: string;
+  agentLabel?: string | null;
+  workspaceId?: string | null;
+  workspaceSlug?: string | null;
+  workspaceTitle?: string | null;
+  teamId?: string | null;
+  teamSlug?: string | null;
+  teamName?: string | null;
+  confirmationRequestId?: string | null;
+  confirmationStatus?: AgentConfirmationStatus | null;
+  canDecideConfirmation?: boolean;
+  title?: string | null;
+  subtitle?: string | null;
+  action: string;
+  targetType: string;
+  targetId: string;
+  status: WorkAgentTaskItem["status"];
+  taskTitle?: string | null;
+  metadata?: unknown;
+  createdAt: string | Date;
+  completedAt?: string | Date | null;
+}): WorkAgentTaskItem {
+  const scope = row.workspaceId && row.workspaceSlug === "personal" ? "personal" : row.teamId ? "team" : "personal";
+  const title = row.title?.trim() || (row.taskTitle ? describeAgentTaskAction(row.action, row.taskTitle) : describeAgentTaskAction(row.action));
+  return {
+    id: row.id,
+    source: "agent_task",
+    status: row.status,
+    action: row.action,
+    targetType: row.targetType,
+    targetId: row.targetId,
+    title,
+    subtitle:
+      row.subtitle?.trim() ||
+      buildAgentTaskSubtitle({
+        action: row.action,
+        status: row.status,
+        teamName: row.teamName,
+        requesterName: row.requesterName,
+      }),
+    scope,
+    workspaceId: row.workspaceId ?? undefined,
+    workspaceSlug: row.workspaceSlug ?? undefined,
+    workspaceTitle: row.workspaceTitle ?? undefined,
+    teamId: row.teamId ?? undefined,
+    teamSlug: row.teamSlug ?? undefined,
+    teamName: row.teamName ?? undefined,
+    agentBindingId: row.agentBindingId,
+    agentLabel: row.agentLabel ?? undefined,
+    confirmationRequestId: row.confirmationRequestId ?? undefined,
+    confirmationStatus: row.confirmationStatus ?? undefined,
+    canDecideConfirmation:
+      row.canDecideConfirmation ?? (row.confirmationRequestId != null && row.confirmationStatus === "pending"),
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
+    completedAt:
+      row.completedAt == null ? undefined : typeof row.completedAt === "string" ? row.completedAt : row.completedAt.toISOString(),
+    metadata:
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : undefined,
+  };
+}
+
 async function recordAgentActionAudit(params: {
   actorUserId: string;
   agentBindingId: string;
@@ -1349,8 +1519,8 @@ async function createAgentConfirmationRequest(params: {
       void notifyUser({
         userId,
         kind: "agent_confirmation_required",
-        title: "Agent action requires confirmation",
-        body: `Agent request pending: ${params.action}${params.taskTitle ? ` on “${params.taskTitle}”` : ""}.`,
+        title: "智能代理动作待确认",
+        body: `智能代理已发起「${describeAgentTaskAction(params.action, params.taskTitle)}」确认请求。`,
         metadata: { confirmationRequestId: row.id, teamSlug: params.teamSlug, taskId: params.taskId, action: params.action },
       });
       void dispatchWebhookEvent(userId, "agent.confirmation_required", {
@@ -1388,8 +1558,8 @@ async function createAgentConfirmationRequest(params: {
     void notifyUser({
       userId,
       kind: "agent_confirmation_required",
-      title: "Agent action requires confirmation",
-      body: `Agent request pending: ${params.action}${created.task?.title ? ` on “${created.task.title}”` : ""}.`,
+      title: "智能代理动作待确认",
+      body: `智能代理已发起「${describeAgentTaskAction(params.action, created.task?.title)}」确认请求。`,
       metadata: { confirmationRequestId: created.id, teamSlug: created.team?.slug ?? params.teamSlug, taskId: params.taskId, action: params.action },
     });
     void dispatchWebhookEvent(userId, "agent.confirmation_required", {
@@ -1405,6 +1575,277 @@ async function createAgentConfirmationRequest(params: {
     teamSlug: created.team?.slug,
     taskTitle: created.task?.title,
   });
+}
+
+async function ensureMockAgentTaskSeeds() {
+  if (!useMockData || mockAgentTasks.length > 0 || mockAgentConfirmationRequests.length > 0) {
+    return;
+  }
+  const now = new Date().toISOString();
+  if (!mockAgentBindings.some((binding) => binding.id === "ab_demo_alice")) {
+    mockAgentBindings.push({
+      id: "ab_demo_alice",
+      userId: "u1",
+      label: "Alice 审核助手",
+      agentType: "codex",
+      description: "用于 v10 智能代理任务中心演示的绑定。",
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  const pendingConfirmation = toAgentConfirmationDto({
+    id: "agent_confirm_demo_review",
+    requesterUserId: "u1",
+    agentBindingId: "ab_demo_alice",
+    teamId: "team1",
+    teamSlug: "vibehub-core",
+    taskId: "tt1",
+    taskTitle: "发布清单复核",
+    targetType: "team_task",
+    targetId: "tt1",
+    action: "team_task_review_approve",
+    reason: "在审核人确认后将发布清单推进到完成状态。",
+    payload: { nextStatus: "done" },
+    status: "pending",
+    createdAt: now,
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(),
+  });
+  mockAgentConfirmationRequests.push(pendingConfirmation);
+  mockInAppNotifications.unshift({
+    id: "notif_agent_confirm_demo_review",
+    userId: "u1",
+    kind: "agent_confirmation_required",
+    title: "智能代理动作待确认",
+    body: "Alice 审核助手正在等待你决定是否通过“发布清单复核”。",
+    metadata: {
+      confirmationRequestId: pendingConfirmation.id,
+      teamSlug: "vibehub-core",
+      taskId: "tt1",
+      action: pendingConfirmation.action,
+    },
+    createdAt: now,
+  });
+  mockAgentTasks.push({
+    id: "agent_task_demo_review",
+    requesterUserId: "u1",
+    agentBindingId: "ab_demo_alice",
+    teamId: "team1",
+    confirmationRequestId: pendingConfirmation.id,
+    taskId: "tt1",
+    title: "批准任务复核 · 发布清单复核",
+    subtitle: "Alice 已发起确认请求，准备将发布清单标记为完成。",
+    action: pendingConfirmation.action,
+    targetType: pendingConfirmation.targetType,
+    targetId: pendingConfirmation.targetId,
+    status: "pending_confirm",
+    metadata: { teamSlug: "vibehub-core", taskId: "tt1" },
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+async function createAgentTaskRecord(params: {
+  requesterUserId: string;
+  agentBindingId: string;
+  apiKeyId?: string;
+  workspaceId?: string | null;
+  teamId?: string | null;
+  confirmationRequestId?: string | null;
+  taskId?: string | null;
+  title: string;
+  subtitle: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  status: WorkAgentTaskItem["status"];
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  const now = new Date();
+  if (useMockData) {
+    mockAgentTasks.unshift({
+      id: `agent_task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      requesterUserId: params.requesterUserId,
+      agentBindingId: params.agentBindingId,
+      apiKeyId: params.apiKeyId,
+      workspaceId: params.workspaceId ?? undefined,
+      teamId: params.teamId ?? undefined,
+      confirmationRequestId: params.confirmationRequestId ?? undefined,
+      taskId: params.taskId ?? undefined,
+      title: params.title,
+      subtitle: params.subtitle,
+      action: params.action,
+      targetType: params.targetType,
+      targetId: params.targetId,
+      status: params.status,
+      metadata: params.metadata,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      completedAt: params.status === "done" || params.status === "failed" ? now.toISOString() : undefined,
+    });
+    return;
+  }
+  const prisma = await getPrisma();
+  const workspaceId =
+    params.workspaceId && !params.workspaceId.includes(":") ? params.workspaceId : null;
+  await prisma.agentTask.create({
+    data: {
+      requesterUserId: params.requesterUserId,
+      agentBindingId: params.agentBindingId,
+      apiKeyId: params.apiKeyId ?? null,
+      workspaceId,
+      teamId: params.teamId ?? null,
+      confirmationRequestId: params.confirmationRequestId ?? null,
+      taskId: params.taskId ?? null,
+      title: params.title,
+      subtitle: params.subtitle,
+      action: params.action,
+      targetType: params.targetType,
+      targetId: params.targetId,
+      status: params.status,
+      metadata: (params.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
+      completedAt: params.status === "done" || params.status === "failed" ? now : null,
+    },
+  });
+}
+
+async function syncAgentTaskForConfirmationDecision(params: {
+  confirmationRequestId: string;
+  decision: "approved" | "rejected";
+  decidedByUserId: string;
+}): Promise<void> {
+  const nextStatus = params.decision === "approved" ? "done" : "failed";
+  const now = new Date();
+  if (useMockData) {
+    const task = mockAgentTasks.find((item) => item.confirmationRequestId === params.confirmationRequestId);
+    if (!task) return;
+    task.status = nextStatus;
+    task.updatedAt = now.toISOString();
+    task.completedAt = now.toISOString();
+    task.subtitle =
+      params.decision === "approved"
+        ? `已由 ${userNameById(params.decidedByUserId)} 批准。`
+        : `已由 ${userNameById(params.decidedByUserId)} 驳回。`;
+    return;
+  }
+  const prisma = await getPrisma();
+  await prisma.agentTask.updateMany({
+    where: { confirmationRequestId: params.confirmationRequestId },
+    data: {
+      status: nextStatus,
+      completedAt: now,
+      subtitle:
+        params.decision === "approved"
+          ? `已由 ${params.decidedByUserId} 批准。`
+          : `已由 ${params.decidedByUserId} 驳回。`,
+    },
+  });
+}
+
+export async function listAgentTasksForUser(params: {
+  userId: string;
+  status?: WorkAgentTaskItem["status"];
+  scope?: "personal" | "team";
+}): Promise<WorkAgentTaskItem[]> {
+  if (useMockData) {
+    await ensureMockAgentTaskSeeds();
+    const reviewableTeamIds = new Set(
+      mockTeamMemberships
+        .filter((item) => item.userId === params.userId && canReviewTasks(item.role))
+        .map((item) => item.teamId)
+    );
+    return mockAgentTasks
+      .filter((item) => item.requesterUserId === params.userId || (item.teamId && reviewableTeamIds.has(item.teamId)))
+      .map((item) => {
+        const team = item.teamId ? mockTeams.find((entry) => entry.id === item.teamId) : undefined;
+        const binding = mockAgentBindings.find((entry) => entry.id === item.agentBindingId);
+        const confirmation = item.confirmationRequestId
+          ? mockAgentConfirmationRequests.find((entry) => entry.id === item.confirmationRequestId)
+          : undefined;
+        return toWorkAgentTaskDto({
+          ...item,
+          requesterName: userNameById(item.requesterUserId),
+          workspaceSlug: item.workspaceId?.startsWith("team:") ? team?.slug ?? undefined : "personal",
+          workspaceTitle: item.workspaceId?.startsWith("team:") ? team?.name ?? undefined : "个人工作区",
+          teamSlug: team?.slug,
+          teamName: team?.name,
+          agentLabel: binding?.label,
+          confirmationStatus: confirmation?.status,
+          canDecideConfirmation:
+            confirmation?.status === "pending"
+              ? item.teamId
+                ? reviewableTeamIds.has(item.teamId)
+                : item.requesterUserId === params.userId
+              : false,
+        });
+      })
+      .filter((item) => (params.status ? item.status === params.status : true))
+      .filter((item) => (params.scope ? item.scope === params.scope : true))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  const prisma = await getPrisma();
+  const memberships = await prisma.teamMembership.findMany({
+    where: { userId: params.userId, role: { in: ["owner", "admin", "reviewer"] } },
+    select: { teamId: true },
+  });
+  const teamIds = memberships.map((item) => item.teamId);
+  const rows = await prisma.agentTask.findMany({
+    where: {
+      OR: [
+        { requesterUserId: params.userId },
+        ...(teamIds.length > 0 ? [{ teamId: { in: teamIds } }] : []),
+      ],
+      ...(params.status ? { status: params.status } : {}),
+      ...(params.scope === "team"
+        ? { teamId: { not: null } }
+        : params.scope === "personal"
+          ? { teamId: null }
+          : {}),
+    },
+    include: {
+      requester: { select: { id: true, name: true } },
+      agentBinding: { select: { id: true, label: true } },
+      workspace: { select: { id: true, slug: true, title: true, kind: true } },
+      team: { select: { id: true, slug: true, name: true } },
+      confirmationRequest: { select: { id: true, status: true } },
+      teamTask: { select: { id: true, title: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((row) =>
+    toWorkAgentTaskDto({
+      id: row.id,
+      requesterUserId: row.requesterUserId,
+      requesterName: row.requester.name,
+      agentBindingId: row.agentBindingId,
+      agentLabel: row.agentBinding.label,
+      workspaceId: row.workspaceId,
+      workspaceSlug: row.workspace?.kind === "personal" ? "personal" : row.workspace?.slug,
+      workspaceTitle: row.workspace?.title,
+      teamId: row.teamId,
+      teamSlug: row.team?.slug,
+      teamName: row.team?.name,
+      confirmationRequestId: row.confirmationRequestId,
+      confirmationStatus: row.confirmationRequest?.status,
+      canDecideConfirmation:
+        row.confirmationRequest?.status === "pending"
+          ? row.teamId
+            ? teamIds.includes(row.teamId)
+            : row.requesterUserId === params.userId
+          : false,
+      title: row.title,
+      subtitle: row.subtitle,
+      action: row.action,
+      targetType: row.targetType,
+      targetId: row.targetId,
+      status: row.status,
+      taskTitle: row.teamTask?.title,
+      metadata: row.metadata,
+      createdAt: row.createdAt,
+      completedAt: row.completedAt,
+    })
+  );
 }
 
 async function assertTeamTaskMutateAllowed(params: {
@@ -1827,6 +2268,7 @@ export async function listInAppNotifications(params: {
 }): Promise<InAppNotification[]> {
   const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
   if (useMockData) {
+    await ensureMockAgentTaskSeeds();
     let rows = mockInAppNotifications.filter((n) => n.userId === params.userId);
     if (params.unreadOnly) {
       rows = rows.filter((n) => !n.readAt);
@@ -2503,6 +2945,7 @@ export async function listAgentConfirmationRequestsForUser(params: {
   status?: AgentConfirmationStatus;
 }): Promise<Paginated<AgentConfirmationRequest>> {
   if (useMockData) {
+    await ensureMockAgentTaskSeeds();
     const reviewableTeamIds = new Set(
       mockTeamMemberships
         .filter((item) => item.userId === params.userId && canReviewTasks(item.role))
@@ -2602,6 +3045,21 @@ export async function agentCompleteTeamTask(params: {
       outcome: "succeeded",
       metadata: { nextStatus: "review" },
     });
+    await createAgentTaskRecord({
+      requesterUserId: params.actorUserId,
+      agentBindingId: params.agentBindingId,
+      apiKeyId: params.apiKeyId,
+      workspaceId: `team:${teamId}`,
+      teamId,
+      taskId: row.id,
+      title: `Moved task to review · ${row.title}`,
+      subtitle: `Agent completed the task and moved it into review for ${mockTeams.find((item) => item.id === teamId)?.name ?? params.teamSlug}.`,
+      action: "team_task_complete",
+      targetType: "team_task",
+      targetId: row.id,
+      status: "done",
+      metadata: { nextStatus: "review", teamSlug: params.teamSlug },
+    });
     const team = mockTeams.find((item) => item.id === teamId);
     const recipients = (await listTeamReviewerUserIds(teamId)).filter((userId) => userId !== params.actorUserId);
     for (const userId of recipients) {
@@ -2665,6 +3123,21 @@ export async function agentCompleteTeamTask(params: {
     action: "team_task_complete",
     outcome: "succeeded",
     metadata: { nextStatus: "review" },
+  });
+  await createAgentTaskRecord({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    workspaceId: teamId ? `team:${teamId}` : null,
+    teamId,
+    taskId: updated.id,
+    title: `Moved task to review · ${updated.title}`,
+    subtitle: `Agent completed the task and moved it into review for ${params.teamSlug}.`,
+    action: "team_task_complete",
+    targetType: "team_task",
+    targetId: updated.id,
+    status: "done",
+    metadata: { nextStatus: "review", teamSlug: params.teamSlug },
   });
   const [team, recipientIds] = await Promise.all([
     prisma.team.findUnique({ where: { id: teamId }, select: { slug: true } }),
@@ -2753,6 +3226,22 @@ export async function requestAgentTaskReview(params: {
       outcome: "confirmation_required",
       metadata: { reviewNote: note ?? null },
     });
+    await createAgentTaskRecord({
+      requesterUserId: params.actorUserId,
+      agentBindingId: params.agentBindingId,
+      apiKeyId: params.apiKeyId,
+      workspaceId: `team:${teamId}`,
+      teamId,
+      confirmationRequestId: request.id,
+      taskId: row.id,
+      title: `${params.approved ? "批准" : "驳回"}任务复核 · ${row.title}`,
+      subtitle: `智能代理已发起「${params.approved ? "批准" : "驳回"}任务复核」确认请求：${row.title}`,
+      action: request.action,
+      targetType: request.targetType,
+      targetId: request.targetId,
+      status: "pending_confirm",
+      metadata: { reviewNote: note ?? null, teamSlug: params.teamSlug },
+    });
     return request;
   }
   const prisma = await getPrisma();
@@ -2787,6 +3276,22 @@ export async function requestAgentTaskReview(params: {
     action: request.action,
     outcome: "confirmation_required",
     metadata: { reviewNote: note ?? null },
+  });
+  await createAgentTaskRecord({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    workspaceId: teamId ? `team:${teamId}` : null,
+    teamId,
+    confirmationRequestId: request.id,
+    taskId: row.id,
+    title: `${params.approved ? "批准" : "驳回"}任务复核 · ${row.title}`,
+    subtitle: `智能代理已发起「${params.approved ? "批准" : "驳回"}任务复核」确认请求：${row.title}`,
+    action: request.action,
+    targetType: request.targetType,
+    targetId: request.targetId,
+    status: "pending_confirm",
+    metadata: { reviewNote: note ?? null, teamSlug: params.teamSlug },
   });
   return request;
 }
@@ -2833,6 +3338,22 @@ export async function requestAgentTaskDelete(params: {
       outcome: "confirmation_required",
       metadata: { reason: reason ?? null },
     });
+    await createAgentTaskRecord({
+      requesterUserId: params.actorUserId,
+      agentBindingId: params.agentBindingId,
+      apiKeyId: params.apiKeyId,
+      workspaceId: `team:${teamId}`,
+      teamId,
+      confirmationRequestId: request.id,
+      taskId: row.id,
+      title: `删除团队任务 · ${row.title}`,
+      subtitle: `智能代理在删除任务前请求确认：${row.title}`,
+      action: request.action,
+      targetType: request.targetType,
+      targetId: request.targetId,
+      status: "pending_confirm",
+      metadata: { reason: reason ?? null, teamSlug: params.teamSlug },
+    });
     return request;
   }
   const prisma = await getPrisma();
@@ -2865,6 +3386,22 @@ export async function requestAgentTaskDelete(params: {
     action: request.action,
     outcome: "confirmation_required",
     metadata: { reason: reason ?? null },
+  });
+  await createAgentTaskRecord({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    workspaceId: teamId ? `team:${teamId}` : null,
+    teamId,
+    confirmationRequestId: request.id,
+    taskId: row.id,
+    title: `删除团队任务 · ${row.title}`,
+    subtitle: `智能代理在删除任务前请求确认：${row.title}`,
+    action: request.action,
+    targetType: request.targetType,
+    targetId: request.targetId,
+    status: "pending_confirm",
+    metadata: { reason: reason ?? null, teamSlug: params.teamSlug },
   });
   return request;
 }
@@ -2908,6 +3445,213 @@ export async function requestAgentTeamMemberRoleChange(params: {
     outcome: "confirmation_required",
     metadata: { memberUserId: params.memberUserId, role: params.nextRole },
   });
+  await createAgentTaskRecord({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    workspaceId: teamId ? `team:${teamId}` : null,
+    teamId,
+    confirmationRequestId: request.id,
+    title: "更新团队成员角色",
+    subtitle: `智能代理请求确认，将成员角色调整为 ${params.nextRole}。`,
+    action: request.action,
+    targetType: request.targetType,
+    targetId: request.targetId,
+    status: "pending_confirm",
+    metadata: { memberUserId: params.memberUserId, role: params.nextRole, teamSlug: params.teamSlug },
+  });
+  return request;
+}
+
+export async function requestAgentWorkspaceArtifactUpload(params: {
+  teamSlug: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  actorUserId: string;
+  agentBindingId: string;
+  apiKeyId?: string;
+}): Promise<AgentConfirmationRequest> {
+  await assertActiveAgentBindingForUser({ userId: params.actorUserId, agentBindingId: params.agentBindingId });
+  const { teamId } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
+  const workspace = await ensureTeamWorkspace(teamId);
+  const filename = params.filename.trim();
+  const contentType = params.contentType.trim().toLowerCase();
+  const sizeBytes = params.sizeBytes;
+  if (!filename || !contentType || !Number.isInteger(sizeBytes) || sizeBytes <= 0) {
+    throw new Error("INVALID_WORKSPACE_ARTIFACT_REQUEST");
+  }
+  const recipients = (await listTeamReviewerUserIds(teamId)).filter((userId) => userId !== params.actorUserId);
+  const request = await createAgentConfirmationRequest({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    teamId,
+    teamSlug: params.teamSlug,
+    targetType: "workspace_artifact",
+    targetId: `workspace_artifact_request:${randomUUID()}`,
+    action: "workspace_artifact_upload",
+    reason: `Upload ${filename}`,
+    payload: {
+      workspaceId: workspace.id,
+      filename,
+      contentType,
+      sizeBytes,
+      teamSlug: params.teamSlug,
+    },
+    notifyUserIds: recipients,
+  });
+  await recordAgentActionAudit({
+    actorUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    teamId,
+    action: request.action,
+    outcome: "confirmation_required",
+    metadata: { workspaceId: workspace.id, filename, sizeBytes, teamSlug: params.teamSlug },
+  });
+  await createAgentTaskRecord({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    workspaceId: workspace.id,
+    teamId,
+    confirmationRequestId: request.id,
+    title: `上传工作区文件 · ${filename}`,
+    subtitle: `智能代理在将 ${filename} 添加到 ${workspace.title} 前请求确认。`,
+    action: request.action,
+    targetType: request.targetType,
+    targetId: request.targetId,
+    status: "pending_confirm",
+    metadata: { workspaceId: workspace.id, filename, sizeBytes, teamSlug: params.teamSlug },
+  });
+  return request;
+}
+
+export async function requestAgentWorkspaceSnapshotCreate(params: {
+  teamSlug: string;
+  title: string;
+  summary: string;
+  goal?: string;
+  roleNotes?: string;
+  projectIds: string[];
+  actorUserId: string;
+  agentBindingId: string;
+  apiKeyId?: string;
+}): Promise<AgentConfirmationRequest> {
+  await assertActiveAgentBindingForUser({ userId: params.actorUserId, agentBindingId: params.agentBindingId });
+  const { teamId } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
+  const workspace = await ensureTeamWorkspace(teamId);
+  const title = params.title.trim();
+  const summary = params.summary.trim();
+  const projectIds = Array.from(new Set(params.projectIds.map((item) => item.trim()).filter(Boolean)));
+  if (!title || !summary || projectIds.length === 0) {
+    throw new Error("INVALID_WORKSPACE_SNAPSHOT_REQUEST");
+  }
+  const recipients = (await listTeamReviewerUserIds(teamId)).filter((userId) => userId !== params.actorUserId);
+  const request = await createAgentConfirmationRequest({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    teamId,
+    teamSlug: params.teamSlug,
+    targetType: "workspace_snapshot",
+    targetId: `workspace_snapshot_request:${randomUUID()}`,
+    action: "workspace_snapshot_create",
+    reason: summary,
+    payload: {
+      workspaceId: workspace.id,
+      title,
+      summary,
+      goal: params.goal?.trim() || null,
+      roleNotes: params.roleNotes?.trim() || null,
+      projectIds,
+      teamSlug: params.teamSlug,
+    },
+    notifyUserIds: recipients,
+  });
+  await recordAgentActionAudit({
+    actorUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    teamId,
+    action: request.action,
+    outcome: "confirmation_required",
+    metadata: { workspaceId: workspace.id, title, projectIds, teamSlug: params.teamSlug },
+  });
+  await createAgentTaskRecord({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    workspaceId: workspace.id,
+    teamId,
+    confirmationRequestId: request.id,
+    title: `创建工作区快照 · ${title}`,
+    subtitle: `智能代理在 ${workspace.title} 中创建快照「${title}」前请求确认。`,
+    action: request.action,
+    targetType: request.targetType,
+    targetId: request.targetId,
+    status: "pending_confirm",
+    metadata: { workspaceId: workspace.id, title, projectIds, teamSlug: params.teamSlug },
+  });
+  return request;
+}
+
+export async function requestAgentWorkspaceSnapshotRollback(params: {
+  teamSlug: string;
+  snapshotId: string;
+  actorUserId: string;
+  agentBindingId: string;
+  apiKeyId?: string;
+}): Promise<AgentConfirmationRequest> {
+  await assertActiveAgentBindingForUser({ userId: params.actorUserId, agentBindingId: params.agentBindingId });
+  const { teamId, role } = await assertTeamMemberRoleBySlug(params.teamSlug, params.actorUserId);
+  if (!(role === "owner" || role === "admin")) {
+    throw new Error("FORBIDDEN_WORKSPACE_SNAPSHOT_ROLLBACK");
+  }
+  const workspace = await ensureTeamWorkspace(teamId);
+  const recipients = (await listTeamReviewerUserIds(teamId)).filter((userId) => userId !== params.actorUserId);
+  const request = await createAgentConfirmationRequest({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    teamId,
+    teamSlug: params.teamSlug,
+    targetType: "workspace_snapshot",
+    targetId: params.snapshotId,
+    action: "workspace_snapshot_rollback",
+    reason: `Rollback snapshot ${params.snapshotId}`,
+    payload: {
+      workspaceId: workspace.id,
+      snapshotId: params.snapshotId,
+      teamSlug: params.teamSlug,
+    },
+    notifyUserIds: recipients.length > 0 ? recipients : [params.actorUserId],
+  });
+  await recordAgentActionAudit({
+    actorUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    teamId,
+    action: request.action,
+    outcome: "confirmation_required",
+    metadata: { workspaceId: workspace.id, snapshotId: params.snapshotId, teamSlug: params.teamSlug },
+  });
+  await createAgentTaskRecord({
+    requesterUserId: params.actorUserId,
+    agentBindingId: params.agentBindingId,
+    apiKeyId: params.apiKeyId,
+    workspaceId: workspace.id,
+    teamId,
+    confirmationRequestId: request.id,
+    title: "回滚工作区快照",
+    subtitle: `智能代理在 ${workspace.title} 中回滚快照 ${params.snapshotId} 前请求确认。`,
+    action: request.action,
+    targetType: request.targetType,
+    targetId: request.targetId,
+    status: "pending_confirm",
+    metadata: { workspaceId: workspace.id, snapshotId: params.snapshotId, teamSlug: params.teamSlug },
+  });
   return request;
 }
 
@@ -2924,7 +3668,11 @@ export async function decideAgentConfirmationRequest(params: {
     if (row.teamId) {
       const membership = mockTeamMemberships.find((item) => item.teamId === row.teamId && item.userId === params.deciderUserId);
       if (!membership) throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
-      if (row.action === "team_task_delete" || row.action === "team_member_role_update") {
+      if (
+        row.action === "team_task_delete" ||
+        row.action === "team_member_role_update" ||
+        row.action === "workspace_snapshot_rollback"
+      ) {
         if (!canManageTeamMembership(membership.role)) throw new Error("FORBIDDEN_AGENT_CONFIRMATION");
       } else if (!canReviewTasks(membership.role)) {
         throw new Error("FORBIDDEN_AGENT_CONFIRMATION");
@@ -2951,8 +3699,8 @@ export async function decideAgentConfirmationRequest(params: {
           void notifyUser({
             userId,
             kind: "team_task_reviewed",
-            title: "Task review completed",
-            body: `“${task.title}” was ${task.status === "done" ? "approved" : "sent back"} by ${userNameById(params.deciderUserId)}.`,
+            title: "任务复核已完成",
+            body: `「${task.title}」已由 ${userNameById(params.deciderUserId)}${task.status === "done" ? "通过" : "驳回"}。`,
             metadata: { teamSlug: team?.slug ?? row.teamSlug, taskId: task.id },
           });
           void dispatchWebhookEvent(userId, "team.task_reviewed", {
@@ -2971,6 +3719,111 @@ export async function decideAgentConfirmationRequest(params: {
           actorUserId: params.deciderUserId,
           memberUserId: row.targetId,
           role: nextRole,
+        });
+      } else if (row.action === "workspace_artifact_upload") {
+        const workspaceId = typeof row.payload.workspaceId === "string" ? row.payload.workspaceId : null;
+        const filename = typeof row.payload.filename === "string" ? row.payload.filename : null;
+        const contentType = typeof row.payload.contentType === "string" ? row.payload.contentType : "application/octet-stream";
+        const sizeBytes = typeof row.payload.sizeBytes === "number" ? row.payload.sizeBytes : null;
+        if (!workspaceId || !filename || !sizeBytes) throw new Error("INVALID_WORKSPACE_ARTIFACT_REQUEST");
+        const uploader = mockUsers.find((item) => item.id === row.requesterUserId);
+        const artifactId = `agent_workspace_artifact_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const artifact = {
+          id: artifactId,
+          workspaceId,
+          filename,
+          contentType,
+          sizeBytes,
+          storageKey: `agent-request://${workspaceId}/${artifactId}/${filename.replace(/[^a-zA-Z0-9._-]+/g, "_")}`,
+          uploaderUserId: row.requesterUserId,
+          uploaderName: uploader?.name,
+          visibility: "workspace" as const,
+          validationState: "pending" as const,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        mockWorkspaceArtifacts.unshift(artifact);
+        mockAuditLogs.unshift({
+          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          actorId: params.deciderUserId,
+          action: "workspace.artifact.upload_requested",
+          entityType: "workspace_artifact",
+          entityId: artifact.id,
+          metadata: { workspaceId, filename, sizeBytes, teamId: row.teamId, agentBindingId: row.agentBindingId, via: "agent_confirmation" },
+          createdAt: now.toISOString(),
+        });
+      } else if (row.action === "workspace_snapshot_create") {
+        const workspaceId = typeof row.payload.workspaceId === "string" ? row.payload.workspaceId : null;
+        const title = typeof row.payload.title === "string" ? row.payload.title.trim() : null;
+        const summary = typeof row.payload.summary === "string" ? row.payload.summary.trim() : null;
+        const goal = typeof row.payload.goal === "string" ? row.payload.goal : undefined;
+        const roleNotes = typeof row.payload.roleNotes === "string" ? row.payload.roleNotes : undefined;
+        const projectIds = Array.isArray(row.payload.projectIds)
+          ? row.payload.projectIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+          : [];
+        if (!workspaceId || !title || !summary || projectIds.length === 0) throw new Error("INVALID_WORKSPACE_SNAPSHOT_REQUEST");
+        const snapshotId = `snapshot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const previousSnapshotId =
+          typeof row.payload.previousSnapshotId === "string" ? row.payload.previousSnapshotId : undefined;
+        const previousSnapshot = previousSnapshotId
+          ? mockWorkspaceSnapshots.find((item) => item.id === previousSnapshotId)
+          : undefined;
+        mockWorkspaceSnapshots.unshift({
+          id: snapshotId,
+          workspaceId,
+          title,
+          summary,
+          goal,
+          roleNotes,
+          projectIds,
+          projects: mockProjects
+            .filter((project) => projectIds.includes(project.id))
+            .map((project) => ({
+              id: project.id,
+              slug: project.slug,
+              title: project.title,
+              openSource: project.openSource,
+            })),
+          previousSnapshotId,
+          previousSnapshotTitle: previousSnapshot?.title,
+          createdByUserId: row.requesterUserId,
+          createdByName: userNameById(row.requesterUserId),
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        });
+        mockAuditLogs.unshift({
+          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          actorId: params.deciderUserId,
+          action: previousSnapshotId ? "workspace.snapshot.rolled_back" : "workspace.snapshot.created",
+          entityType: "workspace_snapshot",
+          entityId: snapshotId,
+          metadata: { workspaceId, projectIds, previousSnapshotId, teamId: row.teamId, agentBindingId: row.agentBindingId, via: "agent_confirmation" },
+          createdAt: now.toISOString(),
+        });
+      } else if (row.action === "workspace_snapshot_rollback") {
+        const workspaceId = typeof row.payload.workspaceId === "string" ? row.payload.workspaceId : null;
+        const snapshotId = typeof row.payload.snapshotId === "string" ? row.payload.snapshotId : null;
+        const existingSnapshot = snapshotId ? mockWorkspaceSnapshots.find((item) => item.id === snapshotId) : undefined;
+        if (!workspaceId || !existingSnapshot) throw new Error("WORKSPACE_SNAPSHOT_NOT_FOUND");
+        const newSnapshotId = `snapshot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        mockWorkspaceSnapshots.unshift({
+          ...existingSnapshot,
+          id: newSnapshotId,
+          previousSnapshotId: existingSnapshot.id,
+          previousSnapshotTitle: existingSnapshot.title,
+          createdByUserId: params.deciderUserId,
+          createdByName: userNameById(params.deciderUserId),
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        });
+        mockAuditLogs.unshift({
+          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          actorId: params.deciderUserId,
+          action: "workspace.snapshot.rolled_back",
+          entityType: "workspace_snapshot",
+          entityId: newSnapshotId,
+          metadata: { workspaceId, previousSnapshotId: existingSnapshot.id, teamId: row.teamId, agentBindingId: row.agentBindingId, via: "agent_confirmation" },
+          createdAt: now.toISOString(),
         });
       }
       await recordAgentActionAudit({
@@ -3015,7 +3868,11 @@ export async function decideAgentConfirmationRequest(params: {
       select: { role: true },
     });
     if (!membership) throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
-    if (existing.action === "team_task_delete" || existing.action === "team_member_role_update") {
+    if (
+      existing.action === "team_task_delete" ||
+      existing.action === "team_member_role_update" ||
+      existing.action === "workspace_snapshot_rollback"
+    ) {
       if (!canManageTeamMembership(membership.role as TeamRole)) throw new Error("FORBIDDEN_AGENT_CONFIRMATION");
     } else if (!canReviewTasks(membership.role as TeamRole)) {
       throw new Error("FORBIDDEN_AGENT_CONFIRMATION");
@@ -3072,8 +3929,8 @@ export async function decideAgentConfirmationRequest(params: {
           void notifyUser({
             userId,
             kind: "team_task_reviewed",
-            title: "Task review completed",
-            body: `“${task.title}” was ${task.status === "done" ? "approved" : "sent back"} by ${task.team.slug}.`,
+            title: "任务复核已完成",
+            body: `「${task.title}」已在团队 ${task.team.slug} 中${task.status === "done" ? "通过" : "驳回"}。`,
             metadata: { teamSlug: task.team.slug, taskId: task.id },
           });
           void dispatchWebhookEvent(userId, "team.task_reviewed", {
@@ -3110,6 +3967,103 @@ export async function decideAgentConfirmationRequest(params: {
             metadata: { memberUserId: row.targetId, role: nextRole, agentBindingId: row.agentBindingId },
           },
         });
+      } else if (row.action === "workspace_artifact_upload") {
+        const payload = row.payload as Record<string, unknown>;
+        const workspaceId = typeof payload.workspaceId === "string" ? payload.workspaceId : null;
+        const filename = typeof payload.filename === "string" ? payload.filename : null;
+        const contentType = typeof payload.contentType === "string" ? payload.contentType : "application/octet-stream";
+        const sizeBytes = typeof payload.sizeBytes === "number" ? payload.sizeBytes : null;
+        if (!workspaceId || !filename || !sizeBytes) throw new Error("INVALID_WORKSPACE_ARTIFACT_REQUEST");
+        await tx.workspaceArtifact.create({
+          data: {
+            workspaceId,
+            uploaderUserId: row.requesterUserId,
+            filename,
+            contentType,
+            sizeBytes,
+            storageKey: `agent-request/${workspaceId}/${row.id}/${filename.replace(/[^a-zA-Z0-9._-]+/g, "_")}`,
+            visibility: "workspace",
+            validationState: "pending",
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: params.deciderUserId,
+            action: "workspace.artifact.upload_requested",
+            entityType: "workspace_artifact",
+            entityId: row.id,
+            metadata: { workspaceId, filename, sizeBytes, teamId: row.teamId, agentBindingId: row.agentBindingId, via: "agent_confirmation" },
+          },
+        });
+      } else if (row.action === "workspace_snapshot_create") {
+        const payload = row.payload as Record<string, unknown>;
+        const workspaceId = typeof payload.workspaceId === "string" ? payload.workspaceId : null;
+        const title = typeof payload.title === "string" ? payload.title.trim() : null;
+        const summary = typeof payload.summary === "string" ? payload.summary.trim() : null;
+        const goal = typeof payload.goal === "string" ? payload.goal : null;
+        const roleNotes = typeof payload.roleNotes === "string" ? payload.roleNotes : null;
+        const projectIds = Array.isArray(payload.projectIds)
+          ? payload.projectIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+          : [];
+        if (!workspaceId || !title || !summary || projectIds.length === 0) throw new Error("INVALID_WORKSPACE_SNAPSHOT_REQUEST");
+        const createdSnapshot = await tx.snapshotCapsule.create({
+          data: {
+            workspaceId,
+            createdByUserId: row.requesterUserId,
+            title,
+            summary,
+            goal,
+            roleNotes,
+            projectIds,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: params.deciderUserId,
+            action: "workspace.snapshot.created",
+            entityType: "workspace_snapshot",
+            entityId: createdSnapshot.id,
+            metadata: { workspaceId, projectIds, teamId: row.teamId, agentBindingId: row.agentBindingId, via: "agent_confirmation" },
+          },
+        });
+      } else if (row.action === "workspace_snapshot_rollback") {
+        const payload = row.payload as Record<string, unknown>;
+        const workspaceId = typeof payload.workspaceId === "string" ? payload.workspaceId : null;
+        const snapshotId = typeof payload.snapshotId === "string" ? payload.snapshotId : null;
+        if (!workspaceId || !snapshotId) throw new Error("WORKSPACE_SNAPSHOT_NOT_FOUND");
+        const source = await tx.snapshotCapsule.findFirst({
+          where: { id: snapshotId, workspaceId },
+          select: {
+            id: true,
+            title: true,
+            summary: true,
+            goal: true,
+            roleNotes: true,
+            projectIds: true,
+          },
+        });
+        if (!source) throw new Error("WORKSPACE_SNAPSHOT_NOT_FOUND");
+        const createdSnapshot = await tx.snapshotCapsule.create({
+          data: {
+            workspaceId,
+            createdByUserId: params.deciderUserId,
+            title: source.title,
+            summary: source.summary,
+            goal: source.goal,
+            roleNotes: source.roleNotes,
+            projectIds: source.projectIds,
+            previousSnapshotId: source.id,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: params.deciderUserId,
+            action: "workspace.snapshot.rolled_back",
+            entityType: "workspace_snapshot",
+            entityId: createdSnapshot.id,
+            metadata: { workspaceId, previousSnapshotId: source.id, teamId: row.teamId, agentBindingId: row.agentBindingId, via: "agent_confirmation" },
+          },
+        });
       }
     }
     return row;
@@ -3123,6 +4077,11 @@ export async function decideAgentConfirmationRequest(params: {
     action: updated.action,
     outcome: decision === "approved" ? "succeeded" : "rejected",
     metadata: { decidedByUserId: params.deciderUserId },
+  });
+  await syncAgentTaskForConfirmationDecision({
+    confirmationRequestId: updated.id,
+    decision,
+    decidedByUserId: params.deciderUserId,
   });
   return toAgentConfirmationDto({
     ...updated,
@@ -4410,8 +5369,6 @@ export async function upsertUserSubscription(params: {
   enterpriseWorkEmail?: string | null;
   enterpriseUseCase?: string | null;
   enterpriseReviewNote?: string | null;
-  stripeSubscriptionId?: string;
-  stripePriceId?: string;
   currentPeriodEnd?: Date;
   cancelAtPeriodEnd?: boolean;
 }): Promise<UserSubscription> {
@@ -4480,16 +5437,6 @@ export async function countUserProjects(userId: string): Promise<number> {
   const creator = await prisma.creatorProfile.findUnique({ where: { userId }, select: { id: true } });
   if (!creator) return 0;
   return prisma.project.count({ where: { creatorId: creator.id } });
-}
-
-export async function upsertStripeCustomer(userId: string, stripeCustomerId: string): Promise<void> {
-  if (useMockData) {
-    const user = mockUsers.find((u) => u.id === userId);
-    if (user) user.stripeCustomerId = stripeCustomerId;
-    return;
-  }
-  const prisma = await getPrisma();
-  await prisma.user.update({ where: { id: userId }, data: { stripeCustomerId } });
 }
 
 export async function getCreatorProfileByUserId(userId: string): Promise<CreatorProfile | null> {
@@ -5719,7 +6666,7 @@ export async function unifiedSearchPaged(params: {
 
 export async function listProjectCollaborationIntents(params: {
   projectId: string;
-  status?: ReviewStatus | "all";
+  status?: CollaborationIntentStatus | "all";
   page: number;
   limit: number;
 }): Promise<Paginated<CollaborationIntent>> {
@@ -5804,9 +6751,22 @@ export async function submitCollaborationIntent(input: {
   projectId: string;
   applicantId: string;
   intentType: CollaborationIntentType;
-  message: string;
-  contact?: string;
+  pitch: string;
+  whyYou: string;
+  howCollab: string;
 }): Promise<CollaborationIntent> {
+  const pitch = input.pitch.trim();
+  const whyYou = input.whyYou.trim();
+  const howCollab = input.howCollab.trim();
+  const contactViolation = findIntentContactViolation({ pitch, whyYou, howCollab });
+  if (contactViolation) {
+    throw new RepositoryError(
+      "INVALID_INPUT",
+      `Direct contact info is not allowed in ${contactViolation}`,
+      400
+    );
+  }
+
   // Verify applicant has a creator profile
   const profile = useMockData
     ? mockCreators.find((c) => c.userId === input.applicantId)
@@ -5822,18 +6782,30 @@ export async function submitCollaborationIntent(input: {
   // Prevent duplicate pending/approved intents
   if (useMockData) {
     const dup = mockCollaborationIntents.find(
-      (i) => i.projectId === input.projectId && i.applicantId === input.applicantId && i.status !== "rejected"
+      (i) =>
+        i.projectId === input.projectId &&
+        i.applicantId === input.applicantId &&
+        !["rejected", "ignored", "expired"].includes(normalizeCollaborationIntentStatus(i.status, i.expiresAt))
     );
     if (dup) throw new Error("DUPLICATE_INTENT");
   } else {
     const prisma = await getPrisma();
     const dup = await prisma.collaborationIntent.findFirst({
-      where: { projectId: input.projectId, applicantId: input.applicantId, status: { not: "rejected" } },
+      where: {
+        projectId: input.projectId,
+        applicantId: input.applicantId,
+        status: { notIn: ["rejected", "ignored", "expired"] },
+      },
     });
     if (dup) throw new Error("DUPLICATE_INTENT");
   }
 
-  const intent = await createCollaborationIntent(input);
+  const intent = await createCollaborationIntent({
+    ...input,
+    pitch,
+    whyYou,
+    howCollab,
+  });
   await notifyProjectOwnerOfNewCollaborationIntent({
     projectId: input.projectId,
     intentId: intent.id,
@@ -5846,11 +6818,15 @@ export async function createCollaborationIntent(input: {
   projectId: string;
   applicantId: string;
   intentType: CollaborationIntentType;
-  message: string;
-  contact?: string;
+  pitch: string;
+  whyYou: string;
+  howCollab: string;
 }): Promise<CollaborationIntent> {
-  const message = input.message.trim();
-  const contact = input.contact?.trim();
+  const pitch = input.pitch.trim();
+  const whyYou = input.whyYou.trim();
+  const howCollab = input.howCollab.trim();
+  const expiresAt = deriveIntentExpiresAt(new Date());
+  const message = composeStructuredIntentMessage({ pitch, whyYou, howCollab });
 
   if (useMockData) {
     const projectExists = mockProjects.some((project) => project.id === input.projectId);
@@ -5867,9 +6843,13 @@ export async function createCollaborationIntent(input: {
       projectId: input.projectId,
       applicantId: input.applicantId,
       intentType: input.intentType,
+      pitch,
+      whyYou,
+      howCollab,
       message,
-      contact: contact || undefined,
+      contact: undefined,
       status: "pending",
+      expiresAt,
       convertedToTeamMembership: false,
       createdAt: new Date().toISOString(),
     };
@@ -5914,9 +6894,13 @@ export async function createCollaborationIntent(input: {
         projectId: input.projectId,
         applicantId: input.applicantId,
         intentType: input.intentType,
+        pitch,
+        whyYou,
+        howCollab,
         message,
-        contact: contact || null,
+        contact: null,
         status: "pending",
+        expiresAt: new Date(expiresAt),
       },
     });
 
@@ -5940,7 +6924,7 @@ export async function createCollaborationIntent(input: {
 }
 
 export async function listCollaborationIntentsForModeration(params: {
-  status?: ReviewStatus | "all";
+  status?: CollaborationIntentStatus | "all";
   projectId?: string;
   page: number;
   limit: number;
@@ -5986,7 +6970,7 @@ export async function listCollaborationIntentsForModeration(params: {
 export async function reviewCollaborationIntent(
   input: ReviewCollaborationIntentInput
 ): Promise<CollaborationIntent> {
-  const nextStatus: ReviewStatus = input.action === "approve" ? "approved" : "rejected";
+  const nextStatus = mapCollaborationIntentActionToStatus(input.action);
   const note = normalizeModerationNote(input.note);
 
   if (useMockData) {
@@ -6047,13 +7031,13 @@ export async function reviewCollaborationIntent(
     void notifyUser({
       userId: intent.applicantId,
       kind: "collaboration_intent_status_update",
-      title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
+      title: nextStatus === "approved" ? "协作意向已通过" : "协作意向状态更新",
       body:
         nextStatus === "approved"
           ? joinedTeamSlug
-            ? `Your join request for “${projectTitle}” was approved and you were added to team /teams/${joinedTeamSlug}.`
-            : `Your collaboration intent for “${projectTitle}” was approved.`
-          : `Your collaboration intent for “${projectTitle}” was not approved.`,
+            ? `你提交给“${projectTitle}”的加入申请已通过，现已加入团队工作区 /work/team/${joinedTeamSlug}。`
+            : `你提交给“${projectTitle}”的协作意向已通过。`
+          : `你提交给“${projectTitle}”的协作意向未通过。`,
       metadata: {
         projectSlug,
         status: nextStatus,
@@ -6155,13 +7139,13 @@ export async function reviewCollaborationIntent(
   void notifyUser({
     userId: updated.applicantId,
     kind: "collaboration_intent_status_update",
-    title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
+    title: nextStatus === "approved" ? "协作意向已通过" : "协作意向状态更新",
     body:
       nextStatus === "approved"
         ? joinedTeamSlug
-          ? `Your join request for “${project.title}” was approved and you were added to team /teams/${joinedTeamSlug}.`
-          : `Your collaboration intent for “${project.title}” was approved.`
-        : `Your collaboration intent for “${project.title}” was not approved.`,
+          ? `你提交给“${project.title}”的加入申请已通过，现已加入团队工作区 /work/team/${joinedTeamSlug}。`
+          : `你提交给“${project.title}”的协作意向已通过。`
+        : `你提交给“${project.title}”的协作意向未通过。`,
     metadata: {
       projectSlug: project.slug,
       status: nextStatus,
@@ -6449,7 +7433,7 @@ export async function listReportTickets(params: {
 }
 
 export async function createReportTicket(params: {
-  targetType: "post";
+  targetType: "post" | "collaboration_intent";
   targetId: string;
   reporterId: string;
   reason: string;
@@ -7459,16 +8443,48 @@ export async function pruneOldTeamChatMessages(): Promise<number> {
 
 // ─── T-4: Project-owner collaboration intent review ──────────────────────────
 
-export async function reviewCollaborationIntentByOwner(params: {
+function buildCollaborationIntentStatusNotification(params: {
+  status: CollaborationIntentStatus;
+  projectTitle: string;
+  joinedTeamSlug?: string;
+}) {
+  if (params.status === "approved") {
+    return {
+      title: "协作意向已通过",
+      body: params.joinedTeamSlug
+        ? `你提交给“${params.projectTitle}”的加入申请已通过，现已加入团队工作区 /work/team/${params.joinedTeamSlug}。`
+        : `你提交给“${params.projectTitle}”的协作意向已通过。`,
+    };
+  }
+  if (params.status === "ignored") {
+    return {
+      title: "协作意向已忽略",
+      body: `你提交给“${params.projectTitle}”的协作意向已被项目所有者归档。`,
+    };
+  }
+  if (params.status === "blocked") {
+    return {
+      title: "协作意向已拦截",
+      body: `你提交给“${params.projectTitle}”的协作意向已被拦截并进入复核。`,
+    };
+  }
+  return {
+    title: "协作意向状态更新",
+    body: `你提交给“${params.projectTitle}”的协作意向未通过。`,
+  };
+}
+
+async function transitionCollaborationIntentByOwner(params: {
   intentId: string;
   ownerUserId: string;
-  action: "approve" | "reject";
+  action: OwnerCollaborationIntentAction;
   note?: string;
   /** If approve + teamSlug provided, auto-invite applicant to this team */
   inviteToTeamSlug?: string;
 }): Promise<CollaborationIntent> {
-  const nextStatus: ReviewStatus = params.action === "approve" ? "approved" : "rejected";
+  const nextStatus = mapCollaborationIntentActionToStatus(params.action);
   const note = normalizeModerationNote(params.note);
+  const reportReason = note ?? "Blocked by project owner from the collaboration inbox.";
 
   if (useMockData) {
     const intent = mockCollaborationIntents.find((i) => i.id === params.intentId);
@@ -7505,18 +8521,48 @@ export async function reviewCollaborationIntentByOwner(params: {
         }
       }
     }
+    if (nextStatus === "blocked") {
+      const openTicket = mockReportTickets.find(
+        (ticket) =>
+          ticket.targetType === "collaboration_intent" &&
+          ticket.targetId === intent.id &&
+          ticket.reporterId === params.ownerUserId &&
+          ticket.status === "open"
+      );
+      if (!openTicket) {
+        const ticketId = `report_intent_${Date.now()}`;
+        mockReportTickets.unshift({
+          id: ticketId,
+          targetType: "collaboration_intent",
+          targetId: intent.id,
+          reporterId: params.ownerUserId,
+          reason: reportReason,
+          status: "open",
+          createdAt: new Date().toISOString(),
+        });
+        mockAuditLogs.unshift({
+          id: `audit_report_intent_${Date.now()}`,
+          actorId: params.ownerUserId,
+          action: "report_ticket_created",
+          entityType: "report_ticket",
+          entityId: ticketId,
+          createdAt: new Date().toISOString(),
+          metadata: { targetType: "collaboration_intent", targetId: intent.id },
+        });
+      }
+    }
     const projectSlug = project?.slug ?? intent.projectId;
     const projectTitle = project?.title ?? "the project";
+    const notification = buildCollaborationIntentStatusNotification({
+      status: nextStatus,
+      projectTitle,
+      joinedTeamSlug,
+    });
     void notifyUser({
       userId: intent.applicantId,
       kind: "collaboration_intent_status_update",
-      title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
-      body:
-        nextStatus === "approved"
-          ? joinedTeamSlug
-            ? `Your join request for “${projectTitle}” was approved — you’re now on team /teams/${joinedTeamSlug}.`
-            : `Your collaboration intent for “${projectTitle}” was approved.`
-          : `Your collaboration intent for “${projectTitle}” was not approved.`,
+      title: notification.title,
+      body: notification.body,
       metadata: {
         projectSlug,
         status: nextStatus,
@@ -7573,27 +8619,60 @@ export async function reviewCollaborationIntentByOwner(params: {
         }
       }
     }
+    if (nextStatus === "blocked") {
+      const existingReport = await tx.reportTicket.findFirst({
+        where: {
+          targetType: "collaboration_intent",
+          targetId: params.intentId,
+          reporterId: params.ownerUserId,
+          status: "open",
+        },
+      });
+      if (!existingReport) {
+        const report = await tx.reportTicket.create({
+          data: {
+            targetType: "collaboration_intent",
+            targetId: params.intentId,
+            reporterId: params.ownerUserId,
+            reason: reportReason,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: params.ownerUserId,
+            action: "report_ticket_created",
+            entityType: "report_ticket",
+            entityId: report.id,
+            metadata: { targetType: "collaboration_intent", targetId: params.intentId },
+          },
+        });
+      }
+    }
     await tx.auditLog.create({
       data: {
         actorId: params.ownerUserId,
         action: `collaboration_intent_${nextStatus}_by_owner`,
         entityType: "collaboration_intent",
         entityId: params.intentId,
-        metadata: { note, inviteToTeamSlug: params.inviteToTeamSlug },
+        metadata: {
+          note,
+          inviteToTeamSlug: params.inviteToTeamSlug,
+          blockedAndReported: nextStatus === "blocked",
+        },
       },
     });
     return { updated: u, project: intent.project, joinedTeamSlug };
   });
+  const notification = buildCollaborationIntentStatusNotification({
+    status: nextStatus,
+    projectTitle: result.project.title,
+    joinedTeamSlug: result.joinedTeamSlug,
+  });
   void notifyUser({
     userId: result.updated.applicantId,
     kind: "collaboration_intent_status_update",
-    title: nextStatus === "approved" ? "Collaboration intent approved" : "Collaboration intent update",
-    body:
-      nextStatus === "approved"
-        ? result.joinedTeamSlug
-          ? `Your join request for “${result.project.title}” was approved — you’re now on team /teams/${result.joinedTeamSlug}.`
-          : `Your collaboration intent for “${result.project.title}” was approved.`
-        : `Your collaboration intent for “${result.project.title}” was not approved.`,
+    title: notification.title,
+    body: notification.body,
     metadata: {
       projectSlug: result.project.slug,
       status: nextStatus,
@@ -7613,20 +8692,33 @@ export async function reviewCollaborationIntentByOwner(params: {
       field: "intentsApproved",
     });
   }
-  return {
-    id: updated.id,
-    projectId: updated.projectId,
-    applicantId: updated.applicantId,
-    intentType: updated.intentType as CollaborationIntentType,
-    message: updated.message,
-    contact: updated.contact ?? undefined,
-    status: updated.status as ReviewStatus,
-    reviewNote: updated.reviewNote ?? undefined,
-    reviewedAt: updated.reviewedAt?.toISOString(),
-    reviewedBy: updated.reviewedBy ?? undefined,
-    convertedToTeamMembership: updated.convertedToTeamMembership,
-    createdAt: updated.createdAt.toISOString(),
-  };
+  return toCollaborationIntentDto(updated);
+}
+
+export async function reviewCollaborationIntentByOwner(params: {
+  intentId: string;
+  ownerUserId: string;
+  action: "approve" | "reject";
+  note?: string;
+  inviteToTeamSlug?: string;
+}): Promise<CollaborationIntent> {
+  return transitionCollaborationIntentByOwner(params);
+}
+
+export async function ignoreCollaborationIntentByOwner(params: {
+  intentId: string;
+  ownerUserId: string;
+  note?: string;
+}): Promise<CollaborationIntent> {
+  return transitionCollaborationIntentByOwner({ ...params, action: "ignore" });
+}
+
+export async function blockAndReportCollaborationIntentByOwner(params: {
+  intentId: string;
+  ownerUserId: string;
+  note?: string;
+}): Promise<CollaborationIntent> {
+  return transitionCollaborationIntentByOwner({ ...params, action: "block" });
 }
 
 export async function requestTeamJoin(params: {
@@ -10491,6 +11583,14 @@ export async function getCreatorGrowthStats(creatorSlug: string): Promise<Creato
 
 function classifyTeamActivityEntry(input: { entityType: string; action: string }): TeamActivityLogEntry["kind"] {
   if (input.entityType === "agent_action_audit") return "agent";
+  if (input.entityType === "agent_confirmation_request") return "confirmation";
+  if (
+    input.entityType === "workspace_artifact" ||
+    input.entityType === "workspace_snapshot" ||
+    input.entityType === "workspace_deliverable"
+  ) {
+    return "workspace";
+  }
   if (input.entityType === "team_discussion") return "discussion";
   return "task";
 }
@@ -10501,7 +11601,19 @@ function summarizeTeamActivityEntry(input: {
   metadata?: Record<string, unknown>;
 }): string {
   if (input.kind === "agent") {
-    return input.action.replaceAll("_", " ");
+    const outcome = typeof input.metadata?.outcome === "string" ? input.metadata.outcome.replaceAll("_", " ") : null;
+    return outcome ? `${input.action.replaceAll("_", " ")} · ${outcome}` : input.action.replaceAll("_", " ");
+  }
+  if (input.kind === "confirmation") {
+    const status = typeof input.metadata?.status === "string" ? input.metadata.status.replaceAll("_", " ") : null;
+    return status ? `${input.action.replaceAll("_", " ")} · ${status}` : input.action.replaceAll("_", " ");
+  }
+  if (input.kind === "workspace") {
+    const filename = typeof input.metadata?.filename === "string" ? input.metadata.filename : null;
+    const snapshotTitle = typeof input.metadata?.snapshotTitle === "string" ? input.metadata.snapshotTitle : null;
+    const deliverableTitle = typeof input.metadata?.deliverableTitle === "string" ? input.metadata.deliverableTitle : null;
+    const title = filename ?? snapshotTitle ?? deliverableTitle ?? (typeof input.metadata?.title === "string" ? input.metadata.title : null);
+    return title ? `${input.action.replaceAll("_", " ")} · ${title}` : input.action.replaceAll("_", " ");
   }
   const title =
     typeof input.metadata?.title === "string"
@@ -10527,18 +11639,30 @@ export async function listTeamActivityLog(params: {
     const team = mockTeams.find((t) => t.slug === params.teamSlug);
     if (!team) return { items: [], pagination: { page: params.page, limit: params.limit, total: 0, totalPages: 1 } };
 
-    const teamEntityTypes = ["team", "team_task", "team_milestone", "team_join_request", "team_discussion", "team_task_comment"];
+    const workspaceId = `team:${team.id}`;
+    const teamEntityTypes = [
+      "team",
+      "team_task",
+      "team_milestone",
+      "team_join_request",
+      "team_discussion",
+      "team_task_comment",
+      "workspace_artifact",
+      "workspace_snapshot",
+      "workspace_deliverable",
+    ];
     const auditEntries = mockAuditLogs
       .filter((log) => {
         if (!teamEntityTypes.includes(log.entityType)) return false;
         const meta = log.metadata as Record<string, unknown> | undefined;
-        return meta?.teamId === team.id;
+        return meta?.teamId === team.id || meta?.workspaceId === workspaceId;
       })
       .map((log) => {
         const user = mockUsers.find((u) => u.id === log.actorId);
+        const kind = classifyTeamActivityEntry({ entityType: log.entityType, action: log.action });
         return {
           id: log.id,
-          kind: classifyTeamActivityEntry({ entityType: log.entityType, action: log.action }),
+          kind,
           actorId: log.actorId,
           actorName: user?.name,
           action: log.action,
@@ -10546,7 +11670,7 @@ export async function listTeamActivityLog(params: {
           entityId: log.entityId,
           metadata: log.metadata,
           summary: summarizeTeamActivityEntry({
-            kind: classifyTeamActivityEntry({ entityType: log.entityType, action: log.action }),
+            kind,
             action: log.action,
             metadata: log.metadata as Record<string, unknown> | undefined,
           }),
@@ -10563,11 +11687,34 @@ export async function listTeamActivityLog(params: {
         action: item.action,
         entityType: "agent_action_audit",
         entityId: item.taskId ?? item.id,
-        metadata: item.metadata,
-        summary: summarizeTeamActivityEntry({ kind: "agent", action: item.action, metadata: item.metadata }),
+        metadata: { ...(item.metadata ?? {}), outcome: item.outcome },
+        summary: summarizeTeamActivityEntry({ kind: "agent", action: item.action, metadata: { ...(item.metadata ?? {}), outcome: item.outcome } }),
         createdAt: item.createdAt,
       }));
-    const merged = [...auditEntries, ...agentEntries]
+    const confirmationEntries = mockAgentConfirmationRequests
+      .filter((item) => item.teamId === team.id)
+      .map((item) => ({
+        id: item.id,
+        kind: "confirmation" as const,
+        actorId: item.requesterUserId,
+        actorName: userNameById(item.requesterUserId),
+        action: item.action,
+        entityType: "agent_confirmation_request",
+        entityId: item.id,
+        metadata: {
+          ...item.payload,
+          status: item.status,
+          teamSlug: item.teamSlug,
+          decidedByUserId: item.decidedByUserId,
+        },
+        summary: summarizeTeamActivityEntry({
+          kind: "confirmation",
+          action: item.action,
+          metadata: { ...item.payload, status: item.status },
+        }),
+        createdAt: item.createdAt,
+      }));
+    const merged = [...auditEntries, ...agentEntries, ...confirmationEntries]
       .filter((item) => (type === "all" ? true : item.kind === type))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -10579,14 +11726,32 @@ export async function listTeamActivityLog(params: {
   if (!team) return { items: [], pagination: { page: params.page, limit: params.limit, total: 0, totalPages: 1 } };
 
   const teamId = team.id;
-  const teamEntityTypes = ["team", "team_task", "team_milestone", "team_join_request", "team_discussion", "team_task_comment"];
+  const workspace = await prisma.workspace.findUnique({
+    where: { teamId },
+    select: { id: true },
+  });
+  const workspaceId = workspace?.id ?? null;
+  const teamEntityTypes = [
+    "team",
+    "team_task",
+    "team_milestone",
+    "team_join_request",
+    "team_discussion",
+    "team_task_comment",
+    "workspace_artifact",
+    "workspace_snapshot",
+    "workspace_deliverable",
+  ];
 
   const where = {
     entityType: { in: teamEntityTypes },
-    metadata: { path: ["teamId"], equals: teamId },
+    OR: [
+      { metadata: { path: ["teamId"], equals: teamId } },
+      ...(workspaceId ? [{ metadata: { path: ["workspaceId"], equals: workspaceId } }] : []),
+    ],
   };
 
-  const [items, agentRows] = await Promise.all([
+  const [items, agentRows, confirmationRows] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -10595,6 +11760,13 @@ export async function listTeamActivityLog(params: {
     prisma.agentActionAudit.findMany({
       where: { teamId },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.agentConfirmationRequest.findMany({
+      where: { teamId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        requester: { select: { name: true } },
+      },
     }),
   ]);
 
@@ -10623,8 +11795,28 @@ export async function listTeamActivityLog(params: {
       action: row.action,
       entityType: "agent_action_audit",
       entityId: row.taskId ?? row.id,
-      metadata: row.metadata as Record<string, unknown> | undefined,
-      summary: summarizeTeamActivityEntry({ kind: "agent", action: row.action, metadata: row.metadata as Record<string, unknown> | undefined }),
+      metadata: { ...((row.metadata as Record<string, unknown> | undefined) ?? {}), outcome: row.outcome },
+      summary: summarizeTeamActivityEntry({
+        kind: "agent",
+        action: row.action,
+        metadata: { ...((row.metadata as Record<string, unknown> | undefined) ?? {}), outcome: row.outcome },
+      }),
+      createdAt: row.createdAt.toISOString(),
+    })),
+    ...confirmationRows.map((row) => ({
+      id: row.id,
+      kind: "confirmation" as const,
+      actorId: row.requesterUserId,
+      actorName: row.requester.name,
+      action: row.action,
+      entityType: "agent_confirmation_request",
+      entityId: row.id,
+      metadata: { ...((row.payload as Record<string, unknown> | undefined) ?? {}), status: row.status },
+      summary: summarizeTeamActivityEntry({
+        kind: "confirmation",
+        action: row.action,
+        metadata: { ...((row.payload as Record<string, unknown> | undefined) ?? {}), status: row.status },
+      }),
       createdAt: row.createdAt.toISOString(),
     })),
   ]
@@ -10924,7 +12116,7 @@ export async function getEmbedProjectCard(slug: string): Promise<EmbedProjectCar
     tags: project.tags,
     team: project.team,
     updatedAt: project.updatedAt,
-    vibehubUrl: `/projects/${project.slug}`,
+    vibehubUrl: `/p/${project.slug}`,
   };
 }
 
@@ -10940,7 +12132,7 @@ export async function getEmbedTeamCard(slug: string): Promise<EmbedTeamCard | nu
       mission: team.mission,
       memberCount,
       projectCount,
-      vibehubUrl: `/teams/${team.slug}`,
+      vibehubUrl: `/work/team/${team.slug}`,
     };
   }
 
@@ -10958,7 +12150,7 @@ export async function getEmbedTeamCard(slug: string): Promise<EmbedTeamCard | nu
     mission: team.mission ?? undefined,
     memberCount: team._count.memberships,
     projectCount: team._count.projects,
-    vibehubUrl: `/teams/${team.slug}`,
+    vibehubUrl: `/work/team/${team.slug}`,
   };
 }
 

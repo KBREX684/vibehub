@@ -85,7 +85,15 @@ export default async function AdminCollaborationQueuePage() {
                   {intent.intentType === "join" ? "Join Request" : "Recruitment Notice"}
                 </h3>
                 <TagPill
-                  accent={intent.status === "pending" ? "info" : intent.status === "approved" ? "success" : "error"}
+                  accent={
+                    intent.status === "pending"
+                      ? "info"
+                      : intent.status === "approved"
+                        ? "success"
+                        : intent.status === "ignored"
+                          ? "warning"
+                          : "error"
+                  }
                   mono
                   size="sm"
                   className="capitalize"
@@ -94,11 +102,29 @@ export default async function AdminCollaborationQueuePage() {
                 </TagPill>
               </div>
 
-              <p className="text-sm text-[var(--color-text-secondary)]">{intent.message}</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-[var(--color-text-muted)]">
+              <div className="space-y-3 text-sm text-[var(--color-text-secondary)]">
+                <div>
+                  <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">Who</div>
+                  <p className="m-0 whitespace-pre-wrap">{intent.pitch || intent.message}</p>
+                </div>
+                {intent.whyYou ? (
+                  <div>
+                    <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">Why</div>
+                    <p className="m-0 whitespace-pre-wrap">{intent.whyYou}</p>
+                  </div>
+                ) : null}
+                {intent.howCollab ? (
+                  <div>
+                    <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">How</div>
+                    <p className="m-0 whitespace-pre-wrap">{intent.howCollab}</p>
+                  </div>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs text-[var(--color-text-muted)]">
                 <p>Project: {intent.projectId}</p>
                 <p>Applicant: {intent.applicantId}</p>
-                {intent.contact ? <p>Contact: {intent.contact}</p> : <p>Contact: —</p>}
+                <p>Expires: {intent.expiresAt ? formatLocalizedDateTime(intent.expiresAt, language) : "—"}</p>
+                <p>Legacy contact: {intent.contact ? intent.contact : "—"}</p>
               </div>
 
               {intent.status === "pending" ? (

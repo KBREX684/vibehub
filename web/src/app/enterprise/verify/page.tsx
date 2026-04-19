@@ -26,18 +26,17 @@ export default async function EnterpriseVerifyPage() {
           <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-enterprise-subtle)] flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-6 h-6 text-[var(--color-enterprise)]" />
           </div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Apply for enterprise verification</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">申请企业认证</h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-2">
-            Submit your organization profile for a manual verification review. In v7 this unlocks an enterprise badge
-            and verified identity context only, not a separate workspace product.
+            提交企业主体资料以进入人工审核。当前版本的企业认证只提供企业身份标识与审核记录，不作为独立工作区产品售卖。
           </p>
         </div>
 
         <div className="space-y-3">
           {[
-            { step: 1, icon: Shield, title: "Submit application", desc: "Share the organization details behind your company or operating entity" },
-            { step: 2, icon: Clock, title: "Manual review", desc: "Platform admins verify the request and supporting context" },
-            { step: 3, icon: CheckCircle, title: "Verification result", desc: "Approved accounts receive an enterprise badge and review record" },
+            { step: 1, icon: Shield, title: "提交申请", desc: "填写企业主体与组织资料，明确实际运营实体。" },
+            { step: 2, icon: Clock, title: "人工审核", desc: "平台管理员会结合资料与上下文进行核验。" },
+            { step: 3, icon: CheckCircle, title: "审核结果", desc: "通过后会获得企业认证标识与留痕记录。" },
           ].map(({ step, icon: Icon, title, desc }) => (
             <div
               key={step}
@@ -67,8 +66,8 @@ export default async function EnterpriseVerifyPage() {
       </div>
 
       <div className="text-center">
-        <Link href="/developers" className="text-xs text-[var(--color-primary-hover)] hover:underline">
-          View developer tools <ArrowRight className="w-3 h-3 inline-block align-[-1px]" />
+        <Link href="/settings/developers" className="text-xs text-[var(--color-primary-hover)] hover:underline">
+          查看开发者设置 <ArrowRight className="w-3 h-3 inline-block align-[-1px]" />
         </Link>
       </div>
     </main>

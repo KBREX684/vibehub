@@ -28,7 +28,7 @@ export async function CreatorTeamsSection({ userId }: Props) {
         {teams.map((team) => (
           <Link
             key={team.id}
-            href={`/teams/${encodeURIComponent(team.slug)}`}
+            href={`/work/team/${encodeURIComponent(team.slug)}`}
             className="card p-5 flex items-start gap-3 hover:-translate-y-0.5 transition-all duration-200 group"
           >
             <div className={TEAM_CARD_INITIAL_CLASS}>
@@ -45,7 +45,7 @@ export async function CreatorTeamsSection({ userId }: Props) {
               </div>
               {team.mission && <p className="text-xs text-[var(--color-text-muted)] line-clamp-2 m-0">{team.mission}</p>}
               <span className="text-xs text-[var(--color-primary-hover)] mt-2 inline-flex items-center gap-1">
-                {t("notifications.open_team", "Open team")}
+                {t("notifications.open_team", "打开团队工作区")}
                 <ArrowRight className="w-3 h-3" />
               </span>
             </div>

@@ -101,7 +101,7 @@ export function EditProjectForm({ project }: Props) {
         return;
       }
       const nextSlug = json.data?.slug ?? project.slug;
-      window.location.assign(`/projects/${encodeURIComponent(nextSlug)}`);
+      window.location.assign(`/p/${encodeURIComponent(nextSlug)}`);
     } catch (err) {
       setFormStatus("error");
       setMessage(err instanceof Error ? err.message : t("project.form.edit.failed"));

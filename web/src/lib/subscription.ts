@@ -23,6 +23,10 @@ export interface TierLimits {
   maxTeamMembers: number;
   maxProjects: number;
   maxScreenshots: number;
+  workspaceStorageMb: number;
+  maxWorkspaceFileBytes: number;
+  maxSnapshots: number;
+  maxAgentsPerTeam: number;
   apiRatePerMinute: number;
   maxApiKeys: number;
   canFeatureProject: boolean;
@@ -39,6 +43,10 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     maxTeamMembers: 5,
     maxProjects: 5,
     maxScreenshots: 3,
+    workspaceStorageMb: 256,
+    maxWorkspaceFileBytes: 25 * 1024 * 1024,
+    maxSnapshots: 20,
+    maxAgentsPerTeam: 3,
     apiRatePerMinute: 60,
     maxApiKeys: 2,
     canFeatureProject: false,
@@ -53,6 +61,10 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     maxTeamMembers: 20,
     maxProjects: Infinity,
     maxScreenshots: 10,
+    workspaceStorageMb: 5 * 1024,
+    maxWorkspaceFileBytes: 250 * 1024 * 1024,
+    maxSnapshots: 200,
+    maxAgentsPerTeam: 20,
     apiRatePerMinute: 600,
     maxApiKeys: 10,
     canFeatureProject: true,
@@ -67,8 +79,8 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
 // ─── Pricing (display only) ───────────────────────────────────────────────────
 
 export const TIER_PRICING = {
-  free: { label: "Free", priceMonthly: 0, currency: "CNY" },
-  pro: { label: "Pro", priceMonthly: 29, currency: "CNY" },
+  free: { label: "免费版", priceMonthly: 0, currency: "CNY" },
+  pro: { label: "专业版", priceMonthly: 29, currency: "CNY" },
 } satisfies Record<SubscriptionTier, { label: string; priceMonthly: number; currency: string }>;
 
 export function resolveEntitledTier(subscription: SubscriptionEntitlementLike): SubscriptionTier {
@@ -148,35 +160,35 @@ export function getApiRateUsagePercent(tier: SubscriptionTier, usedThisMinute: n
 
 export const UPGRADE_MESSAGES: Record<UpgradeReason, { title: string; body: string }> = {
   team_limit: {
-    title: "Upgrade to create more teams",
-    body: "Free plan allows 1 team. Upgrade to Pro (¥29/mo) for up to 5 teams.",
+    title: "升级后可创建更多团队",
+    body: "免费版最多创建 1 个团队。升级到专业版后最多可创建 5 个团队。",
   },
   team_member_limit: {
-    title: "Team member limit reached",
-    body: "Free plan allows 5 members per team. Upgrade to Pro (¥29/mo) for up to 20.",
+    title: "团队成员数量已达上限",
+    body: "免费版每个团队最多支持 5 名成员。升级到专业版后最多支持 20 名成员。",
   },
   project_limit: {
-    title: "Upgrade for unlimited projects",
-    body: "Free plan allows 5 projects. Upgrade to Pro (¥29/mo) for unlimited projects.",
+    title: "升级后可创建无限项目",
+    body: "免费版最多支持 5 个项目。升级到专业版后可使用无限项目。",
   },
   screenshot_limit: {
-    title: "Upgrade for more screenshots",
-    body: "Free plan allows 3 screenshots per project. Upgrade to Pro (¥29/mo) for 10.",
+    title: "升级后可上传更多截图",
+    body: "免费版每个项目最多上传 3 张截图。升级到专业版后最多可上传 10 张。",
   },
   feature_project: {
-    title: "Upgrade to apply for daily featured",
-    body: "Pro members can apply for the daily featured project slot for maximum exposure.",
+    title: "升级后可申请今日精选",
+    body: "专业版用户可以申请今日精选项目位，获得更高曝光。",
   },
   publish_milestone: {
-    title: "Upgrade to publish milestones",
-    body: "Pro members can make milestones public on the project page to attract collaborators.",
+    title: "升级后可公开里程碑",
+    body: "专业版用户可以在项目页公开里程碑，吸引协作者加入。",
   },
   mcp_tools: {
-    title: "Upgrade to unlock all MCP tools",
-    body: "Free plan includes 5 basic MCP tools. Upgrade to Pro (¥29/mo) for all 9 tools.",
+    title: "升级后可解锁全部 MCP 工具",
+    body: "免费版包含 5 个基础 MCP 工具。升级到专业版后可使用全部 9 个工具。",
   },
   api_key_limit: {
-    title: "Upgrade for more API keys",
-    body: "Free plan allows 2 API keys. Upgrade to Pro (¥29/mo) for up to 10.",
+    title: "升级后可创建更多 API 密钥",
+    body: "免费版最多支持 2 个 API 密钥。升级到专业版后最多可创建 10 个。",
   },
 };

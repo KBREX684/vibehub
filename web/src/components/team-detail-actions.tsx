@@ -177,13 +177,13 @@ export function TeamDetailActions({ team, currentUserId }: Props) {
       <p className="muted small">
         {isDevDemoAuth() ? (
           <a
-            href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${team.slug}`)}`}
+            href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/work/team/${team.slug}`)}`}
             className="inline-link"
           >
             Demo 登录
           </a>
         ) : (
-          <Link href={`/login?redirect=${encodeURIComponent(`/teams/${team.slug}`)}`} className="inline-link">
+          <Link href={`/login?redirect=${encodeURIComponent(`/work/team/${team.slug}`)}`} className="inline-link">
             登录
           </Link>
         )}

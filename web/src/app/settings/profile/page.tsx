@@ -34,10 +34,10 @@ export default async function SettingsProfilePage() {
           {t("settings.public_profile_url")}{" "}
           {profile ? (
             <Link
-              href={`/creators/${encodeURIComponent(profile.slug)}`}
+              href={`/u/${encodeURIComponent(profile.slug)}`}
               className="text-[var(--color-text-secondary)] underline underline-offset-2 hover:text-[var(--color-text-primary)]"
             >
-              /creators/{profile.slug}
+              /u/{profile.slug}
             </Link>
           ) : (
             <span className="text-[var(--color-text-secondary)]">{t("settings.create_profile_first")}</span>

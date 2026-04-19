@@ -130,7 +130,7 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/projects/new" className="btn btn-primary text-sm px-5 py-2 inline-flex">
+          <Link href="/p/new" className="btn btn-primary text-sm px-5 py-2 inline-flex">
             {t("discover.new_project", "New project")}
           </Link>
           {hasFilters && (

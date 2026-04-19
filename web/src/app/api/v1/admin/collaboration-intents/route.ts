@@ -18,7 +18,13 @@ export async function GET(request: Request) {
     const projectId = url.searchParams.get("projectId") ?? undefined;
 
     const status =
-      statusRaw === "pending" || statusRaw === "approved" || statusRaw === "rejected" || statusRaw === "all"
+      statusRaw === "pending" ||
+      statusRaw === "approved" ||
+      statusRaw === "rejected" ||
+      statusRaw === "ignored" ||
+      statusRaw === "blocked" ||
+      statusRaw === "expired" ||
+      statusRaw === "all"
         ? statusRaw
         : "all";
 

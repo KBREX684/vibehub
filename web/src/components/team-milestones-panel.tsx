@@ -164,13 +164,13 @@ export function TeamMilestonesPanel({ teamSlug, currentUserId }: Props) {
       >
         <div className="flex justify-center">
           {isDevDemoAuth() ? (
-            <a href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}>
+            <a href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/work/team/${teamSlug}?view=milestones`)}`}>
               <Button variant="apple" size="md">
                 {t("dev.demo.login_cta", "Demo login")}
               </Button>
             </a>
           ) : (
-            <Link href={`/login?redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}>
+            <Link href={`/login?redirect=${encodeURIComponent(`/work/team/${teamSlug}?view=milestones`)}`}>
               <Button variant="apple" size="md">
                 {t("auth.sign_in", "Sign in")}
               </Button>

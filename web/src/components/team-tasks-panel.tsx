@@ -41,19 +41,19 @@ const STATUSES: {
   label: string;
   accent: TagPillAccent;
 }[] = [
-  { value: "todo", label: "To Do", accent: "default" },
-  { value: "doing", label: "In Progress", accent: "cyan" },
-  { value: "review", label: "In Review", accent: "warning" },
-  { value: "done", label: "Done", accent: "success" },
-  { value: "rejected", label: "Rejected", accent: "error" },
+  { value: "todo", label: "待开始", accent: "default" },
+  { value: "doing", label: "进行中", accent: "cyan" },
+  { value: "review", label: "待复核", accent: "warning" },
+  { value: "done", label: "已完成", accent: "success" },
+  { value: "rejected", label: "已驳回", accent: "error" },
 ];
 
 const BOARD_COLUMNS: { status: TeamTaskStatus; title: string }[] = [
-  { status: "todo", title: "To Do" },
-  { status: "doing", title: "In Progress" },
-  { status: "review", title: "In Review" },
-  { status: "done", title: "Done" },
-  { status: "rejected", title: "Rejected" },
+  { status: "todo", title: "待开始" },
+  { status: "doing", title: "进行中" },
+  { status: "review", title: "待复核" },
+  { status: "done", title: "已完成" },
+  { status: "rejected", title: "已驳回" },
 ];
 
 function sortTasksForColumn(rows: TeamTask[]): TeamTask[] {
@@ -114,7 +114,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
       });
       const json = (await res.json()) as { data?: { tasks?: TeamTask[] }; error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Failed to load tasks");
+        setMsg(json.error?.message ?? "加载任务失败");
         setTasks([]);
         return;
       }
@@ -178,7 +178,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
       const json = (await res.json()) as { data?: TeamTask; error?: { message?: string } };
       if (!res.ok) {
         setTasks((prev) => prev.filter((task) => task.id !== optimisticId));
-        setMsg(json.error?.message ?? "Create failed");
+        setMsg(json.error?.message ?? "创建任务失败");
         return;
       }
       const createdTask = json.data;
@@ -222,7 +222,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
       );
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Update failed");
+        setMsg(json.error?.message ?? "更新任务失败");
         await load(); // Revert on failure
         return;
       }
@@ -250,7 +250,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
         error?: { message?: string; code?: string };
       };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Reorder failed");
+        setMsg(json.error?.message ?? "调整顺序失败");
         return;
       }
       if (json.data?.tasks) {
@@ -286,7 +286,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
       });
       const json = (await res.json()) as { data?: { tasks?: TeamTask[] }; error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Batch update failed");
+        setMsg(json.error?.message ?? "批量更新失败");
         return;
       }
       setSelectedIds(new Set());
@@ -313,7 +313,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
       );
       const json = (await res.json()) as { error?: { message?: string } };
       if (!res.ok) {
-        setMsg(json.error?.message ?? "Delete failed");
+        setMsg(json.error?.message ?? "删除任务失败");
         return;
       }
       await load();
@@ -327,20 +327,20 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
     return (
       <SectionCard
         icon={KanbanSquare}
-        title="Task board"
-        description="Log in to view and manage team tasks."
+        title="任务看板"
+        description="登录后即可查看和管理团队任务。"
       >
         <div className="flex justify-center">
           {isDevDemoAuth() ? (
-            <a href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}>
+            <a href={`/api/v1/auth/demo-login?role=user&redirect=${encodeURIComponent(`/work/team/${teamSlug}?view=tasks`)}`}>
               <Button variant="apple" size="md">
-                Demo login
+                演示账号登录
               </Button>
             </a>
           ) : (
-            <Link href={`/login?redirect=${encodeURIComponent(`/teams/${teamSlug}`)}`}>
+            <Link href={`/login?redirect=${encodeURIComponent(`/work/team/${teamSlug}?view=tasks`)}`}>
               <Button variant="apple" size="md">
-                Sign in
+                登录
               </Button>
             </Link>
           )}
@@ -352,8 +352,8 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
   return (
     <SectionCard
       icon={KanbanSquare}
-      title="Task board"
-      description="Kanban across To Do, In Progress, In Review, Done and Rejected."
+      title="任务看板"
+      description="以看板方式管理待开始、进行中、待复核、已完成和已驳回的任务。"
       actions={
         <Button
           variant={isFormOpen ? "ghost" : "primary"}
@@ -364,7 +364,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
             className={`w-3.5 h-3.5 transition-transform ${isFormOpen ? "rotate-45" : ""}`}
             aria-hidden="true"
           />
-          {isFormOpen ? "Cancel" : "New task"}
+          {isFormOpen ? "取消" : "新建任务"}
         </Button>
       }
     >
@@ -378,7 +378,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
             onSubmit={(ev) => void createTask(ev)}
           >
             <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-elevated)] p-4 space-y-3">
-              <FormField htmlFor="team-task-title" label="Task title" required>
+              <FormField htmlFor="team-task-title" label="任务标题" required>
                 <input
                   id="team-task-title"
                   className="input-base"
@@ -387,10 +387,10 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                   required
                   maxLength={200}
                   disabled={!isHydrated}
-                  placeholder="e.g., Design new landing page"
+                  placeholder="例如：设计新的落地页"
                 />
               </FormField>
-              <FormField htmlFor="team-task-description" label="Description">
+              <FormField htmlFor="team-task-description" label="任务描述">
                 <textarea
                   id="team-task-description"
                   className="input-base resize-none"
@@ -399,11 +399,11 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                   rows={2}
                   maxLength={2000}
                   disabled={!isHydrated}
-                  placeholder="Add more details..."
+                  placeholder="补充更多背景与说明..."
                 />
               </FormField>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <FormField htmlFor="team-task-assignee" label="Assignee">
+                <FormField htmlFor="team-task-assignee" label="负责人">
                   <select
                     id="team-task-assignee"
                     className="input-base"
@@ -411,7 +411,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                     onChange={(e) => setNewAssignee(e.target.value)}
                     disabled={!isHydrated}
                   >
-                    <option value="">Unassigned</option>
+                    <option value="">暂不指派</option>
                     {members.map((m) => (
                       <option key={m.userId} value={m.userId}>
                         {m.name}
@@ -419,7 +419,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                     ))}
                   </select>
                 </FormField>
-                <FormField htmlFor="team-task-milestone" label="Milestone">
+                <FormField htmlFor="team-task-milestone" label="所属里程碑">
                   <select
                     id="team-task-milestone"
                     className="input-base"
@@ -427,7 +427,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                     onChange={(e) => setNewMilestoneId(e.target.value)}
                     disabled={!isHydrated}
                   >
-                    <option value="">No milestone</option>
+                    <option value="">暂不关联</option>
                     {milestones.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.title}
@@ -445,7 +445,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                   onClick={() => void submitCreateTask()}
                   loading={creating}
                 >
-                  {creating ? "Creating…" : "Create task"}
+                  {creating ? "创建中…" : "创建任务"}
                 </Button>
               </div>
             </div>
@@ -479,7 +479,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
 
                 {canReview && col.some((t) => selectedIds.has(t.id)) ? (
                   <div className="flex flex-wrap items-center gap-1.5 px-1">
-                    <span className="text-[11px] text-[var(--color-text-muted)] mr-1">Selected:</span>
+                    <span className="text-[11px] text-[var(--color-text-muted)] mr-1">已选中：</span>
                     {STATUSES.filter((s) => s.value !== status).map((s) => (
                       <Button
                         key={s.value}
@@ -487,7 +487,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                         size="sm"
                         onClick={() => void batchSetStatus(s.value)}
                       >
-                        Move to {s.label}
+                        移动到{s.label}
                       </Button>
                     ))}
                     <Button
@@ -495,7 +495,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                       size="sm"
                       onClick={() => setSelectedIds(new Set())}
                     >
-                      Clear
+                      清空选择
                     </Button>
                   </div>
                 ) : null}
@@ -520,11 +520,11 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                                 checked={selectedIds.has(t.id)}
                                 onChange={() => toggleSelected(t.id)}
                                 className="mt-1 accent-[var(--color-accent-apple)] shrink-0"
-                                aria-label={`Select task ${t.title}`}
+                                aria-label={`选中任务 ${t.title}`}
                               />
                             ) : null}
                             <Link
-                              href={`/teams/${encodeURIComponent(teamSlug)}/tasks/${encodeURIComponent(t.id)}`}
+                              href={`/work/team/${encodeURIComponent(teamSlug)}?view=tasks&task=${encodeURIComponent(t.id)}`}
                               className={TASK_TITLE_LINK_CLASS}
                             >
                               {t.title}
@@ -535,7 +535,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                               type="button"
                               onClick={() => void reorderTask(t.id, "up")}
                               disabled={index <= 0}
-                              aria-label="Move up"
+                              aria-label="上移"
                               className="p-1 rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
                               <ArrowUp className="w-3 h-3" aria-hidden="true" />
@@ -544,7 +544,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                               type="button"
                               onClick={() => void reorderTask(t.id, "down")}
                               disabled={index >= col.length - 1}
-                              aria-label="Move down"
+                              aria-label="下移"
                               className="p-1 rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
                               <ArrowDown className="w-3 h-3" aria-hidden="true" />
@@ -583,7 +583,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                               onChange={(e) =>
                                 void patchTask(t.id, { status: e.target.value as TeamTaskStatus })
                               }
-                              aria-label="Change status"
+                              aria-label="修改状态"
                               className={INLINE_SELECT_CLASS}
                             >
                               {STATUSES.map((s) => (
@@ -609,7 +609,7 @@ export function TeamTasksPanel({ teamSlug, members, milestones, currentUserId, v
                               aria-label="Change assignee"
                               className={INLINE_SELECT_CLASS}
                             >
-                              <option value="">Unassigned</option>
+                              <option value="">暂不指派</option>
                               {members.map((m) => (
                                 <option key={m.userId} value={m.userId}>
                                   {m.name}

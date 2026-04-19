@@ -1,4 +1,5 @@
 import type { TeamAgentRole } from "@/lib/types";
+import { createPersistedArray } from "@/lib/data/mock-persist";
 
 /**
  * Mock-mode store for `TeamAgentMembership` (see prisma/schema.prisma §W3).
@@ -20,4 +21,5 @@ export interface MockTeamAgentMembership {
   updatedAt: string;
 }
 
-export const mockTeamAgentMemberships: MockTeamAgentMembership[] = [];
+export const mockTeamAgentMemberships: MockTeamAgentMembership[] =
+  createPersistedArray<MockTeamAgentMembership>("teamAgentMemberships");

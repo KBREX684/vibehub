@@ -649,7 +649,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/billing/checkout": {
         post: {
           tags: ["subscription"],
-          summary: "Create a checkout session for Stripe, Alipay, or WeChat Pay (session cookie)",
+          summary: "Create an Alipay checkout session (session cookie)",
           security: [{ SessionCookie: [] }],
           requestBody: {
             required: true,
@@ -660,7 +660,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
                   required: ["tier"],
                   properties: {
                     tier: { type: "string", enum: ["pro"] },
-                    paymentProvider: { type: "string", enum: ["stripe", "alipay", "wechatpay"], default: "stripe" },
+                    paymentProvider: { type: "string", enum: ["alipay"], default: "alipay" },
                     successUrl: { type: "string", format: "uri" },
                     cancelUrl: { type: "string", format: "uri" },
                   },
@@ -674,7 +674,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/api/v1/billing/portal": {
         post: {
           tags: ["subscription"],
-          summary: "Open Stripe billing portal or return a manual renewal entry for China-local payment channels (session cookie)",
+          summary: "Return the Alipay renewal guide entry (session cookie)",
           security: [{ SessionCookie: [] }],
           requestBody: {
             content: {

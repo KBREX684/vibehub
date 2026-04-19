@@ -33,8 +33,8 @@ function startNotificationSse(onUnread: (n: number) => void) {
     _notificationSse = new EventSource("/api/v1/me/notifications?stream=1");
     _notificationSse.onmessage = (ev) => {
       try {
-        const payload = JSON.parse(ev.data) as { data?: { unreadCount?: unknown } };
-        const unreadRaw = payload?.data?.unreadCount;
+        const payload = JSON.parse(ev.data) as { unreadCount?: unknown; data?: { unreadCount?: unknown } };
+        const unreadRaw = payload?.unreadCount ?? payload?.data?.unreadCount;
         if (typeof unreadRaw === "number" && Number.isFinite(unreadRaw)) {
           onUnread(unreadRaw);
         }

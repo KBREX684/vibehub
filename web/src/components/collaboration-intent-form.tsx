@@ -12,8 +12,9 @@ interface Props {
 
 export function CollaborationIntentForm({ projectSlug }: Props) {
   const [intentType, setIntentType] = useState<"join" | "recruit">("join");
-  const [message, setMessage] = useState("");
-  const [contact, setContact] = useState("");
+  const [pitch, setPitch] = useState("");
+  const [whyYou, setWhyYou] = useState("");
+  const [howCollab, setHowCollab] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -30,22 +31,24 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intentType,
-          message,
-          contact: contact || undefined,
+          pitch,
+          whyYou,
+          howCollab,
         }),
       });
 
       if (!response.ok) {
         const json = await response.json().catch(() => ({}));
-        setError(json?.error?.message ?? "Failed to submit collaboration intent");
+        setError(json?.error?.message ?? "提交合作申请失败");
         return;
       }
 
-      setMessage("");
-      setContact("");
-      setSuccess("Submitted successfully. Admin review is pending.");
+      setPitch("");
+      setWhyYou("");
+      setHowCollab("");
+      setSuccess("合作申请已提交。");
     } catch {
-      setError("Network error while submitting collaboration intent");
+      setError("提交合作申请时网络异常");
     } finally {
       setLoading(false);
     }
@@ -56,15 +59,15 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
   return (
     <form className="flex flex-col gap-5" onSubmit={onSubmit}>
       <div className="flex flex-col gap-2">
-        <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">Intent type</label>
+        <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">申请类型</label>
         <div className="relative">
           <select 
             value={intentType} 
             onChange={(event) => setIntentType(event.target.value as "join" | "recruit")}
             className={`${inputClasses} appearance-none pr-10`}
           >
-            <option value="join">I want to join this project</option>
-            <option value="recruit">I am recruiting collaborators</option>
+            <option value="join">我想加入这个项目</option>
+            <option value="recruit">我希望招募协作者</option>
           </select>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-text-tertiary)]">
             {intentType === "join" ? <UserPlus className="w-4 h-4" /> : <Users className="w-4 h-4" />}
@@ -73,27 +76,44 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">Message</label>
+        <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">你是谁，你能做什么？</label>
         <textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          placeholder="Describe your collaboration goal and what you can contribute"
+          value={pitch}
+          onChange={(event) => setPitch(event.target.value)}
+          placeholder="简要说明你的背景以及你能带来的贡献。"
           minLength={10}
-          maxLength={500}
-          rows={4}
+          maxLength={250}
+          rows={3}
           required
           className={`${inputClasses} resize-none`}
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">Contact (optional)</label>
-        <input
-          value={contact}
-          onChange={(event) => setContact(event.target.value)}
-          placeholder="Email / Discord / X"
-          maxLength={120}
-          className={inputClasses}
+        <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">你为什么联系对方？</label>
+        <textarea
+          value={whyYou}
+          onChange={(event) => setWhyYou(event.target.value)}
+          placeholder="说明为什么你认为这个项目、团队或合作方向适合你。"
+          minLength={10}
+          maxLength={250}
+          rows={3}
+          required
+          className={`${inputClasses} resize-none`}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-[0.9rem] font-medium text-[var(--color-text-secondary)]">你希望如何合作？</label>
+        <textarea
+          value={howCollab}
+          onChange={(event) => setHowCollab(event.target.value)}
+          placeholder="描述你希望提出的合作方式。"
+          minLength={10}
+          maxLength={250}
+          rows={3}
+          required
+          className={`${inputClasses} resize-none`}
         />
       </div>
 
@@ -107,11 +127,11 @@ export function CollaborationIntentForm({ projectSlug }: Props) {
           className="w-full"
         >
           {loading ? (
-            "Submitting..."
+            "提交中..."
           ) : (
             <>
               <Send className="w-4 h-4" aria-hidden="true" />
-              Submit collaboration intent
+              发送合作申请
             </>
           )}
         </Button>

@@ -15,16 +15,16 @@ export default async function ApiKeysSettingsPage() {
             <Key className="w-6 h-6 text-[var(--color-text-muted)]" />
           </div>
           <h1 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
-            Developer Settings
+            开发者设置
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)] mb-6">
-            Sign in to manage your API keys, scopes, and MCP integrations.
+            登录后即可管理 API 密钥、权限范围和 MCP 接入。
           </p>
           <a
             href="/login?redirect=/settings/api-keys"
             className="btn btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-1.5"
           >
-            Sign in
+            登录
             <ArrowRight className="w-4 h-4" />
           </a>
         </div>
@@ -40,10 +40,10 @@ export default async function ApiKeysSettingsPage() {
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Settings
+          设置
         </Link>
         <span className="text-[var(--color-text-muted)]">/</span>
-        <span className="text-sm text-[var(--color-text-muted)]">API Keys</span>
+        <span className="text-sm text-[var(--color-text-muted)]">API 密钥</span>
       </div>
 
       <div className="flex items-center gap-4 pb-5 border-b border-[var(--color-border)]">
@@ -52,10 +52,10 @@ export default async function ApiKeysSettingsPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
-            Developer Settings
+            开发者设置
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Manage API keys, scopes, and MCP integrations
+            管理 API 密钥、权限范围与 MCP 接入
           </p>
         </div>
       </div>
@@ -67,15 +67,15 @@ export default async function ApiKeysSettingsPage() {
         <div className="lg:col-span-1 space-y-5">
           <ContributionCreditPanel userId={session.userId} />
           <div className="card p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Quick Links</h3>
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">快捷入口</h3>
             <div className="space-y-2">
               {[
-                { href: "/developers", label: "Developers hub" },
-                { href: "/developers/api-docs", label: "Interactive API docs" },
-                { href: "/settings/agents", label: "Agent bindings" },
-                { href: "/api/v1/openapi.json", label: "OpenAPI Spec", external: true },
-                { href: "/api/v1/mcp/v2/manifest", label: "MCP v2 Manifest", external: true },
-                { href: "/leaderboards", label: "Contribution Leaderboard" },
+                { href: "/settings/developers", label: "开发者总览" },
+                { href: "/settings/developers", label: "接入说明" },
+                { href: "/settings/agents", label: "智能代理绑定" },
+                { href: "/api/v1/openapi.json", label: "OpenAPI 规范", external: true },
+                { href: "/api/v1/mcp/v2/manifest", label: "MCP v2 清单", external: true },
+                { href: "/work/library", label: "项目库" },
               ].map(({ href, label, external }) => (
                 <a
                   key={href}

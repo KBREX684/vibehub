@@ -9,6 +9,7 @@ import {
   mockTeams,
   mockUsers,
 } from "@/lib/data/mock-data";
+import { ensureTeamWorkspace } from "@/lib/repositories/workspace.repository";
 import type {
   TeamDetail,
   TeamJoinRequestRow,
@@ -412,6 +413,7 @@ export async function createTeam(input: {
       metadata: { slug, name },
       createdAt,
     });
+    void ensureTeamWorkspace(id).catch(() => undefined);
     const detail = await getTeamBySlug(slug);
     if (!detail) throw new Error("TEAM_CREATE_FAILED");
     return detail;
@@ -448,6 +450,12 @@ export async function createTeam(input: {
         entityId: team.id,
         metadata: { slug: team.slug, name: team.name },
       },
+    });
+    await ensureTeamWorkspace(team.id, tx, {
+      id: team.id,
+      slug: team.slug,
+      name: team.name,
+      mission: team.mission,
     });
     return team;
   });

@@ -48,7 +48,7 @@ export function CreateTeamForm() {
         setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
-      router.push(`/teams/${encodeURIComponent(json.data.slug)}`);
+      router.push(`/work/team/${encodeURIComponent(json.data.slug)}`);
       router.refresh();
     } catch (err) {
       setStatus("error");

@@ -16,7 +16,7 @@ export function UpgradePlanCallout({ upgradeReason, className }: Props) {
       <p className="font-semibold text-[var(--color-text-primary)] m-0 mb-1">{title}</p>
       <p className="text-[var(--color-text-secondary)] m-0 mb-3 text-xs leading-relaxed">{body}</p>
       <Link href="/pricing" className="btn btn-primary text-xs px-3 py-1.5 inline-flex">
-        View Pro pricing
+        查看专业版定价
       </Link>
     </div>
   );

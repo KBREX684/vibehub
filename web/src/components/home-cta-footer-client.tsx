@@ -41,7 +41,7 @@ export function HomeCtaFooterClient({
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
           <Link
-            href="/developers"
+            href="/settings/developers"
             className="btn btn-ghost px-6 py-2.5 text-sm font-semibold"
           >
             <Terminal className="w-4 h-4" aria-hidden="true" />

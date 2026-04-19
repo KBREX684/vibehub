@@ -9,10 +9,10 @@ import { useLanguage } from "@/app/context/LanguageContext";
 type Key = keyof NotificationPreferenceDto;
 
 const FIELDS: { key: Key; labelKey: string; fallback: string }[] = [
-  { key: "commentReplies", labelKey: "settings.notifications_comment", fallback: "Comments & replies" },
-  { key: "teamUpdates", labelKey: "settings.notifications_team", fallback: "Team activity" },
-  { key: "collaborationModeration", labelKey: "settings.notifications_collab", fallback: "Collaboration & moderation" },
-  { key: "systemAnnouncements", labelKey: "settings.notifications_system", fallback: "Product & system" },
+  { key: "commentReplies", labelKey: "settings.notifications_comment", fallback: "评论与回复" },
+  { key: "teamUpdates", labelKey: "settings.notifications_team", fallback: "团队动态" },
+  { key: "collaborationModeration", labelKey: "settings.notifications_collab", fallback: "协作与审核" },
+  { key: "systemAnnouncements", labelKey: "settings.notifications_system", fallback: "产品与系统通知" },
 ];
 
 export function NotificationPreferencesForm({ initial }: { initial: NotificationPreferenceDto }) {
@@ -31,11 +31,11 @@ export function NotificationPreferencesForm({ initial }: { initial: Notification
       });
       const json = (await res.json()) as { data?: NotificationPreferenceDto; error?: { message?: string } };
       if (!res.ok || !json.data) {
-        toast.error(json.error?.message ?? "Save failed");
+        toast.error(json.error?.message ?? "保存失败");
         return;
       }
       setPrefs(json.data);
-      toast.success(t("settings.notifications_saved", "Preferences saved."));
+      toast.success(t("settings.notifications_saved", "通知偏好已保存。"));
     } finally {
       setSaving(false);
     }

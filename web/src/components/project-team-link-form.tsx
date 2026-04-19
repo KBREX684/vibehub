@@ -48,7 +48,7 @@ export function ProjectTeamLinkForm({ project, canEdit }: Props) {
     return project.team ? (
       <p className="muted small">
         团队：{" "}
-        <a href={`/teams/${encodeURIComponent(project.team.slug)}`} className="inline-link">
+        <a href={`/work/team/${encodeURIComponent(project.team.slug)}`} className="inline-link">
           {project.team.name}
         </a>
       </p>
@@ -70,7 +70,7 @@ export function ProjectTeamLinkForm({ project, canEdit }: Props) {
       });
       const json = (await res.json()) as { data?: Project; error?: { message?: string } };
       if (!res.ok || !json.data) {
-        setMsg(json.error?.message ?? "Update failed");
+        setMsg(json.error?.message ?? "更新失败");
         return;
       }
       router.refresh();
@@ -85,22 +85,22 @@ export function ProjectTeamLinkForm({ project, canEdit }: Props) {
 
   return (
     <form className="card" onSubmit={(ev) => void onSubmit(ev)}>
-      <h3>团队归属（P3-3）</h3>
-      <p className="muted small">仅项目创建者可绑定；你必须已是该团队成员。</p>
+      <h3>团队归属</h3>
+      <p className="muted small">仅项目创建者可绑定；你必须已经是目标团队成员。</p>
       {current ? (
         <p className="muted small">
           当前：
-          <a href={`/teams/${encodeURIComponent(current.slug)}`} className="inline-link">
+          <a href={`/work/team/${encodeURIComponent(current.slug)}`} className="inline-link">
             {current.name}
           </a>
         </p>
       ) : (
-        <p className="muted small">当前未绑定团队。</p>
+        <p className="muted small">当前未绑定团队工作区。</p>
       )}
       <label className="discover-field" style={{ display: "block", marginTop: "0.5rem" }}>
-        <span>选择团队</span>
+          <span>选择团队工作区</span>
         <select value={teamSlug} onChange={(ev) => setTeamSlug(ev.target.value)}>
-          <option value="">（不归属团队）</option>
+          <option value="">（保持在个人工作区）</option>
           {teams.map((t) => (
             <option key={t.slug} value={t.slug}>
               {t.name} ({t.slug})
@@ -110,7 +110,7 @@ export function ProjectTeamLinkForm({ project, canEdit }: Props) {
       </label>
       <div className="discover-actions" style={{ marginTop: "0.75rem" }}>
         <button type="submit" className="button" disabled={loading}>
-          {loading ? "保存中…" : "保存"}
+          {loading ? "保存中…" : "保存归属"}
         </button>
       </div>
       {msg ? <p className="error-text">{msg}</p> : null}

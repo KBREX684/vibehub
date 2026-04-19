@@ -123,7 +123,7 @@ export async function markBillingSucceededAndExtendSubscription(params: {
   metadata?: Record<string, unknown>;
 }) {
   const record = await getBillingRecordByExternalSessionId({
-    paymentProvider: params.paymentProvider ?? "stripe",
+    paymentProvider: params.paymentProvider ?? "alipay",
     externalSessionId: params.externalSessionId,
   });
   if (!record) {

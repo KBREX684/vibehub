@@ -53,15 +53,11 @@ const FEATURE_ROWS: FeatureRow[] = [
 
 export function PricingCards() {
   const { t } = useLanguage();
-  const providerLabel = (provider: PaymentProviderKind) => {
-    if (provider === "alipay") return t("pricing.provider_alipay", "Alipay");
-    if (provider === "wechatpay") return t("pricing.provider_wechat", "WeChat Pay");
-    return t("pricing.provider_stripe", "Stripe");
-  };
+  const providerLabel = () => t("pricing.provider_alipay", "支付宝");
 
   async function startCheckout(tier: SubscriptionTier, paymentProvider: PaymentProviderKind) {
     const toastId = toast.loading(
-      t("pricing.checkout_preparing", "Preparing {provider} checkout...").replace("{provider}", providerLabel(paymentProvider))
+      t("pricing.checkout_preparing", "正在准备 {provider} 支付...").replace("{provider}", providerLabel())
     );
     try {
       const res = await apiFetch("/api/v1/billing/checkout", {
@@ -74,10 +70,10 @@ export function PricingCards() {
         toast.dismiss(toastId);
         window.location.href = json.data.url;
       } else {
-        toast.error(json.error?.message ?? t("pricing.checkout_failed", "Unable to start checkout right now. Please try again shortly."), { id: toastId });
+        toast.error(json.error?.message ?? t("pricing.checkout_failed", "暂时无法发起支付，请稍后重试。"), { id: toastId });
       }
     } catch {
-      toast.error(t("pricing.network_error", "Network error. Please try again."), { id: toastId });
+      toast.error(t("pricing.network_error", "网络异常，请稍后重试。"), { id: toastId });
     }
   }
 
@@ -96,12 +92,12 @@ export function PricingCards() {
               <div className="flex-grow flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-semibold tracking-tight m-0">{tierLabel}</h2>
-                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>{t("pricing.recommended", "Recommended")}</span>}
+                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>{t("pricing.recommended", "推荐")}</span>}
                 </div>
 
                 <div className="mb-6">
                   {pricing.priceMonthly === 0 ? (
-                    <div className="text-5xl font-mono font-bold tracking-tight">{t("pricing.free_price", "Free")}</div>
+                    <div className="text-5xl font-mono font-bold tracking-tight">{t("pricing.free_price", "免费")}</div>
                   ) : (
                     <div className="flex items-baseline">
                       <span className="text-2xl font-mono font-medium mr-1">¥</span>
@@ -110,34 +106,27 @@ export function PricingCards() {
                         duration={1100}
                         className="text-5xl font-mono font-bold tracking-tight"
                       />
-                      <span className="text-sm font-mono ml-2 opacity-70">{t("pricing.per_month", "/ month")}</span>
+                      <span className="text-sm font-mono ml-2 opacity-70">{t("pricing.per_month", "/ 月")}</span>
                     </div>
                   )}
                 </div>
 
                 <p className={`text-sm mb-8 ${isPro ? "opacity-80" : "text-[var(--color-text-secondary)]"}`}>
                   {isPro
-                    ? t("pricing.pro_description", "More projects, more collaboration capacity, higher API and MCP limits, and stronger discovery benefits.")
-                    : t("pricing.free_description", "Publish projects, join discussions, and use the core collaboration loop before you decide to upgrade.")}
+                    ? t("pricing.pro_description", "获得更多项目容量、更强协作配额、更高 API 与 MCP 限额，以及更强的发现曝光。")
+                    : t("pricing.free_description", "先体验项目发布、协作申请与核心工作台闭环，再决定是否升级。")}
                 </p>
 
                 {tier === "free" ? (
                   <Link href="/signup" className={FREE_CTA_CLASS}>
-                    {t("pricing.free_cta", "Get started free")}
+                    {t("pricing.free_cta", "免费开始使用")}
                   </Link>
                 ) : (
                   <div className="mt-auto space-y-3">
                     <button className={PRIMARY_CTA_CLASS} onClick={() => void startCheckout(tier, "alipay")}>
-                      {t("pricing.upgrade_alipay", "Upgrade with Alipay")}
+                      {t("pricing.upgrade_alipay", "使用支付宝升级")}
                     </button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button className={ALT_BTN_CLASS} onClick={() => void startCheckout(tier, "wechatpay")}>
-                        {t("pricing.upgrade_wechat", "WeChat Pay")}
-                      </button>
-                      <button className={ALT_BTN_CLASS} onClick={() => void startCheckout(tier, "stripe")}>
-                        {t("pricing.upgrade_stripe", "Cards / Stripe")}
-                      </button>
-                    </div>
+                    <div className={ALT_BTN_CLASS}>{t("pricing.alipay_only_hint", "当前仅支持支付宝结算")}</div>
                   </div>
                 )}
               </div>
@@ -148,13 +137,13 @@ export function PricingCards() {
 
       <div className="border border-[var(--color-border)] bg-[var(--color-bg-canvas)] overflow-hidden animate-fade-in-up delay-100">
         <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">{t("pricing.compare_title", "Plan comparison")}</h3>
+          <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-text-primary)] m-0">{t("pricing.compare_title", "套餐对比")}</h3>
         </div>
 
         <div className={COMPARE_HEADER_CLASS}>
-          <span>{t("pricing.compare.feature", "Feature")}</span>
-          <span className="text-center">{t("pricing.compare.free", "Free")}</span>
-          <span className="text-center">{t("pricing.compare.pro", "Pro")}</span>
+          <span>{t("pricing.compare.feature", "能力项")}</span>
+          <span className="text-center">{t("pricing.compare.free", "免费版")}</span>
+          <span className="text-center">{t("pricing.compare.pro", "专业版")}</span>
         </div>
 
         <div className="divide-y divide-[var(--color-border)]">
@@ -165,19 +154,19 @@ export function PricingCards() {
               </span>
 
               <div className="flex md:hidden justify-between text-xs font-mono mb-1">
-                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.free", "Free")}</span>
-                <span className="text-[var(--color-text-primary)]">{row.free === true ? "✓" : row.free === false ? "—" : row.free === "basic" ? t("pricing.compare.basic_tools", "Basic tools") : row.free}</span>
+                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.free", "免费版")}</span>
+                <span className="text-[var(--color-text-primary)]">{row.free === true ? "✓" : row.free === false ? "—" : row.free === "basic" ? t("pricing.compare.basic_tools", "基础工具") : row.free}</span>
               </div>
               <div className="flex md:hidden justify-between text-xs font-mono">
-                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.pro", "Pro")}</span>
-                <span className="text-[var(--color-text-primary)] font-bold">{row.pro === true ? "✓" : row.pro === false ? "—" : row.pro === "all" ? t("pricing.compare.all_tools", "All unlocked tools") : row.pro}</span>
+                <span className="text-[var(--color-text-muted)]">{t("pricing.compare.pro", "专业版")}</span>
+                <span className="text-[var(--color-text-primary)] font-bold">{row.pro === true ? "✓" : row.pro === false ? "—" : row.pro === "all" ? t("pricing.compare.all_tools", "全部已解锁工具") : row.pro}</span>
               </div>
 
               <span className="hidden md:block text-center font-mono text-[var(--color-text-secondary)]">
-                {row.free === true ? "✓" : row.free === false ? "—" : row.free === "basic" ? t("pricing.compare.basic_tools", "Basic tools") : row.free}
+                {row.free === true ? "✓" : row.free === false ? "—" : row.free === "basic" ? t("pricing.compare.basic_tools", "基础工具") : row.free}
               </span>
               <span className="hidden md:block text-center font-mono text-[var(--color-text-primary)] font-bold">
-                {row.pro === true ? "✓" : row.pro === false ? "—" : row.pro === "all" ? t("pricing.compare.all_tools", "All unlocked tools") : row.pro}
+                {row.pro === true ? "✓" : row.pro === false ? "—" : row.pro === "all" ? t("pricing.compare.all_tools", "全部已解锁工具") : row.pro}
               </span>
             </div>
           ))}

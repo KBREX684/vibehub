@@ -73,7 +73,7 @@ export function CreateProjectForm() {
         setUpgradeReason(json.error?.details?.upgradeReason);
         return;
       }
-      window.location.assign(`/projects/${encodeURIComponent(json.data.slug)}`);
+      window.location.assign(`/p/${encodeURIComponent(json.data.slug)}`);
     } catch (err) {
       setFormStatus("error");
       setMessage(err instanceof Error ? err.message : t("project.form.create.failed"));

@@ -11,11 +11,19 @@ import { parsePagination } from "@/lib/pagination";
 import { apiError, apiSuccess } from "@/lib/response";
 import { apiErrorFromRepositoryCatch } from "@/lib/repository-errors";
 import { isRepositoryError } from "@/lib/repository-errors";
-import type { ReviewStatus } from "@/lib/types";
+import type { CollaborationIntentStatus } from "@/lib/types";
 
 interface Props { params: Promise<{ slug: string }> }
 
-const VALID_STATUSES: (ReviewStatus | "all")[] = ["pending", "approved", "rejected", "all"];
+const VALID_STATUSES: (CollaborationIntentStatus | "all")[] = [
+  "pending",
+  "approved",
+  "rejected",
+  "ignored",
+  "blocked",
+  "expired",
+  "all",
+];
 
 export async function GET(request: NextRequest, { params }: Props) {
   const auth = await authenticateRequest(request);
@@ -36,7 +44,9 @@ export async function GET(request: NextRequest, { params }: Props) {
   const url = new URL(request.url);
   const { page, limit } = parsePagination(url.searchParams);
   const rawStatus = url.searchParams.get("status") ?? (isOwner ? "all" : "approved");
-  const status = VALID_STATUSES.includes(rawStatus as ReviewStatus) ? rawStatus as ReviewStatus | "all" : "approved";
+  const status = VALID_STATUSES.includes(rawStatus as CollaborationIntentStatus | "all")
+    ? (rawStatus as CollaborationIntentStatus | "all")
+    : "approved";
 
   if (!isOwner && status !== "approved") {
     return apiError({ code: "FORBIDDEN", message: "Only the project owner can view non-approved intents" }, 403);
@@ -48,8 +58,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
 const submitSchema = z.object({
   intentType: z.enum(["join", "recruit"]),
-  message: z.string().min(10).max(1000),
-  contact: z.string().max(200).optional(),
+  pitch: z.string().min(10).max(250),
+  whyYou: z.string().min(10).max(250),
+  howCollab: z.string().min(10).max(250),
 });
 
 export async function POST(request: NextRequest, { params }: Props) {
@@ -77,8 +88,9 @@ if (err instanceof z.ZodError) return apiError({ code: "INVALID_BODY", message: 
       projectId: project.id,
       applicantId: auth.user.userId,
       intentType: parsed.intentType,
-      message: parsed.message,
-      contact: parsed.contact,
+      pitch: parsed.pitch,
+      whyYou: parsed.whyYou,
+      howCollab: parsed.howCollab,
     });
     return apiSuccess({ intent }, 201);
   } catch (err) {

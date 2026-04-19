@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const providerId = detectPaymentProviderFromWebhook(request.headers, rawBody);
   if (!providerId) {
-    return apiError({ code: "UNKNOWN_PAYMENT_PROVIDER", message: "Could not determine payment provider for webhook" }, 400);
+    return apiError({ code: "UNKNOWN_PAYMENT_PROVIDER", message: "无法识别支付回调来源" }, 400);
   }
 
   const provider = getPaymentProvider(providerId);
@@ -40,12 +40,6 @@ export async function POST(request: NextRequest) {
     if (providerId === "alipay") {
       return new Response("failure", { status: 500, headers: { "content-type": "text/plain" } });
     }
-    if (providerId === "wechatpay") {
-      return new Response(JSON.stringify({ code: "FAIL", message: "Webhook handler failed" }), {
-        status: 500,
-        headers: { "content-type": "application/json" },
-      });
-    }
-    return apiError({ code: "WEBHOOK_HANDLER_FAILED", message: "Webhook handler failed" }, 500);
+    return apiError({ code: "WEBHOOK_HANDLER_FAILED", message: "支付回调处理失败" }, 500);
   }
 }

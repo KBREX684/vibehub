@@ -151,7 +151,7 @@ export function ProjectGalleryOrbit({ items, ariaLabel }: ProjectGalleryOrbitPro
           {orbitItems.slice(0, 6).map((item) => (
             <Link
               key={item.id}
-              href={`/projects/${item.slug}`}
+              href={`/p/${item.slug}`}
               className="snap-start shrink-0 w-40 h-[11rem] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/95 p-2 flex flex-col"
             >
               <div className="relative h-28 overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)]">
@@ -206,7 +206,7 @@ export function ProjectGalleryOrbit({ items, ariaLabel }: ProjectGalleryOrbitPro
           {(singleItem ? orbitItems : loopItems).map((item, index) => (
             <Link
               key={`${item.id}-${index}`}
-              href={`/projects/${item.slug}`}
+              href={`/p/${item.slug}`}
               className="block w-52 h-[14.75rem] shrink-0 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)]/96 p-2 shadow-[var(--shadow-modal)] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-0.5"
             >
               <div className="relative h-36 overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-bg-subtle)]">

@@ -10,6 +10,7 @@ export const API_KEY_SCOPES = [
   "read:team:detail",
   "read:team:tasks",
   "read:team:milestones",
+  "read:team:workspace",
   "read:enterprise:workspace",
   "read:projects:list",
   "read:projects:detail",
@@ -20,6 +21,7 @@ export const API_KEY_SCOPES = [
   "read:posts:list",
   "read:posts:detail",
   "write:team:tasks",
+  "write:team:workspace",
   /** P2-2: MCP / HTTP write surfaces (opt-in; never in DEFAULT_API_KEY_SCOPES) */
   "write:posts",
   "write:projects",
@@ -42,6 +44,7 @@ export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = [
   "read:team:detail",
   "read:team:tasks",
   "read:team:milestones",
+  "read:team:workspace",
   "read:projects:list",
   "read:projects:detail",
   "read:creators:list",

@@ -22,13 +22,13 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
     post: { tags: ["auth"], summary: "Logout (clear session cookie)", responses: ok },
   },
   "/api/v1/billing/checkout": {
-    post: { tags: ["subscription"], summary: "Stripe Checkout session", responses: okWrite },
+    post: { tags: ["subscription"], summary: "支付宝结算会话", responses: okWrite },
   },
   "/api/v1/billing/portal": {
-    post: { tags: ["subscription"], summary: "Stripe Customer Portal", responses: okWrite },
+    post: { tags: ["subscription"], summary: "支付宝续费说明入口", responses: okWrite },
   },
   "/api/v1/billing/webhook": {
-    post: { tags: ["subscription"], summary: "Stripe webhooks", responses: ok },
+    post: { tags: ["subscription"], summary: "支付宝支付回调", responses: ok },
   },
   "/api/v1/collection-topics": {
     get: { tags: ["meta"], summary: "List collection topics", responses: ok },
@@ -66,6 +66,18 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
   },
   "/api/v1/me/bookmarks": {
     get: { tags: ["me"], summary: "My bookmarks", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/workspaces": {
+    get: { tags: ["me"], summary: "List workspace console entries and badges", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/library": {
+    get: { tags: ["me"], summary: "List work-library projects for the current user", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/intents": {
+    get: { tags: ["me"], summary: "List collaboration inbox items for the current user", security: [{ SessionCookie: [] }], responses: ok },
+  },
+  "/api/v1/me/agent-tasks": {
+    get: { tags: ["me"], summary: "List work-console agent tasks for the current user", security: [{ SessionCookie: [] }], responses: ok },
   },
   "/api/v1/me/feed": {
     get: { tags: ["me"], summary: "Personalized feed", security: [{ SessionCookie: [] }], responses: ok },
@@ -152,6 +164,28 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
     post: {
       tags: ["projects"],
       summary: "Project owner reviews collaboration intent",
+      parameters: [
+        { name: "slug", in: "path", required: true, schema: { type: "string" } },
+        { name: "intentId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/projects/{slug}/collaboration-intents/{intentId}/ignore": {
+    post: {
+      tags: ["projects"],
+      summary: "Project owner ignores collaboration intent",
+      parameters: [
+        { name: "slug", in: "path", required: true, schema: { type: "string" } },
+        { name: "intentId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/projects/{slug}/collaboration-intents/{intentId}/block-and-report": {
+    post: {
+      tags: ["projects"],
+      summary: "Project owner blocks and reports collaboration intent",
       parameters: [
         { name: "slug", in: "path", required: true, schema: { type: "string" } },
         { name: "intentId", in: "path", required: true, schema: { type: "string" } },
@@ -293,6 +327,138 @@ export const P1_API_PATH_STUBS: Record<string, Record<string, unknown>> = {
       summary: "Unfollow user",
       parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
       responses: ok,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/artifacts": {
+    get: {
+      tags: ["workspaces"],
+      summary: "List artifacts for a workspace",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: ok,
+    },
+    post: {
+      tags: ["workspaces"],
+      summary: "Request a workspace artifact upload",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/artifacts/{artifactId}": {
+    delete: {
+      tags: ["workspaces"],
+      summary: "Delete a workspace artifact",
+      security: [{ SessionCookie: [] }],
+      parameters: [
+        { name: "workspaceId", in: "path", required: true, schema: { type: "string" } },
+        { name: "artifactId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/artifacts/{artifactId}/complete": {
+    post: {
+      tags: ["workspaces"],
+      summary: "Mark a workspace artifact upload as complete",
+      security: [{ SessionCookie: [] }],
+      parameters: [
+        { name: "workspaceId", in: "path", required: true, schema: { type: "string" } },
+        { name: "artifactId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/artifacts/{artifactId}/download-url": {
+    get: {
+      tags: ["workspaces"],
+      summary: "Get a workspace artifact download URL",
+      security: [{ SessionCookie: [] }],
+      parameters: [
+        { name: "workspaceId", in: "path", required: true, schema: { type: "string" } },
+        { name: "artifactId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: ok,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/snapshots": {
+    get: {
+      tags: ["workspaces"],
+      summary: "List snapshots for a workspace",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: ok,
+    },
+    post: {
+      tags: ["workspaces"],
+      summary: "Create a snapshot for a workspace",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/snapshots/{snapshotId}": {
+    get: {
+      tags: ["workspaces"],
+      summary: "Get a workspace snapshot",
+      security: [{ SessionCookie: [] }],
+      parameters: [
+        { name: "workspaceId", in: "path", required: true, schema: { type: "string" } },
+        { name: "snapshotId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: ok,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/snapshots/{snapshotId}/rollback": {
+    post: {
+      tags: ["workspaces"],
+      summary: "Create a rollback snapshot from an existing workspace snapshot",
+      security: [{ SessionCookie: [] }],
+      parameters: [
+        { name: "workspaceId", in: "path", required: true, schema: { type: "string" } },
+        { name: "snapshotId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/deliverables": {
+    get: {
+      tags: ["workspaces"],
+      summary: "List deliverables for a workspace",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: ok,
+    },
+    post: {
+      tags: ["workspaces"],
+      summary: "Create a deliverable for a workspace",
+      security: [{ SessionCookie: [] }],
+      parameters: [{ name: "workspaceId", in: "path", required: true, schema: { type: "string" } }],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/deliverables/{deliverableId}/submit": {
+    post: {
+      tags: ["workspaces"],
+      summary: "Submit a workspace deliverable",
+      security: [{ SessionCookie: [] }],
+      parameters: [
+        { name: "workspaceId", in: "path", required: true, schema: { type: "string" } },
+        { name: "deliverableId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: okWrite,
+    },
+  },
+  "/api/v1/workspaces/{workspaceId}/deliverables/{deliverableId}/review": {
+    post: {
+      tags: ["workspaces"],
+      summary: "Review a workspace deliverable",
+      security: [{ SessionCookie: [] }],
+      parameters: [
+        { name: "workspaceId", in: "path", required: true, schema: { type: "string" } },
+        { name: "deliverableId", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: okWrite,
     },
   },
 };

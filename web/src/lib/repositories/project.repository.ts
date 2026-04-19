@@ -8,6 +8,7 @@ import { incrementContributionCreditField, contributionWeights } from "@/lib/con
 import { isMockDataEnabled } from "@/lib/runtime-mode";
 import { mockCreators, mockProjects, mockTeams, mockTeamMemberships, mockAuditLogs } from "@/lib/data/mock-data";
 import type { Project } from "@/lib/types";
+import { ensurePersonalWorkspace, ensureTeamWorkspace } from "@/lib/repositories/workspace.repository";
 
 interface PaginationMeta {
   page: number;
@@ -34,6 +35,7 @@ function toProjectDto(project: {
   slug: string;
   creatorId: string;
   teamId: string | null;
+  workspaceId?: string | null;
   title: string;
   oneLiner: string;
   description: string;
@@ -76,6 +78,7 @@ function toProjectDto(project: {
   if (project.featuredAt) base.featuredAt = project.featuredAt.toISOString();
   if (project.featuredRank != null) base.featuredRank = project.featuredRank;
   if (project.teamId) base.teamId = project.teamId;
+  if (project.workspaceId) base.workspaceId = project.workspaceId;
   if (project.team) base.team = { slug: project.team.slug, name: project.team.name };
   return base;
 }
@@ -208,6 +211,7 @@ export async function listProjects(params: {
         slug: string;
         creatorId: string;
         teamId: string | null;
+        workspaceId: string | null;
         title: string;
         oneLiner: string;
         description: string;
@@ -226,7 +230,7 @@ export async function listProjects(params: {
         team_name: string | null;
       }>
     >(Prisma.sql`
-      SELECT p.id, p.slug, p."creatorId", p."teamId", p.title, p."oneLiner", p.description,
+      SELECT p.id, p.slug, p."creatorId", p."teamId", p."workspaceId", p.title, p."oneLiner", p.description,
         p."techStack", p.tags, p.status, p."demoUrl", p."repoUrl", p."websiteUrl", p.screenshots,
         p."logoUrl", p."openSource", p.license, p."updatedAt",
         te.slug AS team_slug, te.name AS team_name
@@ -243,6 +247,7 @@ export async function listProjects(params: {
           slug: r.slug,
           creatorId: r.creatorId,
           teamId: r.teamId,
+          workspaceId: r.workspaceId,
           title: r.title,
           oneLiner: r.oneLiner,
           description: r.description,
@@ -298,7 +303,7 @@ export async function listProjects(params: {
       ? encodeCursor({ t: last.updatedAt.toISOString(), id: last.id })
       : undefined;
   return {
-    items: pageItems.map((p) => toProjectDto({ ...p, teamId: p.teamId, team: p.team })),
+    items: pageItems.map((p) => toProjectDto({ ...p, teamId: p.teamId, workspaceId: p.workspaceId, team: p.team })),
     pagination: {
       page: params.page,
       limit: params.limit,
@@ -346,7 +351,7 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
     where: { slug },
     include: { team: { select: { slug: true, name: true } } },
   });
-  return project ? toProjectDto({ ...project, team: project.team }) : null;
+  return project ? toProjectDto({ ...project, workspaceId: project.workspaceId, team: project.team }) : null;
 }
 
 export async function createProject(input: {
@@ -379,6 +384,7 @@ export async function createProject(input: {
       id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       slug: `${slug}-${Date.now()}`,
       creatorId: creator.id,
+      workspaceId: `personal:${input.creatorUserId}`,
       title: input.title,
       oneLiner: input.oneLiner,
       description: input.description,
@@ -426,10 +432,12 @@ export async function createProject(input: {
   }
   try {
     const project = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const workspace = await ensurePersonalWorkspace(input.creatorUserId, tx);
       const p = await tx.project.create({
         data: {
           slug: `${slug}-${Date.now()}`,
           creatorId: creator.id,
+          workspaceId: workspace.id,
           title: input.title,
           oneLiner: input.oneLiner,
           description: input.description,
@@ -463,7 +471,7 @@ export async function createProject(input: {
       slug: project.slug,
       title: project.title,
     });
-    return toProjectDto({ ...project, team: project.team });
+    return toProjectDto({ ...project, workspaceId: project.workspaceId, team: project.team });
   } catch (e) {
     const mapped = mapPrismaToRepositoryError(e);
     if (mapped) throw mapped;
@@ -547,7 +555,7 @@ export async function updateProject(params: {
       title: updated.title,
     });
   }
-  return toProjectDto({ ...updated, team: updated.team });
+  return toProjectDto({ ...updated, workspaceId: updated.workspaceId, team: updated.team });
 }
 
 export async function deleteProject(params: {
@@ -613,6 +621,7 @@ export async function updateProjectTeamLink(params: {
     if (params.teamSlug === null || params.teamSlug === "") {
       project.teamId = undefined;
       project.team = undefined;
+      project.workspaceId = `personal:${creator.userId}`;
       return { ...project };
     }
     const slugTrim = params.teamSlug.trim();
@@ -621,6 +630,7 @@ export async function updateProjectTeamLink(params: {
     const isMember = mockTeamMemberships.some((m) => m.teamId === team.id && m.userId === params.actorUserId);
     if (!isMember) throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
     project.teamId = team.id;
+    project.workspaceId = `team:${team.id}`;
     project.team = { slug: team.slug, name: team.name };
     return { ...project };
   }
@@ -634,12 +644,13 @@ export async function updateProjectTeamLink(params: {
   if (project.creator.userId !== params.actorUserId) throw new Error("FORBIDDEN_NOT_CREATOR");
 
   if (params.teamSlug === null || params.teamSlug === "") {
+    const personalWorkspace = await ensurePersonalWorkspace(params.actorUserId, prisma);
     const updated = await prisma.project.update({
       where: { id: project.id },
-      data: { teamId: null },
+      data: { teamId: null, workspaceId: personalWorkspace.id },
       include: { team: { select: { slug: true, name: true } } },
     });
-    return toProjectDto({ ...updated, team: updated.team });
+    return toProjectDto({ ...updated, workspaceId: updated.workspaceId, team: updated.team });
   }
 
   const slugTrim = params.teamSlug.trim();
@@ -651,10 +662,12 @@ export async function updateProjectTeamLink(params: {
   });
   if (!membership) throw new Error("FORBIDDEN_NOT_TEAM_MEMBER");
 
+  const workspace = await ensureTeamWorkspace(team.id, prisma);
+
   const updated = await prisma.project.update({
     where: { id: project.id },
-    data: { teamId: team.id },
+    data: { teamId: team.id, workspaceId: workspace.id },
     include: { team: { select: { slug: true, name: true } } },
   });
-  return toProjectDto({ ...updated, team: updated.team });
+  return toProjectDto({ ...updated, workspaceId: updated.workspaceId, team: updated.team });
 }

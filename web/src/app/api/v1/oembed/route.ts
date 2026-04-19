@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 /**
  * A-3: oEmbed endpoint for VibeHub projects.
  * Spec: https://oembed.com
- * Usage: GET /api/v1/oembed?url=https://vibehub.dev/projects/:slug&format=json
+ * Usage: GET /api/v1/oembed?url=https://vibehub.dev/p/:slug&format=json
  */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -18,10 +18,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Parse project slug from URL patterns:
-  // https://vibehub.dev/projects/:slug  or  /projects/:slug
-  const slugMatch = targetUrl.match(/\/projects\/([a-z0-9-]+)/i);
+  // https://vibehub.dev/p/:slug, /p/:slug, and legacy /projects/:slug
+  const slugMatch = targetUrl.match(/\/(?:p|projects)\/([a-z0-9-]+)/i);
   if (!slugMatch) {
-    return NextResponse.json({ error: "Unsupported URL. Must be a /projects/:slug URL." }, { status: 400 });
+    return NextResponse.json({ error: "Unsupported URL. Must be a /p/:slug URL." }, { status: 400 });
   }
   const slug = slugMatch[1];
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   const escSlug = escapeHtmlForEmbed(project.slug);
   const escTitle = escapeHtmlForEmbed(project.title);
   const escOneLiner = escapeHtmlForEmbed(project.oneLiner);
-  const projectUrl = `${baseUrl}/projects/${project.slug}`;
+  const projectUrl = `${baseUrl}/p/${project.slug}`;
 
   const response = {
     // Standard oEmbed fields

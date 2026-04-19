@@ -75,9 +75,9 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
   return (
     <form onSubmit={onSubmit} className="card p-6 space-y-5">
       <p className="text-xs text-[var(--color-text-muted)] m-0">
-        {t("team.settings.links_hint_prefix", "Use full")}{" "}
+        {t("team.settings.links_hint_prefix", "请填写完整的")}{" "}
         <code className="text-[var(--color-text-secondary)]">https://</code>{" "}
-        {t("team.settings.links_hint_suffix", "links. These are shown on the team page and reused by project, GitHub, and community discovery surfaces. Leave blank to clear a field.")}
+        {t("team.settings.links_hint_suffix", "链接。这些链接会展示在团队页，并复用于项目、GitHub 和社区发现入口；留空即可清空该字段。")}
       </p>
       {FIELDS.map(({ key, labelKey }) => (
         <div key={key} className="space-y-1.5">
@@ -99,7 +99,7 @@ export function TeamLinksSettingsForm({ teamSlug, initial }: Props) {
         <button type="submit" className="btn btn-primary text-sm px-5 py-2" disabled={status === "loading"}>
           {status === "loading" ? t("common.saving") : t("team.settings.save_links")}
         </button>
-        <button type="button" className="btn btn-secondary text-sm px-5 py-2" onClick={() => router.push(`/teams/${encodeURIComponent(teamSlug)}`)}>
+        <button type="button" className="btn btn-secondary text-sm px-5 py-2" onClick={() => router.push(`/work/team/${encodeURIComponent(teamSlug)}`)}>
           {t("team.back_to_team")}
         </button>
       </div>

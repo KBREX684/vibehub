@@ -7,7 +7,6 @@ export default async function PricingPage() {
   const { t } = await getServerTranslator();
   const faqs = [
     "alipay",
-    "stripe",
     "plans",
     "renewal",
     "mcp",

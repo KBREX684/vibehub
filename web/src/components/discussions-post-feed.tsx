@@ -79,7 +79,7 @@ export function DiscussionsPostFeed({
           <PostCard
             key={post.id}
             post={post}
-            detailHref={`/discussions/${post.slug}`}
+            detailHref="/discover"
           />
         ))}
       </div>

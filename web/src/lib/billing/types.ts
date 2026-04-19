@@ -1,6 +1,6 @@
 import type { SubscriptionTier, UserSubscription } from "@/lib/types";
 
-export type PaymentProviderId = "stripe" | "alipay" | "wechatpay";
+export type PaymentProviderId = "alipay";
 export type PaymentProviderMode = "live" | "sandbox";
 export type PaymentReadinessStatus = "ready" | "sandbox" | "not_configured";
 

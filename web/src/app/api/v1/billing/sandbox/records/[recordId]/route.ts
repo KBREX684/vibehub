@@ -37,10 +37,6 @@ export async function POST(request: Request, { params }: Params) {
       return apiError({ code: "BILLING_RECORD_NOT_FOUND", message: "Billing record not found" }, 404);
     }
 
-    if (record.paymentProvider === "stripe") {
-      return apiError({ code: "SANDBOX_ONLY", message: "Sandbox actions are only available for China payment staging records" }, 400);
-    }
-
     if (parsed.action === "refund" && record.status !== "succeeded") {
       return apiError({ code: "INVALID_BILLING_STATE", message: "Only successful records can be refunded" }, 409);
     }
@@ -82,8 +78,6 @@ export async function POST(request: Request, { params }: Params) {
           tier: subscription.tier,
           status: "past_due",
           paymentProvider: record.paymentProvider,
-          stripeSubscriptionId: subscription.stripeSubscriptionId,
-          stripePriceId: subscription.stripePriceId,
           cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
           currentPeriodEnd: subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd) : undefined,
         });

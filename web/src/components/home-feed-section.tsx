@@ -49,7 +49,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
             )}
           </h2>
           <Link
-            href="/discussions"
+            href="/discover"
             className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             {t("common.viewAll", "查看全部")}
@@ -63,7 +63,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
               {t("home.feed.empty_following", "你还没有关注任何人，或你关注的人最近没有发帖。")}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/discussions" className="btn btn-primary text-xs px-4 py-2">
+              <Link href="/discover" className="btn btn-primary text-xs px-4 py-2">
                 {t("home.feed.browse_discussions", "浏览讨论")}
               </Link>
               <Link href="/discover" className="btn btn-secondary text-xs px-4 py-2">
@@ -142,7 +142,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
                 </h2>
               </div>
               <Link
-                href="/teams"
+                href="/discover"
                 className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 {t("common.viewAll", "查看全部")}
@@ -153,7 +153,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
               {teams.map((team) => (
                 <Link
                   key={team.id}
-                  href={`/teams/${team.slug}`}
+                  href={`/work/team/${team.slug}`}
                   className="card p-4 flex items-start gap-3 transition-colors block"
                 >
                   <Avatar tone="neutral" size="md" square initial={team.name.charAt(0)} alt={team.name} />

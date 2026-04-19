@@ -24,7 +24,7 @@ export async function CreatorPostsSection({ authorUserId }: Props) {
           <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] m-0">{t("creator.posts_title")}</h2>
         </div>
         <Link
-          href={`/discussions?sort=recent&author=${encodeURIComponent(authorUserId)}`}
+          href="/discover"
           className="text-xs font-medium text-[var(--color-primary-hover)] hover:underline inline-flex items-center gap-1"
         >
           {t("creator.posts_view")}

@@ -6,10 +6,10 @@ interface Props {
 }
 
 const ERROR_MAP: Record<string, { title: string; detail: string }> = {
-  oauth_failed:   { title: "GitHub login failed",   detail: "The GitHub OAuth handshake failed. Please try again." },
-  state_mismatch: { title: "Session expired",       detail: "The login session timed out. Please start fresh." },
-  config_missing: { title: "OAuth not configured",  detail: "GitHub OAuth credentials are not set on this server." },
-  callback_error: { title: "Login error",           detail: "An unexpected error occurred during login." },
+  oauth_failed: { title: "GitHub 登录失败", detail: "GitHub OAuth 握手失败，请稍后再试。" },
+  state_mismatch: { title: "会话已过期", detail: "本次登录会话已超时，请重新开始登录。" },
+  config_missing: { title: "OAuth 未配置", detail: "当前服务器尚未配置 GitHub OAuth 凭据。" },
+  callback_error: { title: "登录异常", detail: "登录过程中发生了未预期的错误。" },
 };
 
 export default async function AuthErrorPage({ searchParams }: Props) {
@@ -36,7 +36,7 @@ export default async function AuthErrorPage({ searchParams }: Props) {
             className="btn btn-primary w-full text-sm py-2.5 flex items-center justify-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Login
+            返回登录
           </Link>
         </div>
       </div>

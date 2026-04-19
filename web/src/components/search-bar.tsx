@@ -38,6 +38,9 @@ export function SearchBar() {
         placeholder={t("search.placeholder")}
         className={`${SEARCH_INPUT_CLASS} focus:border-[var(--color-text-primary)]`}
         aria-label={t("common.search")}
+        autoComplete="off"
+        spellCheck={false}
+        suppressHydrationWarning
       />
 
       {query.length > 0 && (

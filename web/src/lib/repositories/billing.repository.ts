@@ -17,8 +17,6 @@ function toSubscriptionDto(row: {
   tier: string;
   status: string;
   paymentProvider?: string;
-  stripeSubscriptionId: string | null;
-  stripePriceId: string | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   createdAt: Date;
@@ -29,9 +27,7 @@ function toSubscriptionDto(row: {
     userId: row.userId,
     tier: (row.tier as UserSubscription["tier"]) ?? "free",
     status: (row.status as UserSubscription["status"]) ?? "active",
-    paymentProvider: (row.paymentProvider as UserSubscription["paymentProvider"]) ?? "stripe",
-    stripeSubscriptionId: row.stripeSubscriptionId ?? undefined,
-    stripePriceId: row.stripePriceId ?? undefined,
+    paymentProvider: (row.paymentProvider as UserSubscription["paymentProvider"]) ?? "alipay",
     currentPeriodEnd: row.currentPeriodEnd?.toISOString(),
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
     createdAt: row.createdAt.toISOString(),
@@ -106,7 +102,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       userId,
       tier: "free",
       status: "active",
-      paymentProvider: "stripe",
+      paymentProvider: "alipay",
       cancelAtPeriodEnd: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -120,7 +116,7 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
       userId,
       tier: "free",
       status: "active",
-      paymentProvider: "stripe",
+      paymentProvider: "alipay",
       cancelAtPeriodEnd: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -133,8 +129,6 @@ export async function upsertUserSubscription(params: {
   userId: string;
   tier: UserSubscription["tier"];
   status: UserSubscription["status"];
-  stripeSubscriptionId?: string;
-  stripePriceId?: string;
   currentPeriodEnd?: Date;
   cancelAtPeriodEnd?: boolean;
   paymentProvider?: UserSubscription["paymentProvider"];
@@ -147,9 +141,7 @@ export async function upsertUserSubscription(params: {
       userId: params.userId,
       tier: params.tier,
       status: params.status,
-      paymentProvider: params.paymentProvider ?? "stripe",
-      stripeSubscriptionId: params.stripeSubscriptionId,
-      stripePriceId: params.stripePriceId,
+      paymentProvider: params.paymentProvider ?? "alipay",
       currentPeriodEnd: params.currentPeriodEnd?.toISOString(),
       cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
       createdAt: idx >= 0 ? mockSubscriptions[idx].createdAt : now,
@@ -167,9 +159,7 @@ export async function upsertUserSubscription(params: {
   const data = {
     tier: params.tier as "free" | "pro",
     status: params.status as "active" | "past_due" | "canceled" | "trialing",
-    paymentProvider: (params.paymentProvider ?? "stripe") as "stripe" | "alipay" | "wechatpay",
-    stripeSubscriptionId: params.stripeSubscriptionId ?? null,
-    stripePriceId: params.stripePriceId ?? null,
+    paymentProvider: (params.paymentProvider ?? "alipay") as "alipay",
     currentPeriodEnd: params.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
   };

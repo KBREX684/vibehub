@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TeamActivityLogEntry } from "@/lib/types";
 import { apiFetch } from "@/lib/api-fetch";
-import { Bot, History, ListChecks, MessageSquareText } from "lucide-react";
+import { Bot, FolderKanban, History, ListChecks, MessageSquareText, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { formatLocalizedDateTime } from "@/lib/formatting";
 import { TagPill } from "@/components/ui";
@@ -19,15 +19,32 @@ const FILTERS: Array<{
   label: string;
   icon: typeof History;
 }> = [
-  { value: "all", label: "All", icon: History },
-  { value: "task", label: "Tasks", icon: ListChecks },
-  { value: "discussion", label: "Discussions", icon: MessageSquareText },
-  { value: "agent", label: "Agent", icon: Bot },
+  { value: "all", label: "全部", icon: History },
+  { value: "task", label: "任务", icon: ListChecks },
+  { value: "discussion", label: "讨论", icon: MessageSquareText },
+  { value: "workspace", label: "工作区", icon: FolderKanban },
+  { value: "confirmation", label: "确认流", icon: ShieldCheck },
+  { value: "agent", label: "智能代理", icon: Bot },
 ];
 
 function labelForEntry(item: TeamActivityLogEntry): string {
   if (item.summary) return item.summary;
   return item.action.replaceAll("_", " ");
+}
+
+function detailForEntry(item: TeamActivityLogEntry): string | null {
+  const outcome = typeof item.metadata?.outcome === "string" ? item.metadata.outcome : null;
+  const filename = typeof item.metadata?.filename === "string" ? item.metadata.filename : null;
+  const title =
+    typeof item.metadata?.title === "string"
+      ? item.metadata.title
+      : typeof item.metadata?.taskTitle === "string"
+        ? item.metadata.taskTitle
+        : typeof item.metadata?.snapshotTitle === "string"
+          ? item.metadata.snapshotTitle
+          : null;
+  const parts = [filename, title, outcome].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = false }: Props) {
@@ -38,8 +55,8 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
   const [filter, setFilter] = useState<"all" | TeamActivityLogEntry["kind"]>("all");
   const emptyMessage =
     filter === "all"
-      ? t("team.timeline.empty_all", "No recorded team activity yet.")
-      : t("team.timeline.empty_kind", "No {kind} events recorded yet.").replace("{kind}", filter);
+      ? t("team.timeline.empty_all", "团队还没有产生任何活动记录。")
+      : t("team.timeline.empty_kind", "当前还没有「{kind}」相关活动。").replace("{kind}", filter);
 
   const load = useCallback(async () => {
     if (!currentUserId) return;
@@ -53,13 +70,13 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
       );
       const json = (await response.json()) as { data?: { items?: TeamActivityLogEntry[] }; error?: { message?: string } };
       if (!response.ok) {
-        setMessage(json.error?.message ?? t("team.timeline.load_failed", "Failed to load the activity timeline."));
+        setMessage(json.error?.message ?? t("team.timeline.load_failed", "加载团队活动流失败。"));
         setItems([]);
         return;
       }
       setItems(json.data?.items ?? []);
     } catch (error) {
-      setMessage(error instanceof Error && error.message ? error.message : t("team.timeline.load_failed", "Failed to load the activity timeline."));
+      setMessage(error instanceof Error && error.message ? error.message : t("team.timeline.load_failed", "加载团队活动流失败。"));
     }
   }, [currentUserId, filter, fullWidth, t, teamSlug]);
 
@@ -76,9 +93,9 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
       <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-[var(--color-warning)]" />
           <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("team.timeline.title", "Team timeline")}</h2>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t("team.timeline.title", "团队活动流")}</h2>
           <p className="text-xs text-[var(--color-text-secondary)] m-0">
-            {t("team.timeline.subtitle", "Task changes, structured discussions, and agent actions in one filtered stream.")}
+            {t("team.timeline.subtitle", "在同一条可筛选时间线上查看任务变化、结构化讨论和智能代理动作。")}
           </p>
         </div>
       </div>
@@ -103,7 +120,7 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
         </div>
       ) : null}
       {!currentUserId ? (
-        <p className="text-sm text-[var(--color-text-secondary)] m-0">{t("team.timeline.sign_in_required", "Join the team to inspect the activity timeline.")}</p>
+        <p className="text-sm text-[var(--color-text-secondary)] m-0">{t("team.timeline.sign_in_required", "加入团队后即可查看活动时间线。")}</p>
       ) : items.length === 0 ? (
         <div
           key={filter}
@@ -125,6 +142,9 @@ export function TeamActivityTimeline({ teamSlug, currentUserId, fullWidth = fals
               <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">
                 {item.actorName ?? item.actorId} · {formatLocalizedDateTime(item.createdAt, language)}
               </p>
+              {detailForEntry(item) ? (
+                <p className="text-xs text-[var(--color-text-tertiary)] mt-2 mb-0">{detailForEntry(item)}</p>
+              ) : null}
             </div>
           ))}
         </div>

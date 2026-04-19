@@ -8,10 +8,18 @@ export type ProjectSortOrder = "latest" | "hot" | "featured" | "recommended";
 export type ProjectStatus = "idea" | "building" | "launched" | "paused";
 export type ReviewStatus = "pending" | "approved" | "rejected";
 export type CollaborationIntentType = "join" | "recruit";
+export type CollaborationIntentStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "ignored"
+  | "blocked"
+  | "expired";
 export type ChallengeStatus = "draft" | "active" | "closed";
 export type SubscriptionTier = "free" | "pro";
 export type SubscriptionStatus = "active" | "past_due" | "canceled" | "trialing";
 export type OAuthAppTokenScope = string;
+export type WorkspaceKind = "personal" | "team";
 export type AutomationWorkflowRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped";
 export type AutomationWorkflowActionType =
   | "create_team_task"
@@ -44,8 +52,6 @@ export interface User {
   githubId?: number;
   githubUsername?: string;
   avatarUrl?: string;
-  /** M-2: Stripe */
-  stripeCustomerId?: string;
   enterpriseStatus?: EnterpriseVerificationStatus;
   enterpriseOrganization?: string;
   enterpriseWebsite?: string;
@@ -83,6 +89,7 @@ export interface Project {
   creatorId: string;
   /** Present when the project is linked to a Team. */
   teamId?: string;
+  workspaceId?: string;
   team?: ProjectTeamSummary;
   title: string;
   oneLiner: string;
@@ -100,6 +107,7 @@ export interface Project {
   logoUrl?: string;
   openSource: boolean;
   license?: string;
+  visibility?: "draft" | "public" | "private";
   updatedAt: string;
   /** Admin daily featured slot (C-5) */
   featuredAt?: string;
@@ -185,15 +193,138 @@ export interface CollaborationIntent {
   projectId: string;
   applicantId: string;
   intentType: CollaborationIntentType;
-  message: string;
+  /** v10 primary structured fields */
+  pitch?: string;
+  whyYou?: string;
+  howCollab?: string;
+  /** Legacy field kept for compatibility during migration. */
+  message?: string;
   contact?: string;
-  status: ReviewStatus;
+  status: CollaborationIntentStatus;
   reviewNote?: string;
   reviewedAt?: string;
   reviewedBy?: string;
+  expiresAt?: string;
   /** T-4: tracks conversion to team membership */
   convertedToTeamMembership: boolean;
   createdAt: string;
+}
+
+export interface WorkspaceSummary {
+  id: string;
+  kind: WorkspaceKind;
+  slug: string;
+  title: string;
+  subtitle?: string;
+  teamSlug?: string;
+  memberCount?: number;
+}
+
+export interface WorkLibraryItem extends Project {
+  workspaceTitle: string;
+  workspaceSlug: string;
+  workspaceKind: WorkspaceKind;
+  collaborationIntentCount: number;
+}
+
+export interface WorkspaceProjectReference {
+  id: string;
+  slug: string;
+  title: string;
+  openSource: boolean;
+}
+
+export type WorkspaceArtifactValidationState = "pending" | "ready" | "rejected";
+
+export interface WorkspaceArtifact {
+  id: string;
+  workspaceId: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  storageKey: string;
+  uploaderUserId: string;
+  uploaderName?: string;
+  visibility: "workspace";
+  validationState: WorkspaceArtifactValidationState;
+  publicUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkspaceSnapshot {
+  id: string;
+  workspaceId: string;
+  title: string;
+  summary: string;
+  goal?: string;
+  roleNotes?: string;
+  projectIds: string[];
+  projects: WorkspaceProjectReference[];
+  previousSnapshotId?: string;
+  previousSnapshotTitle?: string;
+  createdByUserId: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkspaceDeliverableStatus = "draft" | "submitted" | "approved" | "rejected";
+
+export interface WorkspaceDeliverable {
+  id: string;
+  workspaceId: string;
+  snapshotId: string;
+  snapshotTitle?: string;
+  title: string;
+  description?: string;
+  status: WorkspaceDeliverableStatus;
+  createdByUserId: string;
+  createdByName?: string;
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkIntentTab = "received" | "sent" | "accepted" | "declined" | "expired";
+
+export interface WorkIntentInboxItem extends CollaborationIntent {
+  projectSlug: string;
+  projectTitle: string;
+  applicantName: string;
+  applicantEmail?: string;
+  ownerUserId?: string;
+}
+
+export type WorkAgentTaskStatus = "running" | "pending_confirm" | "done" | "failed";
+
+export interface WorkAgentTaskItem {
+  id: string;
+  source: "agent_task";
+  status: WorkAgentTaskStatus;
+  action: string;
+  targetType: string;
+  targetId: string;
+  title: string;
+  subtitle: string;
+  scope: WorkspaceKind;
+  workspaceId?: string;
+  workspaceSlug?: string;
+  workspaceTitle?: string;
+  teamId?: string;
+  teamSlug?: string;
+  teamName?: string;
+  agentBindingId?: string;
+  agentLabel?: string;
+  confirmationRequestId?: string;
+  confirmationStatus?: AgentConfirmationStatus;
+  canDecideConfirmation?: boolean;
+  createdAt: string;
+  completedAt?: string;
+  metadata?: Record<string, unknown>;
 }
 
 // ─── Session / Auth ───────────────────────────────────────────────────────────
@@ -235,7 +366,7 @@ export interface ModerationCase {
 
 export interface ReportTicket {
   id: string;
-  targetType: "post";
+  targetType: "post" | "collaboration_intent";
   targetId: string;
   reporterId: string;
   reason: string;
@@ -311,6 +442,9 @@ export interface AuditLog {
     | "team_task_comment"
     | "team_task"
     | "team_milestone"
+    | "workspace_snapshot"
+    | "workspace_artifact"
+    | "workspace_deliverable"
     | "api_key"
     | "team_membership"
     | "in_app_notification"
@@ -684,7 +818,7 @@ export interface CollaborationIntentConversionMetrics {
 /** P3: Team-scoped activity log entry. */
 export interface TeamActivityLogEntry {
   id: string;
-  kind: "task" | "discussion" | "agent";
+  kind: "task" | "discussion" | "workspace" | "confirmation" | "agent";
   actorId: string;
   actorName?: string;
   action: string;
@@ -737,7 +871,7 @@ export interface SubscriptionPlanInfo {
 }
 
 /** M-1: Per-user subscription record (billing-provider-backed). */
-export type PaymentProviderKind = "stripe" | "alipay" | "wechatpay";
+export type PaymentProviderKind = "alipay";
 export type BillingRecordStatus = "pending" | "succeeded" | "failed" | "canceled" | "refunded";
 
 export interface UserSubscription {
@@ -746,8 +880,6 @@ export interface UserSubscription {
   tier: SubscriptionTier;
   status: SubscriptionStatus;
   paymentProvider?: PaymentProviderKind;
-  stripeSubscriptionId?: string;
-  stripePriceId?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd: boolean;
   enterpriseStatus?: EnterpriseVerificationStatus;

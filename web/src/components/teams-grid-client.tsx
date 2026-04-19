@@ -17,7 +17,7 @@ export function TeamsGridClient({ teams }: { teams: TeamSummary[] }) {
       {teams.map((team, i) => (
         <Link
           key={team.id}
-          href={`/teams/${team.slug}`}
+          href={`/work/team/${team.slug}`}
           className="block"
         >
           <SpotlightCard

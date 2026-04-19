@@ -31,7 +31,7 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
   }
 
   async function handleUpgrade() {
-    const toastId = toast.loading("Preparing checkout…");
+    const toastId = toast.loading("正在准备支付…");
     try {
       const res = await apiFetch("/api/v1/billing/checkout", {
         method: "POST",
@@ -43,12 +43,12 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
         toast.dismiss(toastId);
         window.location.href = json.data.url;
       } else {
-        toast.error(json.error?.message ?? "Could not start checkout. Please try again.", {
+        toast.error(json.error?.message ?? "暂时无法发起支付，请稍后重试。", {
           id: toastId,
         });
       }
     } catch {
-      toast.error("Network error. Please try again.", { id: toastId });
+      toast.error("网络异常，请稍后重试。", { id: toastId });
     }
   }
 
@@ -92,11 +92,11 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
 
               <div className="flex flex-col gap-2">
                 <Button variant="apple" size="md" onClick={handleUpgrade} className="w-full">
-                  Upgrade to Pro
+                  升级到专业版
                   <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleDismiss} className="w-full">
-                  Maybe later
+                  稍后再说
                 </Button>
               </div>
             </motion.div>
@@ -128,12 +128,12 @@ export function UpgradePrompt({ reason, variant = "banner", onDismiss }: Props) 
 
       <div className="flex items-center gap-1.5 shrink-0">
         <Button variant="apple" size="sm" onClick={handleUpgrade}>
-          Upgrade
+          升级
         </Button>
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Dismiss"
+          aria-label="关闭"
           className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors"
         >
           <X className="w-4 h-4" aria-hidden="true" />

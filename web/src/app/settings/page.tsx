@@ -38,98 +38,98 @@ interface SettingsGroup {
 const SETTINGS_GROUPS: SettingsGroup[] = [
   {
     labelKey: "settings.group.account",
-    labelFallback: "Account",
+    labelFallback: "账号",
     links: [
       {
         href: "/settings/profile",
         titleKey: "settings.profile_title",
-        titleFallback: "Profile",
+        titleFallback: "资料",
         descKey: "settings.profile_desc",
-        descFallback: "Edit your public profile, links, and collaboration preferences.",
+        descFallback: "编辑公开资料、外部链接和协作偏好。",
         icon: User,
       },
       {
         href: "/settings/account",
         titleKey: "settings.account_title",
-        titleFallback: "Account & Security",
+        titleFallback: "账号与安全",
         descKey: "settings.account_desc",
-        descFallback: "Email, linked providers, password, and account deletion.",
+        descFallback: "管理邮箱、已绑定账号、密码与账号删除。",
         icon: Settings2,
       },
       {
         href: "/settings/notifications",
         titleKey: "settings.notifications_title",
-        titleFallback: "Notifications",
+        titleFallback: "通知",
         descKey: "settings.notifications_desc",
-        descFallback: "Choose which in-app notification categories you receive.",
+        descFallback: "选择希望接收的站内通知类型。",
         icon: Bell,
       },
     ],
   },
   {
     labelKey: "settings.group.developer",
-    labelFallback: "Developer",
+    labelFallback: "开发者",
     links: [
       {
         href: "/settings/api-keys",
         titleKey: "settings.api_keys_title",
-        titleFallback: "API Keys",
+        titleFallback: "API 密钥",
         descKey: "settings.api_keys_desc",
-        descFallback: "Manage developer keys, scopes, and MCP integrations.",
+        descFallback: "管理开发者密钥、权限范围与 MCP 接入。",
         icon: Key,
       },
       {
         href: "/settings/agents",
         titleKey: "settings.agents_title",
-        titleFallback: "Agents",
+        titleFallback: "智能代理",
         descKey: "settings.agents_desc",
-        descFallback: "Named agent identities linked to API keys and audit trails.",
+        descFallback: "管理绑定到 API 密钥和审计链路的智能代理身份。",
         icon: Bot,
       },
       {
         href: "/settings/oauth-apps",
         titleKey: "settings.oauth_apps_title",
-        titleFallback: "OAuth Apps",
+        titleFallback: "OAuth 应用",
         descKey: "settings.oauth_apps_desc",
-        descFallback: "Third-party apps using scoped Bearer access tokens.",
+        descFallback: "管理使用受限 Bearer 令牌的第三方应用。",
         icon: AppWindow,
       },
       {
         href: "/settings/automations",
         titleKey: "settings.automations_title",
-        titleFallback: "Automations",
+        titleFallback: "自动化",
         descKey: "settings.automations_desc",
-        descFallback: "Event-driven workflows for team actions and integrations.",
+        descFallback: "配置团队动作与集成场景的事件驱动工作流。",
         icon: Workflow,
       },
       {
         href: "/settings/webhooks",
         titleKey: "settings.webhooks_title",
-        titleFallback: "Webhooks",
+        titleFallback: "Webhook",
         descKey: "settings.webhooks_desc",
-        descFallback: "Outbound HTTPS webhooks with HMAC signatures.",
+        descFallback: "管理带 HMAC 签名的外发 HTTPS Webhook。",
         icon: Webhook,
       },
     ],
   },
   {
     labelKey: "settings.group.billing",
-    labelFallback: "Billing & Plans",
+    labelFallback: "订阅与套餐",
     links: [
       {
         href: "/settings/subscription",
         titleKey: "settings.subscription_title",
-        titleFallback: "Subscription",
+        titleFallback: "订阅",
         descKey: "settings.subscription_desc",
-        descFallback: "Plan, billing, and usage limits.",
+        descFallback: "查看套餐、账单和使用额度。",
         icon: CreditCard,
       },
       {
         href: "/enterprise/verify",
         titleKey: "settings.enterprise_verify_title",
-        titleFallback: "Enterprise Verification",
+        titleFallback: "企业认证",
         descKey: "settings.enterprise_verify_desc",
-        descFallback: "Apply for enterprise certification (badge only).",
+        descFallback: "提交企业认证申请（当前仅提供徽章审核）。",
         icon: Building2,
       },
     ],
@@ -162,7 +162,7 @@ export default async function SettingsIndexPage() {
             {t("settings.sign_in_hint")}
           </p>
           <Link href="/login?redirect=/settings" className="btn btn-primary text-sm px-6 py-2.5 inline-flex">
-            {t("settings.sign_in")}
+            {t("settings.sign_in", "立即登录")}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

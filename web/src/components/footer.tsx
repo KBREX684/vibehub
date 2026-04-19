@@ -6,8 +6,8 @@ import { useLanguage } from "@/app/context/LanguageContext";
 import { Float } from "@/components/ui";
 
 type FooterLink =
-  | { kind: "link"; href: string; labelKey: string }
-  | { kind: "mailto"; href: string; labelKey: string };
+  | { kind: "link"; href: string; labelKey: string; fallback: string }
+  | { kind: "mailto"; href: string; labelKey: string; fallback: string };
 
 type FooterColumn = {
   titleKey: string;
@@ -20,28 +20,28 @@ export function Footer() {
     {
       titleKey: "footer.platform",
       links: [
-        { kind: "link", href: "/discover", labelKey: "nav.projects" },
-        { kind: "link", href: "/discussions", labelKey: "nav.discussions" },
-        { kind: "link", href: "/teams", labelKey: "nav.teams" },
-        { kind: "link", href: "/pricing", labelKey: "nav.pricing" },
+        { kind: "link", href: "/discover", labelKey: "nav.projects", fallback: "发现" },
+        { kind: "link", href: "/work", labelKey: "nav.workspace", fallback: "工作台" },
+        { kind: "link", href: "/pricing", labelKey: "nav.pricing", fallback: "定价" },
+        { kind: "link", href: "/signup", labelKey: "nav.signup", fallback: "注册" },
       ],
     },
     {
       titleKey: "footer.developers",
       links: [
-        { kind: "link", href: "/developers", labelKey: "nav.developers" },
-        { kind: "link", href: "/settings/api-keys", labelKey: "footer.apiKeys" },
-        { kind: "link", href: "/api/v1/openapi.json", labelKey: "footer.openapi" },
-        { kind: "link", href: "/developers/api-docs", labelKey: "footer.docs" },
+        { kind: "link", href: "/settings/developers", labelKey: "nav.developers", fallback: "开发者设置" },
+        { kind: "link", href: "/settings/api-keys", labelKey: "footer.apiKeys", fallback: "API 密钥" },
+        { kind: "link", href: "/api/v1/openapi.json", labelKey: "footer.openapi", fallback: "OpenAPI" },
+        { kind: "link", href: "/settings/developers", labelKey: "footer.docs", fallback: "接入说明" },
       ],
     },
     {
       titleKey: "footer.company",
       links: [
-        { kind: "link", href: "/#about", labelKey: "footer.about" },
-        { kind: "link", href: "/rules", labelKey: "footer.rules" },
-        { kind: "link", href: "/aigc", labelKey: "footer.aigc" },
-        { kind: "mailto", href: "mailto:support@vibehub.dev", labelKey: "footer.contact" },
+        { kind: "link", href: "/#about", labelKey: "footer.about", fallback: "关于" },
+        { kind: "link", href: "/rules", labelKey: "footer.rules", fallback: "社区规则" },
+        { kind: "link", href: "/aigc", labelKey: "footer.aigc", fallback: "AIGC 说明" },
+        { kind: "mailto", href: "mailto:support@vibehub.dev", labelKey: "footer.contact", fallback: "联系支持" },
       ],
     },
   ];
@@ -65,15 +65,15 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3 mt-4">
               {[
-                { icon: GitBranch, href: "https://github.com/KBREX684/vibehub", labelKey: "footer.github" },
-                { icon: BookOpen, href: "/developers", labelKey: "footer.docs" },
-                { icon: Mail, href: "mailto:support@vibehub.dev", labelKey: "footer.contact" },
-              ].map(({ icon: Icon, href, labelKey }) => (
+                { icon: GitBranch, href: "https://github.com/KBREX684/vibehub", labelKey: "footer.github", fallback: "GitHub" },
+                { icon: BookOpen, href: "/settings/developers", labelKey: "footer.docs", fallback: "接入说明" },
+                { icon: Mail, href: "mailto:support@vibehub.dev", labelKey: "footer.contact", fallback: "联系支持" },
+              ].map(({ icon: Icon, href, labelKey, fallback }) => (
                 <a
                   key={labelKey}
                   href={href}
                   className="p-2 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] transition-all"
-                  aria-label={t(labelKey)}
+                  aria-label={t(labelKey, fallback)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -98,7 +98,7 @@ export function Footer() {
                           href={link.href}
                           className="footer-link text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                         >
-                          {t(link.labelKey)}
+                          {t(link.labelKey, link.fallback)}
                         </a>
                       </li>
                     );
@@ -109,7 +109,7 @@ export function Footer() {
                         href={link.href}
                         className="footer-link text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                       >
-                        {t(link.labelKey)}
+                        {t(link.labelKey, link.fallback)}
                       </Link>
                     </li>
                   );

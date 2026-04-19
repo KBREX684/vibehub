@@ -15,6 +15,10 @@ import type {
   Post,
   Project,
   ReportTicket,
+  WorkspaceSnapshot,
+  WorkspaceArtifact,
+  WorkspaceDeliverable,
+  WorkAgentTaskStatus,
   SubscriptionPlanInfo,
   SubscriptionTier,
   SystemAlertRecord,
@@ -25,6 +29,7 @@ import type {
   TeamTaskStatus,
   User,
 } from "@/lib/types";
+import { createPersistedArray } from "@/lib/data/mock-persist";
 
 // P3: SubscriptionPlanInfo and UserSubscriptionInfo for mock data
 export interface MockUserSubscriptionInfo {
@@ -149,15 +154,40 @@ export interface MockInAppNotification {
   createdAt: string;
 }
 
+export interface MockAgentTaskRecord {
+  id: string;
+  requesterUserId: string;
+  agentBindingId: string;
+  apiKeyId?: string;
+  workspaceId?: string;
+  teamId?: string;
+  confirmationRequestId?: string;
+  taskId?: string;
+  title: string;
+  subtitle: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  status: WorkAgentTaskStatus;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
 const globalMockState = globalThis as typeof globalThis & {
   __vibehubMockAdminAiSuggestions?: AdminAiSuggestionRecord[];
   __vibehubMockSystemAlerts?: SystemAlertRecord[];
 };
 
-export const mockInAppNotifications: MockInAppNotification[] = [];
-export const mockAgentActionAudits: AgentActionAuditRow[] = [];
-export const mockAgentConfirmationRequests: AgentConfirmationRequest[] = [];
-export const mockMcpInvokeAudits: McpInvokeAuditRow[] = [];
+export const mockInAppNotifications: MockInAppNotification[] =
+  createPersistedArray<MockInAppNotification>("inAppNotifications");
+export const mockAgentActionAudits: AgentActionAuditRow[] =
+  createPersistedArray<AgentActionAuditRow>("agentActionAudits");
+export const mockAgentConfirmationRequests: AgentConfirmationRequest[] =
+  createPersistedArray<AgentConfirmationRequest>("agentConfirmationRequests");
+export const mockMcpInvokeAudits: McpInvokeAuditRow[] =
+  createPersistedArray<McpInvokeAuditRow>("mcpInvokeAudits");
 export const mockAdminAiSuggestions: AdminAiSuggestionRecord[] =
   globalMockState.__vibehubMockAdminAiSuggestions ??
   (globalMockState.__vibehubMockAdminAiSuggestions = []);
@@ -302,11 +332,22 @@ function cloneSeedProjects(): Project[] {
 
 /** In Next.js dev, HMR re-evaluates modules and would reset mutable mock arrays; keep one store on globalThis. */
 const mockProjectStore = globalThis as typeof globalThis & { __vibehubMockProjects?: Project[] };
-
 export const mockProjects: Project[] =
   process.env.NODE_ENV === "development"
     ? (mockProjectStore.__vibehubMockProjects ??= cloneSeedProjects())
     : cloneSeedProjects();
+
+export const mockWorkspaceSnapshots: WorkspaceSnapshot[] =
+  createPersistedArray<WorkspaceSnapshot>("workspaceSnapshots");
+
+export const mockWorkspaceArtifacts: WorkspaceArtifact[] =
+  createPersistedArray<WorkspaceArtifact>("workspaceArtifacts");
+
+export const mockWorkspaceDeliverables: WorkspaceDeliverable[] =
+  createPersistedArray<WorkspaceDeliverable>("workspaceDeliverables");
+
+export const mockAgentTasks: MockAgentTaskRecord[] =
+  createPersistedArray<MockAgentTaskRecord>("agentTasks");
 
 export const mockPosts: Post[] = [
   {
@@ -556,9 +597,7 @@ export const mockSubscriptions: Array<{
   userId: string;
   tier: "free" | "pro";
   status: "active" | "past_due" | "canceled" | "trialing";
-  paymentProvider?: "stripe" | "alipay" | "wechatpay";
-  stripeSubscriptionId?: string;
-  stripePriceId?: string;
+  paymentProvider?: "alipay";
   currentPeriodEnd?: string;
   cancelAtPeriodEnd: boolean;
   enterpriseStatus?: EnterpriseVerificationStatus;
@@ -574,14 +613,14 @@ export const mockSubscriptions: Array<{
   updatedAt: string;
 }> = [
   // Admin user u1 gets pro so team-limit E2E tests pass
-  { id: "sub_u1_pro", userId: "u1", tier: "pro", status: "active", paymentProvider: "stripe", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: "sub_u1_pro", userId: "u1", tier: "pro", status: "active", paymentProvider: "alipay", cancelAtPeriodEnd: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
 export const mockBillingRecords: Array<{
   id: string;
   userId: string;
   subscriptionId?: string;
-  paymentProvider: "stripe" | "alipay" | "wechatpay";
+  paymentProvider: "alipay";
   tier: "free" | "pro";
   status: "pending" | "succeeded" | "failed" | "canceled" | "refunded";
   amountCents: number;
