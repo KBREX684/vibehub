@@ -19,12 +19,15 @@ import {
   Settings,
 } from "lucide-react";
 
+/* v11.1 warm: active uses primary (Sienna) subtle + primary text so the
+   active state reads clearly on the warm canvas. Hover keeps the neutral
+   surface overlay to avoid fighting the single-CTA rule on each page. */
 const SIDEBAR_LINK_CLASS =
-  "flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-colors";
+  "flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-colors duration-120";
 const SIDEBAR_LINK_ACTIVE_CLASS =
-  "text-[var(--color-text-primary)] bg-[var(--color-surface-overlay)]";
+  "text-[var(--color-primary)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary-border)]";
 const SIDEBAR_LINK_INACTIVE_CLASS =
-  "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-overlay)]";
+  "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-overlay)] border border-transparent";
 
 interface StudioShellProps {
   children: React.ReactNode;

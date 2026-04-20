@@ -152,11 +152,12 @@ export function SiteNav() {
 
           {/* v11.0: Chinese-only — language toggle removed by RFC §0.1 freeze. */}
 
-          {/* Quick-create (logged-in only) — single action */}
+          {/* Quick-create (logged-in only) — single action.
+              v11.1: uses the warm Sienna primary (single CTA per page rule). */}
           {!loading && user ? (
             <Link
               href="/studio"
-              className="hidden md:inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] text-xs font-semibold border border-[var(--color-text-primary)] hover:opacity-90 transition-opacity"
+              className="hidden md:inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-on-accent)] text-xs font-semibold border border-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)] active:scale-[0.98] transition-all duration-150"
             >
               <Compass className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{t("nav.quick.new_work", "新建工作记录")}</span>

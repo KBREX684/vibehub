@@ -1,117 +1,141 @@
 @import "tailwindcss";
 
 /* =========================================
-   VibeHub Design System — Monochrome Geek
-   Canonical dark base with accent palette.
+   VibeHub Design System — v11.1 Warm Light
+   "Paper Workspace" — Claude.ai-inspired warm
+   light theme for Chinese solo developers.
+
    Single source-of-truth: all components
    consume these tokens; never hard-code
    colour literals in component files.
+
+   v11.0 dark Monochrome Geek tokens have been
+   replaced inline below — token names are kept
+   stable so business components require no
+   changes. See docs/v11.1-warm-ui-prompts.md.
    ========================================= */
 
 @theme {
   /* === Background Hierarchy === */
-  --color-bg-canvas:          #09090B;   /* Near-black canvas */
-  --color-bg-surface:         #101014;   /* Card surface */
-  --color-bg-surface-hover:   #17171C;   /* Card hover */
-  --color-bg-elevated:        #16161C;   /* Modal / popover */
-  --color-bg-subtle:          rgba(255,255,255,0.03);
+  --color-bg-canvas:          #FAF9F6;   /* warm off-white canvas */
+  --color-bg-surface:         #F5F2EC;   /* warm cream — card surface */
+  --color-bg-surface-hover:   #EBE6DC;   /* card hover */
+  --color-bg-elevated:        #FFFFFF;   /* modal / popover — pure white only at elevation */
+  --color-bg-subtle:          rgba(60, 40, 20, 0.04);
 
   /* === Text === */
-  --color-text-primary:       #EDEDED;
-  --color-text-secondary:     #A1A1AA;
-  --color-text-tertiary:      #71717A;
-  --color-text-inverse:       #000000;
-  --color-text-muted:         #52525B;
-  /* Foreground to use on saturated colored fills (accent-apple / accent-violet
-     gradient avatars, notification badge with bg-accent, etc.). Always white
-     in both themes because every accent is mid-to-deep in value. */
-  --color-on-accent:          #FFFFFF;
+  --color-text-primary:       #1F1B16;   /* deep warm brown — never #000 */
+  --color-text-secondary:     #5C544A;
+  --color-text-tertiary:      #8B8378;
+  --color-text-inverse:       #FAF9F6;
+  --color-text-muted:         #B5AC9E;
+  /* Foreground to use on saturated coloured fills. Uses canvas warm-white
+     instead of pure #FFF so it sits naturally next to the warm palette. */
+  --color-on-accent:          #FAF9F6;
 
   /* === Borders === */
-  --color-border:             rgba(255,255,255,0.08);
-  --color-border-subtle:      rgba(255,255,255,0.04);
-  --color-border-strong:      rgba(255,255,255,0.16);
-  --color-focus-ring:         rgba(255,255,255,0.32);
+  --color-border:             rgba(60, 40, 20, 0.10);
+  --color-border-subtle:      rgba(60, 40, 20, 0.05);
+  --color-border-strong:      rgba(60, 40, 20, 0.18);
+  --color-focus-ring:         rgba(196, 90, 47, 0.45);
 
-  /* === Brand / Primary (white on black) === */
-  --color-primary:            #FFFFFF;
-  --color-primary-hover:      #E5E5E5;
-  --color-primary-subtle:     rgba(255,255,255,0.1);
-  --color-surface-overlay:    rgba(255,255,255,0.05);
-  --color-surface-overlay-strong: rgba(255,255,255,0.1);
-  --color-overlay-scrim:      rgba(0,0,0,0.6);
-  --color-admin-bg:           #060810;
-  --color-contrast-border:    rgba(0,0,0,0.16);
-  --color-contrast-surface-hover: rgba(0,0,0,0.06);
-  --color-disabled-bg:        rgba(255,255,255,0.04);
-  --color-disabled-border:    rgba(255,255,255,0.08);
-  --color-disabled-text:      rgba(255,255,255,0.38);
-  --color-featured-highlight: rgba(255,255,255,0.18);
-  --color-chat-self-subtle:   rgba(255,255,255,0.05);
+  /* === Brand / Primary (Anthropic Sienna) === */
+  --color-primary:            #C45A2F;
+  --color-primary-hover:      #A94A24;
+  --color-primary-subtle:     rgba(196, 90, 47, 0.10);
+  --color-primary-border:     rgba(196, 90, 47, 0.30);
 
-  /* === Semantic — real colours on the dark canvas === */
-  --color-success:            #34d399;   /* emerald-400 */
-  --color-success-subtle:     rgba(52,211,153,0.1);
-  --color-success-border:     rgba(52,211,153,0.25);
-  --color-warning:            #fbbf24;   /* amber-400 */
-  --color-warning-subtle:     rgba(251,191,36,0.1);
-  --color-warning-border:     rgba(251,191,36,0.25);
-  --color-warning-border-strong: rgba(251,191,36,0.3);
-  --color-error:              #f87171;   /* red-400 */
-  --color-error-subtle:       rgba(248,113,113,0.1);
-  --color-error-border:       rgba(248,113,113,0.25);
-  --color-error-border-strong: rgba(248,113,113,0.35);
-  --color-info:               #60a5fa;   /* blue-400 */
-  --color-info-subtle:        rgba(96,165,250,0.1);
-  --color-info-border:        rgba(96,165,250,0.25);
+  --color-surface-overlay:        rgba(60, 40, 20, 0.05);
+  --color-surface-overlay-strong: rgba(60, 40, 20, 0.10);
+  --color-overlay-scrim:          rgba(60, 40, 20, 0.40);
+  --color-admin-bg:               #F5F2EC;
+  --color-contrast-border:        rgba(60, 40, 20, 0.16);
+  --color-contrast-surface-hover: rgba(60, 40, 20, 0.06);
+  --color-disabled-bg:            rgba(60, 40, 20, 0.04);
+  --color-disabled-border:        rgba(60, 40, 20, 0.08);
+  --color-disabled-text:          rgba(60, 40, 20, 0.38);
+  --color-featured-highlight:     rgba(196, 90, 47, 0.18);
+  --color-chat-self-subtle:       rgba(196, 90, 47, 0.05);
 
-  /* === Accent palette (all components must use these; never inline hex) === */
-  --color-accent-apple:       #0071e3;   /* Apple Blue — primary interactive CTA */
-  --color-accent-apple-hover: #0062cc;
-  --color-accent-apple-subtle: rgba(0,113,227,0.12);
-  --color-accent-apple-border: rgba(0,113,227,0.25);
+  /* === Semantic (warm-shifted) === */
+  --color-success:            #5B7A3F;   /* warm olive */
+  --color-success-subtle:     rgba(91, 122, 63, 0.10);
+  --color-success-border:     rgba(91, 122, 63, 0.25);
+  --color-warning:            #C68A2E;   /* warm amber */
+  --color-warning-subtle:     rgba(198, 138, 46, 0.10);
+  --color-warning-border:     rgba(198, 138, 46, 0.25);
+  --color-warning-border-strong: rgba(198, 138, 46, 0.30);
+  --color-error:              #B23A3A;   /* warm brick red */
+  --color-error-subtle:       rgba(178, 58, 58, 0.10);
+  --color-error-border:       rgba(178, 58, 58, 0.25);
+  --color-error-border-strong: rgba(178, 58, 58, 0.35);
+  --color-info:               #6A7AA0;   /* warm slate */
+  --color-info-subtle:        rgba(106, 122, 160, 0.10);
+  --color-info-border:        rgba(106, 122, 160, 0.25);
 
-  --color-accent-violet:        #a78bfa;  /* violet-400 */
-  --color-accent-violet-hover:  #8b5cf6;
-  --color-accent-violet-subtle: rgba(167,139,250,0.1);
-  --color-accent-violet-border: rgba(167,139,250,0.25);
+  /* === Accent palette ===
+     `accent-apple` token kept for stability — it now points at Sienna, so
+     every `var(--color-accent-apple)` usage automatically renders the new
+     warm CTA colour without component changes. */
+  --color-accent-apple:        #C45A2F;
+  --color-accent-apple-hover:  #A94A24;
+  --color-accent-apple-subtle: rgba(196, 90, 47, 0.10);
+  --color-accent-apple-border: rgba(196, 90, 47, 0.30);
 
-  --color-accent-cyan:        #22d3ee;   /* cyan-400 */
-  --color-accent-cyan-hover:  #06b6d4;
-  --color-accent-cyan-subtle: rgba(34,211,238,0.1);
-  --color-accent-cyan-border: rgba(34,211,238,0.25);
+  --color-accent-violet:        #7A5FB4;  /* warm violet — Ledger emphasis */
+  --color-accent-violet-hover:  #634A99;
+  --color-accent-violet-subtle: rgba(122, 95, 180, 0.10);
+  --color-accent-violet-border: rgba(122, 95, 180, 0.25);
 
-  /* === Enterprise tier (emerald) === */
-  --color-enterprise:         #34d399;   /* emerald-400 — same hue as success */
-  --color-enterprise-subtle:  rgba(52,211,153,0.1);
-  --color-enterprise-border:  rgba(52,211,153,0.25);
-  --color-spotlight-default:  rgba(255,255,255,0.06);
-  --color-spotlight-apple:    rgba(0,113,227,0.08);
-  --color-spotlight-violet:   rgba(167,139,250,0.08);
-  --color-spotlight-cyan:     rgba(34,211,238,0.08);
-  --color-spotlight-success:  rgba(52,211,153,0.08);
+  --color-accent-cyan:        #3F7A82;   /* warm teal — Card emphasis */
+  --color-accent-cyan-hover:  #2D5C63;
+  --color-accent-cyan-subtle: rgba(63, 122, 130, 0.10);
+  --color-accent-cyan-border: rgba(63, 122, 130, 0.25);
 
-  /* === Radii === */
-  --radius-xs:    2px;
-  --radius-sm:    4px;
-  --radius-md:    6px;
-  --radius-lg:    8px;
-  --radius-xl:    12px;
-  --radius-2xl:   16px;
-  --radius-3xl:   24px;
+  /* === Enterprise tier === */
+  --color-enterprise:         #5B7A3F;
+  --color-enterprise-subtle:  rgba(91, 122, 63, 0.10);
+  --color-enterprise-border:  rgba(91, 122, 63, 0.25);
+
+  --color-spotlight-default:  rgba(60, 40, 20, 0.06);
+  --color-spotlight-apple:    rgba(196, 90, 47, 0.08);
+  --color-spotlight-violet:   rgba(122, 95, 180, 0.08);
+  --color-spotlight-cyan:     rgba(63, 122, 130, 0.08);
+  --color-spotlight-success:  rgba(91, 122, 63, 0.08);
+
+  /* === Radii (warm theme +2-8px softness vs dark v11.0) === */
+  --radius-xs:    4px;
+  --radius-sm:    6px;
+  --radius-md:    10px;
+  --radius-lg:    14px;
+  --radius-xl:    18px;
+  --radius-2xl:   24px;
+  --radius-3xl:   32px;
   --radius-pill:  9999px;
 
-  /* === Shadows === */
-  --shadow-card:       none;
-  --shadow-card-hover: none;
-  --shadow-modal:      0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
+  /* === Shadows (soft warm-brown elevation, replaces border-first dark) === */
+  --shadow-card:        0 1px 2px rgba(60, 40, 20, 0.05);
+  --shadow-card-hover:  0 2px 8px rgba(60, 40, 20, 0.10);
+  --shadow-elevated:    0 8px 24px rgba(60, 40, 20, 0.10);
+  --shadow-modal:       0 24px 64px rgba(60, 40, 20, 0.20), 0 0 0 1px rgba(60, 40, 20, 0.06);
+  --shadow-focus-ring:  0 0 0 3px var(--color-focus-ring);
 
   /* === Typography === */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans:  "Inter", "PingFang SC", "Source Han Sans SC", -apple-system,
+                BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono:  "Geist Mono", "JetBrains Mono", "Fira Code", ui-monospace,
+                SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-serif: "Source Han Serif SC", "Noto Serif SC", Georgia,
+                "Songti SC", "STSong", serif;
+
+  /* === Animation easings (paper-workspace motion language) === */
+  --ease-standard:   cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* === Tailwind semantic token wiring === */
+/* === Tailwind semantic token wiring (warm light) === */
 :root {
   --background:             var(--color-bg-canvas);
   --foreground:             var(--color-text-primary);
@@ -120,19 +144,20 @@
   --popover:                var(--color-bg-elevated);
   --popover-foreground:     var(--color-text-primary);
   --primary:                var(--color-primary);
-  --primary-foreground:     var(--color-text-inverse);
-  --secondary:              rgba(255,255,255,0.05);
+  --primary-foreground:     var(--color-on-accent);
+  --secondary:              rgba(60, 40, 20, 0.05);
   --secondary-foreground:   var(--color-text-primary);
-  --muted:                  var(--color-bg-elevated);
+  --muted:                  var(--color-bg-subtle);
   --muted-foreground:       var(--color-text-secondary);
   --accent:                 var(--color-primary-subtle);
-  --accent-foreground:      var(--color-text-primary);
-  --destructive:            var(--color-text-primary);
-  --destructive-foreground: var(--color-text-inverse);
+  --accent-foreground:      var(--color-primary);
+  --destructive:            var(--color-error);
+  --destructive-foreground: var(--color-on-accent);
   --border:                 var(--color-border);
-  --input:                  rgba(255,255,255,0.05);
+  --input:                  rgba(60, 40, 20, 0.05);
   --ring:                   var(--color-primary);
-  --radius:                 6px;
+  --radius:                 10px;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -170,8 +195,10 @@ html, body {
   background-color: var(--color-bg-canvas);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv01";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Ensure content renders above texture */
@@ -187,7 +214,15 @@ a {
 
 /* === Layout === */
 .container {
-  width: min(1280px, 94vw);
+  width: min(1120px, 92vw);
+  margin: 0 auto;
+}
+.container-narrow {
+  width: min(720px, 90vw);
+  margin: 0 auto;
+}
+.container-wide {
+  width: min(1440px, 96vw);
   margin: 0 auto;
 }
 
@@ -199,17 +234,35 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-primary);
 }
 
-h1 { font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1.1; }
-h2 { font-size: clamp(1.5rem, 3vw, 2.5rem); line-height: 1.15; }
-h3 { font-size: clamp(1.25rem, 2vw, 1.75rem); line-height: 1.2; }
+/* v11.1 paper-workspace: hero / section H1 + H2 use serif for "纸感" */
+h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+h3 {
+  font-family: var(--font-sans);
+  font-size: clamp(1.125rem, 1.75vw, 1.5rem);
+  line-height: 1.35;
+  font-weight: 600;
+}
 
-p { line-height: 1.6; color: var(--color-text-secondary); }
+p { line-height: 1.75; color: var(--color-text-secondary); }
 
-/* === Scrollbar === */
+/* === Scrollbar (warm-brown thumb) === */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+::-webkit-scrollbar-thumb { background: rgba(60, 40, 20, 0.20); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(60, 40, 20, 0.32); }
 
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -219,16 +272,24 @@ p { line-height: 1.6; color: var(--color-text-secondary); }
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  box-shadow: var(--shadow-card);
+  transition:
+    border-color 200ms var(--ease-standard),
+    background-color 200ms var(--ease-standard),
+    box-shadow 200ms var(--ease-decelerate),
+    transform 200ms var(--ease-decelerate);
 }
 
 .card:hover {
   border-color: var(--color-border-strong);
   background: var(--color-bg-surface-hover);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 .card-elevated {
   background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-elevated);
 }
 
 /* === Buttons === */
@@ -242,20 +303,31 @@ p { line-height: 1.6; color: var(--color-text-secondary); }
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background-color 120ms var(--ease-standard),
+    border-color 120ms var(--ease-standard),
+    color 120ms var(--ease-standard),
+    box-shadow 200ms var(--ease-decelerate),
+    transform 280ms var(--ease-spring);
   border: 1px solid transparent;
   white-space: nowrap;
   outline: none;
 }
+.btn:focus-visible {
+  box-shadow: var(--shadow-focus-ring);
+}
 
 .btn-primary {
-  background: var(--color-text-primary);
-  color: var(--color-bg-canvas);
-  border-color: var(--color-text-primary);
+  background: var(--color-primary);
+  color: var(--color-on-accent);
+  border-color: var(--color-primary);
 }
 .btn-primary:hover {
-  background: color-mix(in srgb, var(--color-text-primary) 88%, var(--color-bg-canvas));
-  border-color: color-mix(in srgb, var(--color-text-primary) 88%, var(--color-bg-canvas));
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 .btn-secondary {
@@ -313,8 +385,8 @@ pre, code {
 }
 .input-base::placeholder { color: var(--color-text-muted); }
 .input-base:focus {
-  border-color: var(--color-border-strong);
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 /* === Meta row === */
@@ -343,7 +415,9 @@ pre, code {
 
 /* === Responsive utilities === */
 @media (max-width: 768px) {
-  .container { width: 95vw; }
+  .container        { width: 94vw; }
+  .container-narrow { width: 94vw; }
+  .container-wide   { width: 96vw; }
 }
 
 /* === Subtle Animations === */
@@ -425,17 +499,21 @@ pre, code {
    Visual Polish — reactbits-inspired animations
    ========================================= */
 
-/* --- Noise texture overlay (pure CSS, zero JS) --- */
+/* --- Paper-grain texture overlay (very subtle, warm) ---
+   v11.1: noise is kept at 1.5% opacity to avoid muddying the warm canvas
+   while still adding a faint "paper" quality. Disable with
+   prefers-reduced-motion or set opacity: 0 per-page if needed. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.02;
+  opacity: 0.015;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
+  mix-blend-mode: multiply;
 }
 
 /* --- Aurora blobs --- */
