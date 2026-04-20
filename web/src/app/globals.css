@@ -160,29 +160,18 @@
   color-scheme: light;
 }
 
-@theme inline {
-  --color-background:             var(--background);
-  --color-foreground:             var(--foreground);
-  --color-card:                   var(--card);
-  --color-card-foreground:        var(--card-foreground);
-  --color-popover:                var(--popover);
-  --color-popover-foreground:     var(--popover-foreground);
-  --color-primary:                var(--primary);
-  --color-primary-foreground:     var(--primary-foreground);
-  --color-secondary:              var(--secondary);
-  --color-secondary-foreground:   var(--secondary-foreground);
-  --color-muted:                  var(--muted);
-  --color-muted-foreground:       var(--muted-foreground);
-  --color-accent:                 var(--accent);
-  --color-accent-foreground:      var(--accent-foreground);
-  --color-border:                 var(--border);
-  --color-input:                  var(--input);
-  --color-ring:                   var(--ring);
-  --radius-sm:  calc(var(--radius) - 2px);
-  --radius-md:  var(--radius);
-  --radius-lg:  calc(var(--radius) + 2px);
-  --radius-xl:  calc(var(--radius) + 6px);
-}
+/* v11.1 CRITICAL FIX:
+   The previous `@theme inline { --color-primary: var(--primary); ... }` block
+   introduced a circular reference with the `:root` aliases above
+   (`--primary: var(--color-primary)` combined with `--color-primary:
+   var(--primary)`), which caused `--color-primary` (and friends) to resolve to
+   an empty string at runtime. The net effect was invisible primary CTAs
+   across the entire site.
+
+   The semantic tokens (`--primary`, `--border`, ...) already live in `:root`
+   so Tailwind's shadcn-style utilities (`bg-primary`, `border`) keep working.
+   The base palette (`--color-primary` etc.) stays defined literally in
+   `@theme {}` above. Nothing else is needed here. */
 
 /* === Base Reset === */
 *, *::before, *::after {
@@ -234,22 +223,24 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-primary);
 }
 
-/* v11.1 paper-workspace: hero / section H1 + H2 use serif for "纸感" */
-h1 {
+/* v11.1 paper-workspace: hero / section H1 + H2 default to serif for "纸感".
+   Using :where() so Tailwind utility classes (`font-sans`, `text-lg`, etc.)
+   can override without !important or higher specificity tricks. */
+:where(h1) {
   font-family: var(--font-serif);
   font-size: clamp(2rem, 4vw, 3.5rem);
   line-height: 1.1;
   letter-spacing: -0.02em;
   font-weight: 600;
 }
-h2 {
+:where(h2) {
   font-family: var(--font-serif);
   font-size: clamp(1.5rem, 3vw, 2.5rem);
   line-height: 1.2;
   letter-spacing: -0.015em;
   font-weight: 600;
 }
-h3 {
+:where(h3) {
   font-family: var(--font-sans);
   font-size: clamp(1.125rem, 1.75vw, 1.5rem);
   line-height: 1.35;

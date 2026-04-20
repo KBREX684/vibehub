@@ -34,7 +34,7 @@ export default async function HomePage() {
             中国 OPC · AI 留痕本
           </p>
           <h1 className="font-serif text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-[var(--color-text-primary)] max-w-[720px] mx-auto">
-            你和 AI 一起做的工作，<br />
+            你和 AI 一起做的工作，
             <span className="text-[var(--color-text-secondary)]">有据可查。</span>
           </h1>
           <p className="text-base md:text-lg text-[var(--color-text-secondary)] leading-[1.75] max-w-[560px] mx-auto">

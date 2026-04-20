@@ -48,6 +48,9 @@ function securityHeaders(): { key: string; value: string }[] {
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // v11.1: hide the floating dev indicator ("N" + "1 Issue" bubble) so our
+  // warm paper canvas isn't punctured by pure-black circles during dev.
+  devIndicators: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "avatars.githubusercontent.com", pathname: "/**" },
