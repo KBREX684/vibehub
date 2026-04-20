@@ -17,10 +17,16 @@ import {
 } from "lucide-react";
 
 const ADMIN_NAV_LINK_CLASS =
-  "flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-overlay)] transition-colors";
+  "flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-120";
+
+const ADMIN_NAV_ACTIVE_CLASS =
+  "text-[var(--color-text-primary)] bg-[var(--color-surface-overlay)]";
+
+const ADMIN_NAV_INACTIVE_CLASS =
+  "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-overlay)]";
 
 const ADMIN_BADGE_CLASS =
-  "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest bg-[var(--color-error-subtle)] text-[var(--color-error)] border border-[var(--color-error-border)]";
+  "inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] text-[10px] font-mono font-medium uppercase tracking-wider bg-[var(--color-error-subtle)] text-[var(--color-error)] border border-[var(--color-error-border)]";
 
 export default async function AdminLayout({
   children,
@@ -50,12 +56,13 @@ export default async function AdminLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--color-admin-bg)] flex">
-      <aside className="w-56 shrink-0 border-r border-[var(--color-border-subtle)] flex flex-col">
-        <div className="px-5 py-4 border-b border-[var(--color-border-subtle)]">
-          <Link href="/" className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] mb-3">
+    <div className="min-h-screen bg-[var(--color-bg-canvas)] flex">
+      {/* Left sidebar - wider for admin */}
+      <aside className="w-64 shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] flex flex-col">
+        <div className="px-5 py-5 border-b border-[var(--color-border-subtle)]">
+          <Link href="/" className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] mb-4">
             <Home className="w-3.5 h-3.5" />
-            {t("admin.layout.back_to_site", "Back to site")}
+            {t("admin.layout.back_to_site", "返回站点")}
           </Link>
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-[var(--color-error)]" />
@@ -63,25 +70,25 @@ export default async function AdminLayout({
               {t("admin.layout.console", "Admin Console")}
             </span>
           </div>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">{session.name}</p>
+          <p className="text-xs text-[var(--color-text-tertiary)] mt-1 font-mono">{session.name}</p>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {NAV.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} className={ADMIN_NAV_LINK_CLASS}>
-              <Icon className="w-3.5 h-3.5 shrink-0" />
+            <Link key={href} href={href} className={`${ADMIN_NAV_LINK_CLASS} ${ADMIN_NAV_INACTIVE_CLASS}`}>
+              <Icon className="w-4 h-4 shrink-0" />
               {label}
             </Link>
           ))}
         </nav>
         <div className="px-5 py-3 border-t border-[var(--color-border-subtle)]">
           <span className={ADMIN_BADGE_CLASS}>
-            <ShieldAlert className="w-2.5 h-2.5" aria-hidden="true" />
+            <ShieldAlert className="w-3 h-3" aria-hidden="true" />
             {t("admin.layout.badge", "Admin")}
           </span>
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 overflow-auto">{children}</div>
+      <div className="flex-1 min-w-0 overflow-auto p-8">{children}</div>
     </div>
   );
 }
