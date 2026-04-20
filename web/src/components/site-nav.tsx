@@ -48,12 +48,33 @@ const NAV_LINKS: NavLink[] = [
   { href: "/pricing", key: "nav.pricing" },
 ];
 
+/**
+ * Paths where the main site navigation (logo + nav pills + user menu) is
+ * hidden entirely. Auth pages get a distraction-free layout per Claude.ai.
+ */
+const HIDDEN_PATHS = ["/login", "/signup", "/reset-password", "/onboarding"];
+
+/**
+ * Paths where the 3-pill primary nav is hidden (but brand + user menu stay).
+ * These are "workspace" pages that already have a left sidebar — showing the
+ * pill nav on top would duplicate IA.
+ */
+const WORKSPACE_PATH_PREFIXES = ["/studio", "/ledger", "/settings", "/u/", "/admin"];
+
 export function SiteNav() {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { user, loading, logout, unreadCount } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Hide entirely on auth/onboarding pages
+  if (HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return null;
+  }
+
+  // On workspace pages, collapse to a minimal chrome (no pill nav)
+  const isWorkspacePage = WORKSPACE_PATH_PREFIXES.some((p) => pathname.startsWith(p));
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const userMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -108,10 +129,10 @@ export function SiteNav() {
           </span>
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop nav — hidden on workspace pages to avoid double IA */}
         <nav
           aria-label={t("a11y.main_navigation", "主导航")}
-          className="hidden md:flex items-center gap-0.5 bg-[var(--color-bg-surface)] border border-[var(--color-border)] px-1 py-1 rounded-[var(--radius-pill)]"
+          className={`${isWorkspacePage ? "hidden" : "hidden md:flex"} items-center gap-0.5 bg-[var(--color-bg-surface)] border border-[var(--color-border)] px-1 py-1 rounded-[var(--radius-pill)]`}
         >
           {NAV_LINKS.map((link) => {
             const active = isActive(link);

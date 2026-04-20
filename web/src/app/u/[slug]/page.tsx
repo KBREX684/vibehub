@@ -6,7 +6,7 @@ import { TrustMetricGrid } from "@/components/trust-metric-grid";
 import { getMockTrustCard, type TrustCardData } from "@/lib/data/mock-trust-card";
 import { mockFetch } from "@/lib/data/mock-v11-routes";
 import { isMockDataEnabled } from "@/lib/runtime-mode";
-import { Badge, EmptyState } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import { Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
@@ -67,30 +67,37 @@ export default function TrustCardPage() {
   const { user, profile, metrics, publicWorks } = data;
 
   return (
-    <main className="container max-w-3xl py-8 space-y-8">
+    <main className="container-narrow mx-auto py-12 space-y-10">
       {/* Hero */}
-      <section className="text-center space-y-3">
+      <section className="text-center space-y-4">
         {/* Avatar */}
-        <div className="mx-auto w-24 h-24 rounded-full bg-[var(--color-bg-elevated)] border-2 border-[var(--color-border-strong)] flex items-center justify-center text-3xl font-bold text-[var(--color-text-primary)]">
+        <div
+          className="mx-auto w-24 h-24 rounded-[var(--radius-2xl)] flex items-center justify-center text-3xl font-semibold text-[var(--color-on-accent)] shadow-[var(--shadow-card)]"
+          style={{
+            background: "linear-gradient(135deg, var(--color-primary-subtle), var(--color-primary))",
+          }}
+        >
           {user.name.charAt(0)}
         </div>
 
         {/* Name */}
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{user.name}</h1>
+        <h1 className="font-serif text-[clamp(1.75rem,3vw,2.5rem)] font-semibold text-[var(--color-text-primary)] tracking-tight leading-tight">
+          {user.name}
+        </h1>
 
         {/* Company kind badge + tagline */}
         <div className="flex items-center justify-center gap-2 flex-wrap">
-          <Badge variant="apple" pill mono size="sm">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--color-primary-border)] bg-[var(--color-primary-subtle)] text-[var(--color-primary)] text-[11px] font-mono">
             {COMPANY_KIND_LABELS[profile.companyKind] ?? profile.companyKind}
-          </Badge>
+          </span>
           {profile.openToCollab && (
-            <Badge variant="success" pill size="sm">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-pill)] border border-[var(--color-success-border)] text-[var(--color-success)] text-[11px] font-mono">
               开放协作
-            </Badge>
+            </span>
           )}
         </div>
         {profile.tagline && (
-          <p className="text-sm text-[var(--color-text-secondary)] max-w-md mx-auto">
+          <p className="text-base text-[var(--color-text-secondary)] max-w-[480px] mx-auto leading-[1.65]">
             {profile.tagline}
           </p>
         )}
@@ -103,20 +110,20 @@ export default function TrustCardPage() {
 
       {/* Public works */}
       {publicWorks.length > 0 && (
-        <section>
-          <h2 className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
-            公开作品 ({publicWorks.length})
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <section className="space-y-4">
+          <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]">
+            公开作品
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {publicWorks.map((work) => (
               <div
                 key={work.slug}
-                className="p-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-surface)]"
+                className="card p-4"
               >
-                <div className="w-full h-20 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] mb-2 flex items-center justify-center text-xs text-[var(--color-text-muted)]">
-                  Preview
+                <div className="w-full aspect-video rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-bg-subtle)] to-[var(--color-bg-surface-hover)] border border-[var(--color-border-subtle)] mb-3 flex items-center justify-center text-xs font-mono text-[var(--color-text-tertiary)]">
+                  {work.name.slice(0, 2).toUpperCase()}
                 </div>
-                <p className="text-sm text-[var(--color-text-primary)] font-medium">{work.name}</p>
+                <p className="text-sm text-[var(--color-text-primary)] font-medium truncate">{work.name}</p>
               </div>
             ))}
           </div>
@@ -124,26 +131,29 @@ export default function TrustCardPage() {
       )}
 
       {/* Actions */}
-      <section className="flex items-center justify-center gap-3 pt-4 border-t border-[var(--color-border)]">
+      <section className="flex items-center justify-center gap-3 pt-6">
         <a
           href={`/api/v1/u/${slug}/trust-card.pdf`}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] border border-[var(--color-text-primary)] rounded-[var(--radius-md)] hover:opacity-90 transition-opacity"
+          className="btn btn-primary text-sm"
         >
-          <Download className="w-3.5 h-3.5" />
+          <Download className="w-4 h-4" />
           下载 Trust Card PDF
         </a>
         <Link
           href={`/u/${slug}/print`}
           target="_blank"
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-[var(--color-text-secondary)] border border-[var(--color-border)] rounded-[var(--radius-md)] hover:bg-[var(--color-bg-surface)] transition-colors"
+          className="btn btn-secondary text-sm"
         >
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink className="w-4 h-4" />
           打印版
         </Link>
       </section>
 
       {/* Footer branding */}
-      <p className="text-center text-[10px] font-mono text-[var(--color-text-muted)] pt-4">
+      <p
+        className="text-center text-xs text-[var(--color-text-tertiary)] pt-6"
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
         由 VibeHub 公证 · {metrics.ledgerEntryCount} 条可校验操作 · #{user.slug}
       </p>
     </main>

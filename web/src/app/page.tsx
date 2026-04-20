@@ -27,91 +27,37 @@ export default async function HomePage() {
 
   return (
     <main>
-      {/* ── Section 1 · HERO ─────────────────────────────────────────── */}
-      <section className="py-20 md:py-24 bg-[var(--color-bg-canvas)]">
-        <div className="container-narrow mx-auto">
-          <div className="grid md:grid-cols-[3fr_2fr] gap-12 items-center">
-            {/* Left */}
-            <div className="space-y-6">
-              <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]">
-                中国 OPC · AI 留痕本
-              </p>
-              <h1 className="font-serif text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.1] tracking-tight text-[var(--color-text-primary)]">
-                你和 AI 一起做的工作，
-                <br />
-                有据可查。
-              </h1>
-              <p className="text-lg text-[var(--color-text-secondary)] leading-[1.75] max-w-[560px]">
-                VibeHub 自动记录你和 Agent 的每一次写入，加合规标识、
-                留可校验账本、沉淀为可外发的信用名片。给客户、给监管、给自己一份证据。
-              </p>
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Link
-                  href="/signup"
-                  className="btn btn-primary"
-                >
-                  开始留痕
-                </Link>
-                <Link
-                  href="/u/dev-alice"
-                  className="btn btn-ghost"
-                >
-                  查看示例 Card
-                </Link>
-              </div>
-              <p className="text-[11px] font-mono text-[var(--color-text-muted)] pt-2">
-                免费 1 GB · 100 ledger/月 · 无需信用卡
-              </p>
-            </div>
-
-            {/* Right: workflow card */}
-            <div className="hidden md:flex items-center justify-center">
-              <div className="w-[400px] rounded-[var(--radius-2xl)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-elevated)] p-8">
-                <div className="space-y-8">
-                  {/* Step 1: Studio */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] border border-[var(--color-border)] flex items-center justify-center">
-                      <Compass className="w-5 h-5 text-[var(--color-text-primary)]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">Studio（做）</p>
-                      <p className="text-xs text-[var(--color-text-secondary)]">任务 + Agent 执行</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center">
-                    <div className="w-px h-8 border-l border-dashed border-[var(--color-border-strong)]" />
-                  </div>
-
-                  {/* Step 2: Ledger */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-violet-subtle)] border border-[var(--color-accent-violet-border)] flex items-center justify-center">
-                      <Receipt className="w-5 h-5 text-[var(--color-accent-violet)]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">Ledger（签）</p>
-                      <p className="text-xs text-[var(--color-text-secondary)]">操作公证账本</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center">
-                    <div className="w-px h-8 border-l border-dashed border-[var(--color-border-strong)]" />
-                  </div>
-
-                  {/* Step 3: Card */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-accent-cyan-subtle)] border border-[var(--color-accent-cyan-border)] flex items-center justify-center">
-                      <User className="w-5 h-5 text-[var(--color-accent-cyan)]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">Card（晒）</p>
-                      <p className="text-xs text-[var(--color-text-secondary)]">可外发信用名片</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* ── Section 1 · HERO (single-column, Claude.ai-style) ─────────── */}
+      <section className="pt-28 pb-20 md:pt-32 md:pb-24 bg-[var(--color-bg-canvas)]">
+        <div className="container-narrow mx-auto text-center space-y-8">
+          <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
+            中国 OPC · AI 留痕本
+          </p>
+          <h1 className="font-serif text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-[var(--color-text-primary)] max-w-[720px] mx-auto">
+            你和 AI 一起做的工作，<br />
+            <span className="text-[var(--color-text-secondary)]">有据可查。</span>
+          </h1>
+          <p className="text-base md:text-lg text-[var(--color-text-secondary)] leading-[1.75] max-w-[560px] mx-auto">
+            VibeHub 自动记录你和 Agent 的每一次写入，加合规标识、留可校验账本、
+            沉淀为可外发的信用名片。
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Link
+              href="/signup"
+              className="btn btn-primary px-6 py-3 text-sm font-semibold"
+            >
+              开始留痕
+            </Link>
+            <Link
+              href="/u/dev-alice"
+              className="btn btn-secondary px-6 py-3 text-sm font-semibold"
+            >
+              查看示例 Card
+            </Link>
           </div>
+          <p className="text-[11px] font-mono text-[var(--color-text-muted)] pt-1">
+            免费 1 GB · 100 ledger/月 · 无需信用卡
+          </p>
         </div>
       </section>
 
