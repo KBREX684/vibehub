@@ -31,9 +31,9 @@ export function StudioTopBar({
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-canvas)]">
-      {/* Left: workspace name */}
+      {/* Left: workspace name (sans, app chrome — not a hero title) */}
       <div className="flex items-center gap-3">
-        <h1 className="text-sm font-semibold text-[var(--color-text-primary)]">
+        <h1 className="font-sans text-sm font-semibold text-[var(--color-text-primary)] tracking-normal">
           {t("studio.workspace_name", "我的工作站")}
         </h1>
       </div>

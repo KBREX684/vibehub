@@ -1,12 +1,26 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { StudioShell } from "@/components/studio-shell";
 import { StudioTopBar } from "@/components/studio-top-bar";
 import { LedgerStampBadge } from "@/components/ui/ledger-stamp-badge";
 import { EmptyState, Tabs, TabList, Tab, TabPanel } from "@/components/ui";
-import { getMockLedgerEntries } from "@/lib/data/mock-ledger";
+import { getMockLedgerEntries, type LedgerEntry } from "@/lib/data/mock-ledger";
 import { useLanguage } from "@/app/context/LanguageContext";
+
+/**
+ * v11.1: Mock entries are built with Math.random() / new Date() so they
+ * differ between SSR and the first client render → React hydration mismatch.
+ * Returning [] on the server, then populating in useEffect, eliminates the
+ * mismatch and the dev "1 Issue" overlay it triggers.
+ */
+function useClientMockEntries(): LedgerEntry[] {
+  const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  useEffect(() => {
+    setEntries(getMockLedgerEntries());
+  }, []);
+  return entries;
+}
 import {
   ListTodo,
   Activity,
@@ -23,7 +37,7 @@ import {
 type StudioView = "tasks" | "activity" | "files" | "snapshots" | "agents";
 
 function TasksPanel() {
-  const entries = getMockLedgerEntries();
+  const entries = useClientMockEntries();
   const tasks = entries.filter((e) => e.actionKind === "agent.task.complete" || e.actionKind === "deliverable.approve");
 
   const inProgress = tasks.filter((e) => e.actorType === "agent" && !e.anchorTxId);
@@ -166,7 +180,7 @@ function ActivityPanel() {
 
 function FilesPanel() {
   const { t } = useLanguage();
-  const entries = getMockLedgerEntries();
+  const entries = useClientMockEntries();
   const uploads = entries.filter((e) => e.actionKind === "workspace.artifact.upload");
 
   return (

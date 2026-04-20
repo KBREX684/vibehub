@@ -68,19 +68,16 @@ export function SiteNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  // Hide entirely on auth/onboarding pages
-  if (HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    return null;
-  }
-
-  // On workspace pages, collapse to a minimal chrome (no pill nav)
-  const isWorkspacePage = WORKSPACE_PATH_PREFIXES.some((p) => pathname.startsWith(p));
-
   const userMenuRef = useRef<HTMLDivElement>(null);
   const userMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuId = useId();
   const userMenuId = useId();
+
+  // On workspace pages, collapse to a minimal chrome (no pill nav)
+  const isWorkspacePage = WORKSPACE_PATH_PREFIXES.some((p) => pathname.startsWith(p));
+  // Hide entirely on auth/onboarding pages — must be after all hooks!
+  const isHiddenPage = HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   useEffect(() => {
     function onWindowKeyDown(event: KeyboardEvent) {
@@ -109,6 +106,10 @@ export function SiteNav() {
     if (link.exact) return pathname === "/";
     if (link.href === "/") return pathname === "/";
     return pathname === link.href || pathname.startsWith(`${link.href}/`);
+  }
+
+  if (isHiddenPage) {
+    return null;
   }
 
   return (

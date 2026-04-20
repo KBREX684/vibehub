@@ -215,39 +215,47 @@ a {
   margin: 0 auto;
 }
 
-/* === Typography === */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin-top: 0;
-  color: var(--color-text-primary);
-}
+/* === Typography ===
+   v11.1 CRITICAL: All heading defaults are wrapped in `@layer base` so that
+   Tailwind utility classes (`text-lg`, `text-sm`, `text-2xl`, `font-sans`,
+   etc., which Tailwind v4 emits in `@layer utilities`) can override them per
+   the CSS Cascade Layer spec.
 
-/* v11.1 paper-workspace: hero / section H1 + H2 default to serif for "纸感".
-   Using :where() so Tailwind utility classes (`font-sans`, `text-lg`, etc.)
-   can override without !important or higher specificity tricks. */
-:where(h1) {
-  font-family: var(--font-serif);
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  font-weight: 600;
-}
-:where(h2) {
-  font-family: var(--font-serif);
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
-  line-height: 1.2;
-  letter-spacing: -0.015em;
-  font-weight: 600;
-}
-:where(h3) {
-  font-family: var(--font-sans);
-  font-size: clamp(1.125rem, 1.75vw, 1.5rem);
-  line-height: 1.35;
-  font-weight: 600;
-}
+   Without this wrapper, the unlayered `:where(h1)` rule defeats every
+   utility because *unlayered styles win against any layered styles* —
+   producing 56px serif h1s on /login, /signup, /studio, /ledger and turning
+   the workspace chrome into a marketing landing page. */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-top: 0;
+    color: var(--color-text-primary);
+  }
 
-p { line-height: 1.75; color: var(--color-text-secondary); }
+  h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+  h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+  }
+  h3 {
+    font-family: var(--font-sans);
+    font-size: clamp(1.125rem, 1.75vw, 1.5rem);
+    line-height: 1.35;
+    font-weight: 600;
+  }
+
+  p { line-height: 1.75; color: var(--color-text-secondary); }
+}
 
 /* === Scrollbar (warm-brown thumb) === */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
