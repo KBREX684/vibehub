@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { TrustMetricGrid } from "@/components/trust-metric-grid";
-import { LedgerStampBadge } from "@/components/ledger-stamp-badge";
 import { getMockTrustCard, type TrustCardData } from "@/lib/data/mock-trust-card";
 import { mockFetch } from "@/lib/data/mock-v11-routes";
 import { isMockDataEnabled } from "@/lib/runtime-mode";

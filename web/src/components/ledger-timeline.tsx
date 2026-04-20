@@ -10,7 +10,7 @@
  * - "Load more" button at bottom
  */
 
-import { LedgerStampBadge } from "@/components/ledger-stamp-badge";
+import { LedgerStampBadge } from "@/components/ui/ledger-stamp-badge";
 import type { LedgerEntry } from "@/lib/data/mock-ledger";
 import { useLanguage } from "@/app/context/LanguageContext";
 import {
@@ -169,7 +169,10 @@ function TimelineEntry({ entry }: { entry: LedgerEntry }) {
         </div>
 
         {/* Bottom row: stamp badge */}
-        <LedgerStampBadge entry={entry} />
+        <LedgerStampBadge
+          signature={entry.signature}
+          state={entry.anchorTxId ? "anchored" : "default"}
+        />
       </div>
     </div>
   );
