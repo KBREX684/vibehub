@@ -1,3 +1,5 @@
+> ⚠️ 已归档：本文件仅供历史参考，不得作为当前实现依据。当前主线请看 `docs/roadmap-current.md` 与 v11 系列文档。
+
 # VibeHub v8.0 Progress Tracker
 
 更新日期：2026-04-17

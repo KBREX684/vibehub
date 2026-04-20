@@ -134,11 +134,11 @@ export async function ProjectDetailPageContent({ params }: Props) {
 
       {/* Back */}
       <Link
-        href="/discover"
+        href="/"
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
-        {t("project.back_to_discover", "Back to Discover")}
+        {t("project.back_to_discover", "Back to home")}
       </Link>
 
       {/* Hero */}
@@ -357,7 +357,7 @@ export async function ProjectDetailPageContent({ params }: Props) {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {project.techStack.map((tech) => (
-                      <Link key={tech} href={`/discover?tech=${encodeURIComponent(tech)}`} className="hover:opacity-80 transition-opacity">
+                      <Link key={tech} href="/" className="hover:opacity-80 transition-opacity">
                         <Badge variant="cyan" pill mono size="sm">{tech}</Badge>
                       </Link>
                     ))}
@@ -369,7 +369,7 @@ export async function ProjectDetailPageContent({ params }: Props) {
                 <div className={project.techStack?.length ? "mt-5 pt-5 border-t border-[var(--color-border-subtle)]" : ""}>
                   <div className="flex flex-wrap gap-2">
                     {project.tags.map((tag) => (
-                      <Link key={tag} href={`/discover?tag=${encodeURIComponent(tag)}`} className="hover:opacity-80 transition-opacity">
+                      <Link key={tag} href="/" className="hover:opacity-80 transition-opacity">
                         <Badge variant="default" pill mono size="sm">#{tag}</Badge>
                       </Link>
                     ))}

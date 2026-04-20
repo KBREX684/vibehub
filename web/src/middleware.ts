@@ -24,8 +24,8 @@ function isDeveloperLegacyPage(pathname: string): boolean {
 }
 
 function getLegacyProjectRedirect(pathname: string): string | null {
-  if (pathname === "/projects") return "/discover";
-  if (pathname === "/projects/new") return "/p/new";
+  if (pathname === "/projects") return "/";
+  if (pathname === "/projects/new") return "/studio";
   const editMatch = pathname.match(/^\/projects\/([^/]+)\/edit$/);
   if (editMatch) return `/p/${editMatch[1]}/edit`;
   const detailMatch = pathname.match(/^\/projects\/([^/]+)$/);
@@ -38,8 +38,8 @@ function getLegacyCreatorRedirect(pathname: string): string | null {
 }
 
 function getLegacyTeamRedirect(pathname: string): string | null {
-  if (pathname === "/teams") return "/discover";
-  if (pathname === "/teams/new") return "/work/create-team";
+  if (pathname === "/teams") return "/";
+  if (pathname === "/teams/new") return "/studio";
   const taskMatch = pathname.match(/^\/teams\/([^/]+)\/tasks\/([^/]+)$/);
   if (taskMatch) return `/work/team/${taskMatch[1]}?view=tasks&taskId=${taskMatch[2]}`;
   const agentsMatch = pathname.match(/^\/teams\/([^/]+)\/agents$/);
@@ -256,7 +256,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isRetiredDiscoveryPage(nextUrl.pathname)) {
-    return withRequestId(NextResponse.redirect(new URL("/discover", request.url)));
+    return withRequestId(NextResponse.redirect(new URL("/", request.url)));
   }
 
   if (nextUrl.pathname.startsWith("/api/v1/internal/rate-limit")) {

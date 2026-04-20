@@ -121,7 +121,7 @@ export function PostCard({
     </SpotlightCard>
   );
 
-  const href = detailHref ?? "/discover";
+  const href = detailHref ?? "/";
   return (
     <Link href={href} className="block outline-none">
       {inner}

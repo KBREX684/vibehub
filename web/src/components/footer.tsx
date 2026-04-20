@@ -2,23 +2,22 @@
 
 import Link from "next/link";
 import { Zap } from "lucide-react";
-import { useLanguage } from "@/app/context/LanguageContext";
 
 const FOOTER_COLUMNS = [
   {
     title: "产品",
     links: [
-      { href: "/", label: "Home" },
+      { href: "/", label: "首页" },
       { href: "/studio", label: "Studio" },
       { href: "/ledger", label: "Ledger" },
-      { href: "/u/dev-alice", label: "Card" },
-      { href: "/pricing", label: "Pricing" },
+      { href: "/u/dev-alice", label: "Trust Card" },
+      { href: "/pricing", label: "定价" },
     ],
   },
   {
-    title: "开发者",
+    title: "工具",
     links: [
-      { href: "/aigc", label: "API 文档" },
+      { href: "/aigc", label: "AIGC 公示" },
       { href: "/aigc", label: "vibehub-verify CLI" },
       { href: "/aigc", label: "MCP server" },
     ],
@@ -35,15 +34,13 @@ const FOOTER_COLUMNS = [
   {
     title: "关于",
     links: [
-      { href: "/", label: "博客" },
-      { href: "/", label: "联系" },
+      { href: "/", label: "产品说明" },
+      { href: "/pricing", label: "升级 Pro" },
     ],
   },
 ];
 
 export function Footer() {
-  const { t } = useLanguage();
-
   return (
     <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg-canvas)]">
       <div className="container py-12">

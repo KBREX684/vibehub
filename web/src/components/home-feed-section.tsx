@@ -49,7 +49,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
             )}
           </h2>
           <Link
-            href="/discover"
+            href="/"
             className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             {t("common.viewAll", "查看全部")}
@@ -63,10 +63,10 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
               {t("home.feed.empty_following", "你还没有关注任何人，或你关注的人最近没有发帖。")}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/discover" className="btn btn-primary text-xs px-4 py-2">
+              <Link href="/" className="btn btn-primary text-xs px-4 py-2">
                 {t("home.feed.browse_discussions", "浏览讨论")}
               </Link>
-              <Link href="/discover" className="btn btn-secondary text-xs px-4 py-2">
+              <Link href="/" className="btn btn-secondary text-xs px-4 py-2">
                 {t("home.feed.discover_projects", "发现项目")}
               </Link>
             </div>
@@ -94,7 +94,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
                   {t("home.feed.featured_today", "今日精选")}
                 </h2>
               </div>
-              <Link href="/discover" className="text-xs text-[var(--color-text-secondary)] hover:underline shrink-0">
+              <Link href="/" className="text-xs text-[var(--color-text-secondary)] hover:underline shrink-0">
                 {t("nav.discover")}
               </Link>
             </div>
@@ -114,7 +114,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
               </h2>
             </div>
             <Link
-              href="/discover"
+              href="/"
               className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               {t("common.explore", "探索")}
@@ -142,7 +142,7 @@ export async function HomeFeedSection({ session, projects, teams }: Props) {
                 </h2>
               </div>
               <Link
-                href="/discover"
+                href="/"
                 className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 {t("common.viewAll", "查看全部")}

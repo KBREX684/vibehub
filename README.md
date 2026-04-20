@@ -1,32 +1,29 @@
 # VibeHub Workspace
 
-VibeHub is a developer-first community and delivery platform for independent builders
-and small teams. The current repository focus is maturity convergence: align product,
-code, and docs around the main loop of community -> project -> collaboration -> delivery.
+VibeHub 当前仓库围绕 **v11.0 AI 留痕本** 维护：
+- `Studio`：记录你与 Agent 的日常工作
+- `Ledger`：把关键操作写成可校验账本
+- `Trust Card`：把真实工作记录公开展示与导出
 
-## Current product direction
+## 当前入口
 
-- Developer-first, small-team-first
-- Subscription model unified to `free | pro`
-- Enterprise capability kept as a secondary observer layer, not the product center
-- Real database + seed is the preferred validation path; mock mode is explicit opt-in
+- `web/`：Next.js 全栈应用
+- `docs/roadmap-current.md`：当前主线索引
+- `docs/v11.0-final-chapter-rfc.md`：产品与收敛定义
+- `docs/v11.0-backend-tasks.md`：后端执行计划
+- `docs/v11.0-frontend-tasks.md`：前端执行计划
+- `DESIGN.md`：当前设计系统基线
 
-## Primary entry points
+## 归档
 
-- `web/`: Next.js full-stack app
-- `docs/roadmap-current.md`: current execution line and acceptance priorities
-- `docs/release-notes.md`: merged change history and notable closures
-- `docs/repository-cleanup-report.md`: repository cleanup decisions, retain/archive/delete rationale
-- `docs/roadmap-history.md`: archived historical planning material
+历史路线图、旧设计参考与存量辅助文档已移至：
+- `docs/archive/v8-v10/`
+- `docs/archive/design/`
+- `docs/archive/reference/`
 
-## Historical reference material
+这些文件仅供回溯，不得继续作为当前实现依据。
 
-- `VibeHub_项目计划书_v3.0.md`: historical strategy source
-- `docs/01_实现计划图.md`: historical implementation map
-- `docs/02_Debug表.md`: historical debug tracker
-- `docs/03_项目日志.md`: historical execution log
-
-## Quick Start (Web)
+## Quick Start
 
 ```bash
 cd web
@@ -35,16 +32,16 @@ cp .env.example .env.local
 npm run dev
 ```
 
-## Recommended verification paths
+## 推荐验证路径
 
-Mock-assisted local development:
+Mock 模式：
 
 ```bash
 cd web
 USE_MOCK_DATA=true npm run test
 ```
 
-Real database smoke path:
+真实数据库路径：
 
 ```bash
 cd web
@@ -53,9 +50,3 @@ npm run prisma:migrate
 npm run prisma:seed
 npm run smoke:live-data
 ```
-
-CI note:
-- `.github/workflows/p1-gate.yml` now runs the same real-data sequence
-  (`migrate deploy -> generate -> seed -> smoke:live-data`) before the build.
-- Mock mode remains an explicit fallback for demo or no-DB environments, but
-  is no longer the sole acceptance truth.
