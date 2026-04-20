@@ -21,8 +21,8 @@ const sizeClass: Record<AvatarSize, string> = {
   xs: "w-5 h-5 text-[10px]",
   sm: "w-6 h-6 text-xs",
   md: "w-8 h-8 text-sm",
-  lg: "w-10 h-10 text-base",
-  xl: "w-14 h-14 text-lg",
+  lg: "w-12 h-12 text-base",
+  xl: "w-24 h-24 text-2xl",
 };
 
 /**
@@ -57,7 +57,7 @@ export function Avatar({
   className = "",
 }: AvatarProps) {
   const letter = (initial ?? alt?.charAt(0) ?? "?").toUpperCase();
-  const shape = square ? "rounded-[var(--radius-md)]" : "rounded-full";
+  const shape = square ? "rounded-[var(--radius-md)]" : "rounded-[var(--radius-md)]";
   const fg = tone === "neutral"
     ? "text-[var(--color-text-primary)]"
     : "text-[var(--color-on-accent)]";

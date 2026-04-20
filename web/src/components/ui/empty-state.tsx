@@ -26,21 +26,19 @@ export function EmptyState({
       role="status"
       className={[
         "flex flex-col items-center text-center",
-        "px-6 py-10",
+        "px-6 py-12",
         block ? "min-h-[50vh] justify-center" : "",
         className,
       ].join(" ")}
     >
-      <FloatingIcon>
-        <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] flex items-center justify-center mb-4">
-          <Icon className="w-5 h-5 text-[var(--color-text-tertiary)]" aria-hidden="true" />
-        </div>
-      </FloatingIcon>
-      <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] m-0">
+      <div className="w-10 h-10 rounded-[var(--radius-lg)] flex items-center justify-center mb-4">
+        <Icon className="w-10 h-10 text-[var(--color-text-tertiary)]" aria-hidden="true" strokeWidth={1.5} />
+      </div>
+      <h3 className="text-base font-semibold text-[var(--color-text-primary)] m-0 font-sans">
         {title}
       </h3>
       {description ? (
-        <p className="text-xs text-[var(--color-text-tertiary)] leading-relaxed max-w-[360px] mt-2 m-0">
+        <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed max-w-[400px] mt-2 m-0">
           {description}
         </p>
       ) : null}

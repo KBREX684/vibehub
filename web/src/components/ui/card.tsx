@@ -12,11 +12,17 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     <div
       ref={ref}
       className={[
-        "rounded-[var(--radius-lg)] border border-[var(--color-border)] transition-colors",
+        "rounded-[var(--radius-lg)] border transition-all",
         elevated
-          ? "bg-[var(--color-bg-elevated)]"
-          : "bg-[var(--color-bg-surface)]",
-        !noHover && "hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-surface-hover)]",
+          ? "bg-[var(--color-bg-elevated)] shadow-[var(--shadow-elevated)] border-[var(--color-border)]"
+          : "bg-[var(--color-bg-surface)] shadow-[var(--shadow-card)] border-[var(--color-border)]",
+        !noHover && [
+          "hover:border-[var(--color-border-strong)]",
+          "hover:bg-[var(--color-bg-surface-hover)]",
+          "hover:shadow-[var(--shadow-card-hover)]",
+          "hover:-translate-y-[1px]",
+        ].join(" "),
+        "duration-200 ease-[cubic-bezier(0,0,0.2,1)]",
         className,
       ].join(" ")}
       {...rest}

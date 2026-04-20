@@ -13,11 +13,11 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:     "bg-[var(--color-primary)] text-[var(--color-text-inverse)] border-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)]",
-  secondary:   "bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] border-[var(--color-border)] hover:bg-[var(--color-bg-surface-hover)] hover:border-[var(--color-border-strong)]",
-  ghost:       "bg-transparent text-[var(--color-text-secondary)] border-transparent hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-primary)]",
-  destructive: "bg-[var(--color-error-subtle)] text-[var(--color-error)] border-[var(--color-error-border-strong)] hover:bg-[var(--color-error-subtle)]",
-  apple:       "bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] border-[var(--color-accent-apple)] hover:bg-[var(--color-accent-apple-hover)] hover:border-[var(--color-accent-apple-hover)]",
+  primary:     "bg-[var(--color-primary)] text-[var(--color-on-accent)] border-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)] hover:shadow-[var(--shadow-card-hover)] active:scale-[0.98]",
+  secondary:   "bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] border-[var(--color-border)] hover:bg-[var(--color-bg-surface-hover)] hover:border-[var(--color-border-strong)] hover:-translate-y-[1px]",
+  ghost:       "bg-transparent text-[var(--color-text-secondary)] border-transparent hover:bg-[var(--color-surface-overlay)] hover:text-[var(--color-text-primary)]",
+  destructive: "bg-[var(--color-error)] text-[var(--color-on-accent)] border-[var(--color-error)] hover:bg-[var(--color-error-subtle)] hover:text-[var(--color-error)] hover:border-[var(--color-error-border)]",
+  apple:       "bg-[var(--color-accent-apple)] text-[var(--color-on-accent)] border-[var(--color-accent-apple)] hover:bg-[var(--color-accent-apple-hover)] hover:border-[var(--color-accent-apple-hover)] hover:shadow-[var(--shadow-card-hover)] active:scale-[0.98]",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -35,10 +35,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={isDisabled}
         className={[
-          "inline-flex items-center justify-center font-medium transition-colors duration-150",
+          "inline-flex items-center justify-center font-medium",
           "border whitespace-nowrap outline-none",
-          "focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg-canvas)]",
-          "disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-bg)] disabled:border-[var(--color-disabled-border)] disabled:text-[var(--color-disabled-text)] disabled:shadow-none disabled:opacity-100",
+          "transition-[background-color,border-color,color,box-shadow,transform]",
+          "duration-[120ms,120ms,120ms,200ms,280ms]",
+          "ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "focus-visible:shadow-[var(--shadow-focus-ring)]",
+          "disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-bg)] disabled:border-[var(--color-disabled-border)] disabled:text-[var(--color-disabled-text)] disabled:shadow-none disabled:opacity-100 disabled:hover:translate-y-0",
           variantClasses[variant],
           sizeClasses[size],
           className,
