@@ -48,6 +48,19 @@ const NAV_LINKS: NavLink[] = [
   { href: "/pricing", key: "nav.pricing" },
 ];
 
+/**
+ * Paths where the main site navigation (logo + nav pills + user menu) is
+ * hidden entirely. Auth pages get a distraction-free layout per Claude.ai.
+ */
+const HIDDEN_PATHS = ["/login", "/signup", "/reset-password", "/onboarding"];
+
+/**
+ * Paths where the 3-pill primary nav is hidden (but brand + user menu stay).
+ * These are "workspace" pages that already have a left sidebar — showing the
+ * pill nav on top would duplicate IA.
+ */
+const WORKSPACE_PATH_PREFIXES = ["/studio", "/ledger", "/settings", "/u/", "/admin"];
+
 export function SiteNav() {
   const pathname = usePathname();
   const { t } = useLanguage();
@@ -60,6 +73,11 @@ export function SiteNav() {
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuId = useId();
   const userMenuId = useId();
+
+  // On workspace pages, collapse to a minimal chrome (no pill nav)
+  const isWorkspacePage = WORKSPACE_PATH_PREFIXES.some((p) => pathname.startsWith(p));
+  // Hide entirely on auth/onboarding pages — must be after all hooks!
+  const isHiddenPage = HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   useEffect(() => {
     function onWindowKeyDown(event: KeyboardEvent) {
@@ -90,6 +108,10 @@ export function SiteNav() {
     return pathname === link.href || pathname.startsWith(`${link.href}/`);
   }
 
+  if (isHiddenPage) {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--color-border)] bg-[var(--color-bg-canvas)]/90 backdrop-blur-md">
       <div className="container flex items-center justify-between h-14 gap-4">
@@ -108,10 +130,10 @@ export function SiteNav() {
           </span>
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop nav — hidden on workspace pages to avoid double IA */}
         <nav
           aria-label={t("a11y.main_navigation", "主导航")}
-          className="hidden md:flex items-center gap-0.5 bg-[var(--color-bg-surface)] border border-[var(--color-border)] px-1 py-1 rounded-[var(--radius-pill)]"
+          className={`${isWorkspacePage ? "hidden" : "hidden md:flex"} items-center gap-0.5 bg-[var(--color-bg-surface)] border border-[var(--color-border)] px-1 py-1 rounded-[var(--radius-pill)]`}
         >
           {NAV_LINKS.map((link) => {
             const active = isActive(link);
@@ -152,11 +174,12 @@ export function SiteNav() {
 
           {/* v11.0: Chinese-only — language toggle removed by RFC §0.1 freeze. */}
 
-          {/* Quick-create (logged-in only) — single action */}
+          {/* Quick-create (logged-in only) — single action.
+              v11.1: uses the warm Sienna primary (single CTA per page rule). */}
           {!loading && user ? (
             <Link
               href="/studio"
-              className="hidden md:inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] text-xs font-semibold border border-[var(--color-text-primary)] hover:opacity-90 transition-opacity"
+              className="hidden md:inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-on-accent)] text-xs font-semibold border border-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)] active:scale-[0.98] transition-all duration-150"
             >
               <Compass className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{t("nav.quick.new_work", "新建工作记录")}</span>

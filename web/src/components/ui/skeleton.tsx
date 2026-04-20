@@ -10,10 +10,15 @@ export function Skeleton({ circle = false, className = "", ...rest }: SkeletonPr
     <div
       aria-hidden="true"
       className={[
-        "animate-pulse bg-[var(--color-bg-elevated)]",
+        "bg-[var(--color-bg-subtle)]",
+        "animate-[shimmer_1.4s_ease-in-out_infinite]",
         circle ? "rounded-full" : "rounded-[var(--radius-md)]",
         className,
       ].join(" ")}
+      style={{
+        backgroundImage: "linear-gradient(90deg, transparent 0%, var(--color-bg-surface-hover) 50%, transparent 100%)",
+        backgroundSize: "200% 100%",
+      }}
       {...rest}
     />
   );

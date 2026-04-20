@@ -1,6 +1,10 @@
 # VibeHub Repository Cleanup Report
 
-Updated: 2026-04-14
+> 适用版本：v8 maturity convergence（已被 v11.0 取代）。
+> 本文件描述的清理决策仍然有效（从未撤回过），但里面提到的"developer-first
+> small-team"产品定位已不再准确。当前 v11.0 定位见 `docs/v11.0-final-chapter-rfc.md`。
+
+Updated: 2026-04-14（v11 注释 2026-04-19 添加）
 
 ## Scope
 

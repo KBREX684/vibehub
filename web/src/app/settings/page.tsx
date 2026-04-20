@@ -4,133 +4,118 @@ import { getServerTranslator } from "@/lib/i18n";
 import {
   Key,
   CreditCard,
-  Building2,
   ChevronRight,
-  Settings2,
-  Bell,
-  Webhook,
   User,
+  Shield,
   Bot,
-  AppWindow,
-  Workflow,
-  ArrowRight,
+  Bell,
+  Download,
+  Lock,
+  Receipt,
+  Anchor,
+  Stamp,
 } from "lucide-react";
 
-const SETTINGS_LINK_CLASS =
-  "group flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-canvas)] p-4 transition-colors hover:bg-[var(--color-bg-surface)] hover:border-[var(--color-border-strong)]";
+const SETTINGS_CARD_CLASS =
+  "card p-5 cursor-pointer group";
 
 /* ── Settings group definition ─────────────────────────────────────────── */
 interface SettingsLink {
   href: string;
-  titleKey: string;
-  titleFallback: string;
-  descKey: string;
-  descFallback: string;
+  title: string;
+  description: string;
   icon: typeof Key;
 }
 
 interface SettingsGroup {
-  labelKey: string;
-  labelFallback: string;
+  title: string;
   links: SettingsLink[];
 }
 
 const SETTINGS_GROUPS: SettingsGroup[] = [
   {
-    labelKey: "settings.group.account",
-    labelFallback: "账号",
+    title: "账户",
     links: [
       {
         href: "/settings/profile",
-        titleKey: "settings.profile_title",
-        titleFallback: "资料",
-        descKey: "settings.profile_desc",
-        descFallback: "编辑公开资料、外部链接和协作偏好。",
+        title: "个人资料",
+        description: "编辑公开资料、外部链接和 OPC 信息",
         icon: User,
       },
       {
         href: "/settings/account",
-        titleKey: "settings.account_title",
-        titleFallback: "账号与安全",
-        descKey: "settings.account_desc",
-        descFallback: "管理邮箱、已绑定账号、密码与账号删除。",
-        icon: Settings2,
+        title: "账号安全",
+        description: "邮箱、密码、2FA、会话管理",
+        icon: Shield,
       },
       {
-        href: "/settings/notifications",
-        titleKey: "settings.notifications_title",
-        titleFallback: "通知",
-        descKey: "settings.notifications_desc",
-        descFallback: "选择希望接收的站内通知类型。",
-        icon: Bell,
+        href: "/settings/subscription",
+        title: "订阅与账单",
+        description: "套餐、账单历史、升降级",
+        icon: CreditCard,
       },
     ],
   },
   {
-    labelKey: "settings.group.developer",
-    labelFallback: "开发者",
+    title: "开发者",
     links: [
       {
-        href: "/settings/api-keys",
-        titleKey: "settings.api_keys_title",
-        titleFallback: "API 密钥",
-        descKey: "settings.api_keys_desc",
-        descFallback: "管理开发者密钥、权限范围与 MCP 接入。",
-        icon: Key,
-      },
-      {
         href: "/settings/agents",
-        titleKey: "settings.agents_title",
-        titleFallback: "智能代理",
-        descKey: "settings.agents_desc",
-        descFallback: "管理绑定到 API 密钥和审计链路的智能代理身份。",
+        title: "Agent 接入",
+        description: "绑定 Cursor / Claude / Codex 等 Agent",
         icon: Bot,
       },
       {
-        href: "/settings/oauth-apps",
-        titleKey: "settings.oauth_apps_title",
-        titleFallback: "OAuth 应用",
-        descKey: "settings.oauth_apps_desc",
-        descFallback: "管理使用受限 Bearer 令牌的第三方应用。",
-        icon: AppWindow,
-      },
-      {
-        href: "/settings/automations",
-        titleKey: "settings.automations_title",
-        titleFallback: "自动化",
-        descKey: "settings.automations_desc",
-        descFallback: "配置团队动作与集成场景的事件驱动工作流。",
-        icon: Workflow,
-      },
-      {
-        href: "/settings/webhooks",
-        titleKey: "settings.webhooks_title",
-        titleFallback: "Webhook",
-        descKey: "settings.webhooks_desc",
-        descFallback: "管理带 HMAC 签名的外发 HTTPS Webhook。",
-        icon: Webhook,
+        href: "/settings/api-keys",
+        title: "API 密钥",
+        description: "管理 API Key 和权限范围",
+        icon: Key,
       },
     ],
   },
   {
-    labelKey: "settings.group.billing",
-    labelFallback: "订阅与套餐",
+    title: "通知与隐私",
     links: [
       {
-        href: "/settings/subscription",
-        titleKey: "settings.subscription_title",
-        titleFallback: "订阅",
-        descKey: "settings.subscription_desc",
-        descFallback: "查看套餐、账单和使用额度。",
-        icon: CreditCard,
+        href: "/settings/notifications",
+        title: "通知设置",
+        description: "邮件、站内、Webhook 通知偏好",
+        icon: Bell,
       },
       {
-        href: "/enterprise/verify",
-        titleKey: "settings.enterprise_verify_title",
-        titleFallback: "企业认证",
-        descKey: "settings.enterprise_verify_desc",
-        descFallback: "提交企业认证申请（当前仅提供徽章审核）。",
-        icon: Building2,
+        href: "/settings/privacy",
+        title: "隐私与权限",
+        description: "数据可见性、导出、删除",
+        icon: Lock,
+      },
+      {
+        href: "/settings/data-export",
+        title: "数据导出",
+        description: "一键导出所有 Ledger 和 Artifact",
+        icon: Download,
+      },
+    ],
+  },
+  {
+    title: "合规",
+    links: [
+      {
+        href: "/settings/compliance",
+        title: "AIGC 标识",
+        description: "自动加标、覆盖率、服务商选择",
+        icon: Stamp,
+      },
+      {
+        href: "/ledger",
+        title: "操作账本",
+        description: "查看完整 Ledger 时间线",
+        icon: Receipt,
+      },
+      {
+        href: "/settings/compliance#anchor",
+        title: "司法锚定",
+        description: "至信链 / 保全网存证设置",
+        icon: Anchor,
       },
     ],
   },
@@ -141,57 +126,49 @@ export default async function SettingsIndexPage() {
   const { t } = await getServerTranslator();
 
   return (
-    <main className="container max-w-3xl pb-24 pt-8 space-y-8">
+    <main className="container-narrow mx-auto pb-24 pt-12 space-y-12">
 
       {/* Page header */}
-      <div className="flex items-start gap-4 pb-6 border-b border-[var(--color-border)]">
-        <div className="w-11 h-11 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-secondary)]">
-          <Settings2 className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] m-0">{t("settings.title")}</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1 m-0">
-            {t("settings.subtitle")}
-          </p>
-        </div>
+      <div className="text-center mb-12">
+        <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] mb-3">
+          账户
+        </p>
+        <h1 className="font-serif text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.1] text-[var(--color-text-primary)] mb-3">
+          设置
+        </h1>
+        <p className="text-base text-[var(--color-text-secondary)] max-w-[480px] mx-auto leading-[1.75]">
+          管理你的账户、订阅、Agent 绑定与合规默认值。
+        </p>
       </div>
-
-      {!session && (
-        <div className="card p-6 text-center space-y-3">
-          <p className="text-sm text-[var(--color-text-secondary)] m-0">
-            {t("settings.sign_in_hint")}
-          </p>
-          <Link href="/login?redirect=/settings" className="btn btn-primary text-sm px-6 py-2.5 inline-flex">
-            {t("settings.sign_in", "立即登录")}
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      )}
 
       {/* Grouped settings sections */}
       {SETTINGS_GROUPS.map((group) => (
-        <section key={group.labelKey} className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] px-1">
-            {t(group.labelKey, group.labelFallback)}
+        <section key={group.title} className="space-y-4">
+          <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+            {group.title}
           </h2>
-          <ul className="space-y-2">
-            {group.links.map(({ href, titleKey, titleFallback, descKey, descFallback, icon: Icon }) => (
-              <li key={href}>
-                <Link href={href} className={SETTINGS_LINK_CLASS}>
-                  <div className="flex items-start gap-3 min-w-0">
-                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">{t(titleKey, titleFallback)}</p>
-                      <p className="text-xs text-[var(--color-text-secondary)] mt-0.5 m-0">{t(descKey, descFallback)}</p>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {group.links.map(({ href, title, description, icon: Icon }) => (
+              <Link key={href} href={href} className={SETTINGS_CARD_CLASS}>
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              </li>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                        {title}
+                      </p>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed">
+                      {description}
+                    </p>
+                  </div>
+                </div>
+              </Link>
             ))}
-          </ul>
+          </div>
         </section>
       ))}
     </main>

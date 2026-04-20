@@ -12,21 +12,21 @@ import { CountUp } from "@/components/ui";
 const TIERS: SubscriptionTier[] = ["free", "pro"];
 
 const TIER_CARD_CLASS_FREE =
-  "bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)]";
+  "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 ease-[cubic-bezier(0,0,0.2,1)] hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-[1px]";
 const TIER_CARD_CLASS_PRO =
-  "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_var(--color-featured-highlight)]";
+  "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] rounded-[var(--radius-2xl)] border-[1.5px] border-[var(--color-primary-border)] shadow-[var(--shadow-card)] transition-all duration-200 ease-[cubic-bezier(0,0,0.2,1)] hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-[1px] relative";
 
 const PRIMARY_CTA_CLASS =
-  "w-full py-3 bg-[var(--color-text-primary)] text-[var(--color-bg-canvas)] border border-[var(--color-text-primary)] text-center font-mono text-sm uppercase tracking-wider hover:opacity-90 transition-opacity";
+  "w-full py-2.5 bg-[var(--color-primary)] text-[var(--color-on-accent)] border border-[var(--color-primary)] text-center text-sm font-semibold rounded-[var(--radius-md)] hover:bg-[var(--color-primary-hover)] hover:border-[var(--color-primary-hover)] active:scale-[0.98] transition-all duration-150";
 
 const FREE_CTA_CLASS =
-  "w-full py-3 border border-[var(--color-border-strong)] text-center font-mono text-sm uppercase tracking-wider hover:bg-[var(--color-bg-surface-hover)] transition-colors mt-auto";
+  "w-full py-2.5 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] border border-[var(--color-border-strong)] text-center text-sm font-semibold rounded-[var(--radius-md)] hover:bg-[var(--color-bg-surface-hover)] hover:border-[var(--color-text-primary)] active:scale-[0.98] transition-all duration-150 mt-auto";
 
 const ALT_BTN_CLASS =
-  "py-2 border border-[var(--color-contrast-border)] text-center font-mono text-xs uppercase tracking-wider hover:bg-[var(--color-contrast-surface-hover)] transition-colors";
+  "py-2 border border-[var(--color-contrast-border)] text-center font-mono text-xs tracking-wider hover:bg-[var(--color-contrast-surface-hover)] transition-colors";
 
 const RECOMMENDED_TAG_CLASS =
-  "inline-flex items-center px-2 py-1 border border-[var(--color-border-strong)] bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] text-[10px] font-mono font-bold uppercase tracking-wider";
+  "inline-flex items-center px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] text-[var(--color-on-accent)] text-[10px] font-mono font-medium uppercase tracking-wider";
 
 interface FeatureRow {
   labelKey: string;
@@ -74,7 +74,7 @@ export function PricingCards() {
 
   return (
     <div className="max-w-4xl mx-auto mb-16 animate-fade-in-up">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
         {TIERS.map((tier) => {
           const pricing = TIER_PRICING[tier];
           const isPro = tier === "pro";
@@ -82,36 +82,47 @@ export function PricingCards() {
           return (
             <div
               key={tier}
-              className={`flex flex-col p-8 md:p-10 transition-colors ${isPro ? TIER_CARD_CLASS_PRO : TIER_CARD_CLASS_FREE}`}
+              className={`flex flex-col p-8 md:p-10 ${isPro ? TIER_CARD_CLASS_PRO : TIER_CARD_CLASS_FREE}`}
             >
+              {isPro && (
+                <span
+                  className={`absolute -top-3 left-8 ${RECOMMENDED_TAG_CLASS}`}
+                >
+                  {t("pricing.recommended", "推荐")}
+                </span>
+              )}
               <div className="flex-grow flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-semibold tracking-tight m-0">{tierLabel}</h2>
-                  {isPro && <span className={RECOMMENDED_TAG_CLASS}>{t("pricing.recommended", "Recommended")}</span>}
-                </div>
+                <p className={`text-[11px] font-mono uppercase tracking-[0.14em] mb-3 ${isPro ? "text-[var(--color-primary)]" : "text-[var(--color-text-tertiary)]"}`}>
+                  {tierLabel}
+                </p>
 
                 <div className="mb-6">
                   {pricing.priceMonthly === 0 ? (
-                    <div className="text-5xl font-mono font-bold tracking-tight">{t("pricing.free_price", "Free")}</div>
+                    <div
+                      className="text-5xl font-medium tracking-tight text-[var(--color-text-primary)]"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      ¥0
+                    </div>
                   ) : (
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-baseline">
-                        <span className="text-2xl font-mono font-medium mr-1">¥</span>
+                      <div className="flex items-baseline" style={{ fontFamily: "var(--font-mono)" }}>
+                        <span className="text-2xl font-medium mr-1 text-[var(--color-text-primary)]">¥</span>
                         <CountUp
                           end={pricing.priceMonthly}
                           duration={1100}
-                          className="text-5xl font-mono font-bold tracking-tight"
+                          className="text-5xl font-medium tracking-tight text-[var(--color-text-primary)]"
                         />
-                        <span className="text-sm font-mono ml-2 opacity-70">{t("pricing.per_month", "/ month")}</span>
+                        <span className="text-sm font-normal ml-2 text-[var(--color-text-secondary)]">/ 月</span>
                       </div>
-                      <div className="text-sm font-mono text-[var(--color-text-tertiary)]">
-                        {t("pricing.yearly_price", "¥{price}/year").replace("{price}", String(pricing.priceYearly))}
+                      <div className="text-sm text-[var(--color-text-tertiary)]" style={{ fontFamily: "var(--font-mono)" }}>
+                        ¥{pricing.priceYearly}/年
                       </div>
                     </div>
                   )}
                 </div>
 
-                <p className={`text-sm mb-8 ${isPro ? "opacity-80" : "text-[var(--color-text-secondary)]"}`}>
+                <p className="text-sm mb-8 text-[var(--color-text-secondary)] leading-relaxed">
                   {isPro
                     ? t("pricing.pro_description_v11", "无限 Ledger · 完整 AIGC 标识 · 至信链锚定 · 月度合规报告 · Trust Card 高级版")
                     : t("pricing.free_description_v11", "1 GB Workspace · 100 ledger/月 · 基础 AIGC 标识 · 公开 Trust Card · vibehub-verify CLI")}
@@ -119,13 +130,12 @@ export function PricingCards() {
 
                 {tier === "free" ? (
                   <Link href="/signup" className={FREE_CTA_CLASS}>
-                    {t("pricing.free_cta", "Get started free")}
+                    {t("pricing.free_cta", "免费开始")}
                   </Link>
                 ) : (
                   <div className="mt-auto space-y-3">
-                    {/* v10 收口为 China-only Alipay；v11 RFC §0.1 沿用此约束 */}
                     <button className={PRIMARY_CTA_CLASS} onClick={() => void startCheckout(tier, "alipay")}>
-                      {t("pricing.upgrade_alipay", "Upgrade with Alipay")}
+                      {t("pricing.upgrade_alipay", "使用支付宝升级")}
                     </button>
                   </div>
                 )}

@@ -111,3 +111,20 @@ export { FloatingIcon } from "./floating-icon";
 
 export { StaggerList } from "./stagger-list";
 export type { StaggerListProps } from "./stagger-list";
+
+/* v11.1 warm-ui primitives */
+
+export { Tabs, TabList, Tab, TabPanel } from "./tabs";
+export type { TabsProps, TabListProps, TabProps, TabPanelProps } from "./tabs";
+
+export { Toast, ToastProvider, useToast } from "./toast";
+export type { ToastProps, ToastVariant } from "./toast";
+
+export { Tooltip } from "./tooltip";
+export type { TooltipProps } from "./tooltip";
+
+export { LedgerStampBadge } from "./ledger-stamp-badge";
+export type { LedgerStampBadgeProps, LedgerStampState } from "./ledger-stamp-badge";
+
+export { TrustMetricCard, TrustMetricGrid } from "./trust-metric-card";
+export type { TrustMetricCardProps, TrustMetricGridProps } from "./trust-metric-card";
