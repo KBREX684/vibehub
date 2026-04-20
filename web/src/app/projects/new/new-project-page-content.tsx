@@ -17,7 +17,7 @@ export async function NewProjectPageContent() {
     return (
       <main className="container max-w-xl pb-24 pt-8 space-y-6">
         <Link
-          href="/discover"
+          href="/"
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -47,7 +47,7 @@ export async function NewProjectPageContent() {
   return (
     <main className="container max-w-2xl pb-24 pt-8 space-y-6">
       <Link
-        href="/discover"
+        href="/"
         className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
       >
         <ArrowLeft className="w-4 h-4" />

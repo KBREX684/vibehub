@@ -86,7 +86,7 @@ const INTEREST_KEYS: InterestKey[] = [
 const TOOL_KEYS: ToolKey[] = ["cursor", "claude", "openclaw", "codex", "custom", "none"];
 
 const FINAL_ACTION_LINKS: Record<"post" | "project" | "agent", string> = {
-  post: "/discover",
+  post: "/",
   project: "/p/new",
   agent: "/settings/agents",
 };

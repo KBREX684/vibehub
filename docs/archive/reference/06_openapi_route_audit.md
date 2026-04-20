@@ -1,3 +1,5 @@
+> ⚠️ 已归档：本文件仅供历史参考，不得作为当前实现依据。当前主线请看 `docs/roadmap-current.md` 与 v11 系列文档。
+
 # VibeHub — OpenAPI / Route Audit v1.1
 
 > Audit completed during remediation pass v1.1 (2026-04-13)

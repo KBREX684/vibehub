@@ -109,7 +109,7 @@ function hrefForRow(row: NotificationDisplayRow) {
     return `/p/${encodeURIComponent(projectSlug)}`;
   }
   if (postSlug) {
-    return "/discover";
+  return "/";
   }
   return "/work/notifications";
 }
